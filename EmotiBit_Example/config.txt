@@ -1,1 +1,0 @@
-{"WifiCredentials": [{"ssid": "SSSS", "password" : "PPPP"}]}
