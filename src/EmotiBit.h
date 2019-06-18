@@ -13,24 +13,6 @@
 #include <ArduinoJson.h>
 #include <SdFat.h>
 
-//Define Overflow Constants for MagnetoConversion on BMM150
-#define BMM150_XYAXES_FLIP_OVERFLOW_ADCVAL	INT16_C(-4096)
-#define BMM150_ZAXIS_HALL_OVERFLOW_ADCVAL	INT16_C(-16384)
-#define BMM150_OVERFLOW_OUTPUT_FLOAT		0.0f
-
-//Important BMM150 Registers
-#define BMM150_DIG_X1					UINT8_C(0x5D)
-#define BMM150_DIG_Z4_LSB				UINT8_C(0x62)
-#define BMM150_DIG_Z2_LSB				UINT8_C(0x68)
-
-//Delays, in milliseconds
-#define BMI160_AUX_COM_DELAY			UINT8_C(10)
-#define BMI160_READ_WRITE_DELAY			UINT8_C(1)
-
-//Bit Masks for MAG_IF[1]
-#define BMI160_MANUAL_MODE_EN_MSK		UINT8_C(0x80)
-#define BMI160_AUX_READ_BURST_MSK		UINT8_C(0x03)
-
 
 class EmotiBit {
   

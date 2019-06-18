@@ -464,8 +464,11 @@ int8_t EmotiBit::updateIMUData() {
 	// ToDo: Add status return
 	//static int8_t status;
 	timestamp = millis();
-	static int16_t ax, ay, az, gx, gy, gz, mx, my, mz, rh;
+	static int16_t ax, ay, az, gx, gy, gz, mx, my, mz;
+	static uint16_t rh;
 	BMI160.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
+	//BMI160.getMotion9Bosch(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
+	//BMI160.getMotion9Check(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
 
 	checkIMUClipping(EmotiBit::DataType::ACCELEROMETER_X, ax, timestamp);
 	checkIMUClipping(EmotiBit::DataType::ACCELEROMETER_Y, ay, timestamp);
@@ -484,9 +487,9 @@ int8_t EmotiBit::updateIMUData() {
 	pushData(EmotiBit::DataType::GYROSCOPE_Z, convertRawGyro(gz), &timestamp);
 	
 	// ToDo: determine correct magnetometer clipping and conversion 
-	pushData(EmotiBit::DataType::MAGNETOMETER_X, convertMagnetoX(mx,(uint16_t)rh), &timestamp);
-	pushData(EmotiBit::DataType::MAGNETOMETER_Y, convertMagnetoY(my,(uint16_t)rh), &timestamp);
-	pushData(EmotiBit::DataType::MAGNETOMETER_Z, convertMagnetoY(mz,(uint16_t)rh), &timestamp);
+	pushData(EmotiBit::DataType::MAGNETOMETER_X, convertMagnetoX(mx,rh), &timestamp);
+	pushData(EmotiBit::DataType::MAGNETOMETER_Y, convertMagnetoY(my,rh), &timestamp);
+	pushData(EmotiBit::DataType::MAGNETOMETER_Z, convertMagnetoZ(mz,rh), &timestamp);
 	if (bmm150XYClipped) {
 		pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_X, &timestamp);
 		pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_Y, &timestamp);
