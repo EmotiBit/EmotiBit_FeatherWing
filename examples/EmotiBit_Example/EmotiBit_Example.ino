@@ -1,5 +1,7 @@
 //#define DEBUG_GET_DATA
 
+#include <DoubleBufferFloat.h>
+#include <BufferFloat.h>
 #define SEND_UDP
 //#define SEND_TCP;
 bool sendSerial = false;
