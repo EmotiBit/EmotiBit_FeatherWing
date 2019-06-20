@@ -6,7 +6,7 @@
 
 #include "Arduino.h"
 #include <Wire.h>
-#include <CFL_Si7013.h>
+#include <EmotiBit_Si7013.h>
 #include <BMI160Gen.h>
 #include <MAX30105.h>
 #include "DoubleBufferFloat.h"
