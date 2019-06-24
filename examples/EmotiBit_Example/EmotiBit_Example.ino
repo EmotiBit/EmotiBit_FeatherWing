@@ -576,6 +576,12 @@ void parseIncomingMessages() {
 				else if (typeTag.equals("TU")) { // Timestamp UTC
 					isLoggableMessage = true;
 				}
+				else if (typeTag.equals("TX")) { // Timestamp UTC
+					isLoggableMessage = true;
+				}
+				else if (typeTag.equals("LM")) { // Timestamp UTC
+					isLoggableMessage = true;
+				}
 				else if (typeTag.equals("RB")) { // Recording begin
 					isLoggableMessage = true;
 					String datetimeString = receivedMessage.substring(dataStartChar, receivedMessage.length() - 1);
