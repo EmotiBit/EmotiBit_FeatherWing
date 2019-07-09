@@ -239,8 +239,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	uint8_t dev_id = BMI160.getDeviceID();
 	Serial.print("DEVICE ID: ");
 	Serial.println(dev_id, HEX);
-	_accelerometerRange = 4;
-	_gyroRange = 500;
+	_accelerometerRange = 8;
+	_gyroRange = 1000;
 	BMI160.setAccelerometerRange(_accelerometerRange);
 	BMI160.setGyroRange(_gyroRange);
 	BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR); // I2C MAG
