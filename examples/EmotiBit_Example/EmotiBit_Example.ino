@@ -21,8 +21,10 @@ struct EmotibitConfig {
 	String ssid = "";
 	String password = "";
 };
-EmotibitConfig config;
 
+EmotibitConfig config;
+size_t configSize;
+EmotibitConfig * configList = nullptr;
 
 #ifdef SEND_TCP
 #include <WiFi101.h> 
@@ -172,7 +174,7 @@ void setup() {
 	delay(500);
 
 	Serial.begin(SERIAL_BAUD);
-	//while (!Serial);
+	while (!Serial);
 	Serial.println("Serial started");
 
 	delay(500);
@@ -245,31 +247,49 @@ void setup() {
 #endif
 
 #ifdef SEND_UDP
+#if 1
 	// attempt to connect to WiFi network:
-	while (wifiStatus != WL_CONNECTED) {
+	WiFi.setTimeout(15);			/*Fixes loop delay due to WiFi.begin()*/
+	size_t i = 0;
+	while (WiFi.status() != WL_CONNECTED) {
+#if 0
 		if (millis() - setupTimerStart > SETUP_TIMEOUT) {
 		  while(true) {
 			hibernate();
 		  }
 		}
-		Serial.print("Attempting to connect to SSID: ");
-		Serial.println(config.ssid);
+#endif
 		// Connect to WPA/WPA2 network. Change this line if using open or WEP network:
-		wifiStatus = WiFi.begin(config.ssid, config.password);
-
+		Serial.print("Attempting to connect to SSID: ");
+		Serial.println(configList[i].ssid);
+		wifiStatus = WiFi.begin(configList[i].ssid, configList[i].password);
+		//wifiStatus = WiFi.begin(configList[0].ssid, configList[0].password);
 		// wait for connection:
-		delay(1000);
+		Serial.println(wifiStatus);
+		delay(2500);
+		Serial.println(WiFi.status());
+		delay(2500);
+		Serial.println(WiFi.status());
+		delay(5000);
+		Serial.println(WiFi.status());
+		if (i == configSize-1) { i = 0; }
+		else {
+			i++;
+		}
 	}
 	wifiReady = true;
 	Serial.println("Connected to wifi");
 	printWiFiStatus();
-
+	config.ssid = configList[i - 1].ssid;
+	config.password = configList[i - 1].password;
 	Serial.println("\nStarting connection to server...");
 	// if you get a connection, report back via serial:
 	Udp.begin(localPort);
 	socketReady = true;
 	networkBeginStart = millis();
-	WiFi.setTimeout(15);			/*Fixes loop delay due to WiFi.begin()*/
+	//WiFi.setTimeout(15);			/*Fixes loop delay due to WiFi.begin()*/
+#endif
+
 #endif
 
 #ifdef SEND_TCP
@@ -1064,7 +1084,8 @@ bool loadConfigFile(String filename) {
 	// Allocate the memory pool on the stack.
 	// Don't forget to change the capacity to match your JSON document.
 	// Use arduinojson.org/assistant to compute the capacity.
-	StaticJsonBuffer<512> jsonBuffer;
+	//StaticJsonBuffer<1024> jsonBuffer;
+	StaticJsonBuffer<1024> jsonBuffer;
 
 	// Parse the root object
 	JsonObject &root = jsonBuffer.parseObject(file);
@@ -1075,8 +1096,17 @@ bool loadConfigFile(String filename) {
 	}
 
 	// Copy values from the JsonObject to the Config
-	config.ssid = root["WifiCredentials"][0]["ssid"] | "";
-	config.password = root["WifiCredentials"][0]["password"] | "";
+	configSize = root.get<JsonVariant>("WifiCredentials").as<JsonArray>().size();
+	Serial.print("ConfigSize: ");
+	Serial.println(configSize);
+	configList = new EmotibitConfig[configSize];
+	for (size_t i = 0; i < configSize; i++) {
+		configList[i].ssid = root["WifiCredentials"][i]["ssid"] | "";
+		configList[i].password = root["WifiCredentials"][i]["password"] | "";
+		Serial.println(configList[i].ssid);
+		Serial.println(configList[i].password);
+	}
+
 	//strlcpy(config.hostname,                   // <- destination
 	//	root["hostname"] | "example.com",  // <- source
 	//	sizeof(config.hostname));          // <- destination's capacity
@@ -1199,19 +1229,22 @@ bool sendMessage(String & s) {
 
 void updateWiFi() {
 	//Serial.println("<<<<<<< updateWiFi >>>>>>>");
+#if 0
 	Serial.println("------- WiFi Status -------");
 	Serial.println(millis());
 	wifiStatus = WiFi.status();
 	Serial.println(wifiStatus);
 	//Serial.println(wifiRebootCounter);    /* Uncommment for WiFi Debugging*/
+	Serial.println(configSize);
+#endif
 	if (wifiStatus != WL_CONNECTED) {
 		wifiReady = false;
 		socketReady = false;
 	}
+#if 0
 	Serial.println(millis());
 	Serial.println("-------  -------");
-
-	
+#endif
 
 	// Handle Wifi Reboot
 	if (wifiReady && wifiRebootCounter > wifiRebootTarget) {
@@ -1228,6 +1261,7 @@ void updateWiFi() {
 				Serial.println(WIFI_BEGIN_ATTEMPT_DELAY);
 				Serial.println(wifiRebootCounter);
 				Serial.println(wifiRebootTarget);
+				//wifiStatus = WiFi.begin(configList[0].ssid, configList[0].password);
 				wifiStatus = WiFi.begin(config.ssid, config.password);
 				networkBeginStart = millis();
 				Serial.println(networkBeginStart);
