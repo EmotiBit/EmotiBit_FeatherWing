@@ -22,8 +22,11 @@ typedef struct EmotibitConfig {
 	String password = "";
 };
 size_t configSize;
-EmotibitConfig config;
+size_t configPos;
 EmotibitConfig configList[12];
+bool switchCred = false;
+bool getMomentLost;
+uint32_t momentLost;
 
 
 
@@ -82,9 +85,10 @@ String consoleMessage;
 bool socketReady = false;
 bool wifiReady = false;
 uint32_t wifiRebootCounter = 0;
-uint32_t wifiRebootTarget = 20000;				/*Set to 250 for WiFi debugging*/
+uint32_t wifiRebootTarget = 250;				/*Set to 250 for WiFi debugging, 20000 for Release*/
 uint32_t networkBeginStart;
 uint32_t WIFI_BEGIN_ATTEMPT_DELAY = 5000;
+uint32_t WIFI_BEGIN_SWITCH_CRED = 5000;      //Set to 300000 for Release
 bool hibernateButtonPressed = false;
 uint32_t hibernateButtonStart;
 uint32_t hibernateButtonDelay = 2000;
@@ -251,10 +255,12 @@ void setup() {
 #ifdef SEND_UDP
 #if 1
 	// attempt to connect to WiFi network:
-	size_t i = 0;
-	Serial.print("StartTime: ");
-	Serial.println(millis());
+	configPos = configSize-1;
 	while (wifiStatus != WL_CONNECTED) {
+		if (configPos == configSize - 1) { configPos = 0; }
+		else {
+			configPos++;
+		}
 #if 0
 		if (millis() - setupTimerStart > SETUP_TIMEOUT) {
 		  while(true) {
@@ -264,9 +270,8 @@ void setup() {
 #endif
 		// Connect to WPA/WPA2 network. Change this line if using open or WEP network:
 		Serial.print("Attempting to connect to SSID: ");
-		Serial.println(configList[i].ssid);
-		wifiStatus = WiFi.begin(configList[i].ssid, configList[i].password);
-		//wifiStatus = WiFi.begin(s, p);
+		Serial.println(configList[configPos].ssid);
+		wifiStatus = WiFi.begin(configList[configPos].ssid, configList[configPos].password);
 		// wait for connection:
 		Serial.println(wifiStatus);
 		if (wifiStatus == WL_CONNECTED) {
@@ -276,19 +281,11 @@ void setup() {
 		delay(1000);
 		wifiStatus = WiFi.status();
 		Serial.println(wifiStatus);
-
-		if (i == configSize-1) { i = 0; }
-		else {
-			i++;
-		}
 	}
-	Serial.print("EndTime: ");
-	Serial.println(millis());
 	wifiReady = true;
+	getMomentLost = true;
 	Serial.println("Connected to wifi");
 	printWiFiStatus();
-	config.ssid = configList[i - 1].ssid;
-	config.password = configList[i - 1].password;
 	Serial.println("\nStarting connection to server...");
 	// if you get a connection, report back via serial:
 	Udp.begin(localPort);
@@ -1235,18 +1232,17 @@ bool sendMessage(String & s) {
 
 void updateWiFi() {
 	//Serial.println("<<<<<<< updateWiFi >>>>>>>");
-	Serial.println("------- WiFi Status -------");
-	Serial.println(millis());
+	//Serial.println("------- WiFi Status -------");
+	//Serial.println(millis());
 	wifiStatus = WiFi.status();
-	Serial.println(wifiStatus);
+	//Serial.println(wifiStatus);
 	//Serial.println(wifiRebootCounter);    /* Uncommment for WiFi Debugging*/
-	Serial.println(configSize);
 	if (wifiStatus != WL_CONNECTED) {
 		wifiReady = false;
 		socketReady = false;
 	}
-	Serial.println(millis());
-	Serial.println("-------  -------");
+	//Serial.println(millis());
+	//Serial.println("-------  -------");
 
 	// Handle Wifi Reboot
 	if (wifiReady && wifiRebootCounter > wifiRebootTarget) {
@@ -1255,26 +1251,39 @@ void updateWiFi() {
 
 	// Handle WiFi Reconnects
 	if (!wifiReady) {
+		if (getMomentLost) {
+			momentLost = millis();
+			getMomentLost = false;
+		}
+
 		if (millis() - networkBeginStart > WIFI_BEGIN_ATTEMPT_DELAY) {
-			//int numSsid = listNetworks();
-			//if (numSsid > 0) {
+				if (millis() - momentLost > WIFI_BEGIN_SWITCH_CRED) { switchCred = true; }
+				else { switchCred = false; }
+
+				if (switchCred && (configPos != configSize - 1)) { configPos++; }
+				else if (switchCred && (configPos == configSize - 1)) { configPos = 0; }
 				Serial.println("<<<<<<< Wifi begin >>>>>>>");
 				Serial.println(millis());
+#if 0
 				Serial.println(WIFI_BEGIN_ATTEMPT_DELAY);
 				Serial.println(wifiRebootCounter);
 				Serial.println(wifiRebootTarget);
-				//wifiStatus = WiFi.begin(configList[0].ssid, configList[0].password);
-				wifiStatus = WiFi.begin(config.ssid, config.password);
+#endif
+				Serial.println(momentLost);
+				Serial.println(configList[configPos].ssid);
+				wifiStatus = WiFi.begin(configList[configPos].ssid, configList[configPos].password);
 				networkBeginStart = millis();
 				Serial.println(networkBeginStart);
 				Serial.println("<<<<<<<  >>>>>>>");
-			//}
 		}
 		if (wifiStatus == WL_CONNECTED) {
 			wifiReady = true;
+			getMomentLost = true;
 			Serial.println(">>>>>>> Connected to wifi <<<<<<<");
 			printWiFiStatus();
 			wifiRebootCounter = 0;
+			//For case where begin works immediately in this loop, but disconnects again within
+			// the attempt delay. Without changing nBS, the code is blocked from attempting to reconnect
 			networkBeginStart = millis() - WIFI_BEGIN_ATTEMPT_DELAY - 1;
 		}
 	}
