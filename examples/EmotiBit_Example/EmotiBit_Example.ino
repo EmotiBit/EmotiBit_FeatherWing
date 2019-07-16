@@ -17,14 +17,16 @@ bool sendConsole = false;
 
 SdFat SD;
 
-struct EmotibitConfig {
+typedef struct EmotibitConfig {
 	String ssid = "";
 	String password = "";
 };
-
-EmotibitConfig config;
 size_t configSize;
-EmotibitConfig * configList = nullptr;
+EmotibitConfig config;
+EmotibitConfig configList[12];
+
+
+
 
 #ifdef SEND_TCP
 #include <WiFi101.h> 
@@ -249,9 +251,10 @@ void setup() {
 #ifdef SEND_UDP
 #if 1
 	// attempt to connect to WiFi network:
-	WiFi.setTimeout(15);			/*Fixes loop delay due to WiFi.begin()*/
 	size_t i = 0;
-	while (WiFi.status() != WL_CONNECTED) {
+	Serial.print("StartTime: ");
+	Serial.println(millis());
+	while (wifiStatus != WL_CONNECTED) {
 #if 0
 		if (millis() - setupTimerStart > SETUP_TIMEOUT) {
 		  while(true) {
@@ -263,20 +266,24 @@ void setup() {
 		Serial.print("Attempting to connect to SSID: ");
 		Serial.println(configList[i].ssid);
 		wifiStatus = WiFi.begin(configList[i].ssid, configList[i].password);
-		//wifiStatus = WiFi.begin(configList[0].ssid, configList[0].password);
+		//wifiStatus = WiFi.begin(s, p);
 		// wait for connection:
 		Serial.println(wifiStatus);
-		delay(2500);
-		Serial.println(WiFi.status());
-		delay(2500);
-		Serial.println(WiFi.status());
-		delay(5000);
-		Serial.println(WiFi.status());
+		if (wifiStatus == WL_CONNECTED) {
+			break;
+		}
+		
+		delay(1000);
+		wifiStatus = WiFi.status();
+		Serial.println(wifiStatus);
+
 		if (i == configSize-1) { i = 0; }
 		else {
 			i++;
 		}
 	}
+	Serial.print("EndTime: ");
+	Serial.println(millis());
 	wifiReady = true;
 	Serial.println("Connected to wifi");
 	printWiFiStatus();
@@ -287,7 +294,7 @@ void setup() {
 	Udp.begin(localPort);
 	socketReady = true;
 	networkBeginStart = millis();
-	//WiFi.setTimeout(15);			/*Fixes loop delay due to WiFi.begin()*/
+	WiFi.setTimeout(15);			/*Fixes loop delay due to WiFi.begin()*/
 #endif
 
 #endif
@@ -1099,7 +1106,6 @@ bool loadConfigFile(String filename) {
 	configSize = root.get<JsonVariant>("WifiCredentials").as<JsonArray>().size();
 	Serial.print("ConfigSize: ");
 	Serial.println(configSize);
-	configList = new EmotibitConfig[configSize];
 	for (size_t i = 0; i < configSize; i++) {
 		configList[i].ssid = root["WifiCredentials"][i]["ssid"] | "";
 		configList[i].password = root["WifiCredentials"][i]["password"] | "";
@@ -1229,22 +1235,18 @@ bool sendMessage(String & s) {
 
 void updateWiFi() {
 	//Serial.println("<<<<<<< updateWiFi >>>>>>>");
-#if 0
 	Serial.println("------- WiFi Status -------");
 	Serial.println(millis());
 	wifiStatus = WiFi.status();
 	Serial.println(wifiStatus);
 	//Serial.println(wifiRebootCounter);    /* Uncommment for WiFi Debugging*/
 	Serial.println(configSize);
-#endif
 	if (wifiStatus != WL_CONNECTED) {
 		wifiReady = false;
 		socketReady = false;
 	}
-#if 0
 	Serial.println(millis());
 	Serial.println("-------  -------");
-#endif
 
 	// Handle Wifi Reboot
 	if (wifiReady && wifiRebootCounter > wifiRebootTarget) {
