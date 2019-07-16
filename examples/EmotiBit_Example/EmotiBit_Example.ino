@@ -86,7 +86,7 @@ String consoleMessage;
 bool socketReady = false;
 bool wifiReady = false;
 uint32_t wifiRebootCounter = 0;
-uint32_t wifiRebootTarget = 250;				/*Set to 250 for WiFi debugging, 20000 for Release*/
+uint32_t wifiRebootTarget = 20000;				/*Set to 250 for WiFi debugging, 20000 for Release*/
 uint32_t networkBeginStart;
 uint32_t WIFI_BEGIN_ATTEMPT_DELAY = 5000;
 uint32_t WIFI_BEGIN_SWITCH_CRED = 300000;      //Set to 30000 for debug, 300000 for Release
@@ -254,7 +254,6 @@ void setup() {
 #endif
 
 #ifdef SEND_UDP
-#if 1
 	// attempt to connect to WiFi network:
 	configPos = configSize-1;
 	while (wifiStatus != WL_CONNECTED) {
@@ -262,19 +261,14 @@ void setup() {
 		else {
 			configPos++;
 		}
-#if 0
-		if (millis() - setupTimerStart > SETUP_TIMEOUT) {
-		  while(true) {
-			hibernate();
-		  }
-		}
-#endif
+		
 		// Connect to WPA/WPA2 network. Change this line if using open or WEP network:
 		Serial.print("Attempting to connect to SSID: ");
 		Serial.println(configList[configPos].ssid);
 		wifiStatus = WiFi.begin(configList[configPos].ssid, configList[configPos].password);
 		// wait for connection:
 		Serial.println(wifiStatus);
+		
 		if (wifiStatus == WL_CONNECTED) {
 			break;
 		}
@@ -293,8 +287,6 @@ void setup() {
 	socketReady = true;
 	networkBeginStart = millis();
 	WiFi.setTimeout(15);			/*Fixes loop delay due to WiFi.begin()*/
-#endif
-
 #endif
 
 #ifdef SEND_TCP
@@ -1268,12 +1260,10 @@ void updateWiFi() {
 				else if (switchCred && (configPos == configSize - 1)) { configPos = 0; }
 				Serial.println("<<<<<<< Wifi begin >>>>>>>");
 				Serial.println(millis());
-#if 0
 				Serial.println(WIFI_BEGIN_ATTEMPT_DELAY);
 				Serial.println(wifiRebootCounter);
 				Serial.println(wifiRebootTarget);
-#endif
-				Serial.println(momentLost);
+				//Serial.println(momentLost);               //uncomment for debugging
 				Serial.println(configList[configPos].ssid);
 				wifiStatus = WiFi.begin(configList[configPos].ssid, configList[configPos].password);
 				attempts++;
