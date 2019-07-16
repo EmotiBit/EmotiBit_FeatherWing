@@ -27,6 +27,7 @@ EmotibitConfig configList[12];
 bool switchCred = false;
 bool getMomentLost;
 uint32_t momentLost;
+unsigned short int attempts = 0;
 
 
 
@@ -88,7 +89,7 @@ uint32_t wifiRebootCounter = 0;
 uint32_t wifiRebootTarget = 250;				/*Set to 250 for WiFi debugging, 20000 for Release*/
 uint32_t networkBeginStart;
 uint32_t WIFI_BEGIN_ATTEMPT_DELAY = 5000;
-uint32_t WIFI_BEGIN_SWITCH_CRED = 5000;      //Set to 300000 for Release
+uint32_t WIFI_BEGIN_SWITCH_CRED = 300000;      //Set to 30000 for debug, 300000 for Release
 bool hibernateButtonPressed = false;
 uint32_t hibernateButtonStart;
 uint32_t hibernateButtonDelay = 2000;
@@ -180,7 +181,7 @@ void setup() {
 	delay(500);
 
 	Serial.begin(SERIAL_BAUD);
-	while (!Serial);
+	//while (!Serial);
 	Serial.println("Serial started");
 
 	delay(500);
@@ -1232,17 +1233,17 @@ bool sendMessage(String & s) {
 
 void updateWiFi() {
 	//Serial.println("<<<<<<< updateWiFi >>>>>>>");
-	//Serial.println("------- WiFi Status -------");
-	//Serial.println(millis());
+	Serial.println("------- WiFi Status -------");
+	Serial.println(millis());
 	wifiStatus = WiFi.status();
-	//Serial.println(wifiStatus);
+	Serial.println(wifiStatus);
 	//Serial.println(wifiRebootCounter);    /* Uncommment for WiFi Debugging*/
 	if (wifiStatus != WL_CONNECTED) {
 		wifiReady = false;
 		socketReady = false;
 	}
-	//Serial.println(millis());
-	//Serial.println("-------  -------");
+	Serial.println(millis());
+	Serial.println("-------  -------");
 
 	// Handle Wifi Reboot
 	if (wifiReady && wifiRebootCounter > wifiRebootTarget) {
@@ -1257,7 +1258,10 @@ void updateWiFi() {
 		}
 
 		if (millis() - networkBeginStart > WIFI_BEGIN_ATTEMPT_DELAY) {
-				if (millis() - momentLost > WIFI_BEGIN_SWITCH_CRED) { switchCred = true; }
+				if ((millis() - momentLost > WIFI_BEGIN_SWITCH_CRED) && (attempts >= 2)) {
+					switchCred = true;
+					attempts = 0;
+				}
 				else { switchCred = false; }
 
 				if (switchCred && (configPos != configSize - 1)) { configPos++; }
@@ -1272,6 +1276,7 @@ void updateWiFi() {
 				Serial.println(momentLost);
 				Serial.println(configList[configPos].ssid);
 				wifiStatus = WiFi.begin(configList[configPos].ssid, configList[configPos].password);
+				attempts++;
 				networkBeginStart = millis();
 				Serial.println(networkBeginStart);
 				Serial.println("<<<<<<<  >>>>>>>");
