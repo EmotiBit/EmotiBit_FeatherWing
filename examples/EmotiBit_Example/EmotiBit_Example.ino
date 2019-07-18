@@ -110,7 +110,7 @@ volatile bool ledOn = false;
 volatile bool ledPinBusy = false;
 uint8_t defaultDataReliabilityScore = 100;
 uint32_t setupTimerStart = 0;
-const uint32_t SETUP_TIMEOUT = 30000;
+const uint32_t SETUP_TIMEOUT = 61500;          //Enough time to run through list of network credentials twice
 bool sendResetPacket = false;
 
 String configFilename = "config.txt";
@@ -257,6 +257,13 @@ void setup() {
 	// attempt to connect to WiFi network:
 	configPos = configSize-1;
 	while (wifiStatus != WL_CONNECTED) {
+		if (millis() - setupTimerStart > SETUP_TIMEOUT) {
+			Serial.println("*********** Setup Timeout **************");
+			while (true) {
+				hibernate();
+			}
+		}
+
 		if (configPos == configSize - 1) { configPos = 0; }
 		else {
 			configPos++;
@@ -277,6 +284,8 @@ void setup() {
 		wifiStatus = WiFi.status();
 		Serial.println(wifiStatus);
 	}
+	//Serial.print("Time2WiFiConnect: ");
+	//Serial.println(millis() - setupTimerStart);
 	wifiReady = true;
 	getMomentLost = true;
 	Serial.println("Connected to wifi");
