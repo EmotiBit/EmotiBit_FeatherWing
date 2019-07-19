@@ -1233,18 +1233,20 @@ bool sendMessage(String & s) {
 }
 
 void updateWiFi() {
-	//Serial.println("<<<<<<< updateWiFi >>>>>>>");
-	Serial.println("------- WiFi Status -------");
-	Serial.println(millis());
 	wifiStatus = WiFi.status();
-	Serial.println(wifiStatus);
-	//Serial.println(wifiRebootCounter);    /* Uncommment for WiFi Debugging*/
 	if (wifiStatus != WL_CONNECTED) {
 		wifiReady = false;
 		socketReady = false;
 	}
+#if 1
+	//Serial.println("<<<<<<< updateWiFi >>>>>>>");
+	Serial.println("------- WiFi Status -------");
+	Serial.println(millis());
+	Serial.println(wifiStatus);
+	//Serial.println(wifiRebootCounter);    /* Uncommment for WiFi Debugging*/
 	Serial.println(millis());
 	Serial.println("-------  -------");
+#endif
 
 	// Handle Wifi Reboot
 	if (wifiReady && wifiRebootCounter > wifiRebootTarget) {
