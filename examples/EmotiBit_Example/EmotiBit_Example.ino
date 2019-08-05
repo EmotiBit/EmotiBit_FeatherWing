@@ -609,6 +609,7 @@ void parseIncomingMessages() {
 					isLoggableMessage = true;
 				}
 				else if (typeTag.equals("RB")) { // Recording begin
+					stopTimer();
 					isLoggableMessage = true;
 					String datetimeString = receivedMessage.substring(dataStartChar, receivedMessage.length() - 1);
 					// Write the configuration info to json file
@@ -634,6 +635,9 @@ void parseIncomingMessages() {
 					else {
 						Serial.println("Failed to open data file for writing");
 					}
+					sendTimerStart = millis();
+					requestTimestampTimerStart = millis();
+					startTimer(BASE_SAMPLING_FREQ);
 				}
 				else if (typeTag.equals("RE")) { // Recording end
 					isLoggableMessage = true;
