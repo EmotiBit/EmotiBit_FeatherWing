@@ -916,7 +916,7 @@ bool EmotiBit::setSensorTimer(SensorTimer t) {
 }
 
 
-
+#if 0
 bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 #ifdef DEBUG
 	Serial.println("printConfigInfo");
@@ -1295,7 +1295,7 @@ bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 
 	return true;
 }
-
+#endif
 float EmotiBit::average(BufferFloat &b) {
 	static float f;
 	f = 0;
