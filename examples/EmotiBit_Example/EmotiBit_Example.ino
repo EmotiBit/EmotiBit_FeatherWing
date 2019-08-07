@@ -181,7 +181,7 @@ void setup() {
 	delay(500);
 
 	Serial.begin(SERIAL_BAUD);
-	while (!Serial);
+	//while (!Serial);
 	Serial.println("Serial started");
 
 	delay(500);
@@ -616,11 +616,9 @@ void parseIncomingMessages() {
 					String infoFilename = datetimeString + "_info.json";
 					dataFile = SD.open(infoFilename, FILE_WRITE);
 					if (dataFile) {
-			#if 1
 						if (!emotibit.printConfigInfo(dataFile, datetimeString)) {
 							Serial.println(F("Failed to write to info file"));
 						}
-			#endif
 						dataFile.close();
 					}
 					// Try to open the data file to be sure we can write

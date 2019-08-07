@@ -916,7 +916,6 @@ bool EmotiBit::setSensorTimer(SensorTimer t) {
 }
 
 
-#if 1
 bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 #ifdef DEBUG
 	Serial.println("printConfigInfo");
@@ -977,7 +976,6 @@ bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
-#if 1
 	{
 		// Parse the root object
 		StaticJsonDocument<bufferSize> jsonDoc;
@@ -1253,11 +1251,10 @@ bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 	}
 
 	file.print("]"); // Doing some manual printing to chunk JSON and save RAM
-#endif
 
 	return true;
 }
-#endif
+
 float EmotiBit::average(BufferFloat &b) {
 	static float f;
 	f = 0;
