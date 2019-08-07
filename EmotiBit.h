@@ -167,7 +167,7 @@ BMM150TrimData bmm150TrimData;
 	float readBatteryVoltage();
 	int8_t readBatteryPercent();
 	bool setSensorTimer(SensorTimer t);
-	//dfdf/bool printConfigInfo(File &file, String datetimeString);
+	bool printConfigInfo(File &file, String datetimeString);
 	//bool printConfigInfo(File file, String datetimeString);
 	bool setSamplingRates(SamplingRates s);
 	bool setSamplesAveraged(SamplesAveraged s);

@@ -916,7 +916,7 @@ bool EmotiBit::setSensorTimer(SensorTimer t) {
 }
 
 
-#if 0
+#if 1
 bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 #ifdef DEBUG
 	Serial.println("printConfigInfo");
@@ -942,128 +942,113 @@ bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
-		//JsonArray& root = jsonBuffer.createArray();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 
 		// Accelerometer
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Accelerometer");
-		infos[i]->set("type", "Accelerometer");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("AX");
-		typeTags[i]->add("AY");
-		typeTags[i]->add("AZ");
-		infos[i]->set("channel_count", 3);
-		infos[i]->set("nominal_srate", _samplingRates.accelerometer);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "G/second");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("range", _accelerometerRange);
+		infos[i]["name"] = "Accelerometer";
+		infos[i]["type"] = "Accelerometer";
 
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("AX");
+		typeTags[i].add("AY");
+		typeTags[i].add("AZ");
+		infos[i]["channel_count"] = 3;
+		infos[i]["nominal_srate"] = _samplingRates.accelerometer;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "G/second";
+		infos[i]["source_id"] = source_id;
+		infos[i]["hardware_version"] = hardware_version;
+		infos[i]["feather_version"] = feather_version;
+		infos[i]["firmware_version"] = firmware_version;
+		infos[i]["created_at"] = datetimeString;
+		setups[i] = infos[i].createNestedObject("setup");
+		setups[i]["range"] = _accelerometerRange;
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
-
+#if 1
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
-		//JsonArray& root = jsonBuffer.createArray();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 
 		// Gyroscope
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Gyroscope");
-		infos[i]->set("type", "Gyroscope");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("GX");
-		typeTags[i]->add("GY");
-		typeTags[i]->add("GZ");
-		infos[i]->set("channel_count", 3);
-		infos[i]->set("nominal_srate", _samplingRates.gyroscope);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "degrees/second");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("range", _gyroRange);
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i]["name"] = "Gyroscope";
+		infos[i]["type"] = "Gyroscope";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("GX");
+		typeTags[i].add("GY");
+		typeTags[i].add("GZ");
+		infos[i]["channel_count"] = 3;
+		infos[i]["nominal_srate"] = _samplingRates.gyroscope;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "degrees/second";
+		infos[i]["source_id"] = source_id;
+		infos[i]["hardware_version"] = hardware_version;
+		infos[i]["feather_version"] = feather_version;
+		infos[i]["firmware_version"] = firmware_version;
+		infos[i]["created_at"] = datetimeString;
+		setups[i] = infos[i].createNestedObject("setup");
+		setups[i]["range"] = _gyroRange;
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
-		//JsonArray& root = jsonBuffer.createArray();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 
 		// Magnetometer
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Magnetometer");
-		infos[i]->set("type", "Magnetometer");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("MX");
-		typeTags[i]->add("MY");
-		typeTags[i]->add("MZ");
-		infos[i]->set("channel_count", 3);
-		infos[i]->set("nominal_srate", _samplingRates.magnetometer);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "raw samples");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i]["name"] = "Magnetometer";
+		infos[i]["type"] = "Magnetometer";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("MX");
+		typeTags[i].add("MY");
+		typeTags[i].add("MZ");
+		infos[i]["channel_count"] = 3;
+		infos[i]["nominal_srate"] = _samplingRates.magnetometer;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "raw samples";
+		infos[i]["source_id"] = source_id;
+		infos[i]["hardware_version"] = hardware_version;
+		infos[i]["feather_version"] = feather_version;
+		infos[i]["firmware_version"] = firmware_version;
+		infos[i]["created_at"] = datetimeString;
+		setups[i] = infos[i].createNestedObject("setup");
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
@@ -1072,226 +1057,203 @@ bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 		// EDA
 
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 		//i++;
-		infos[i]->set("name", "ElectrodermalActivity");
-		infos[i]->set("type", "ElectrodermalActivity");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("EA");
-		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", _samplingRates.eda / _samplesAveraged.eda);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "microsiemens");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("adc_bits", _adcBits);
-		setups[i]->set("voltage_divider_resistance", edaVDivR);
-		setups[i]->set("EDR_amplification", edrAmplification);
-		setups[i]->set("low_pass_filter_frequency", "15.91Hz");
-		setups[i]->set("samples_averaged", _samplesAveraged.eda);
-		setups[i]->set("oversampling_rate", _samplingRates.eda);
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i]["name"] = "ElectrodermalActivity";
+		infos[i]["type"] = "ElectrodermalActivity";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("EA");
+		infos[i]["channel_count"] = 1;
+		infos[i]["nominal_srate"] = _samplingRates.eda / _samplesAveraged.eda;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "microsiemens";
+		infos[i]["source_id"] = source_id;
+		infos[i]["hardware_version"] = hardware_version;
+		infos[i]["feather_version"] = feather_version;
+		infos[i]["firmware_version"] = firmware_version;
+		infos[i]["created_at"] = datetimeString;
+		setups[i] = infos[i].createNestedObject("setup");
+		setups[i]["adc_bits"] = _adcBits;
+		setups[i]["voltage_divider_resistance"] = edaVDivR;
+		setups[i]["EDR_amplification"] = edrAmplification;
+		setups[i]["low_pass_filter_frequency"] = "15.91Hz";
+		setups[i]["samples_averaged"] = _samplesAveraged.eda;
+		setups[i]["oversampling_rate"] = _samplingRates.eda;
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
-		//JsonArray& root = jsonBuffer.createArray();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 		// Humidity0
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Humidity0");
-		infos[i]->set("type", "Humidity");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("H0");
-		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", _samplingRates.humidity / _samplesAveraged.humidity);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "Percent");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("resolution", "RESOLUTION_H11_T11");
-		setups[i]->set("samples_averaged", _samplesAveraged.humidity);
-		setups[i]->set("oversampling_rate", _samplingRates.humidity);
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i]["name"] = "Humidity0";
+		infos[i]["type"] = "Humidity";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("H0");
+		infos[i]["channel_count"] = 1;
+		infos[i]["nominal_srate"] = _samplingRates.humidity / _samplesAveraged.humidity;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "Percent";
+		infos[i]["source_id"] = source_id;
+		infos[i]["hardware_version"] = hardware_version;
+		infos[i]["feather_version"] = feather_version;
+		infos[i]["firmware_version"] = firmware_version;
+		infos[i]["created_at"] = datetimeString;
+		setups[i] = infos[i].createNestedObject("setup");
+		setups[i]["resolution"] = "RESOLUTION_H11_T11";
+		setups[i]["samples_averaged"] = _samplesAveraged.humidity;
+		setups[i]["oversampling_rate"] = _samplingRates.humidity;
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
-		//JsonArray& root = jsonBuffer.createArray();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 		// Temperature0
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Temperature0");
-		infos[i]->set("type", "Temperature");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("T0");
-		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", _samplingRates.temperature / _samplesAveraged.temperature);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "degrees celcius");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("resolution", "RESOLUTION_H11_T11");
-		setups[i]->set("samples_averaged", _samplesAveraged.temperature);
-		setups[i]->set("oversampling_rate", _samplingRates.temperature);
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i]["name"] = "Temperature0";
+		infos[i]["type"] = "Temperature";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("T0");
+		infos[i]["channel_count"] = 1;
+		infos[i]["nominal_srate"] = _samplingRates.temperature / _samplesAveraged.temperature;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "degrees celcius";
+		infos[i]["source_id"] = source_id;
+		infos[i]["hardware_version"] = hardware_version;
+		infos[i]["feather_version"] = feather_version;
+		infos[i]["firmware_version"] = firmware_version;
+		infos[i]["created_at"] = datetimeString;
+		setups[i] = infos[i].createNestedObject("setup");
+		setups[i]["resolution"] = "RESOLUTION_H11_T11";
+		setups[i]["samples_averaged"] = _samplesAveraged.temperature;
+		setups[i]["oversampling_rate"] = _samplingRates.temperature;
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
-		//JsonArray& root = jsonBuffer.createArray();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 
 		// Thermistor
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Thermistor");
-		infos[i]->set("type", "Thermistor");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("TH");
-		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", _samplingRates.thermistor / _samplesAveraged.thermistor);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "raw adc units");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("ADC_speed", "ADC_NORMAL");
-		setups[i]->set("Vin_buffering", "VIN_UNBUFFERED");
-		setups[i]->set("VREFP", "VREFP_VDDA");
-		setups[i]->set("voltage_divider_resistance", 10000);
-		setups[i]->set("thermistor_resistance", 10000);
-		setups[i]->set("low_pass_filter_frequency", "15.91Hz");
-		setups[i]->set("low_pass_filter_frequency", "0.1591Hz");
-		setups[i]->set("amplification", 10);
-		setups[i]->set("samples_averaged", _samplesAveraged.thermistor);
-		setups[i]->set("oversampling_rate", _samplingRates.thermistor);
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i]["name"] = "Thermistor";
+		infos[i]["type"] = "Thermistor";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("TH");
+		infos[i]["channel_count"] = 1;
+		infos[i]["nominal_srate"] = _samplingRates.thermistor / _samplesAveraged.thermistor;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "raw adc units";
+		infos[i]["source_id"] = source_id;
+		infos[i]["hardware_version"] = hardware_version;
+		infos[i]["feather_version"] = feather_version;
+		infos[i]["firmware_version"] = firmware_version;
+		infos[i]["created_at"] = datetimeString;
+		setups[i] = infos[i].createNestedObject("setup");
+		setups[i]["ADC_speed"] = "ADC_NORMAL";
+		setups[i]["Vin_buffering"] = "VIN_UNBUFFERED";
+		setups[i]["VREFP"] = "VREFP_VDDA";
+		setups[i]["voltage_divider_resistance"] = 10000;
+		setups[i]["thermistor_resistance"] = 10000;
+		setups[i]["low_pass_filter_frequency"] = "15.91Hz";
+		setups[i]["low_pass_filter_frequency"] = "0.1591Hz";
+		setups[i]["amplification"] = 10;
+		setups[i]["samples_averaged"] = _samplesAveraged.thermistor;
+		setups[i]["oversampling_rate"] = _samplingRates.thermistor;
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
-		//JsonArray& root = jsonBuffer.createArray();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 
 		// PPG
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "PPG");
-		infos[i]->set("type", "PPG");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("PI");
-		typeTags[i]->add("PR");
-		typeTags[i]->add("PG");
-		infos[i]->set("channel_count", 3);
-		infos[i]->set("nominal_srate", ppgSettings.sampleRate / ppgSettings.sampleAverage);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "raw units");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("LED_power_level", ppgSettings.ledPowerLevel);
-		setups[i]->set("samples_averaged", ppgSettings.sampleAverage);
-		setups[i]->set("LED_mode", ppgSettings.ledMode);
-		setups[i]->set("oversampling_rate", ppgSettings.sampleRate);
-		setups[i]->set("pulse_width", ppgSettings.pulseWidth);
-		setups[i]->set("ADC_range", ppgSettings.adcRange);
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i]["name"] = "PPG";
+		infos[i]["type"] = "PPG";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("PI");
+		typeTags[i].add("PR");
+		typeTags[i].add("PG");
+		infos[i]["channel_count"] = 3;
+		infos[i]["nominal_srate"] = ppgSettings.sampleRate / ppgSettings.sampleAverage;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "raw units";
+		infos[i]["source_id"] = source_id;
+		infos[i]["hardware_version"] = hardware_version;
+		infos[i]["feather_version"] = feather_version;
+		infos[i]["firmware_version"] = firmware_version;
+		infos[i]["created_at"] = datetimeString;
+		setups[i] = infos[i].createNestedObject("setup");
+		setups[i]["LED_power_level"] = ppgSettings.ledPowerLevel;
+		setups[i]["samples_averaged"] = ppgSettings.sampleAverage;
+		setups[i]["LED_mode"] = ppgSettings.ledMode;
+		setups[i]["oversampling_rate"] = ppgSettings.sampleRate;
+		setups[i]["pulse_width"] = ppgSettings.pulseWidth;
+		setups[i]["ADC_range"] = ppgSettings.adcRange;
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print("]"); // Doing some manual printing to chunk JSON and save RAM
+#endif
 
 	return true;
 }

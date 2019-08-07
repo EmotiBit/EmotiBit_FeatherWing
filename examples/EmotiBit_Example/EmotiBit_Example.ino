@@ -616,11 +616,11 @@ void parseIncomingMessages() {
 					String infoFilename = datetimeString + "_info.json";
 					dataFile = SD.open(infoFilename, FILE_WRITE);
 					if (dataFile) {
-          #if 0
+			#if 1
 						if (!emotibit.printConfigInfo(dataFile, datetimeString)) {
 							Serial.println(F("Failed to write to info file"));
 						}
-           #endif
+			#endif
 						dataFile.close();
 					}
 					// Try to open the data file to be sure we can write
@@ -1107,13 +1107,16 @@ bool loadConfigFile(String filename) {
 		return false;
 	}
 
-	// Copy values from the JsonObject to the Config
+	// Copy values from the JsonDocument to EmotiBitConfig
+	// https://arduinojson.org/v6/doc/deserialization/
+	// ssid and password default can be set by = jsonDoc[i] | "Default", but string already defaults to ""
+	//Explicit casting here is unneccessary, but generally safer
 	configSize = jsonDoc["WifiCredentials"].size(); 
 	Serial.print("ConfigSize: ");
 	Serial.println(configSize);
 	for (size_t i = 0; i < configSize; i++) {
-		configList[i].ssid = jsonDoc["WifiCredentials"][i]["ssid"] | "";
-		configList[i].password = jsonDoc["WifiCredentials"][i]["password"] | "";
+		configList[i].ssid = jsonDoc["WifiCredentials"][i]["ssid"].as<String>();
+		configList[i].password = jsonDoc["WifiCredentials"][i]["password"].as<String>();
 		Serial.println(configList[i].ssid);
 		Serial.println(configList[i].password);
 	}
@@ -1123,7 +1126,6 @@ bool loadConfigFile(String filename) {
 	//	sizeof(config.hostname));          // <- destination's capacity
 
 	// Close the file (File's destructor doesn't close the file)
-	// ToDo: Handle multiple credentials
 
 	file.close();
 	return true;
