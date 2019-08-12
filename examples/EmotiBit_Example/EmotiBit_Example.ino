@@ -1268,6 +1268,7 @@ void updateWiFi() {
 				if ((millis() - momentLost > WIFI_BEGIN_SWITCH_CRED) && (attempts >= 2)) {
 					switchCred = true;
 					gotIP = false;
+					sendResetPacket = true;
 					attempts = 0;
 				}
 				else { switchCred = false; }
