@@ -30,8 +30,6 @@ uint32_t momentLost;
 unsigned short int attempts = 0;
 
 
-
-
 #ifdef SEND_TCP
 #include <WiFi101.h> 
 //#include "arduino_secrets.h" 
@@ -64,12 +62,9 @@ IPAddress remoteIp;
 bool gotIP = false;
 uint16_t happy;
 const uint16_t MAX_SEND_LEN = 512;
-const uint16_t MAX_SD_WRITE_LEN = 256; // 512 is the size of the sdFat buffer
-const uint16_t OUT_MESSAGE_RESERVE_SIZE = 5000;
 const uint16_t MAX_INCOMING_PACKET_LEN = 256;
 char packetBuffer[MAX_INCOMING_PACKET_LEN]; //buffer to hold incoming packet
 char  ReplyBuffer[] = "acknowledged";       // a string to send back
-
 uint8_t nUDPSends = 1; // Number of times to send the same packet (e.g. for UDPx3
 
 WiFiUDP Udp;
@@ -78,6 +73,8 @@ bool sendUDP = true;
 bool sendUDP = false;
 #endif
 
+const uint16_t MAX_SD_WRITE_LEN = 256; // 512 is the size of the sdFat buffer
+const uint16_t OUT_MESSAGE_RESERVE_SIZE = 5000;
 uint16_t packetCount = 0;
 uint32_t charCount = 0;
 String outputMessage;
@@ -156,6 +153,32 @@ struct AcquireData {
 	bool ppg = true;
 } acquireData;
 
+void autoSDwrite() {
+	String datetimeString = "EmotiBitDataSave";
+	// Write the configuration info to json file
+	String infoFilename = datetimeString + "_info.json";
+	dataFile = SD.open(infoFilename, FILE_WRITE);
+	if (dataFile) {
+		if (!emotibit.printConfigInfo(dataFile, datetimeString)) {
+			Serial.println(F("Failed to write to info file"));
+		}
+		dataFile.close();
+	}
+	// Try to open the data file to be sure we can write
+	sdCardFilename = datetimeString + ".csv";
+	dataFile = SD.open(sdCardFilename, FILE_WRITE);
+	if (dataFile) {
+		sdWrite = true;
+		Serial.print("** Recording Begin: ");
+		Serial.print(sdCardFilename);
+		Serial.println(" **");
+		dataFile.close();
+
+	}
+	else {
+		Serial.println("Failed to open data file for writing");
+	}
+}
 
 
 String typeTags[(uint8_t) EmotiBit::DataType::length];
@@ -409,6 +432,8 @@ void setup() {
 	sendData[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = true;
 	sendData[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = true;
 
+	//autoSDwrite();
+
 	sendTimerStart = millis();
 	requestTimestampTimerStart = millis();
 
@@ -421,6 +446,44 @@ void setup() {
 	// ToDo: utilize separate strings for SD card writable messages vs transmit acks
 
 	sendResetPacket = true;
+#if 0
+	//GSRToggle; should be done with _analogEnablePin
+	pinMode(5, OUTPUT);
+	digitalWrite(5, HIGH);
+
+	//PPGToggle
+	emotibit.ppgSensor.shutDown();
+
+	//IMU Suspend Mode
+	//Suspend Accelerometer
+	BMI160.setRegister(BMI160_RA_CMD, 0x10); //set acc pmu mode to suspend: 0001 0000
+	delay(BMI160_READ_WRITE_DELAY);
+	uint8_t pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
+	delay(BMI160_READ_WRITE_DELAY);
+	while ((emotibit.getBit(pmu, BMI160_ACC_PMU_STATUS_BIT)!= 0) && (emotibit.getBit(pmu, BMI160_ACC_PMU_STATUS_BIT+1) != 0)) {
+		pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
+		delay(BMI160_READ_WRITE_DELAY);
+	}
+	//Suspend Gyro
+	BMI160.setRegister(BMI160_RA_CMD, 0x14); //set gyr pmu mode to suspend: 0001 0100
+	delay(BMI160_READ_WRITE_DELAY);
+	pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
+	delay(BMI160_READ_WRITE_DELAY);
+	while ((emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT) != 0) && (emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT + 1) != 0)) {
+		pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
+		delay(BMI160_READ_WRITE_DELAY);
+	}
+
+	//Suspend Mag
+	BMI160.setRegister(BMI160_RA_CMD, 0x18); //set mag pmu mode to suspend: 0001 1000
+	delay(BMI160_AUX_COM_DELAY);
+	pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
+	delay(BMI160_READ_WRITE_DELAY);
+	while ((emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT) != 0) && (emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT + 1) != 0)) {
+		pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
+		delay(BMI160_READ_WRITE_DELAY);
+	}
+#endif
 }
 
 String createPacketHeader(uint32_t timestamp, String typeTag, size_t dataLen) {
@@ -703,7 +766,9 @@ bool performTimestampSyncing() {
 	tempMessage += "TL";
 	tempMessage += ',';
 	tempMessage += "TU";
+#ifdef SEND_UDP
 	sendUdpMessage(tempMessage);
+#endif
 	outputMessage += tempMessage;
 	waitingForSyncData = packetCount;
 	packetCount++;
@@ -758,12 +823,13 @@ void loop() {
 		}
 	}
 
+#if defined(SEND_UDP) || defined(SEND_TCP)
 	// Periodically request a timestamp between data dumps to assess round trip time
 	if (millis() - requestTimestampTimerStart > REQUEST_TIMESTAMP_DELAY) {
 			requestTimestampTimerStart = millis();
 			performTimestampSyncing();
 	}
-		
+#endif	
 	// Send waiting data
 	bool newData = false;
 	if (millis() - sendTimerStart > NORMAL_MIN_SEND_DELAY) { // add a delay to batch data sending
@@ -989,12 +1055,50 @@ void printWiFiStatus() {
 void hibernate() {
 	stopTimer();
 
-	emotibit.ppgSensor.shutDown();
+#ifdef SEND_UDP || SEND_TCP
 	if (wifiStatus == WL_CONNECTED) {
 		WiFi.disconnect();
 	}
 	WiFi.end();
+#endif
+#if 1
+	//GSRToggle; should be done with _analogEnablePin
+	pinMode(5, OUTPUT);
+	digitalWrite(5, HIGH);
 
+	//PPGToggle
+	emotibit.ppgSensor.shutDown();
+
+	//IMU Suspend Mode
+	//Suspend Accelerometer
+	BMI160.setRegister(BMI160_RA_CMD, 0x10); //set acc pmu mode to suspend: 0001 0000
+	delay(BMI160_READ_WRITE_DELAY);
+	uint8_t pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
+	delay(BMI160_READ_WRITE_DELAY);
+	while ((emotibit.getBit(pmu, BMI160_ACC_PMU_STATUS_BIT) != 0) && (emotibit.getBit(pmu, BMI160_ACC_PMU_STATUS_BIT + 1) != 0)) {
+		pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
+		delay(BMI160_READ_WRITE_DELAY);
+	}
+	//Suspend Gyro
+	BMI160.setRegister(BMI160_RA_CMD, 0x14); //set gyr pmu mode to suspend: 0001 0100
+	delay(BMI160_READ_WRITE_DELAY);
+	pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
+	delay(BMI160_READ_WRITE_DELAY);
+	while ((emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT) != 0) && (emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT + 1) != 0)) {
+		pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
+		delay(BMI160_READ_WRITE_DELAY);
+	}
+
+	//Suspend Mag
+	BMI160.setRegister(BMI160_RA_CMD, 0x18); //set mag pmu mode to suspend: 0001 1000
+	delay(BMI160_AUX_COM_DELAY);
+	pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
+	delay(BMI160_READ_WRITE_DELAY);
+	while ((emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT) != 0) && (emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT + 1) != 0)) {
+		pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
+		delay(BMI160_READ_WRITE_DELAY);
+	}
+#endif
 	while (ledPinBusy)
 	pinMode(LED_BUILTIN, OUTPUT);
 
@@ -1174,6 +1278,7 @@ bool sendSdCardMessage(String & s) {
 	}
 }
 
+#ifdef SEND_UDP
 bool sendUdpMessage(String & s) {
 	if (wifiReady && socketReady) {
 
@@ -1208,6 +1313,7 @@ bool sendUdpMessage(String & s) {
 		}
 	}
 }
+#endif
 
 bool sendMessage(String & s) {
 
@@ -1236,6 +1342,7 @@ bool sendMessage(String & s) {
 		sendSdCardMessage(s);  
 }
 
+#ifdef SEND_UDP || SEND_TCP
 void updateWiFi() {
 	wifiStatus = WiFi.status();
 	if (wifiStatus != WL_CONNECTED) {
@@ -1346,6 +1453,7 @@ void rebootWiFi() {
 	wifiRebootCounter = 0;
 }
 
+
 int listNetworks() {
 	// scan for nearby networks:
 	Serial.println("xxxxxxx Scan Networks xxxxxxx");
@@ -1380,3 +1488,4 @@ int listNetworks() {
 
 	return numSsid;
 }
+#endif
