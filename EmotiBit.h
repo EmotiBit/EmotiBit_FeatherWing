@@ -127,6 +127,7 @@ public:
 	length
   };
   
+  uint8_t _analogEnablePin;
   Si7013 tempHumiditySensor;
 	uint8_t switchPin;
 	PPGSettings ppgSettings;
@@ -182,7 +183,6 @@ private:
 	SamplingRates _samplingRates;
 	SamplesAveraged _samplesAveraged;
 	uint8_t _batteryReadPin;
-  uint8_t _analogEnablePin;
   uint8_t _edlPin;
   uint8_t _edrPin;
 	float _vcc;

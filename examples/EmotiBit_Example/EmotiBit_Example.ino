@@ -446,44 +446,6 @@ void setup() {
 	// ToDo: utilize separate strings for SD card writable messages vs transmit acks
 
 	sendResetPacket = true;
-#if 0
-	//GSRToggle; should be done with _analogEnablePin
-	pinMode(5, OUTPUT);
-	digitalWrite(5, HIGH);
-
-	//PPGToggle
-	emotibit.ppgSensor.shutDown();
-
-	//IMU Suspend Mode
-	//Suspend Accelerometer
-	BMI160.setRegister(BMI160_RA_CMD, 0x10); //set acc pmu mode to suspend: 0001 0000
-	delay(BMI160_READ_WRITE_DELAY);
-	uint8_t pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
-	delay(BMI160_READ_WRITE_DELAY);
-	while ((emotibit.getBit(pmu, BMI160_ACC_PMU_STATUS_BIT)!= 0) && (emotibit.getBit(pmu, BMI160_ACC_PMU_STATUS_BIT+1) != 0)) {
-		pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
-		delay(BMI160_READ_WRITE_DELAY);
-	}
-	//Suspend Gyro
-	BMI160.setRegister(BMI160_RA_CMD, 0x14); //set gyr pmu mode to suspend: 0001 0100
-	delay(BMI160_READ_WRITE_DELAY);
-	pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
-	delay(BMI160_READ_WRITE_DELAY);
-	while ((emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT) != 0) && (emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT + 1) != 0)) {
-		pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
-		delay(BMI160_READ_WRITE_DELAY);
-	}
-
-	//Suspend Mag
-	BMI160.setRegister(BMI160_RA_CMD, 0x18); //set mag pmu mode to suspend: 0001 1000
-	delay(BMI160_AUX_COM_DELAY);
-	pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
-	delay(BMI160_READ_WRITE_DELAY);
-	while ((emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT) != 0) && (emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT + 1) != 0)) {
-		pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
-		delay(BMI160_READ_WRITE_DELAY);
-	}
-#endif
 }
 
 String createPacketHeader(uint32_t timestamp, String typeTag, size_t dataLen) {
@@ -1061,10 +1023,10 @@ void hibernate() {
 	}
 	WiFi.end();
 #endif
-#if 1
-	//GSRToggle; should be done with _analogEnablePin
-	pinMode(5, OUTPUT);
-	digitalWrite(5, HIGH);
+
+	//GSRToggle, write 1 to the PMOS
+	pinMode(emotibit._analogEnablePin, OUTPUT);
+	digitalWrite(emotibit._analogEnablePin, HIGH);
 
 	//PPGToggle
 	emotibit.ppgSensor.shutDown();
@@ -1098,13 +1060,10 @@ void hibernate() {
 		pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
 		delay(BMI160_READ_WRITE_DELAY);
 	}
-#endif
+
 	while (ledPinBusy)
 	pinMode(LED_BUILTIN, OUTPUT);
 
-	// ToDo: 
-	//	Shutdown IMU
-	//	Consider more low level power management
 
 	while (true) {
 		
