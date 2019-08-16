@@ -153,6 +153,9 @@ struct AcquireData {
 	bool ppg = true;
 } acquireData;
 
+//If this function is called in Setup(), SD writing is automatically initiated without
+// a start message from the GUI or wireless com. Could cause file overwrites do to file naming.
+// Probably causes BAD_THINGS if RB is sent when this function is called.
 void autoSDwrite() {
 	String datetimeString = "EmotiBitDataSave";
 	// Write the configuration info to json file
@@ -1014,6 +1017,7 @@ void printWiFiStatus() {
 //	return &stack_dummy - sbrk(0);
 //}
 
+//Currently Down to ~2.5mA draw (0.01 W)
 void hibernate() {
 	stopTimer();
 
@@ -1032,34 +1036,7 @@ void hibernate() {
 	emotibit.ppgSensor.shutDown();
 
 	//IMU Suspend Mode
-	//Suspend Accelerometer
-	BMI160.setRegister(BMI160_RA_CMD, 0x10); //set acc pmu mode to suspend: 0001 0000
-	delay(BMI160_READ_WRITE_DELAY);
-	uint8_t pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
-	delay(BMI160_READ_WRITE_DELAY);
-	while ((emotibit.getBit(pmu, BMI160_ACC_PMU_STATUS_BIT) != 0) && (emotibit.getBit(pmu, BMI160_ACC_PMU_STATUS_BIT + 1) != 0)) {
-		pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
-		delay(BMI160_READ_WRITE_DELAY);
-	}
-	//Suspend Gyro
-	BMI160.setRegister(BMI160_RA_CMD, 0x14); //set gyr pmu mode to suspend: 0001 0100
-	delay(BMI160_READ_WRITE_DELAY);
-	pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
-	delay(BMI160_READ_WRITE_DELAY);
-	while ((emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT) != 0) && (emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT + 1) != 0)) {
-		pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
-		delay(BMI160_READ_WRITE_DELAY);
-	}
-
-	//Suspend Mag
-	BMI160.setRegister(BMI160_RA_CMD, 0x18); //set mag pmu mode to suspend: 0001 1000
-	delay(BMI160_AUX_COM_DELAY);
-	pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
-	delay(BMI160_READ_WRITE_DELAY);
-	while ((emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT) != 0) && (emotibit.getBit(pmu, BMI160_GYR_PMU_STATUS_BIT + 1) != 0)) {
-		pmu = BMI160.getRegister(BMI160_RA_PMU_STATUS);
-		delay(BMI160_READ_WRITE_DELAY);
-	}
+	BMI160.suspendIMU();
 
 	while (ledPinBusy)
 	pinMode(LED_BUILTIN, OUTPUT);
