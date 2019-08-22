@@ -1021,6 +1021,10 @@ void printWiFiStatus() {
 void hibernate() {
 	stopTimer();
 
+  //PPGToggle
+  // For an unknown reason, this need to be before WiFi diconnect/end
+  emotibit.ppgSensor.shutDown();
+
 #ifdef SEND_UDP || SEND_TCP
 	if (wifiStatus == WL_CONNECTED) {
 		WiFi.disconnect();
@@ -1032,8 +1036,7 @@ void hibernate() {
 	pinMode(emotibit._analogEnablePin, OUTPUT);
 	digitalWrite(emotibit._analogEnablePin, HIGH);
 
-	//PPGToggle
-	emotibit.ppgSensor.shutDown();
+
 
 	//IMU Suspend Mode
 	BMI160.suspendIMU();
