@@ -203,6 +203,24 @@ void setup() {
 
 	Serial.println("setup()");
 
+#if defined(SEND_UDP) || defined(SEND_TCP)
+	//Configure pins for Adafruit ATWINC1500 Feather
+	WiFi.setPins(8, 7, 4, 2);
+	//WiFi.noLowPowerMode();
+	WiFi.lowPowerMode();
+
+	//WiFi.maxLowPowerMode();
+	// check for the presence of the shield:
+	if (WiFi.status() == WL_NO_SHIELD) {
+		Serial.println("WiFi shield not present");
+		// don't continue:
+		while (true) {
+			hibernate();
+		}
+	}
+#endif
+
+
 	if (!outputMessage.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
 		Serial.println("Failed to reserve memory for output");
 		while (true) {
@@ -262,22 +280,6 @@ void setup() {
 	//printDirectory(root, 0);
 	//Serial.println("done!");
 
-#if defined(SEND_UDP) || defined(SEND_TCP)
-	//Configure pins for Adafruit ATWINC1500 Feather
-	WiFi.setPins(8, 7, 4, 2);
-	//WiFi.noLowPowerMode();
-	WiFi.lowPowerMode();
-  
-	//WiFi.maxLowPowerMode();
-	// check for the presence of the shield:
-	if (WiFi.status() == WL_NO_SHIELD) {
-		Serial.println("WiFi shield not present");
-		// don't continue:
-		while (true) {
-			hibernate();
-		}
-	}
-#endif
 
 #ifdef SEND_UDP
 	// attempt to connect to WiFi network:
