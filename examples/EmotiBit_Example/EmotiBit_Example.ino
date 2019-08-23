@@ -189,13 +189,19 @@ uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
 bool sendData[(uint8_t)EmotiBit::DataType::length];
 
 void setup() {
-	Serial.println("setup()");
-
 	pinMode(LED_BUILTIN, OUTPUT);
 	digitalWrite(LED_BUILTIN, HIGH);
 	ledOn = true;
 
 	setupTimerStart = millis();
+
+	Serial.begin(SERIAL_BAUD);
+	//while (!Serial);
+	Serial.println("Serial started");
+
+	delay(500);
+
+	Serial.println("setup()");
 
 	if (!outputMessage.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
 		Serial.println("Failed to reserve memory for output");
@@ -203,12 +209,6 @@ void setup() {
 			hibernate();
 		}
 	}
-
-	delay(500);
-
-	Serial.begin(SERIAL_BAUD);
-	//while (!Serial);
-	Serial.println("Serial started");
 
 	delay(500);
 
