@@ -184,7 +184,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	Serial.print("edrAmplification = "); Serial.println(edrAmplification);
 
 	// Setup switch
-	pinMode(switchPin, INPUT);
+	if (switchPin != LED_BUILTIN) {
+		// If the LED_BUILTIN and switchpin are the same leave it as it was
+		// Otherwise setup the input
+		pinMode(switchPin, INPUT);
+	}
 
 	// Setup battery Reading
 	pinMode(_batteryReadPin, INPUT);
