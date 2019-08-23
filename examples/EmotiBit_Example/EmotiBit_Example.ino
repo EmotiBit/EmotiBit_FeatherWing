@@ -1019,32 +1019,39 @@ void printWiFiStatus() {
 
 //Currently Down to ~2.5mA draw (0.01 W)
 void hibernate() {
+	Serial.println("hibernate()");
+	Serial.println("Stopping timer...");
 	stopTimer();
 
   //PPGToggle
   // For an unknown reason, this need to be before WiFi diconnect/end
-  emotibit.ppgSensor.shutDown();
+	Serial.println("Shutting down ppg...");
+	emotibit.ppgSensor.shutDown();
 
 #ifdef SEND_UDP || SEND_TCP
 	if (wifiStatus == WL_CONNECTED) {
+		Serial.println("Disconnecting WiFi...");
 		WiFi.disconnect();
 	}
+	Serial.println("Ending WiFi...");
 	WiFi.end();
 #endif
 
-	//GSRToggle, write 1 to the PMOS
+	//GSRToggle, write 1 to the PMO
+	Serial.println("Disabling analog circuitry...");
 	pinMode(emotibit._analogEnablePin, OUTPUT);
 	digitalWrite(emotibit._analogEnablePin, HIGH);
 
 
 
 	//IMU Suspend Mode
+	Serial.println("Suspending IMU...");
 	BMI160.suspendIMU();
 
 	while (ledPinBusy)
 	pinMode(LED_BUILTIN, OUTPUT);
 
-
+	Serial.println("Entering sleep loop...");
 	while (true) {
 		
 		digitalWrite(LED_BUILTIN, LOW); // Show we're asleep
@@ -1288,7 +1295,7 @@ void updateWiFi() {
 		wifiReady = false;
 		socketReady = false;
 	}
-#if 1
+#if 0
 	//Serial.println("<<<<<<< updateWiFi >>>>>>>");
 	Serial.println("------- WiFi Status -------");
 	Serial.println(millis());
