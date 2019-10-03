@@ -101,6 +101,9 @@ public:
 	};
 
   enum class DataType{
+  	DATA_OVERFLOW,
+	DATA_CLIPPING,
+	//TODO: Add a debug data type
 	EDA,
 	EDL,
 	EDR,
@@ -121,8 +124,6 @@ public:
 	MAGNETOMETER_Z,
 	BATTERY_VOLTAGE,
 	BATTERY_PERCENT,
-	DATA_OVERFLOW,
-	DATA_CLIPPING,
 	//PUSH_WHILE_GETTING,
 	length
   };

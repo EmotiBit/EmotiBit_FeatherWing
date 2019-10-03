@@ -86,7 +86,7 @@ String consoleMessage;
 bool socketReady = false;
 bool wifiReady = false;
 uint32_t wifiRebootCounter = 0;
-uint32_t wifiRebootTarget = 20000;				/*Set to 250 for WiFi debugging, 20000 for Release*/
+uint32_t wifiRebootTarget = 2000000;				/*Set to 250 for WiFi debugging, 20000 for Release*/
 uint32_t networkBeginStart;
 uint32_t WIFI_BEGIN_ATTEMPT_DELAY = 5000;
 uint32_t WIFI_BEGIN_SWITCH_CRED = 300000;      //Set to 30000 for debug, 300000 for Release
@@ -112,6 +112,9 @@ uint8_t defaultDataReliabilityScore = 100;
 uint32_t setupTimerStart = 0;
 const uint32_t SETUP_TIMEOUT = 61500;          //Enough time to run through list of network credentials twice
 bool sendResetPacket = false;
+
+//TODO: find a better way to Debug ::DBTAG1
+uint8_t debugWifiRecord[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 String configFilename = "config.txt";
 
@@ -467,8 +470,15 @@ bool addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t da
 	if (dataLen > 0) {
 		// ToDo: Consider faster ways to populate the outputMessage
 		outputMessage += "\n";
-		outputMessage += createPacketHeader( timestamp, typeTags[(uint8_t)t], dataLen);
-
+		// DBTAG1
+		if (t == EmotiBit::DataType::DATA_OVERFLOW){
+			outputMessage += createPacketHeader( timestamp, "DB", 10);
+			for (uint8_t i = 0; i < 10; i++){
+				outputMessage += String(debugWifiRecord[i]);
+			}
+			outputMessage += "\n";
+		}
+		outputMessage += createPacketHeader( timestamp, , 10);
 		for (uint16_t i = 0; i < dataLen; i++) {
 			outputMessage += ",";
 			if (t == EmotiBit::DataType::DATA_CLIPPING || t == EmotiBit::DataType::DATA_OVERFLOW) {
@@ -722,7 +732,11 @@ void loop() {
 #endif // DEBUG
 
 	updateWiFi();
-
+	// DBTAG1
+	for (uint8_t i=0;i<9;i++){
+		debugWifiRecord[i] = debugWifiRecord[i+1];
+	}
+	debugWifiRecord[9] = (uint8_t)WiFi.status();
 	parseIncomingMessages();
 
 
