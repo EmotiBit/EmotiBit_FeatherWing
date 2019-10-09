@@ -149,16 +149,16 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	_analogEnablePin = 5; // gpio pin assigned to the mosfet
 	switchPin = 13;
 	_batteryReadPin = A7;
-	_edlPin = A3;
-	_edrPin = A4;
+	_edlPin = A0;
+	_edrPin = A1;
 	_sdCardChipSelectPin = 6;
 	_adcBits = 12;
 	adcRes = pow(2, _adcBits);	// adc bit resolution
 #elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
 	_analogEnablePin = 27;//gpio pin assigned ot the mosfet
 	switchPin = 16;
-	_gsrLowPin = A3;
-	_gsrHighPin = A4;
+	_gsrLowPin = A0;
+	_gsrHighPin = A1;
 	analogReadResolution(12);
 	adcRes = 4096.f;	// adc bit resolution
 #endif

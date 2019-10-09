@@ -103,16 +103,6 @@ public:
   enum class DataType{
   	DATA_OVERFLOW,
 	DATA_CLIPPING,
-	//TODO: Add a debug data type
-	EDA,
-	EDL,
-	EDR,
-	PPG_INFRARED,
-	PPG_RED,
-	PPG_GREEN,
-	TEMPERATURE_0,
-	TEMPERATURE_HP0,
-	HUMIDITY_0,
 	ACCELEROMETER_X,
 	ACCELEROMETER_Y,
 	ACCELEROMETER_Z,
@@ -122,10 +112,38 @@ public:
 	MAGNETOMETER_X,
 	MAGNETOMETER_Y,
 	MAGNETOMETER_Z,
+	PPG_INFRARED,
+	PPG_RED,
+	PPG_GREEN,
+	//TODO: Add a debug data type
+	EDA,
+	EDL,
+	EDR,
+	TEMPERATURE_0,
+	TEMPERATURE_HP0,
+	HUMIDITY_0,
 	BATTERY_VOLTAGE,
 	BATTERY_PERCENT,
 	//PUSH_WHILE_GETTING,
 	length
+  };
+
+  enum class DebugTags{
+  	WIFI_CONNHISTORY = 1,  // To print wifi connection history till point of do
+  	WIFI_DISCONNECT,  // Add message at wifi disconnect 
+  	WIFI_TIMELOSTCONN,  // add message indicating time of disconnect
+  	WIFI_CONNECT,  // add message indicating established connection
+  	WIFI_UPDATECONNRECORDTIME = 0,// NO LONGER IN USE
+  	TIME_PARSEINCOMINGMSG = 6,  // time taken to parse incoming message
+  	TIME_TIMESTAMPSYNC = 0,  // time taken for time stamp syncing
+  	TIME_MSGGENERATION = 8,  // time taken for message generation
+  	TIME_MSGTX,  // time taken for comlpete transmission(udp_sdcard)
+  	TIME_UDPTX,  // time taken for udp transmission
+  	TIME_SDCARDTX,  // time taken for sdcard transmission
+  	TIME_FILEOPEN,  // time taken for file opening
+  	TIME_FILEWRITES,  // time taken for file write
+  	TIME_FILECLOSE,  // time taken for file close
+  	TIME_FILESYNC  //time taken for file syncing
   };
   
   Si7013 tempHumiditySensor;
