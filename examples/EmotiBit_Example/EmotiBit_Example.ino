@@ -647,7 +647,7 @@ bool addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t da
 		outputMessage += "\n";
 		//DBTAG
 		if (t == EmotiBit::DataType::DATA_OVERFLOW){
-			addDebugPacket(1, timestamp);  // addDebugPacket(case, timestamp) 
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_CONNHISTORY, timestamp);  // addDebugPacket(case, timestamp) 
 		}
 		outputMessage += createPacketHeader( timestamp, typeTags[(uint8_t)t], dataLen);
 		for (uint16_t i = 0; i < dataLen; i++) {
@@ -928,13 +928,13 @@ Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
 	debugWifiRecord[MAX_WIFI_CONNECT_HISTORY - 1] = (uint8_t)WiFi.status();
 	// uint32_t duration_WifiRecordAdjust = millis() - start_WifiRecordAdjust;
 	// if ( wifiRebootCounter % 500== 0)
-	// 	addDebugPacket(5, duration_WifiRecordAdjust);  // To record the time taken for adjusting the array of wifi status 
+	// 	addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_UPDATECONNRECORDTIME, duration_WifiRecordAdjust);  // To record the time taken for adjusting the array of wifi status 
 	//DBTAG1
 	uint32_t start_timeparseIncomingMessage = millis();
 	parseIncomingMessages();
 	//DBTAG1
 	if (millis() - start_timeparseIncomingMessage > 100){
-		addDebugPacket(6,millis() - start_timeparseIncomingMessage);
+		addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_PARSEINCOMINGMSG,millis() - start_timeparseIncomingMessage);
 	}
 	
 	// Check for hibernate button press
@@ -976,7 +976,7 @@ Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
 			performTimestampSyncing();
 			//DBTAG1
 			if (millis() - start_timestampSync > 100){
-			addDebugPacket(7, millis() - start_timestampSync); // To record time taken for time stamp syncing
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_TIMESTAMPSYNC, millis() - start_timestampSync); // To record time taken for time stamp syncing
 			}
 	}
 		
@@ -994,24 +994,24 @@ Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
 			newData = addPacket((EmotiBit::DataType) i);
 			// DBTAG1
 			if(i == (uint16_t)EmotiBit::DataType::length - 1)
-				addDebugPacket(8, millis() - start_getdata);
+				addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_MSGGENERATION, millis() - start_getdata);
 			//DBTAG1
 			if (outputMessage.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE) {
 				// Send batches to avoid using too much memory
-				addDebugPacket(8, millis() - start_getdata);
+				addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_MSGGENERATION, millis() - start_getdata);
 				// start_timeSendMessage = millis(); // commented to stop printing the total TX time
 				sendMessage(outputMessage);
 				outputMessage = "";
-				// addDebugPacket(12, duration_timeOpenFile);
+				// addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILEOPEN, duration_timeOpenFile);
 				if (fileOpened){
-					addDebugPacket(13,0); // to add the file write times
-					addDebugPacket(15, duration_timeFileSync); // to add the file sync time
+					addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILEWRITES,0); // to add the file write times
+					addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILESYNC, duration_timeFileSync); // to add the file sync time
 				}
-				// addDebugPacket(13,0); // to add the file write times
-				// addDebugPacket(14, duration_timeFileClose);
-				addDebugPacket(10, duration_udpSend);
-				addDebugPacket(11, duration_sdcardSend);
-				// addDebugPacket(9, millis() - start_timeSendMessage); // commented to stop printing the total TX time
+				// addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILEWRITES,0); // to add the file write times
+				// addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILECLOSE, duration_timeFileClose);
+				addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_UDPTX, duration_udpSend);
+				addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_SDCARDTX, duration_sdcardSend);
+				// addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_MSGTX,TIME_MSGTX, millis() - start_timeSendMessage); // commented to stop printing the total TX time
 				start_getdata = millis();
 			}
 		}
@@ -1020,20 +1020,20 @@ Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
 		sendMessage(outputMessage);
 		outputMessage = "";
 		if (duration_timeOpenFile && !sent_FOPEN){
-			addDebugPacket(12, duration_timeOpenFile);
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILEOPEN, duration_timeOpenFile);
 			sent_FOPEN = true;
 		}
 		if (fileOpened){
-			addDebugPacket(13,0); // to add the file write times
-			addDebugPacket(15, duration_timeFileSync); // to add the file sync time
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILEWRITES,0); // to add the file write times
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILESYNC, duration_timeFileSync); // to add the file sync time
 		}
 		if (duration_timeFileClose && !sent_FCLOSE){
-			addDebugPacket(14, duration_timeFileClose);
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILECLOSE, duration_timeFileClose);
 			sent_FCLOSE = true;
 		}
-		addDebugPacket(10, duration_udpSend);
-		addDebugPacket(11, duration_sdcardSend);
-		// addDebugPacket(9, millis() - start_timeSendMessage); // commented to stop printing the total TX time
+		addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_UDPTX, duration_udpSend);
+		addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_SDCARDTX, duration_sdcardSend);
+		// addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_MSGTX, millis() - start_timeSendMessage); // commented to stop printing the total TX time
 		//DBTAG1
 		// if (false){
 		// Blink the LED slowly if we're writing to the SD card
@@ -1543,7 +1543,7 @@ void updateWiFi() {
 		//DBTAG1
 		// If Wifi gets disconnected
 		if (!connected){
-			addDebugPacket(2, millis());
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_DISCONNECT, millis());
 			connected = true;
 		}
 
@@ -1569,7 +1569,7 @@ void updateWiFi() {
 			momentLost = millis();
 			getMomentLost = false;
 			//DBTAG1
-			addDebugPacket(3, momentLost);// for reporting Wifi Lost moment
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_TIMELOSTCONN, momentLost);// for reporting Wifi Lost moment
 		}
 
 		if (millis() - networkBeginStart > WIFI_BEGIN_ATTEMPT_DELAY) {
@@ -1611,7 +1611,7 @@ void updateWiFi() {
 		// DBTAG1
 		if (connected){
 			connected = false;
-			addDebugPacket(4, millis());
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_CONNECT, millis());
 		}
 		if (!socketReady) {
 #ifdef SEND_TCP
