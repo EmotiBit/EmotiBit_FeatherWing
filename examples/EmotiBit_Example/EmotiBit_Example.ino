@@ -15,7 +15,7 @@ bool sendConsole = false;
 #include <SdFat.h>
 #include <ArduinoJson.h>
 
-SdFat SD;
+SdFat SD; 
 
 typedef struct EmotibitConfig {
 	String ssid = "";
@@ -64,8 +64,9 @@ IPAddress remoteIp;
 bool gotIP = false;
 uint16_t happy;
 const uint16_t MAX_SEND_LEN = 512;
-const uint16_t MAX_SD_WRITE_LEN = 256; // 512 is the size of the sdFat buffer
-const uint16_t OUT_MESSAGE_RESERVE_SIZE = 5000;
+const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
+const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
+uint16_t OUT_PACKET_MAX_SIZE = 1024;
 const uint16_t MAX_INCOMING_PACKET_LEN = 256;
 char packetBuffer[MAX_INCOMING_PACKET_LEN]; //buffer to hold incoming packet
 char  ReplyBuffer[] = "acknowledged";       // a string to send back
@@ -86,7 +87,7 @@ String consoleMessage;
 bool socketReady = false;
 bool wifiReady = false;
 uint32_t wifiRebootCounter = 0;
-uint32_t wifiRebootTarget = 20000;				/*Set to 250 for WiFi debugging, 20000 for Release*/
+uint32_t wifiRebootTarget = 2000000;				/*Set to 250 for WiFi debugging, 20000 for Release*/
 uint32_t networkBeginStart;
 uint32_t WIFI_BEGIN_ATTEMPT_DELAY = 5000;
 uint32_t WIFI_BEGIN_SWITCH_CRED = 300000;      //Set to 30000 for debug, 300000 for Release
@@ -112,6 +113,24 @@ uint8_t defaultDataReliabilityScore = 100;
 uint32_t setupTimerStart = 0;
 const uint32_t SETUP_TIMEOUT = 61500;          //Enough time to run through list of network credentials twice
 bool sendResetPacket = false;
+
+//TODO: find a better way to Debug ::DBTAG1
+uint8_t debugWifiRecord[40]; // = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+// DBTAG1
+bool connected = false;// used in updateWifi
+uint32_t start_udpSend = 0;// used in sendMessage
+uint32_t duration_udpSend = 0;//used in sendMessage
+uint32_t start_sdcardSend = 0;// used in sendMessage
+uint32_t duration_sdcardSend = 0;// used in sendMessage
+const uint8_t MAX_WIFI_CONNECT_HISTORY = 20; // NO. of wifi connectivity status to remember
+uint32_t duration_timeWriteFile[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint32_t duration_timeFileClose = 0;
+uint32_t duration_timeOpenFile = 0;
+bool sent_FOPEN = false;
+bool sent_FCLOSE = false;
+uint32_t duration_timeFileSync = 0;
+bool fileOpened = false;
 
 String configFilename = "config.txt";
 
@@ -163,11 +182,16 @@ uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
 bool sendData[(uint8_t)EmotiBit::DataType::length];
 
 void setup() {
+	// DBTAG
+	for (uint8_t i = 0; i < 40; i++)
+		debugWifiRecord[i] = 0;
 	Serial.println("setup()");
-
+	// DBTAG1
+	// if (false){
 	pinMode(LED_BUILTIN, OUTPUT);
 	digitalWrite(LED_BUILTIN, HIGH);
 	ledOn = true;
+	// }
 
 	setupTimerStart = millis();
 
@@ -413,7 +437,7 @@ void setup() {
 	requestTimestampTimerStart = millis();
 
 
-	//Serial.println("Free Ram :" + String(FreeRam(), DEC) + " bytes");
+	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
 	Serial.println("Setup complete");
 	Serial.println("Starting interrupts");
 	startTimer(BASE_SAMPLING_FREQ);
@@ -456,7 +480,161 @@ String createPacketHeader(uint32_t timestamp, String typeTag, size_t dataLen) {
 //	header += defaultDataReliabilityScore;
 //	return true;
 //}
+//DBTAG1
+void addDebugPacket(uint8_t type, uint32_t timestamp)
+{
+	switch (type){
+		case 1:
+			/*
+			if a DO occurs, create a packet to specify previous WiFi states
+			*/
+			outputMessage += createPacketHeader( timestamp, "DB", MAX_WIFI_CONNECT_HISTORY + 1);
+			outputMessage += ",WFCONNHIS";
+			for (uint8_t i = 0; i < MAX_WIFI_CONNECT_HISTORY; i++){
+				outputMessage += ",";
+				outputMessage += String(debugWifiRecord[i]);
+			}
+			outputMessage += "\n";
+			break;
+		case 2:
+			/*
+			If Wifi Disconnects. Called from Wifiupdate()
+			timestamp = Moment Wifi Disconnects
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( timestamp, "DB", 1);
+			outputMessage += ",WFDCON";
+			break;
+		case 3:
+			/*
+			To record the time in miilis of Wifi Signal Lost
+			timestamp = momentLost
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( millis(), "DB", 1);
+			outputMessage += ",WFLostTime";
+			break;
+		case 4:
+			/*
+			When Wifi connects, record the new connection established
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( timestamp, "DB", 1);
+			outputMessage += ",WFCON";
+			break;
+		case 5:
+			/*
+			UPDATE: no longer in use. function call commented in code.
+			Print the time taken to adjust the buffer of wifi connectivity record.
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( millis(), "DB", 1);
+			outputMessage += ",Time taken for Wifi record update: ";
+			outputMessage += String(timestamp);
+			break;
+		case 6:
+			/*
+			To print the time taken for parseIncoingMessage from main loop
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( millis(), "DB", 1);
+			outputMessage += ",Time taken for parseIncomingMessages: ";
+			outputMessage += String(timestamp);
+			break;
+		case 7:
+			/*
+			UPDATE: no longer in use. function call commented in code.
+			To print the time taken for time syncing if it occurs
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( millis(), "DB", 1);
+			outputMessage += ",Time taken for time stamp syncing(involves call to parseIncomingMessages): ";
+			outputMessage += String(timestamp);
+			break;
+		case 8:
+			/*
+			To print the time taken for time syncing if it occurs
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( millis(), "DB", 2);
+			outputMessage += ",MGEN,";// Message generation
+			outputMessage += String(timestamp);
+			break;
 
+		case 9:
+			/*
+			UPDATE: no longer in use. Commented function call
+			To print the time taken for transmitting last message
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( millis(), "DB", 2);
+			outputMessage += ",MTX:";// Message Transmission
+			outputMessage += String(timestamp);
+			break;
+		case 10:
+			/*
+			To print time taken for udp tx of last message
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( millis(), "DB", 2);
+			outputMessage += ",udpTX,";// Message Transmission
+			outputMessage += String(timestamp);
+			break;
+		case 11:
+			/*
+			To print time taken for sdcardd tx of last message
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( millis(), "DB", 2);
+			outputMessage += ",sdTX,";
+			outputMessage += String(timestamp);
+			break;
+
+		case 12:
+			/*
+			To print time taken for file open
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( millis(), "DB", 2);
+			outputMessage += ",FOPEN,";
+			outputMessage += String(timestamp);
+			break;
+
+		case 13:
+			/*
+			To print time taken for file write
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( millis(), "DB", 11);
+			outputMessage += ",FWRITES";
+			for (uint8_t i =0; i < 10; i++){
+				outputMessage += ",";
+				outputMessage += String(duration_timeWriteFile[i]);
+			}
+			break;
+
+		case 14:
+			/*
+			To print time taken for file close
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( millis(), "DB", 2);
+			outputMessage += ",FCLOSE,";
+			outputMessage += String(timestamp);
+			break;
+
+		case 15:
+			/*
+			To print time taken for file sync
+			*/
+			outputMessage += "\n";
+			outputMessage += createPacketHeader( millis(), "DB", 2);
+			outputMessage += ",FSYNC,";
+			outputMessage += String(timestamp);
+			break;
+
+	}
+}
 
 bool addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision = 4) {
 #ifdef DEBUG_GET_DATA
@@ -467,8 +645,11 @@ bool addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t da
 	if (dataLen > 0) {
 		// ToDo: Consider faster ways to populate the outputMessage
 		outputMessage += "\n";
+		//DBTAG
+		if (t == EmotiBit::DataType::DATA_OVERFLOW){
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_CONNHISTORY, timestamp);  // addDebugPacket(case, timestamp) 
+		}
 		outputMessage += createPacketHeader( timestamp, typeTags[(uint8_t)t], dataLen);
-
 		for (uint16_t i = 0; i < dataLen; i++) {
 			outputMessage += ",";
 			if (t == EmotiBit::DataType::DATA_CLIPPING || t == EmotiBit::DataType::DATA_OVERFLOW) {
@@ -506,9 +687,10 @@ bool addPacket(EmotiBit::DataType t) {
 	float * data;
 	uint32_t timestamp;
 	size_t dataLen;
-
+	
 	dataLen = emotibit.getData(t, &data, &timestamp);
 
+	
 	if (sendData[(uint8_t)t]) {
 		return addPacket(timestamp, t, data, dataLen, printLen[(uint8_t)t]);
 	}
@@ -621,16 +803,21 @@ void parseIncomingMessages() {
 						}
 						dataFile.close();
 					}
+					Serial.println("Creating new file to write data");
 					// Try to open the data file to be sure we can write
 					sdCardFilename = datetimeString + ".csv";
-					dataFile = SD.open(sdCardFilename, FILE_WRITE);
+					uint32_t start_timeOpenFile = millis();
+					dataFile = SD.open(sdCardFilename, O_CREAT | O_WRITE | O_AT_END);
+					duration_timeOpenFile = millis() - start_timeOpenFile;
 					if (dataFile) {
 						sdWrite = true;
 						Serial.print("** Recording Begin: ");
 						Serial.print(sdCardFilename);
 						Serial.println(" **");
-						dataFile.close();
+						// dataFile.close();
 						isAckableMessage = true; // only ACK if we were able to open a file
+						//DBTAG1
+						fileOpened = true;
 					}
 					else {
 						Serial.println("Failed to open data file for writing");
@@ -643,6 +830,14 @@ void parseIncomingMessages() {
 					isLoggableMessage = true;
 					isAckableMessage = true;
 					stopSDWrite = true;
+
+					if(dataFile){
+						uint32_t start_timeFileClose = millis();
+						dataFile.close();
+						duration_timeFileClose = millis() - start_timeFileClose;
+						//DBTAG1
+						fileOpened = false;
+					}
 					Serial.println("** Recording End **");
 				}
 				else if (typeTag.equals("UN")) { // User note
@@ -717,15 +912,31 @@ bool performTimestampSyncing() {
 }
 
 void loop() {
+Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
 #ifdef DEBUG_GET_DATA
 	Serial.println("loop()");
 #endif // DEBUG
-
+	//DBTAG1
+	uint32_t start_timeSendMessage = 0;
+	uint32_t start_getdata;
 	updateWiFi();
-
+	// DBTAG1
+	// uint32_t start_WifiRecordAdjust = millis();
+	for (uint8_t i=0;i<MAX_WIFI_CONNECT_HISTORY - 1;i++){
+		debugWifiRecord[i] = debugWifiRecord[i+1];
+	}
+	debugWifiRecord[MAX_WIFI_CONNECT_HISTORY - 1] = (uint8_t)WiFi.status();
+	// uint32_t duration_WifiRecordAdjust = millis() - start_WifiRecordAdjust;
+	// if ( wifiRebootCounter % 500== 0)
+	// 	addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_UPDATECONNRECORDTIME, duration_WifiRecordAdjust);  // To record the time taken for adjusting the array of wifi status 
+	//DBTAG1
+	uint32_t start_timeparseIncomingMessage = millis();
 	parseIncomingMessages();
-
-
+	//DBTAG1
+	if (millis() - start_timeparseIncomingMessage > 100){
+		addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_PARSEINCOMINGMSG,millis() - start_timeparseIncomingMessage);
+	}
+	
 	// Check for hibernate button press
 	if (switchRead() == 0) {
 		hibernateButtonPressed = false;
@@ -757,11 +968,16 @@ void loop() {
 			hibernateButtonStart = millis();
 		}
 	}
-
+	//DBTAG1
+	uint32_t start_timestampSync = millis();
 	// Periodically request a timestamp between data dumps to assess round trip time
 	if (millis() - requestTimestampTimerStart > REQUEST_TIMESTAMP_DELAY) {
 			requestTimestampTimerStart = millis();
 			performTimestampSyncing();
+			//DBTAG1
+			if (millis() - start_timestampSync > 100){
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_TIMESTAMPSYNC, millis() - start_timestampSync); // To record time taken for time stamp syncing
+			}
 	}
 		
 	// Send waiting data
@@ -770,31 +986,71 @@ void loop() {
 		sendTimerStart = millis();
 		// Create data packets
 		for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++) {
+			//DBTAG1
+			if (i == 1){
+				start_getdata = millis();
+			}
+			
 			newData = addPacket((EmotiBit::DataType) i);
-			//if (outputMessage.length() > MAX_SEND_LEN - 100 || i == (uint8_t)EmotiBit::DataType::length - 1) {
-			//	// Send batches to avoid using too much memory
-			//	sendMessage(outputMessage);
-			//	outputMessage = "";
-			//}
+			// DBTAG1
+			if(i == (uint16_t)EmotiBit::DataType::length - 1)
+				addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_MSGGENERATION, millis() - start_getdata);
+			//DBTAG1
+			if (outputMessage.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE) {
+				// Send batches to avoid using too much memory
+				addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_MSGGENERATION, millis() - start_getdata);
+				// start_timeSendMessage = millis(); // commented to stop printing the total TX time
+				sendMessage(outputMessage);
+				outputMessage = "";
+				// addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILEOPEN, duration_timeOpenFile);
+				if (fileOpened){
+					addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILEWRITES,0); // to add the file write times
+					addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILESYNC, duration_timeFileSync); // to add the file sync time
+				}
+				// addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILEWRITES,0); // to add the file write times
+				// addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILECLOSE, duration_timeFileClose);
+				addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_UDPTX, duration_udpSend);
+				addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_SDCARDTX, duration_sdcardSend);
+				// addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_MSGTX,TIME_MSGTX, millis() - start_timeSendMessage); // commented to stop printing the total TX time
+				start_getdata = millis();
+			}
 		}
-
+		//DBTAG1
+		// start_timeSendMessage = millis(); // commented to stop printing the total TX time
 		sendMessage(outputMessage);
 		outputMessage = "";
-
-		// Blink the LED slowly if we're writing to the SD card
-		if (sdWrite && !ledPinBusy) {	// only change the LED if it's not busy to avoid crashes
-			ledPinBusy = true;
-			if (ledOn) {
-				pinMode(LED_BUILTIN, INPUT);
-				ledOn = false;
-			}
-			else {
-				pinMode(LED_BUILTIN, OUTPUT);
-				digitalWrite(LED_BUILTIN, HIGH);
-				ledOn = true;
-			}
-			ledPinBusy = false;
+		if (duration_timeOpenFile && !sent_FOPEN){
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILEOPEN, duration_timeOpenFile);
+			sent_FOPEN = true;
 		}
+		if (fileOpened){
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILEWRITES,0); // to add the file write times
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILESYNC, duration_timeFileSync); // to add the file sync time
+		}
+		if (duration_timeFileClose && !sent_FCLOSE){
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILECLOSE, duration_timeFileClose);
+			sent_FCLOSE = true;
+		}
+		addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_UDPTX, duration_udpSend);
+		addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_SDCARDTX, duration_sdcardSend);
+		// addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_MSGTX, millis() - start_timeSendMessage); // commented to stop printing the total TX time
+		//DBTAG1
+		// if (false){
+		// Blink the LED slowly if we're writing to the SD card
+			if (sdWrite && !ledPinBusy) {	// only change the LED if it's not busy to avoid crashes
+				ledPinBusy = true;
+				if (ledOn) {
+					pinMode(LED_BUILTIN, INPUT);
+					ledOn = false;
+				}
+				else {
+					pinMode(LED_BUILTIN, OUTPUT);
+					digitalWrite(LED_BUILTIN, HIGH);
+					ledOn = true;
+				}
+				ledPinBusy = false;
+			}
+		// }
 	}
 
 	if (!newData) {
@@ -979,13 +1235,30 @@ void printWiFiStatus() {
 #endif
 }
 
-//extern "C" char *sbrk(int i);
-//
-//int FreeRam() {
-//	char stack_dummy = 0;
-//	return &stack_dummy - sbrk(0);
-//}
+// extern "C" char *sbrk(int i);
 
+// int FreeRam() {s
+// 	char stack_dummy = 0;
+// 	return &stack_dummy - sbrk(0);
+// }
+
+#ifdef __arm__
+// should use uinstd.h to define sbrk but Due causes a conflict
+extern "C" char* sbrk(int incr);
+#else  // __ARM__
+extern char *__brkval;
+#endif  // __arm__
+ 
+int freeMemory() {
+  char top;
+#ifdef __arm__
+  return &top - reinterpret_cast<char*>(sbrk(0));
+#elif defined(CORE_TEENSY) || (ARDUINO > 103 && ARDUINO != 151)
+  return &top - __brkval;
+#else  // __arm__
+  return __brkval ? &top - __brkval : &top - __malloc_heap_start;
+#endif  // __arm__
+}
 void hibernate() {
 	stopTimer();
 
@@ -1131,7 +1404,17 @@ bool sendSdCardMessage(String & s) {
 	// Break up the message in to bite-size chunks to avoid over running the UDP or SD card write buffers
 	// UDP buffer seems to be about 1400 char. SD card buffer seems to be about 2500 char.
 	if (sdWrite && s.length() > 0) {
-		dataFile = SD.open(sdCardFilename, FILE_WRITE);
+		//DBTAG1
+		// dataFile = SD.open(sdCardFilename, FILE_WRITE);//O_CREAT | O_WRITE
+		
+		uint8_t writeCounter = 0;
+		uint32_t start_timeWriteFile;
+		for(uint8_t k = 0; k < 10;k ++){
+			duration_timeWriteFile[k] = 0;  //{0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+		}
+		// uint32_t start_timeOpenFile = millis();
+		// dataFile = SD.open(sdCardFilename, O_CREAT | O_WRITE | O_AT_END);
+		// duration_timeOpenFile =  millis() - start_timeOpenFile;
 		if (dataFile) {
 			static int16_t firstIndex;
 			firstIndex = 0;
@@ -1157,14 +1440,23 @@ bool sendSdCardMessage(String & s) {
 				Serial.println("writing to SD card");
 #endif // DEBUG
 				//sdCardFilename = "DATALOGLOGLOG.CSV";
-
+				// DBTAG1
+				start_timeWriteFile = millis();
 				dataFile.print(s.substring(firstIndex, lastIndex));
+				duration_timeWriteFile[writeCounter] = millis() - start_timeWriteFile;
+				writeCounter++;
 				firstIndex = lastIndex;
 
 				//dataFile.flush();
 				//firstIndex = lastIndex + 1;	// increment substring indexes for breaking up sends
 			}
-			dataFile.close();
+			
+			// uint32_t start_timeFileClose = millis();
+			// dataFile.close();
+			// duration_timeFileClose = millis() - start_timeFileClose;// to add the file close times
+			uint32_t start_timeFileSync = millis();
+			dataFile.sync();
+			duration_timeFileSync = millis() - start_timeFileSync;// to add the file close times
 		}
 		else {
 			Serial.print("Data file didn't open properly: ");
@@ -1229,11 +1521,18 @@ bool sendMessage(String & s) {
 		}
 #endif // SEND_UDP
 #ifdef SEND_UDP
+		//DBTAG1
+		start_udpSend = millis();
 		sendUdpMessage(s);
+		duration_udpSend = millis() - start_udpSend;
+		
 #endif // SEND_UDP	
 		// Write to SD card after sending network messages
 		// This give the receiving computer time to process in advance of a sync exchange
+		//DBTAG1
+		start_sdcardSend = millis();
 		sendSdCardMessage(s);  
+		duration_sdcardSend = millis() - start_sdcardSend;
 }
 
 void updateWiFi() {
@@ -1241,8 +1540,15 @@ void updateWiFi() {
 	if (wifiStatus != WL_CONNECTED) {
 		wifiReady = false;
 		socketReady = false;
+		//DBTAG1
+		// If Wifi gets disconnected
+		if (!connected){
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_DISCONNECT, millis());
+			connected = true;
+		}
+
 	}
-#if 1
+#if 0
 	//Serial.println("<<<<<<< updateWiFi >>>>>>>");
 	Serial.println("------- WiFi Status -------");
 	Serial.println(millis());
@@ -1262,6 +1568,8 @@ void updateWiFi() {
 		if (getMomentLost) {
 			momentLost = millis();
 			getMomentLost = false;
+			//DBTAG1
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_TIMELOSTCONN, momentLost);// for reporting Wifi Lost moment
 		}
 
 		if (millis() - networkBeginStart > WIFI_BEGIN_ATTEMPT_DELAY) {
@@ -1300,6 +1608,11 @@ void updateWiFi() {
 		}
 	}
 	else {
+		// DBTAG1
+		if (connected){
+			connected = false;
+			addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_CONNECT, millis());
+		}
 		if (!socketReady) {
 #ifdef SEND_TCP
 			if (millis() - networkBeginStart > WIFI_BEGIN_ATTEMPT_DELAY / 2) {
