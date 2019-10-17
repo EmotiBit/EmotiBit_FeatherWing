@@ -147,6 +147,7 @@ const uint32_t SERIAL_BAUD = 2000000; //115200
 uint16_t loopCount = 0;
 
 #define BASE_SAMPLING_FREQ 60
+#define IMU_SAMPLING_DIV 2
 #define EDA_SAMPLING_DIV 1
 #define TEMPERATURE_SAMPLING_DIV 2
 #define BATTERY_SAMPLING_DIV 60
@@ -213,9 +214,9 @@ void setup() {
 	emotibit.setSensorTimer(EmotiBit::SensorTimer::MANUAL);
 	emotibit.setup(EmotiBit::Version::V01B, 16);
 	EmotiBit::SamplingRates samplingRates;
-	samplingRates.accelerometer = BASE_SAMPLING_FREQ;
-	samplingRates.gyroscope = BASE_SAMPLING_FREQ;
-	samplingRates.magnetometer = BASE_SAMPLING_FREQ;
+	samplingRates.accelerometer = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
+	samplingRates.gyroscope = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
+	samplingRates.magnetometer = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
 	samplingRates.eda = BASE_SAMPLING_FREQ / EDA_SAMPLING_DIV;
 	samplingRates.humidity = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
 	samplingRates.temperature = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
@@ -1127,18 +1128,26 @@ void readSensors() {
 
 	// IMU
 	if (acquireData.imu) {
-		int8_t tempStatus = emotibit.updateIMUData();
-		//if (dataStatus.imu == 0) {
-		//	dataStatus.imu = tempStatus;
-		//}
+    static uint16_t imuCounter;
+    if (imuCounter == IMU_SAMPLING_DIV) {
+      imuCounter = 0;
+  		int8_t tempStatus = emotibit.updateIMUData();
+  		//if (dataStatus.imu == 0) {
+  		//	dataStatus.imu = tempStatus;
+  		//}
+    }
+    imuCounter++;
 	}
 
 	// PPG
 	if (acquireData.ppg) {
-		int8_t tempStatus = emotibit.updatePPGData();
-		//if (dataStatus.ppg == 0) {
-		//	dataStatus.ppg = tempStatus;
-		//}
+    
+		  int8_t tempStatus = emotibit.updatePPGData();
+      
+  		//if (dataStatus.ppg == 0) {
+  		//	dataStatus.ppg = tempStatus;
+  		//}
+
 	}
 
 	// Battery (all analog reads must be in the ISR)
