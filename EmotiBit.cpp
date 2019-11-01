@@ -259,31 +259,31 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_MANUAL_MODE_EN_MSK);
 	delay(BMI160_AUX_COM_DELAY);
 	EmotiBit::bmm150ReadTrimRegisters();
-	//Continue into data mode for the rest of the process
-	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_AUX_READ_BURST_MSK); // MAG data mode 8 byte burst
-	delay(BMI160_AUX_COM_DELAY);
+	
 	BMI160.setRegister(BMI160_MAG_IF_2, BMM150_DATA_REG); // ADD_BMM_DATA
 	delay(BMI160_AUX_COM_DELAY);
-	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OPMODE_REG); // ADD_BMM_MEASURE
-	delay(BMI160_AUX_COM_DELAY);
+	//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OPMODE_REG); // ADD_BMM_MEASURE
+	//delay(BMI160_AUX_COM_DELAY);
 
 	// Following example at https://github.com/BoschSensortec/BMI160_driver#auxiliary-fifo-data-parsing 
 
 	// Put the BMM150 in normal mode (may or may not be necessary if putting in force mode later)
 	// BMI160.setRegister(BMM150_OPMODE_REG, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
-	BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
+	BMI160.setRegister(BMI160_MAG_IF_4, BMM150_NORMAL_MODE);
 	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OPMODE_REG);
 	delay(BMI160_AUX_COM_DELAY);
 	
-	/* Set BMM150 repetitions for X/Y-Axis */
-	BMI160.setRegister(BMI160_MAG_IF_4, BMM150_REGULAR_REPXY);             //Added for BMM150 Support
-	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_XY_REP_REG);                 //Added for BMM150 Support
-	delay(BMI160_AUX_COM_DELAY);
+	// Already done in setup
+	///* Set BMM150 repetitions for X/Y-Axis */
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_REGULAR_REPXY);             //Added for BMM150 Support
+	//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_XY_REP_REG);                 //Added for BMM150 Support
+	//delay(BMI160_AUX_COM_DELAY);
 
-	/* Set BMM150 repetitions for Z-Axis */
-	BMI160.setRegister(BMI160_MAG_IF_4, BMM150_REGULAR_REPZ);              //Added for BMM150 Support
-	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_Z_REP_REG);                  //Added for BMM150 Support
-	delay(BMI160_AUX_COM_DELAY);
+	///* Set BMM150 repetitions for Z-Axis */
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_REGULAR_REPZ);              //Added for BMM150 Support
+	//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_Z_REP_REG);                  //Added for BMM150 Support
+	//delay(BMI160_AUX_COM_DELAY);
 
 	BMI160.setRegister(BMI160_MAG_IF_4, BMM150_FORCED_MODE);
 	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OPMODE_REG);
@@ -295,13 +295,16 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	delay(BMI160_AUX_COM_DELAY);
 
 	// Set the AUX ODR
+	/// LOOK HERE FOR PROBLEMS!
 	BMI160.setRegister(BMI160_AUX_ODR_ADDR, BMI160MagRate::BMI160_MAG_RATE_25HZ);
 	delay(BMI160_AUX_COM_DELAY);
 
 	// Disable manual mode (i.e. enable auto mode)
-	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_DISABLE * BMI160_MANUAL_MODE_EN_MSK, BMI160_MANUAL_MODE_EN_MSK);
+	//BMI160.setRegister(BMI160_MAG_IF_1, BMI160_DISABLE * BMI160_MANUAL_MODE_EN_MSK, BMI160_MANUAL_MODE_EN_MSK);
 
-	// might need to set the burst length here
+	// Set the burst length (also a cheeky way to disable manual mode)
+	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_AUX_READ_BURST_MSK); // MAG data mode 8 byte burst
+	delay(BMI160_AUX_COM_DELAY);
 
 	// Setup the FIFO
 	BMI160.setAccelFIFOEnabled(true);
@@ -318,75 +321,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	}
 
 
-	// From https://github.com/BoschSensortec/BMI160_driver#auxiliary-fifo-data-parsing
-	//bmm150.settings.pwr_mode = BMM150_NORMAL_MODE;
-	//rslt = bmm150_set_op_mode(&bmm150);
-		//rslt = write_op_mode(pwr_mode, dev);
-			//rslt = bmm150_get_regs(BMM150_OP_MODE_ADDR, &reg_data, 1, dev);
-			//if (rslt == BMM150_OK) {
-			//	/* Set the op_mode value in Opmode bits of 0x4C */
-			//	reg_data = BMM150_SET_BITS(reg_data, BMM150_OP_MODE, op_mode);
-			//	rslt = bmm150_set_regs(BMM150_OP_MODE_ADDR, &reg_data, 1, dev);
-			//}
-	//bmm150.settings.preset_mode = BMM150_PRESETMODE_LOWPOWER;
-	//rslt = bmm150_set_presetmode(&bmm150);
-		//dev->settings.data_rate = BMM150_DATA_RATE_10HZ; //BMM150_DATA_RATE_10HZ
-			//rslt = bmm150_get_regs(BMM150_OP_MODE_ADDR, &reg_data, 1, dev); //BMM150_OPMODE_REG
-			//if (rslt == BMM150_OK) {
-			//	/*Set the ODR value */
-			//	reg_data = BMM150_SET_BITS(reg_data, BMM150_ODR, dev->settings.data_rate);
-			//	rslt = bmm150_set_regs(BMM150_OP_MODE_ADDR, &reg_data, 1, dev);
-					//rslt = dev->write(dev->dev_id, reg_addr, reg_data, len);
-			//}
-		//dev->settings.xy_rep = BMM150_LOWPOWER_REPXY;
-			//rslt = bmm150_set_regs(BMM150_REP_XY_ADDR, &rep_xy, 1, dev);	
-		//dev->settings.z_rep = BMM150_LOWPOWER_REPZ;
-			//rslt = bmm150_set_regs(BMM150_REP_Z_ADDR, &rep_z, 1, dev);
-				//rslt = dev->write(dev->dev_id, reg_addr, reg_data, len);
-	//bmm150.settings.pwr_mode = BMM150_FORCED_MODE;
-	//rslt = bmm150_set_op_mode(&bmm150);
-	// auto_mode_addr = 0x42;
-	//dev->aux_cfg.aux_odr = BMI160_AUX_ODR_25HZ;
-	//rslt = bmi160_set_aux_auto_mode(&auto_mode_addr, dev);
-		//rslt = bmi160_set_regs(BMI160_AUX_IF_2_ADDR, data_addr, 1, dev);
-			//rslt = dev->write(dev->id, reg_addr, data, len);
-		//dev->delay_ms(BMI160_AUX_COM_DELAY);
-		//if (rslt == BMI160_OK)
-		//{
-		//	/* Configure the polling ODR for
-		//	 * auxiliary sensor */
-		//	rslt = config_aux_odr(dev);
-			//rslt = bmi160_set_regs(BMI160_AUX_ODR_ADDR, &aux_odr, 1, dev);
-			//dev->delay_ms(BMI160_AUX_COM_DELAY);
-		//	if (rslt == BMI160_OK)
-		//	{
-		//		/* Disable the aux. manual mode, i.e aux.
-		//		 * sensor is in auto-mode (data-mode) */
-		//		dev->aux_cfg.manual_enable = BMI160_DISABLE;
-		//		rslt = bmi160_config_aux_mode(dev);
-					//uint8_t aux_if[2] = { (uint8_t)(dev->aux_cfg.aux_i2c_addr * 2), 0 };
 
-					//rslt = bmi160_get_regs(BMI160_AUX_IF_1_ADDR, &aux_if[1], 1, dev);
-					//if (rslt == BMI160_OK)
-					//{
-					//	/* update the Auxiliary interface to manual/auto mode */
-					//	aux_if[1] = BMI160_SET_BITS(aux_if[1], BMI160_MANUAL_MODE_EN, dev->aux_cfg.manual_enable);
-
-					//	/* update the burst read length defined by user */
-					//	aux_if[1] = BMI160_SET_BITS_POS_0(aux_if[1], BMI160_AUX_READ_BURST, dev->aux_cfg.aux_rd_burst_len);
-
-					//	/* Set the secondary interface address and manual mode
-					//	 * along with burst read length */
-					//	rslt = bmi160_set_regs(BMI160_AUX_IF_0_ADDR, &aux_if[0], 2, dev);
-					//	dev->delay_ms(BMI160_AUX_COM_DELAY);
-						//rslt = dev->write(dev->id, reg_addr, data, len);
-					//}
-		//		/*  Auxiliary sensor data is obtained
-		//		 * in auto mode from this point */
-		//	}
-		//}
-	//rslt = bmi160_set_fifo_config(BMI160_FIFO_AUX | BMI160_FIFO_HEADER, BMI160_ENABLE, dev);
-	//rslt = bmi160_get_fifo_data(dev);
 
 	// ToDo: Add interrupts to accurately record timing of data capture
 
