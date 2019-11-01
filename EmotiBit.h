@@ -190,7 +190,7 @@ private:
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)
 	float _gyroRange; // supported values: 125, 250, 500, 1000, 2000 (degrees/second)
 	Version _version;
-
+	uint8_t _imuFifoFrameLen = 0; // in bytes
 
 	DoubleBufferFloat eda;
 	DoubleBufferFloat edl;
