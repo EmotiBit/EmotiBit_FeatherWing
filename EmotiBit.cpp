@@ -244,13 +244,13 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	// Accelerometer
 	_accelerometerRange = 8;
 	BMI160.setAccelerometerRange(_accelerometerRange);
-	BMI160.setAccelRate(BMI160::BMI160AccelRate::BMI160_ACCEL_RATE_25HZ);
-	BMI160.setAccelDLPFMode(BMI160::BMI160_DLPF_MODE_NORM);
+	BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_25HZ);
+	BMI160.setAccelDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
 
 	// Gyroscope
 	_gyroRange = 1000;
 	BMI160.setGyroRange(_gyroRange);
-	BMI160.setGyroRate(BMI160::BMI160AccelRate::BMI160_GYRO_RATE_25HZ);
+	BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_25HZ);
 
 	// Magnetometer
 	BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR); // I2C MAG
@@ -295,7 +295,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	delay(BMI160_AUX_COM_DELAY);
 
 	// Set the AUX ODR
-	BMI160.setRegister(BMI160_AUX_ODR_ADDR, BMI160::BMI160MagRate::BMI160_MAG_RATE_25HZ);
+	BMI160.setRegister(BMI160_AUX_ODR_ADDR, BMI160MagRate::BMI160_MAG_RATE_25HZ);
 	delay(BMI160_AUX_COM_DELAY);
 
 	// Disable manual mode (i.e. enable auto mode)
@@ -306,11 +306,16 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	// Setup the FIFO
 	BMI160.setAccelFIFOEnabled(true);
 	_imuFifoFrameLen += 6;
-	BMI160.getGyroFIFOEnabled(true);
+	BMI160.setGyroFIFOEnabled(true);
 	_imuFifoFrameLen += 6;
-	BMI160.setAccelFIFOEnabled(true);
+	BMI160.setMagFIFOEnabled(true);
 	_imuFifoFrameLen += 8;
-	BMI160.setFIFOHeaderModeEnabled(false);	 
+	BMI160.setFIFOHeaderModeEnabled(false);
+	if (_imuFifoFrameLen > _maxImuFifoFrameLen) {
+		// ToDo: handle _imuFifoFrameLen > _maxImuFifoFrameLen
+		Serial.println("UNHANDLED CASE: _imuFifoFrameLen > _maxImuFifoFrameLen");
+		while (true);
+	}
 
 
 	// From https://github.com/BoschSensortec/BMI160_driver#auxiliary-fifo-data-parsing
@@ -603,16 +608,17 @@ int8_t EmotiBit::updateIMUData() {
 		nFrames = BMI160.getFIFOCount() / _imuFifoFrameLen;
 	}
 
-	getFIFOCount();
-	for (unint16_t j = 0; j < nFrames; j++) {
+	for (uint16_t j = 0; j < nFrames; j++) {
 		if (_imuFifoFrameLen > 0) {
 			// Using FIFO
-			static uint8_t[_imuFifoFrameLen] data;
-			BMI160.getFIFOBytes(uint8_t *data, _imuFifoFrameLen);
+			
+			BMI160.getFIFOBytes(_imuBuffer, _imuFifoFrameLen);
 			if (_imuFifoFrameLen == 20) {
-				BMI160.extractMotion9(data, &ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
+				BMI160.extractMotion9(_imuBuffer, &ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
 			}
 			else {
+				Serial.println("UNHANDLED CASE: _imuFifoFrameLen != 20");
+				while (true);
 				// ToDo: Handle case when _imuFifoFrameLen < 20
 			}
 		}

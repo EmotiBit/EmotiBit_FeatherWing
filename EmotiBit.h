@@ -182,15 +182,17 @@ private:
 	SamplingRates _samplingRates;
 	SamplesAveraged _samplesAveraged;
 	uint8_t _batteryReadPin;
-  uint8_t _analogEnablePin;
-  uint8_t _edlPin;
-  uint8_t _edrPin;
+	uint8_t _analogEnablePin;
+	uint8_t _edlPin;
+	uint8_t _edrPin;
 	float _vcc;
 	uint8_t _adcBits;
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)
 	float _gyroRange; // supported values: 125, 250, 500, 1000, 2000 (degrees/second)
 	Version _version;
 	uint8_t _imuFifoFrameLen = 0; // in bytes
+	const uint8_t _maxImuFifoFrameLen = 40; // in bytes
+	uint8_t _imuBuffer[40];
 
 	DoubleBufferFloat eda;
 	DoubleBufferFloat edl;
