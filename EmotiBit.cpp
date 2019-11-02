@@ -309,9 +309,9 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	BMI160.setMagRate(BMI160MagRate::BMI160_MAG_RATE_50HZ);
 
 	// Disable manual mode (i.e. enable auto mode)
-	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_DISABLE * BMI160_MANUAL_MODE_EN_MSK, BMI160_MANUAL_MODE_EN_MSK);
+	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_DISABLE, BMI160_MANUAL_MODE_EN_MSK);
 
-	// Set the burst length (also a cheeky way to disable manual mode)
+	// Set the burst length
 	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_AUX_READ_BURST_MSK, BMI160_AUX_READ_BURST_MSK); // MAG data mode 8 byte burst
 	delay(BMI160_AUX_COM_DELAY);
 
