@@ -126,7 +126,7 @@ public:
 	//PUSH_WHILE_GETTING,
 	length
   };
-  
+
   Si7013 tempHumiditySensor;
 	uint8_t switchPin;
 	PPGSettings ppgSettings;

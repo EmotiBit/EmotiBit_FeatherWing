@@ -244,19 +244,21 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	// Accelerometer
 	_accelerometerRange = 8;
 	BMI160.setAccelerometerRange(_accelerometerRange);
-	BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_25HZ);
+	//BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_25HZ);
+	BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_50HZ);
 	BMI160.setAccelDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
 
 	// Gyroscope
 	_gyroRange = 1000;
 	BMI160.setGyroRange(_gyroRange);
-	BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_25HZ);
+	//BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_25HZ);
+	BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_50HZ);
 
 	// Magnetometer
 	BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR); // I2C MAG
 	delay(BMI160_AUX_COM_DELAY);
 	//initially load into setup mode to read trim values
-	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_MANUAL_MODE_EN_MSK);
+	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_MANUAL_MODE_EN_MSK, BMI160_MANUAL_MODE_EN_MSK);
 	delay(BMI160_AUX_COM_DELAY);
 	EmotiBit::bmm150ReadTrimRegisters();
 	
@@ -270,8 +272,10 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	// Put the BMM150 in normal mode (may or may not be necessary if putting in force mode later)
 	// BMI160.setRegister(BMM150_OPMODE_REG, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
 	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
-	BMI160.setRegister(BMI160_MAG_IF_4, BMM150_NORMAL_MODE);
-	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OPMODE_REG);
+
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_NORMAL_MODE);
+	BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_NORMAL_MODE, BMM150_OP_MODE_BIT, BMM150_OP_MODE_LEN);
+	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
 	delay(BMI160_AUX_COM_DELAY);
 	
 	// Already done in setup
@@ -285,9 +289,16 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_Z_REP_REG);                  //Added for BMM150 Support
 	//delay(BMI160_AUX_COM_DELAY);
 
-	BMI160.setRegister(BMI160_MAG_IF_4, BMM150_FORCED_MODE);
-	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OPMODE_REG);
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_25HZ);
+	BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ, BMM150_DATA_RATE_BIT, BMM150_DATA_RATE_LEN);
+	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
 	delay(BMI160_AUX_COM_DELAY);
+
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_FORCED_MODE);
+	BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_FORCED_MODE, BMM150_OP_MODE_BIT, BMM150_OP_MODE_LEN);
+	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
+	delay(BMI160_AUX_COM_DELAY);
+
 
 	// Setup the BMI160 AUX
 	// Set the auto mode address
@@ -295,15 +306,13 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	delay(BMI160_AUX_COM_DELAY);
 
 	// Set the AUX ODR
-	/// LOOK HERE FOR PROBLEMS!
-	BMI160.setRegister(BMI160_AUX_ODR_ADDR, BMI160MagRate::BMI160_MAG_RATE_25HZ);
-	delay(BMI160_AUX_COM_DELAY);
+	BMI160.setMagRate(BMI160MagRate::BMI160_MAG_RATE_50HZ);
 
 	// Disable manual mode (i.e. enable auto mode)
-	//BMI160.setRegister(BMI160_MAG_IF_1, BMI160_DISABLE * BMI160_MANUAL_MODE_EN_MSK, BMI160_MANUAL_MODE_EN_MSK);
+	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_DISABLE * BMI160_MANUAL_MODE_EN_MSK, BMI160_MANUAL_MODE_EN_MSK);
 
 	// Set the burst length (also a cheeky way to disable manual mode)
-	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_AUX_READ_BURST_MSK); // MAG data mode 8 byte burst
+	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_AUX_READ_BURST_MSK, BMI160_AUX_READ_BURST_MSK); // MAG data mode 8 byte burst
 	delay(BMI160_AUX_COM_DELAY);
 
 	// Setup the FIFO
@@ -540,13 +549,41 @@ int8_t EmotiBit::updateIMUData() {
 	uint16_t nFrames = 1;
 	if (_imuFifoFrameLen > 0) {
 		// Using FIFO, get available frame count
-		nFrames = BMI160.getFIFOCount() / _imuFifoFrameLen;
+		uint16_t nBytes = BMI160.getFIFOCount();
+		nFrames = nBytes / _imuFifoFrameLen;
+		if (nBytes > MAX_FIFO_BYTES - _imuFifoFrameLen * 2) {
+			// Possible data overflow on the IMU buffer
+			// ToDo: assess IMU buffer overflow more accurately
+			for (uint8_t j = (uint8_t)EmotiBit::DataType::ACCELEROMETER_X; j < (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z; j++) {
+				// Note: this for loop usage relies on all IMU data types being grouped from AX to MZ
+				dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]->push_back(j, &timestamp);
+			}
+		}
+		//Serial.print("FIFO Len: ");
+		//Serial.print(nFrames);
+		//Serial.print(" / ");
+		//Serial.println(nBytes);
 	}
 
 	for (uint16_t j = 0; j < nFrames; j++) {
 		if (_imuFifoFrameLen > 0) {
 			// Using FIFO
-			
+
+			//Serial.print(",");
+			//Serial.print(j);
+
+			// Check for near-overflow of IMU double buffer and if so let data stay on IMU FIFO
+			bool bufferMaxed = false;
+			for (uint8_t k = (uint8_t)EmotiBit::DataType::ACCELEROMETER_X; k < (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z; k++) {
+				// Note: this for loop usage relies on all IMU data types being grouped from AX to MZ
+				if (dataDoubleBuffers[k]->inSize() == dataDoubleBuffers[k]->inCapacity()) {
+					bufferMaxed = true;
+				}
+			}
+			if (bufferMaxed) {
+				// data is about to overflow... leave it on the FIFO
+				break;
+			}
 			BMI160.getFIFOBytes(_imuBuffer, _imuFifoFrameLen);
 			if (_imuFifoFrameLen == 20) {
 				BMI160.extractMotion9(_imuBuffer, &ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);

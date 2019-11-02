@@ -871,10 +871,15 @@ void readSensors() {
 
 	// IMU
 	if (acquireData.imu) {
-		int8_t tempStatus = emotibit.updateIMUData();
-		//if (dataStatus.imu == 0) {
-		//	dataStatus.imu = tempStatus;
+		//static int test = 1;
+		//if (test == 10) {
+			int8_t tempStatus = emotibit.updateIMUData();
+			//if (dataStatus.imu == 0) {
+			//	dataStatus.imu = tempStatus;
+			//}
+		//	test = 0;
 		//}
+		//test++;
 	}
 
 	// PPG
