@@ -244,18 +244,19 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	// Accelerometer
 	_accelerometerRange = 8;
 	BMI160.setAccelerometerRange(_accelerometerRange);
-	//BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_25HZ);
-	BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_50HZ);
 	BMI160.setAccelDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
+	//BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_25HZ);
+	BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_100HZ);
 
 	// Gyroscope
 	_gyroRange = 1000;
 	BMI160.setGyroRange(_gyroRange);
+	BMI160.setGyroDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
 	//BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_25HZ);
-	BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_50HZ);
+	BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_100HZ);
 
 	// Magnetometer
-	BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR); // I2C MAG
+	BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR, BMM150_BASED_I2C_MASK); // I2C MAG
 	delay(BMI160_AUX_COM_DELAY);
 	//initially load into setup mode to read trim values
 	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_MANUAL_MODE_EN_MSK, BMI160_MANUAL_MODE_EN_MSK);
@@ -280,12 +281,12 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	
 	// Already done in setup
 	///* Set BMM150 repetitions for X/Y-Axis */
-	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_REGULAR_REPXY);             //Added for BMM150 Support
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_LOWPOWER_REPXY);             //Added for BMM150 Support
 	//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_XY_REP_REG);                 //Added for BMM150 Support
 	//delay(BMI160_AUX_COM_DELAY);
 
 	///* Set BMM150 repetitions for Z-Axis */
-	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_REGULAR_REPZ);              //Added for BMM150 Support
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_LOWPOWER_REPXY);              //Added for BMM150 Support
 	//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_Z_REP_REG);                  //Added for BMM150 Support
 	//delay(BMI160_AUX_COM_DELAY);
 
@@ -306,13 +307,17 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	delay(BMI160_AUX_COM_DELAY);
 
 	// Set the AUX ODR
-	BMI160.setMagRate(BMI160MagRate::BMI160_MAG_RATE_50HZ);
+	BMI160.setMagRate(BMI160MagRate::BMI160_MAG_RATE_100HZ);
 
 	// Disable manual mode (i.e. enable auto mode)
 	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_DISABLE, BMI160_MANUAL_MODE_EN_MSK);
 
 	// Set the burst length
 	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_AUX_READ_BURST_MSK, BMI160_AUX_READ_BURST_MSK); // MAG data mode 8 byte burst
+	delay(BMI160_AUX_COM_DELAY);
+
+	// Bosch code sets the I2C register again here for an unknown reason
+	BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR, BMM150_BASED_I2C_MASK); // I2C MAG
 	delay(BMI160_AUX_COM_DELAY);
 
 	// Setup the FIFO
@@ -328,8 +333,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 		Serial.println("UNHANDLED CASE: _imuFifoFrameLen > _maxImuFifoFrameLen");
 		while (true);
 	}
-
-
 
 
 	// ToDo: Add interrupts to accurately record timing of data capture
@@ -599,6 +602,8 @@ int8_t EmotiBit::updateIMUData() {
 			BMI160.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
 			//BMI160.getMotion9Bosch(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
 			//BMI160.getMotion9Check(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
+
+			Serial.println("getMotion9");
 		}
 
 		// ToDo: Utilize IMU 1024 buffer to help mitigate buffer overruns

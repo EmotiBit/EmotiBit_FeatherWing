@@ -27,55 +27,62 @@ public:
 		V01C
 	};
 
-  typedef struct IMUSettings {
-    int gyroResolution = 250;
-    int accResolution = 2;
-		uint8_t IF_CONF = 0x6B; //BMI160_IF_CONF
-    uint8_t FIFO_CONF = 0x47;//BMI160_RA_FIFO_CONFIG_1
-    uint8_t MAG_IF_0 = 0x4B;//BMI160_MAG_IF_0
-    uint8_t MAG_IF_1 = 0x4C;//BMI160_MAG_IF_1
-    uint8_t MAG_IF_2 = 0x4D;//BMI160_MAG_IF_2
-    uint8_t MAG_IF_3 = 0x4E;//BMI160_MAG_IF_3
-    uint8_t MAG_IF_4 = 0x4F;//BMI160_MAG_IF_4
-    uint8_t DATA_T_L = 0x20;//BMI160_RA_TEMP_L 
-    uint8_t DATA_T_M = 0x21;//BMI160_RA_TEMP_M 
-    uint8_t DATA_MAG_X_L = 0x04;//BMI160_RA_MAG_X_L
-    uint8_t DATA_MAG_X_M = 0x05;//BMI160_RA_MAG_X_M
-    uint8_t MAG_CONF = 0x44;
-    uint8_t FIFO_L = 0x46;
-    uint8_t FIFO_M = 0x47;
-    uint8_t STATUS = 0x1B;
-    uint8_t I2C_MAG = 0x20;
-    uint8_t MAG_DATA_8BYTE = 0x03;
-    uint8_t ADD_BMM_MEASURE = 0x4C; 
-    uint8_t ADD_BMM_DATA = 0x42;
-  };
+	//struct IMUSettings {
+	//int gyroResolution = 250;
+	//int accResolution = 2;
+	//	uint8_t IF_CONF = 0x6B; //BMI160_IF_CONF
+	//uint8_t FIFO_CONF = 0x47;//BMI160_RA_FIFO_CONFIG_1
+	//uint8_t MAG_IF_0 = 0x4B;//BMI160_MAG_IF_0
+	//uint8_t MAG_IF_1 = 0x4C;//BMI160_MAG_IF_1
+	//uint8_t MAG_IF_2 = 0x4D;//BMI160_MAG_IF_2
+	//uint8_t MAG_IF_3 = 0x4E;//BMI160_MAG_IF_3
+	//uint8_t MAG_IF_4 = 0x4F;//BMI160_MAG_IF_4
+	//uint8_t DATA_T_L = 0x20;//BMI160_RA_TEMP_L 
+	//uint8_t DATA_T_M = 0x21;//BMI160_RA_TEMP_M 
+	//uint8_t DATA_MAG_X_L = 0x04;//BMI160_RA_MAG_X_L
+	//uint8_t DATA_MAG_X_M = 0x05;//BMI160_RA_MAG_X_M
+	//uint8_t MAG_CONF = 0x44;
+	//uint8_t FIFO_L = 0x46;
+	//uint8_t FIFO_M = 0x47;
+	//uint8_t STATUS = 0x1B;
+	//uint8_t I2C_MAG = 0x20;
+	//uint8_t MAG_DATA_8BYTE = 0x03;
+	//uint8_t ADD_BMM_MEASURE = 0x4C; 
+	//uint8_t ADD_BMM_DATA = 0x42;
+	//};
 
- 
-  typedef struct BMM150TrimData {
-	  int8_t dig_x1;
-	  int8_t dig_y1;
-	  int8_t dig_x2;
-	  int8_t dig_y2;
-	  uint16_t dig_z1;
-	  int16_t dig_z2;
-	  int16_t dig_z3;
-	  int16_t dig_z4;
-	  uint8_t dig_xy1;
-	  int8_t dig_xy2;
-	  uint16_t dig_xyz1;
-  };
+	struct BMM150TrimData {
+		int8_t dig_x1;
+		int8_t dig_y1;
+		int8_t dig_x2;
+		int8_t dig_y2;
+		uint16_t dig_z1;
+		int16_t dig_z2;
+		int16_t dig_z3;
+		int16_t dig_z4;
+		uint8_t dig_xy1;
+		int8_t dig_xy2;
+		uint16_t dig_xyz1;
+	};
   
-  typedef struct PPGSettings {
-    uint8_t ledPowerLevel = 0x2F; //Options: 0=Off to 255=50mA
-    uint16_t sampleAverage = 16;   //Options: 1, 2, 4, 8, 16, 32
-    uint8_t ledMode = 3;          //Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
-    uint16_t sampleRate = 400;    //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
-    uint16_t pulseWidth = 215;     //Options: 69, 118, 215, 411
-    uint16_t adcRange = 4096;     //Options: 2048, 4096, 8192, 16384
-  };
+	struct PPGSettings {
+	uint8_t ledPowerLevel = 0x2F; //Options: 0=Off to 255=50mA
+	uint16_t sampleAverage = 16;   //Options: 1, 2, 4, 8, 16, 32
+	uint8_t ledMode = 3;          //Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
+	uint16_t sampleRate = 400;    //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
+	uint16_t pulseWidth = 215;     //Options: 69, 118, 215, 411
+	uint16_t adcRange = 4096;     //Options: 2048, 4096, 8192, 16384
+	};
 
-	typedef struct SamplingRates {
+	struct IMUSettings {
+		uint8_t accelODR = BMI160AccelRate::BMI160_ACCEL_RATE_25HZ;
+		uint8_t accelDLPF = BMI160_DLPF_MODE_NORM;
+		uint8_t gyroODR = BMI160GyroRate::BMI160_GYRO_RATE_25HZ;
+		uint8_t gyroDLPF = BMI160_DLPF_MODE_NORM;
+		uint8_t magODR = BMI160MagRate::BMI160_MAG_RATE_25HZ;
+	};
+
+	struct SamplingRates {
 		uint16_t eda = 0;
 		uint16_t accelerometer = 0;
 		uint16_t gyroscope = 0;
@@ -86,7 +93,7 @@ public:
 		uint16_t ppg = 0;
 	};
 
-	typedef struct SamplesAveraged {
+	struct SamplesAveraged {
 		uint8_t eda = 1;
 		uint8_t humidity = 1;
 		uint8_t temperature = 1;
