@@ -130,7 +130,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	//ppgInfrared.resize(bufferCapacity);
 	//ppgRed.resize(bufferCapacity);
 	//ppgGreen.resize(bufferCapacity);
-	//temp0.resize(bufferCapacity);
+	//temp0.resize(bufferCapacity); 
 	//tempHP0.resize(bufferCapacity);
 	//humidity0.resize(bufferCapacity);
 	//accelX.resize(bufferCapacity);
