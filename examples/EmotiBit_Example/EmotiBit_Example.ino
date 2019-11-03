@@ -127,10 +127,10 @@ const uint32_t CPU_HZ = 48000000;
 const uint32_t SERIAL_BAUD = 2000000; //115200
 uint16_t loopCount = 0;
 
-#define BASE_SAMPLING_FREQ 60
+#define BASE_SAMPLING_FREQ 120
 #define EDA_SAMPLING_DIV 1
-#define TEMPERATURE_SAMPLING_DIV 2
-#define BATTERY_SAMPLING_DIV 60
+#define TEMPERATURE_SAMPLING_DIV 4
+#define BATTERY_SAMPLING_DIV 15
 //#define N_DATA_TYPES 17
 
 bool errorStatus = false;
@@ -199,6 +199,7 @@ void setup() {
 	samplesAveraged.humidity = (float)BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2 / 7.5f;
 	samplesAveraged.temperature = (float)BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2 / 7.5f;
 	samplesAveraged.thermistor = (float)BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2 / 7.5f;
+	samplesAveraged.battery = BASE_SAMPLING_FREQ / BATTERY_SAMPLING_DIV / 1;
 	emotibit.setSamplesAveraged(samplesAveraged);
 
 	delay(500);

@@ -100,6 +100,7 @@ public:
 		uint8_t humidity = 1;
 		uint8_t temperature = 1;
 		uint8_t thermistor = 1;
+		uint8_t battery = 1;
 	};
 
 	enum class Error {
@@ -238,6 +239,8 @@ private:
 	BufferFloat thermistorBuffer = BufferFloat(8);	
 	BufferFloat temperatureBuffer = BufferFloat(8);	
 	BufferFloat humidityBuffer = BufferFloat(8);
+	BufferFloat batteryVoltageBuffer = BufferFloat(8);
+	BufferFloat batteryPercentBuffer = BufferFloat(8);
 
 	const uint8_t SCOPE_TEST_PIN = A0;
 	bool scopeTestPinOn = false;

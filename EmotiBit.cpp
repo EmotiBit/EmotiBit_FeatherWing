@@ -826,12 +826,20 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 }
 
 int8_t EmotiBit::updateBatteryVoltageData() {
-	batteryVoltage.push_back(readBatteryVoltage());
+	batteryVoltageBuffer.push_back(readBatteryVoltage());
+	if (batteryVoltageBuffer.size() >= _samplesAveraged.battery) {
+		batteryVoltage.push_back(average(batteryVoltageBuffer));
+		batteryVoltageBuffer.clear();
+	}
 }
 
 
 int8_t EmotiBit::updateBatteryPercentData() {
-	batteryPercent.push_back(readBatteryPercent());
+	batteryPercentBuffer.push_back(readBatteryPercent());
+	if (batteryPercentBuffer.size() >= _samplesAveraged.battery) {
+		batteryPercent.push_back(average(batteryPercentBuffer));
+		batteryPercentBuffer.clear();
+	}
 }
 
 float EmotiBit::readBatteryVoltage() {
@@ -844,6 +852,7 @@ float EmotiBit::readBatteryVoltage() {
 }
 
 int8_t EmotiBit::readBatteryPercent() {
+	// Thresholded bi-linear approximation
 	// See battery discharge profile here:
 	// https://www.richtek.com/Design%20Support/Technical%20Document/AN024
 	float bv = readBatteryVoltage();
