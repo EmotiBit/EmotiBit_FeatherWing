@@ -6,6 +6,10 @@ EmotiBit::EmotiBit() {
 
 bool EmotiBit::setSamplingRates(SamplingRates s) {
 	_samplingRates = s;
+	_samplingRates.ppg = ppgSettings.sampleRate / ppgSettings.sampleAverage;
+	_samplingRates.accelerometer = 25.f * pow(2.f, ((float)imuSettings.acc_odr - 6.f));	// See lookup table in BMI160 datasheet
+	_samplingRates.gyroscope = 25.f * pow(2.f, ((float)imuSettings.gyr_odr - 6.f));		// See lookup table in BMI160 datasheet
+	_samplingRates.magnetometer = 25.f * pow(2.f, ((float)imuSettings.mag_odr - 6.f));	// See lookup table in BMI160 datasheet
 }
 
 bool EmotiBit::setSamplesAveraged(SamplesAveraged s) {
@@ -554,7 +558,7 @@ int8_t EmotiBit::updateIMUData() {
 		// Using FIFO, get available frame count
 		uint16_t nBytes = BMI160.getFIFOCount();
 		nFrames = nBytes / _imuFifoFrameLen;
-		if (nBytes > MAX_FIFO_BYTES - _imuFifoFrameLen * 2) {
+		if (nBytes > MAX_FIFO_BYTES - _imuFifoFrameLen) {
 			// Possible data overflow on the IMU buffer
 			// ToDo: assess IMU buffer overflow more accurately
 			for (uint8_t j = (uint8_t)EmotiBit::DataType::ACCELEROMETER_X; j < (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z; j++) {
@@ -961,6 +965,8 @@ bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 		typeTags[i]->add("AZ");
 		infos[i]->set("channel_count", 3);
 		infos[i]->set("nominal_srate", _samplingRates.accelerometer);
+		infos[i]->set("acc_bwp", imuSettings.acc_bwp);
+		infos[i]->set("acc_us", imuSettings.acc_us);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "G/second");
 		infos[i]->set("source_id", source_id);
@@ -1005,6 +1011,8 @@ bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 		typeTags[i]->add("GZ");
 		infos[i]->set("channel_count", 3);
 		infos[i]->set("nominal_srate", _samplingRates.gyroscope);
+		infos[i]->set("gyr_bwp", imuSettings.gyr_bwp);
+		infos[i]->set("gyr_us", imuSettings.gyr_us);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "degrees/second");
 		infos[i]->set("source_id", source_id);

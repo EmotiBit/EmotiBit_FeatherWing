@@ -66,31 +66,33 @@ public:
 	};
   
 	struct PPGSettings {
-	uint8_t ledPowerLevel = 0x2F; //Options: 0=Off to 255=50mA
-	uint16_t sampleAverage = 16;   //Options: 1, 2, 4, 8, 16, 32
-	uint8_t ledMode = 3;          //Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
-	uint16_t sampleRate = 400;    //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
-	uint16_t pulseWidth = 215;     //Options: 69, 118, 215, 411
-	uint16_t adcRange = 4096;     //Options: 2048, 4096, 8192, 16384
+		uint8_t ledPowerLevel = 0x2F; //Options: 0=Off to 255=50mA
+		uint16_t sampleAverage = 16;   //Options: 1, 2, 4, 8, 16, 32
+		uint8_t ledMode = 3;          //Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
+		uint16_t sampleRate = 400;    //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
+		uint16_t pulseWidth = 215;     //Options: 69, 118, 215, 411
+		uint16_t adcRange = 4096;     //Options: 2048, 4096, 8192, 16384
 	};
 
 	struct IMUSettings {
-		uint8_t accelODR = BMI160AccelRate::BMI160_ACCEL_RATE_25HZ;
-		uint8_t accelDLPF = BMI160_DLPF_MODE_NORM;
-		uint8_t gyroODR = BMI160GyroRate::BMI160_GYRO_RATE_25HZ;
-		uint8_t gyroDLPF = BMI160_DLPF_MODE_NORM;
-		uint8_t magODR = BMI160MagRate::BMI160_MAG_RATE_25HZ;
+		uint8_t acc_odr = BMI160AccelRate::BMI160_ACCEL_RATE_25HZ;
+		uint8_t acc_bwp = BMI160_DLPF_MODE_NORM;
+		uint8_t acc_us = BMI160_DLPF_MODE_NORM;
+		uint8_t gyr_odr = BMI160GyroRate::BMI160_GYRO_RATE_25HZ;
+		uint8_t gyr_bwp = BMI160_DLPF_MODE_NORM;
+		uint8_t gyr_us = BMI160_DLPF_MODE_NORM;
+		uint8_t mag_odr = BMI160MagRate::BMI160_MAG_RATE_25HZ;
 	};
 
 	struct SamplingRates {
-		uint16_t eda = 0;
-		uint16_t accelerometer = 0;
-		uint16_t gyroscope = 0;
-		uint16_t magnetometer = 0;
-		uint16_t humidity = 0;
-		uint16_t temperature = 0;
-		uint16_t thermistor = 0;
-		uint16_t ppg = 0;
+		float eda = 0.f;
+		float accelerometer = 0.f;
+		float gyroscope = 0.f;
+		float magnetometer = 0.f;
+		float humidity = 0.f;
+		float temperature = 0.f;
+		float thermistor = 0.f;
+		float ppg = 0.f;
 	};
 
 	struct SamplesAveraged {
@@ -134,16 +136,17 @@ public:
 	length
   };
 
-  Si7013 tempHumiditySensor;
+	Si7013 tempHumiditySensor;
 	uint8_t switchPin;
 	PPGSettings ppgSettings;
-  MAX30105 ppgSensor;
+	IMUSettings imuSettings;
+	MAX30105 ppgSensor;
 	float edrAmplification;
 	float vGnd;
 	float adcRes;
 	float edaVDivR;
 	uint8_t _sdCardChipSelectPin;	// ToDo: create getter and make private
-BMM150TrimData bmm150TrimData;
+	BMM150TrimData bmm150TrimData;
 	bool bmm150XYClipped = false;
 	bool bmm150ZHallClipped = false;
 	

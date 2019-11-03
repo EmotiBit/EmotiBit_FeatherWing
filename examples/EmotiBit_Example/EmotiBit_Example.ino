@@ -187,11 +187,8 @@ void setup() {
 	delay(500);
 
 	emotibit.setSensorTimer(EmotiBit::SensorTimer::MANUAL);
-	emotibit.setup(EmotiBit::Version::V01B, 16);
+	emotibit.setup(EmotiBit::Version::V01C);
 	EmotiBit::SamplingRates samplingRates;
-	samplingRates.accelerometer = BASE_SAMPLING_FREQ;
-	samplingRates.gyroscope = BASE_SAMPLING_FREQ;
-	samplingRates.magnetometer = BASE_SAMPLING_FREQ;
 	samplingRates.eda = BASE_SAMPLING_FREQ / EDA_SAMPLING_DIV;
 	samplingRates.humidity = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
 	samplingRates.temperature = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
