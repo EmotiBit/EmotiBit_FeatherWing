@@ -189,7 +189,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	Serial.print("edrAmplification = "); Serial.println(edrAmplification);
 
 	// Setup switch
-	pinMode(switchPin, INPUT);
+	if (switchPin != LED_BUILTIN) {
+		// If the LED_BUILTIN and switchpin are the same leave it as it was
+		// Otherwise setup the input
+		pinMode(switchPin, INPUT);
+	}
 
 	// Setup battery Reading
 	pinMode(_batteryReadPin, INPUT);
@@ -935,7 +939,7 @@ bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	int hardware_version = (int)_version;
 	String feather_version = "Adafruit Feather M0 WiFi";
-	String firmware_version = "0.5.7";
+	String firmware_version = "0.5.8";
 
 	const uint16_t bufferSize = 1024;
 

@@ -30,8 +30,6 @@ uint32_t momentLost;
 unsigned short int attempts = 0;
 
 
-
-
 #ifdef SEND_TCP
 #include <WiFi101.h> 
 //#include "arduino_secrets.h" 
@@ -70,7 +68,6 @@ uint16_t OUT_PACKET_MAX_SIZE = 1024;
 const uint16_t MAX_INCOMING_PACKET_LEN = 256;
 char packetBuffer[MAX_INCOMING_PACKET_LEN]; //buffer to hold incoming packet
 char  ReplyBuffer[] = "acknowledged";       // a string to send back
-
 uint8_t nUDPSends = 1; // Number of times to send the same packet (e.g. for UDPx3
 
 WiFiUDP Udp;
@@ -188,7 +185,6 @@ void setup() {
 		debugWifiRecord[i] = 0;
 	Serial.println("setup()");
 	// DBTAG1
-	// if (false){
 	pinMode(LED_BUILTIN, OUTPUT);
 	digitalWrite(LED_BUILTIN, HIGH);
 	ledOn = true;
@@ -196,18 +192,38 @@ void setup() {
 
 	setupTimerStart = millis();
 
+	Serial.begin(SERIAL_BAUD);
+	//while (!Serial);
+	Serial.println("Serial started");
+
+	delay(500);
+
+	Serial.println("setup()");
+
+#if defined(SEND_UDP) || defined(SEND_TCP)
+	//Configure pins for Adafruit ATWINC1500 Feather
+	WiFi.setPins(8, 7, 4, 2);
+	//WiFi.noLowPowerMode();
+	WiFi.lowPowerMode();
+
+	//WiFi.maxLowPowerMode();
+	// check for the presence of the shield:
+	if (WiFi.status() == WL_NO_SHIELD) {
+		Serial.println("WiFi shield not present");
+		// don't continue:
+		while (true) {
+			hibernate();
+		}
+	}
+#endif
+
+
 	if (!outputMessage.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
 		Serial.println("Failed to reserve memory for output");
 		while (true) {
 			hibernate();
 		}
 	}
-
-	delay(500);
-
-	Serial.begin(SERIAL_BAUD);
-	//while (!Serial);
-	Serial.println("Serial started");
 
 	delay(500);
 
@@ -262,22 +278,6 @@ void setup() {
 	//printDirectory(root, 0);
 	//Serial.println("done!");
 
-#if defined(SEND_UDP) || defined(SEND_TCP)
-	//Configure pins for Adafruit ATWINC1500 Feather
-	WiFi.setPins(8, 7, 4, 2);
-	//WiFi.noLowPowerMode();
-	WiFi.lowPowerMode();
-  
-	//WiFi.maxLowPowerMode();
-	// check for the presence of the shield:
-	if (WiFi.status() == WL_NO_SHIELD) {
-		Serial.println("WiFi shield not present");
-		// don't continue:
-		while (true) {
-			hibernate();
-		}
-	}
-#endif
 
 #ifdef SEND_UDP
 	// attempt to connect to WiFi network:
@@ -689,10 +689,9 @@ bool addPacket(EmotiBit::DataType t) {
 	float * data;
 	uint32_t timestamp;
 	size_t dataLen;
-	
+
 	dataLen = emotibit.getData(t, &data, &timestamp);
 
-	
 	if (sendData[(uint8_t)t]) {
 		return addPacket(timestamp, t, data, dataLen, printLen[(uint8_t)t]);
 	}
@@ -900,7 +899,9 @@ bool performTimestampSyncing() {
 	tempMessage += "TL";
 	tempMessage += ',';
 	tempMessage += "TU";
+#ifdef SEND_UDP
 	sendUdpMessage(tempMessage);
+#endif
 	outputMessage += tempMessage;
 	waitingForSyncData = packetCount;
 	packetCount++;
@@ -971,6 +972,7 @@ void loop() {
 	}
 	//DBTAG1
 	uint32_t start_timestampSync = millis();
+#if defined(SEND_UDP) || defined(SEND_TCP)
 	// Periodically request a timestamp between data dumps to assess round trip time
 	if (millis() - requestTimestampTimerStart > REQUEST_TIMESTAMP_DELAY) {
 			requestTimestampTimerStart = millis();
@@ -980,7 +982,7 @@ void loop() {
 			addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_TIMESTAMPSYNC, millis() - start_timestampSync); // To record time taken for time stamp syncing
 			}
 	}
-		
+#endif	
 	// Send waiting data
 	bool newData = false;
 	if (millis() - sendTimerStart > NORMAL_MIN_SEND_DELAY) { // add a delay to batch data sending
@@ -1244,12 +1246,12 @@ void printWiFiStatus() {
 #endif
 }
 
-// extern "C" char *sbrk(int i);
-
-// int FreeRam() {s
-// 	char stack_dummy = 0;
-// 	return &stack_dummy - sbrk(0);
-// }
+//extern "C" char *sbrk(int i);
+//
+//int FreeRam() {
+//	char stack_dummy = 0;
+//	return &stack_dummy - sbrk(0);
+//}
 
 #ifdef __arm__
 // should use uinstd.h to define sbrk but Due causes a conflict
@@ -1268,22 +1270,42 @@ int freeMemory() {
   return __brkval ? &top - __brkval : &top - __malloc_heap_start;
 #endif  // __arm__
 }
+
+//Currently Down to ~2.5mA draw (0.01 W)
 void hibernate() {
+	Serial.println("hibernate()");
+	Serial.println("Stopping timer...");
 	stopTimer();
 
+  //PPGToggle
+  // For an unknown reason, this need to be before WiFi diconnect/end
+	Serial.println("Shutting down ppg...");
 	emotibit.ppgSensor.shutDown();
+
+#ifdef SEND_UDP || SEND_TCP
 	if (wifiStatus == WL_CONNECTED) {
+		Serial.println("Disconnecting WiFi...");
 		WiFi.disconnect();
 	}
+	Serial.println("Ending WiFi...");
 	WiFi.end();
+#endif
+
+	//GSRToggle, write 1 to the PMO
+	Serial.println("Disabling analog circuitry...");
+	pinMode(emotibit._analogEnablePin, OUTPUT);
+	digitalWrite(emotibit._analogEnablePin, HIGH);
+
+
+
+	//IMU Suspend Mode
+	Serial.println("Suspending IMU...");
+	BMI160.suspendIMU();
 
 	while (ledPinBusy)
 	pinMode(LED_BUILTIN, OUTPUT);
 
-	// ToDo: 
-	//	Shutdown IMU
-	//	Consider more low level power management
-
+	Serial.println("Entering sleep loop...");
 	while (true) {
 		
 		digitalWrite(LED_BUILTIN, LOW); // Show we're asleep
@@ -1475,6 +1497,7 @@ bool sendSdCardMessage(String & s) {
 	}
 }
 
+#ifdef SEND_UDP
 bool sendUdpMessage(String & s) {
 	if (wifiReady && socketReady) {
 
@@ -1509,6 +1532,7 @@ bool sendUdpMessage(String & s) {
 		}
 	}
 }
+#endif
 
 bool sendMessage(String & s) {
 
@@ -1544,6 +1568,7 @@ bool sendMessage(String & s) {
 		duration_sdcardSend = millis() - start_sdcardSend;
 }
 
+#ifdef SEND_UDP || SEND_TCP
 void updateWiFi() {
 	wifiStatus = WiFi.status();
 	if (wifiStatus != WL_CONNECTED) {
@@ -1668,6 +1693,7 @@ void rebootWiFi() {
 	wifiRebootCounter = 0;
 }
 
+
 int listNetworks() {
 	// scan for nearby networks:
 	Serial.println("xxxxxxx Scan Networks xxxxxxx");
@@ -1702,3 +1728,4 @@ int listNetworks() {
 
 	return numSsid;
 }
+#endif
