@@ -565,7 +565,7 @@ int8_t EmotiBit::updateIMUData() {
 		if (nBytes > MAX_FIFO_BYTES - _imuFifoFrameLen) {
 			// Possible data overflow on the IMU buffer
 			// ToDo: assess IMU buffer overflow more accurately
-			for (uint8_t j = (uint8_t)EmotiBit::DataType::ACCELEROMETER_X; j < (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z; j++) {
+			for (uint8_t j = (uint8_t)EmotiBit::DataType::ACCELEROMETER_X; j <= (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z; j++) {
 				// Note: this for loop usage relies on all IMU data types being grouped from AX to MZ
 				dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]->push_back(j, &timestamp);
 			}
@@ -585,7 +585,7 @@ int8_t EmotiBit::updateIMUData() {
 
 			// Check for near-overflow of IMU double buffer and if so let data stay on IMU FIFO
 			bool bufferMaxed = false;
-			for (uint8_t k = (uint8_t)EmotiBit::DataType::ACCELEROMETER_X; k < (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z; k++) {
+			for (uint8_t k = (uint8_t)EmotiBit::DataType::ACCELEROMETER_X; k <= (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z; k++) {
 				// Note: this for loop usage relies on all IMU data types being grouped from AX to MZ
 				if (dataDoubleBuffers[k]->inSize() == dataDoubleBuffers[k]->inCapacity()) {
 					bufferMaxed = true;
