@@ -169,6 +169,7 @@ public:
 	BMM150TrimData bmm150TrimData;
 	bool bmm150XYClipped = false;
 	bool bmm150ZHallClipped = false;
+	uint8_t _analogEnablePin;
 	
   
   EmotiBit();
@@ -212,7 +213,6 @@ private:
 	SamplingRates _samplingRates;
 	SamplesAveraged _samplesAveraged;
 	uint8_t _batteryReadPin;
-	uint8_t _analogEnablePin;
 	uint8_t _edlPin;
 	uint8_t _edrPin;
 	float _vcc;
