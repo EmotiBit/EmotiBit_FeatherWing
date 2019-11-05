@@ -649,6 +649,7 @@ bool addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t da
 		// ToDo: Consider faster ways to populate the outputMessage
 		outputMessage += "\n";
 		//DBTAG
+
 		if (t == EmotiBit::DataType::DATA_OVERFLOW){
 			addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_CONNHISTORY, timestamp);  // addDebugPacket(case, timestamp) 
 		}
@@ -1006,6 +1007,7 @@ void loop() {
 				// start_timeSendMessage = millis(); // commented to stop printing the total TX time
 				sendMessage(outputMessage);
 				outputMessage = "";
+
 				// addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILEOPEN, duration_timeOpenFile);
 				if (fileOpened){
 					addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILEWRITES,0); // to add the file write times
@@ -1023,6 +1025,15 @@ void loop() {
 		// start_timeSendMessage = millis(); // commented to stop printing the total TX time
 		sendMessage(outputMessage);
 		outputMessage = "";
+
+		// Test code to simulate a write delay
+		//static int delayCounter = 0;
+		//delayCounter++;
+		//if (delayCounter == 50) {
+		//	delay(3000);
+		//	delayCounter = 0;
+		//}
+
 		if (duration_timeOpenFile && !sent_FOPEN){
 			addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_FILEOPEN, duration_timeOpenFile);
 			sent_FOPEN = true;

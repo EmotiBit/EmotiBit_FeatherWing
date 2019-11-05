@@ -557,17 +557,19 @@ int8_t EmotiBit::updateIMUData() {
 	static int16_t ax, ay, az, gx, gy, gz, mx, my, mz;
 	static uint16_t rh;
 
+	bool imuBufferFull = false;
 	uint16_t nFrames = 1;
 	if (_imuFifoFrameLen > 0) {
 		// Using FIFO, get available frame count
 		uint16_t nBytes = BMI160.getFIFOCount();
 		nFrames = nBytes / _imuFifoFrameLen;
-		if (nBytes > MAX_FIFO_BYTES - _imuFifoFrameLen) {
+		if (nBytes > MAX_FIFO_BYTES - _imuFifoFrameLen*2) {
 			// Possible data overflow on the IMU buffer
 			// ToDo: assess IMU buffer overflow more accurately
 			for (uint8_t j = (uint8_t)EmotiBit::DataType::ACCELEROMETER_X; j <= (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z; j++) {
 				// Note: this for loop usage relies on all IMU data types being grouped from AX to MZ
 				dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]->push_back(j, &timestamp);
+				imuBufferFull = true;
 			}
 		}
 		//Serial.print("FIFO Len: ");
@@ -591,8 +593,8 @@ int8_t EmotiBit::updateIMUData() {
 					bufferMaxed = true;
 				}
 			}
-			if (bufferMaxed) {
-				// data is about to overflow... leave it on the FIFO
+			if (bufferMaxed && !imuBufferFull) {
+				// data is about to overflow... leave it on the FIFO unless FIFO is also full
 				break;
 			}
 			BMI160.getFIFOBytes(_imuBuffer, _imuFifoFrameLen);
