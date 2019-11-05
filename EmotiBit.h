@@ -253,8 +253,8 @@ private:
 	// Oversampling buffers
 	// Single buffered arrays must only be accessed from ISR functions, not in the main loop
 	// ToDo: add assignment for dynamic allocation;
-	BufferFloat edlBuffer = BufferFloat(8);	
-	BufferFloat edrBuffer = BufferFloat(8);	
+	BufferFloat edlBuffer = BufferFloat(20);	
+	BufferFloat edrBuffer = BufferFloat(20);	
 	BufferFloat thermistorBuffer = BufferFloat(8);	
 	BufferFloat temperatureBuffer = BufferFloat(8);	
 	BufferFloat humidityBuffer = BufferFloat(8);
