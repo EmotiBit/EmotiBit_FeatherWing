@@ -6,6 +6,10 @@ EmotiBit::EmotiBit() {
 
 bool EmotiBit::setSamplingRates(SamplingRates s) {
 	_samplingRates = s;
+	_samplingRates.ppg = ppgSettings.sampleRate / ppgSettings.sampleAverage;
+	_samplingRates.accelerometer = 25.f * pow(2.f, ((float)imuSettings.acc_odr - 6.f));	// See lookup table in BMI160 datasheet
+	_samplingRates.gyroscope = 25.f * pow(2.f, ((float)imuSettings.gyr_odr - 6.f));		// See lookup table in BMI160 datasheet
+	_samplingRates.magnetometer = 25.f * pow(2.f, ((float)imuSettings.mag_odr - 6.f));	// See lookup table in BMI160 datasheet
 }
 
 bool EmotiBit::setSamplesAveraged(SamplesAveraged s) {
@@ -73,6 +77,7 @@ void EmotiBit::bmm150ReadTrimRegisters() {
 	temp_msb = ((uint16_t)(trim_xy1xy2[5] & 0x7F)) << 8;
 	bmm150TrimData.dig_xyz1 = (uint16_t)(temp_msb | trim_xy1xy2[4]);
 }
+
 uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 #ifdef DEBUG
 	Serial.print("setup: version="); 
@@ -184,7 +189,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	Serial.print("edrAmplification = "); Serial.println(edrAmplification);
 
 	// Setup switch
-	pinMode(switchPin, INPUT);
+	if (switchPin != LED_BUILTIN) {
+		// If the LED_BUILTIN and switchpin are the same leave it as it was
+		// Otherwise setup the input
+		pinMode(switchPin, INPUT);
+	}
 
 	// Setup battery Reading
 	pinMode(_batteryReadPin, INPUT);
@@ -239,23 +248,103 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	uint8_t dev_id = BMI160.getDeviceID();
 	Serial.print("DEVICE ID: ");
 	Serial.println(dev_id, HEX);
+
+	// Accelerometer
 	_accelerometerRange = 8;
-	_gyroRange = 1000;
 	BMI160.setAccelerometerRange(_accelerometerRange);
+	BMI160.setAccelDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
+	//BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_25HZ);
+	BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_100HZ);
+
+	// Gyroscope
+	_gyroRange = 1000;
 	BMI160.setGyroRange(_gyroRange);
-	BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR); // I2C MAG
+	BMI160.setGyroDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
+	//BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_25HZ);
+	BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_100HZ);
+
+	// Magnetometer
+	BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR, BMM150_BASED_I2C_MASK); // I2C MAG
 	delay(BMI160_AUX_COM_DELAY);
 	//initially load into setup mode to read trim values
-	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_MANUAL_MODE_EN_MSK);
+	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_MANUAL_MODE_EN_MSK, BMI160_MANUAL_MODE_EN_MSK);
 	delay(BMI160_AUX_COM_DELAY);
 	EmotiBit::bmm150ReadTrimRegisters();
-	//Continue into data mode for the rest of the process
-	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_AUX_READ_BURST_MSK); // MAG data mode 8 byte
-	delay(BMI160_AUX_COM_DELAY);
+	
 	BMI160.setRegister(BMI160_MAG_IF_2, BMM150_DATA_REG); // ADD_BMM_DATA
 	delay(BMI160_AUX_COM_DELAY);
-	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OPMODE_REG); // ADD_BMM_MEASURE
+	//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OPMODE_REG); // ADD_BMM_MEASURE
+	//delay(BMI160_AUX_COM_DELAY);
+
+	// Following example at https://github.com/BoschSensortec/BMI160_driver#auxiliary-fifo-data-parsing 
+
+	// Put the BMM150 in normal mode (may or may not be necessary if putting in force mode later)
+	// BMI160.setRegister(BMM150_OPMODE_REG, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
+
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_NORMAL_MODE);
+	BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_NORMAL_MODE, BMM150_OP_MODE_BIT, BMM150_OP_MODE_LEN);
+	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
 	delay(BMI160_AUX_COM_DELAY);
+	
+	// Already done in setup
+	///* Set BMM150 repetitions for X/Y-Axis */
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_LOWPOWER_REPXY);             //Added for BMM150 Support
+	//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_XY_REP_REG);                 //Added for BMM150 Support
+	//delay(BMI160_AUX_COM_DELAY);
+
+	///* Set BMM150 repetitions for Z-Axis */
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_LOWPOWER_REPXY);              //Added for BMM150 Support
+	//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_Z_REP_REG);                  //Added for BMM150 Support
+	//delay(BMI160_AUX_COM_DELAY);
+
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_25HZ);
+	BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ, BMM150_DATA_RATE_BIT, BMM150_DATA_RATE_LEN);
+	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
+	delay(BMI160_AUX_COM_DELAY);
+
+	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_FORCED_MODE);
+	BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_FORCED_MODE, BMM150_OP_MODE_BIT, BMM150_OP_MODE_LEN);
+	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
+	delay(BMI160_AUX_COM_DELAY);
+
+
+	// Setup the BMI160 AUX
+	// Set the auto mode address
+	BMI160.setRegister(BMI160_MAG_IF_2, BMM150_DATA_X_LSB); 
+	delay(BMI160_AUX_COM_DELAY);
+
+	// Set the AUX ODR
+	BMI160.setMagRate(BMI160MagRate::BMI160_MAG_RATE_100HZ);
+
+	// Disable manual mode (i.e. enable auto mode)
+	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_DISABLE, BMI160_MANUAL_MODE_EN_MSK);
+
+	// Set the burst length
+	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_AUX_READ_BURST_MSK, BMI160_AUX_READ_BURST_MSK); // MAG data mode 8 byte burst
+	delay(BMI160_AUX_COM_DELAY);
+
+	// Bosch code sets the I2C register again here for an unknown reason
+	BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR, BMM150_BASED_I2C_MASK); // I2C MAG
+	delay(BMI160_AUX_COM_DELAY);
+
+	// Setup the FIFO
+	BMI160.setAccelFIFOEnabled(true);
+	_imuFifoFrameLen += 6;
+	BMI160.setGyroFIFOEnabled(true);
+	_imuFifoFrameLen += 6;
+	BMI160.setMagFIFOEnabled(true);
+	_imuFifoFrameLen += 8;
+	BMI160.setFIFOHeaderModeEnabled(false);
+	if (_imuFifoFrameLen > _maxImuFifoFrameLen) {
+		// ToDo: handle _imuFifoFrameLen > _maxImuFifoFrameLen
+		Serial.println("UNHANDLED CASE: _imuFifoFrameLen > _maxImuFifoFrameLen");
+		while (true);
+	}
+
+
+	// ToDo: Add interrupts to accurately record timing of data capture
+
 	//BMI160.detachInterrupt();
 	//BMI160.setRegister()
 
@@ -455,6 +544,7 @@ int8_t EmotiBit::updateTempHumidityData() {
 	return status;
 }
 
+//rslt = bmi160_get_fifo_data(dev);
 
 int8_t EmotiBit::updateIMUData() {
 #ifdef DEBUG
@@ -466,65 +556,98 @@ int8_t EmotiBit::updateIMUData() {
 	timestamp = millis();
 	static int16_t ax, ay, az, gx, gy, gz, mx, my, mz;
 	static uint16_t rh;
-	BMI160.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
-	//BMI160.getMotion9Bosch(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
-	//BMI160.getMotion9Check(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
 
-	checkIMUClipping(EmotiBit::DataType::ACCELEROMETER_X, ax, timestamp);
-	checkIMUClipping(EmotiBit::DataType::ACCELEROMETER_Y, ay, timestamp);
-	checkIMUClipping(EmotiBit::DataType::ACCELEROMETER_Z, az, timestamp);
-	// Convert raw accelerometer to g's
-	pushData(EmotiBit::DataType::ACCELEROMETER_X, convertRawAcc(ax), &timestamp);
-	pushData(EmotiBit::DataType::ACCELEROMETER_Y, convertRawAcc(ay), &timestamp);
-	pushData(EmotiBit::DataType::ACCELEROMETER_Z, convertRawAcc(az), &timestamp);
-
-	checkIMUClipping(EmotiBit::DataType::GYROSCOPE_X, gx, timestamp);
-	checkIMUClipping(EmotiBit::DataType::GYROSCOPE_Y, gy, timestamp);
-	checkIMUClipping(EmotiBit::DataType::GYROSCOPE_Z, gz, timestamp);
-	// convert the raw gyro data to degrees/second
-	pushData(EmotiBit::DataType::GYROSCOPE_X, convertRawGyro(gx), &timestamp);
-	pushData(EmotiBit::DataType::GYROSCOPE_Y, convertRawGyro(gy), &timestamp);
-	pushData(EmotiBit::DataType::GYROSCOPE_Z, convertRawGyro(gz), &timestamp);
-	
-	// ToDo: determine correct magnetometer clipping and conversion 
-	pushData(EmotiBit::DataType::MAGNETOMETER_X, convertMagnetoX(mx,rh), &timestamp);
-	pushData(EmotiBit::DataType::MAGNETOMETER_Y, convertMagnetoY(my,rh), &timestamp);
-	pushData(EmotiBit::DataType::MAGNETOMETER_Z, convertMagnetoZ(mz,rh), &timestamp);
-	if (bmm150XYClipped) {
-		pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_X, &timestamp);
-		pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_Y, &timestamp);
-		bmm150XYClipped = false;
+	bool imuBufferFull = false;
+	uint16_t nFrames = 1;
+	if (_imuFifoFrameLen > 0) {
+		// Using FIFO, get available frame count
+		uint16_t nBytes = BMI160.getFIFOCount();
+		nFrames = nBytes / _imuFifoFrameLen;
+		if (nBytes > MAX_FIFO_BYTES - _imuFifoFrameLen*2) {
+			// Possible data overflow on the IMU buffer
+			// ToDo: assess IMU buffer overflow more accurately
+			for (uint8_t j = (uint8_t)EmotiBit::DataType::ACCELEROMETER_X; j <= (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z; j++) {
+				// Note: this for loop usage relies on all IMU data types being grouped from AX to MZ
+				dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]->push_back(j, &timestamp);
+				imuBufferFull = true;
+			}
+		}
+		//Serial.print("FIFO Len: ");
+		//Serial.print(nFrames);
+		//Serial.print(" / ");
+		//Serial.println(nBytes);
 	}
-	if (bmm150ZHallClipped) {
-		pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z, &timestamp);
-		bmm150ZHallClipped = false;
+
+	for (uint16_t j = 0; j < nFrames; j++) {
+		if (_imuFifoFrameLen > 0) {
+			// Using FIFO
+
+			//Serial.print(",");
+			//Serial.print(j);
+
+			// Check for near-overflow of IMU double buffer and if so let data stay on IMU FIFO
+			bool bufferMaxed = false;
+			for (uint8_t k = (uint8_t)EmotiBit::DataType::ACCELEROMETER_X; k <= (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z; k++) {
+				// Note: this for loop usage relies on all IMU data types being grouped from AX to MZ
+				if (dataDoubleBuffers[k]->inSize() == dataDoubleBuffers[k]->inCapacity()) {
+					bufferMaxed = true;
+				}
+			}
+			if (bufferMaxed && !imuBufferFull) {
+				// data is about to overflow... leave it on the FIFO unless FIFO is also full
+				break;
+			}
+			BMI160.getFIFOBytes(_imuBuffer, _imuFifoFrameLen);
+			if (_imuFifoFrameLen == 20) {
+				BMI160.extractMotion9(_imuBuffer, &ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
+			}
+			else {
+				Serial.println("UNHANDLED CASE: _imuFifoFrameLen != 20");
+				while (true);
+				// ToDo: Handle case when _imuFifoFrameLen < 20
+			}
+		}
+		else {
+			// Not using FIFO
+			BMI160.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
+			//BMI160.getMotion9Bosch(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
+			//BMI160.getMotion9Check(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
+
+			Serial.println("getMotion9");
+		}
+
+		// ToDo: Utilize IMU 1024 buffer to help mitigate buffer overruns
+
+		checkIMUClipping(EmotiBit::DataType::ACCELEROMETER_X, ax, timestamp);
+		checkIMUClipping(EmotiBit::DataType::ACCELEROMETER_Y, ay, timestamp);
+		checkIMUClipping(EmotiBit::DataType::ACCELEROMETER_Z, az, timestamp);
+		// Convert raw accelerometer to g's
+		pushData(EmotiBit::DataType::ACCELEROMETER_X, convertRawAcc(ax), &timestamp);
+		pushData(EmotiBit::DataType::ACCELEROMETER_Y, convertRawAcc(ay), &timestamp);
+		pushData(EmotiBit::DataType::ACCELEROMETER_Z, convertRawAcc(az), &timestamp);
+
+		checkIMUClipping(EmotiBit::DataType::GYROSCOPE_X, gx, timestamp);
+		checkIMUClipping(EmotiBit::DataType::GYROSCOPE_Y, gy, timestamp);
+		checkIMUClipping(EmotiBit::DataType::GYROSCOPE_Z, gz, timestamp);
+		// convert the raw gyro data to degrees/second
+		pushData(EmotiBit::DataType::GYROSCOPE_X, convertRawGyro(gx), &timestamp);
+		pushData(EmotiBit::DataType::GYROSCOPE_Y, convertRawGyro(gy), &timestamp);
+		pushData(EmotiBit::DataType::GYROSCOPE_Z, convertRawGyro(gz), &timestamp);
+
+		// ToDo: determine correct magnetometer clipping
+		pushData(EmotiBit::DataType::MAGNETOMETER_X, convertMagnetoX(mx, rh), &timestamp);
+		pushData(EmotiBit::DataType::MAGNETOMETER_Y, convertMagnetoY(my, rh), &timestamp);
+		pushData(EmotiBit::DataType::MAGNETOMETER_Z, convertMagnetoZ(mz, rh), &timestamp);
+		if (bmm150XYClipped) {
+			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_X, &timestamp);
+			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_Y, &timestamp);
+			bmm150XYClipped = false;
+		}
+		if (bmm150ZHallClipped) {
+			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z, &timestamp);
+			bmm150ZHallClipped = false;
+		}
 	}
-	//static int16_t *ax, *ay, *az, *gx, *gy, *gz, *mx, *my, *mz, *rh;
-	//static uint32_t timestamp;
-
-	//// read raw gyro measurements from device
-	////BMI160.getMotion9(ax, ay, az, gx, gy, gz, mx, my, mz, rh);
-	//timestamp = millis();
-
-	//BMI160.readAccelerometer(ax, ay, az);
-	//// Convert raw accelerometer to g's
-	//accelX.push_back(convertRawAcc(*ax), &timestamp);
-	//accelY.push_back(convertRawAcc(*ay), &timestamp);
-	//accelZ.push_back(convertRawAcc(*az), &timestamp);
-
-	////BMI160.readGyro(gx, gy, gz);
-	//// convert the raw gyro data to degrees/second
-	//gyroX.push_back(convertRawGyro(*gx), &timestamp);
-	//gyroY.push_back(convertRawGyro(*gy), &timestamp);
-	//gyroZ.push_back(convertRawGyro(*gz), &timestamp);
-
-	////magX.push_back(BMI160.getMagnetoX(), &timestamp);
-	////magY.push_back(BMI160.getMagnetoY(), &timestamp);
-	////magZ.push_back(BMI160.getMagnetoZ(), &timestamp);
-	//magX.push_back(*mx, &timestamp);
-	//magY.push_back(*my, &timestamp);
-	//magZ.push_back(*mz, &timestamp);
-
 }
 
 float EmotiBit::convertRawAcc(int16_t aRaw) {
@@ -706,131 +829,23 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 	else {
 		return (int8_t)EmotiBit::Error::NONE;
 	}
-
-	//if (t == DataType::EDA) {
-	//	return eda.getData(data);
-	//}
-	//else if (t == DataType::EDL) {
-	//	return edl.getData(data, timestamp);
-	//}
-	//else if (t == DataType::EDR) {
-	//	return edr.getData(data, timestamp);
-	//}
-	//else if (t == DataType::TEMPERATURE_0) {
-	//	return temp0.getData(data, timestamp);
-	//}	
-	//else if (t == DataType::TEMPERATURE_HP0) {
-	//	return tempHP0.getData(data, timestamp);
-	//}	
-	//else if (t == DataType::HUMIDITY_0) {
-	//	return humidity0.getData(data, timestamp);
-	//}
-	//else if (t == DataType::PPG_INFRARED) {
-	//	return ppgInfrared.getData(data, timestamp);
-	//}
-	//else if (t == DataType::PPG_RED) {
-	//	return ppgRed.getData(data, timestamp);
-	//}
-	//else if (t == DataType::PPG_GREEN) {
-	//	return ppgGreen.getData(data, timestamp);
-	//}
-	//else if (t == DataType::ACCELEROMETER_X) {
-	//	return accelX.getData(data, timestamp);
-	//}
-	//else if (t == DataType::ACCELEROMETER_Y) {
-	//	return accelY.getData(data, timestamp);
-	//}
-	//else if (t == DataType::ACCELEROMETER_Z) {
-	//	return accelZ.getData(data, timestamp);
-	//}
-	//else if (t == DataType::GYROSCOPE_X) {
-	//	return gyroX.getData(data, timestamp);
-	//}
-	//else if (t == DataType::GYROSCOPE_Y) {
-	//	return gyroY.getData(data, timestamp);
-	//}
-	//else if (t == DataType::GYROSCOPE_Z) {
-	//	return gyroZ.getData(data, timestamp);
-	//}
-	//else if (t == DataType::MAGNETOMETER_X) {
-	//	return magX.getData(data, timestamp);
-	//}
-	//else if (t == DataType::MAGNETOMETER_Y) {
-	//	return magY.getData(data, timestamp);
-	//}
-	//else if (t == DataType::MAGNETOMETER_Z) {
-	//	return magZ.getData(data, timestamp);
-	//}
-	//else if (t == DataType::BATTERY_VOLTAGE) {
-	//	return batteryVoltage.getData(data, timestamp);
-	//}
-	//else if (t == DataType::BATTERY_PERCENT) {
-	//	return batteryPercent.getData(data, timestamp);
-	//}
-	//else return 0;
 }
 
-//size_t EmotiBit::dataAvailable(DataType t) {
-//#ifdef DEBUG
-//#endif // DEBUG
-//	//if (t == DataType::EDA) {
-//	//	return eda.outSize();
-//	//}
-//	if (t == DataType::TEMPERATURE_0) {
-//		return temp0.outSize();
-//	}
-//	else if (t == DataType::TEMPERATURE_HP0) {
-//		return tempHP0.outSize();
-//	}
-//	else if (t == DataType::HUMIDITY_0) {
-//		return humidity0.outSize();
-//	}
-//	else if (t == DataType::PPG_INFRARED) {
-//		return ppgInfrared.outSize();
-//	}
-//	else if (t == DataType::PPG_RED) {
-//		return ppgRed.outSize();
-//	}
-//	else if (t == DataType::PPG_GREEN) {
-//		return ppgGreen.outSize();
-//	}
-//	else if (t == DataType::ACCELEROMETER_X) {
-//		return accelX.outSize();
-//	}
-//	else if (t == DataType::ACCELEROMETER_Y) {
-//		return accelY.outSize();
-//	}
-//	else if (t == DataType::ACCELEROMETER_Z) {
-//		return accelZ.outSize();
-//	}
-//	else if (t == DataType::GYROSCOPE_X) {
-//		return gyroX.outSize();
-//	}
-//	else if (t == DataType::GYROSCOPE_Y) {
-//		return gyroY.outSize();
-//	}
-//	else if (t == DataType::GYROSCOPE_Z) {
-//		return gyroZ.outSize();
-//	}
-//	else if (t == DataType::MAGNETOMETER_X) {
-//		return magX.outSize();
-//	}
-//	else if (t == DataType::MAGNETOMETER_Y) {
-//		return magY.outSize();
-//	}
-//	else if (t == DataType::MAGNETOMETER_Z) {
-//		return magZ.outSize();
-//	}
-//	else return 0;
-//}
-
 int8_t EmotiBit::updateBatteryVoltageData() {
-	batteryVoltage.push_back(readBatteryVoltage());
+	batteryVoltageBuffer.push_back(readBatteryVoltage());
+	if (batteryVoltageBuffer.size() >= _samplesAveraged.battery) {
+		batteryVoltage.push_back(average(batteryVoltageBuffer));
+		batteryVoltageBuffer.clear();
+	}
 }
 
 
 int8_t EmotiBit::updateBatteryPercentData() {
-	batteryPercent.push_back(readBatteryPercent());
+	batteryPercentBuffer.push_back(readBatteryPercent());
+	if (batteryPercentBuffer.size() >= _samplesAveraged.battery) {
+		batteryPercent.push_back(average(batteryPercentBuffer));
+		batteryPercentBuffer.clear();
+	}
 }
 
 float EmotiBit::readBatteryVoltage() {
@@ -843,6 +858,7 @@ float EmotiBit::readBatteryVoltage() {
 }
 
 int8_t EmotiBit::readBatteryPercent() {
+	// Thresholded bi-linear approximation
 	// See battery discharge profile here:
 	// https://www.richtek.com/Design%20Support/Technical%20Document/AN024
 	float bv = readBatteryVoltage();
@@ -925,7 +941,7 @@ bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	int hardware_version = (int)_version;
 	String feather_version = "Adafruit Feather M0 WiFi";
-	String firmware_version = "0.5.7";
+	String firmware_version = "0.5.8";
 
 	const uint16_t bufferSize = 1024;
 
@@ -964,6 +980,8 @@ bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 		typeTags[i]->add("AZ");
 		infos[i]->set("channel_count", 3);
 		infos[i]->set("nominal_srate", _samplingRates.accelerometer);
+		infos[i]->set("acc_bwp", imuSettings.acc_bwp);
+		infos[i]->set("acc_us", imuSettings.acc_us);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "G/second");
 		infos[i]->set("source_id", source_id);
@@ -1008,6 +1026,8 @@ bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 		typeTags[i]->add("GZ");
 		infos[i]->set("channel_count", 3);
 		infos[i]->set("nominal_srate", _samplingRates.gyroscope);
+		infos[i]->set("gyr_bwp", imuSettings.gyr_bwp);
+		infos[i]->set("gyr_us", imuSettings.gyr_us);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "degrees/second");
 		infos[i]->set("source_id", source_id);

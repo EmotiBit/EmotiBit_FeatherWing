@@ -27,70 +27,80 @@ public:
 		V01C
 	};
 
-  typedef struct IMUSettings {
-    int gyroResolution = 250;
-    int accResolution = 2;
-		uint8_t IF_CONF = 0x6B; //BMI160_IF_CONF
-    uint8_t FIFO_CONF = 0x47;//BMI160_RA_FIFO_CONFIG_1
-    uint8_t MAG_IF_0 = 0x4B;//BMI160_MAG_IF_0
-    uint8_t MAG_IF_1 = 0x4C;//BMI160_MAG_IF_1
-    uint8_t MAG_IF_2 = 0x4D;//BMI160_MAG_IF_2
-    uint8_t MAG_IF_3 = 0x4E;//BMI160_MAG_IF_3
-    uint8_t MAG_IF_4 = 0x4F;//BMI160_MAG_IF_4
-    uint8_t DATA_T_L = 0x20;//BMI160_RA_TEMP_L 
-    uint8_t DATA_T_M = 0x21;//BMI160_RA_TEMP_M 
-    uint8_t DATA_MAG_X_L = 0x04;//BMI160_RA_MAG_X_L
-    uint8_t DATA_MAG_X_M = 0x05;//BMI160_RA_MAG_X_M
-    uint8_t MAG_CONF = 0x44;
-    uint8_t FIFO_L = 0x46;
-    uint8_t FIFO_M = 0x47;
-    uint8_t STATUS = 0x1B;
-    uint8_t I2C_MAG = 0x20;
-    uint8_t MAG_DATA_8BYTE = 0x03;
-    uint8_t ADD_BMM_MEASURE = 0x4C; 
-    uint8_t ADD_BMM_DATA = 0x42;
-  };
+	//struct IMUSettings {
+	//int gyroResolution = 250;
+	//int accResolution = 2;
+	//	uint8_t IF_CONF = 0x6B; //BMI160_IF_CONF
+	//uint8_t FIFO_CONF = 0x47;//BMI160_RA_FIFO_CONFIG_1
+	//uint8_t MAG_IF_0 = 0x4B;//BMI160_MAG_IF_0
+	//uint8_t MAG_IF_1 = 0x4C;//BMI160_MAG_IF_1
+	//uint8_t MAG_IF_2 = 0x4D;//BMI160_MAG_IF_2
+	//uint8_t MAG_IF_3 = 0x4E;//BMI160_MAG_IF_3
+	//uint8_t MAG_IF_4 = 0x4F;//BMI160_MAG_IF_4
+	//uint8_t DATA_T_L = 0x20;//BMI160_RA_TEMP_L 
+	//uint8_t DATA_T_M = 0x21;//BMI160_RA_TEMP_M 
+	//uint8_t DATA_MAG_X_L = 0x04;//BMI160_RA_MAG_X_L
+	//uint8_t DATA_MAG_X_M = 0x05;//BMI160_RA_MAG_X_M
+	//uint8_t MAG_CONF = 0x44;
+	//uint8_t FIFO_L = 0x46;
+	//uint8_t FIFO_M = 0x47;
+	//uint8_t STATUS = 0x1B;
+	//uint8_t I2C_MAG = 0x20;
+	//uint8_t MAG_DATA_8BYTE = 0x03;
+	//uint8_t ADD_BMM_MEASURE = 0x4C; 
+	//uint8_t ADD_BMM_DATA = 0x42;
+	//};
 
- 
-  typedef struct BMM150TrimData {
-	  int8_t dig_x1;
-	  int8_t dig_y1;
-	  int8_t dig_x2;
-	  int8_t dig_y2;
-	  uint16_t dig_z1;
-	  int16_t dig_z2;
-	  int16_t dig_z3;
-	  int16_t dig_z4;
-	  uint8_t dig_xy1;
-	  int8_t dig_xy2;
-	  uint16_t dig_xyz1;
-  };
+	struct BMM150TrimData {
+		int8_t dig_x1;
+		int8_t dig_y1;
+		int8_t dig_x2;
+		int8_t dig_y2;
+		uint16_t dig_z1;
+		int16_t dig_z2;
+		int16_t dig_z3;
+		int16_t dig_z4;
+		uint8_t dig_xy1;
+		int8_t dig_xy2;
+		uint16_t dig_xyz1;
+	};
   
-  typedef struct PPGSettings {
-    uint8_t ledPowerLevel = 0x2F; //Options: 0=Off to 255=50mA
-    uint16_t sampleAverage = 16;   //Options: 1, 2, 4, 8, 16, 32
-    uint8_t ledMode = 3;          //Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
-    uint16_t sampleRate = 400;    //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
-    uint16_t pulseWidth = 215;     //Options: 69, 118, 215, 411
-    uint16_t adcRange = 4096;     //Options: 2048, 4096, 8192, 16384
-  };
-
-	typedef struct SamplingRates {
-		uint16_t eda = 0;
-		uint16_t accelerometer = 0;
-		uint16_t gyroscope = 0;
-		uint16_t magnetometer = 0;
-		uint16_t humidity = 0;
-		uint16_t temperature = 0;
-		uint16_t thermistor = 0;
-		uint16_t ppg = 0;
+	struct PPGSettings {
+		uint8_t ledPowerLevel = 0x2F; //Options: 0=Off to 255=50mA
+		uint16_t sampleAverage = 16;   //Options: 1, 2, 4, 8, 16, 32
+		uint8_t ledMode = 3;          //Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
+		uint16_t sampleRate = 400;    //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
+		uint16_t pulseWidth = 215;     //Options: 69, 118, 215, 411
+		uint16_t adcRange = 4096;     //Options: 2048, 4096, 8192, 16384
 	};
 
-	typedef struct SamplesAveraged {
+	struct IMUSettings {
+		uint8_t acc_odr = BMI160AccelRate::BMI160_ACCEL_RATE_25HZ;
+		uint8_t acc_bwp = BMI160_DLPF_MODE_NORM;
+		uint8_t acc_us = BMI160_DLPF_MODE_NORM;
+		uint8_t gyr_odr = BMI160GyroRate::BMI160_GYRO_RATE_25HZ;
+		uint8_t gyr_bwp = BMI160_DLPF_MODE_NORM;
+		uint8_t gyr_us = BMI160_DLPF_MODE_NORM;
+		uint8_t mag_odr = BMI160MagRate::BMI160_MAG_RATE_25HZ;
+	};
+
+	struct SamplingRates {
+		float eda = 0.f;
+		float accelerometer = 0.f;
+		float gyroscope = 0.f;
+		float magnetometer = 0.f;
+		float humidity = 0.f;
+		float temperature = 0.f;
+		float thermistor = 0.f;
+		float ppg = 0.f;
+	};
+
+	struct SamplesAveraged {
 		uint8_t eda = 1;
 		uint8_t humidity = 1;
 		uint8_t temperature = 1;
 		uint8_t thermistor = 1;
+		uint8_t battery = 1;
 	};
 
 	enum class Error {
@@ -103,15 +113,6 @@ public:
   enum class DataType{
   	DATA_OVERFLOW,
 	DATA_CLIPPING,
-	ACCELEROMETER_X,
-	ACCELEROMETER_Y,
-	ACCELEROMETER_Z,
-	GYROSCOPE_X,
-	GYROSCOPE_Y,
-	GYROSCOPE_Z,
-	MAGNETOMETER_X,
-	MAGNETOMETER_Y,
-	MAGNETOMETER_Z,
 	PPG_INFRARED,
 	PPG_RED,
 	PPG_GREEN,
@@ -122,6 +123,15 @@ public:
 	TEMPERATURE_0,
 	TEMPERATURE_HP0,
 	HUMIDITY_0,
+	ACCELEROMETER_X,
+	ACCELEROMETER_Y,
+	ACCELEROMETER_Z,
+	GYROSCOPE_X,
+	GYROSCOPE_Y,
+	GYROSCOPE_Z,
+	MAGNETOMETER_X,
+	MAGNETOMETER_Y,
+	MAGNETOMETER_Z,
 	BATTERY_VOLTAGE,
 	BATTERY_PERCENT,
 	//PUSH_WHILE_GETTING,
@@ -145,19 +155,21 @@ public:
   	TIME_FILECLOSE,  // time taken for file close
   	TIME_FILESYNC  //time taken for file syncing
   };
-  
-  Si7013 tempHumiditySensor;
+
+	Si7013 tempHumiditySensor;
 	uint8_t switchPin;
 	PPGSettings ppgSettings;
-  MAX30105 ppgSensor;
+	IMUSettings imuSettings;
+	MAX30105 ppgSensor;
 	float edrAmplification;
 	float vGnd;
 	float adcRes;
 	float edaVDivR;
 	uint8_t _sdCardChipSelectPin;	// ToDo: create getter and make private
-BMM150TrimData bmm150TrimData;
+	BMM150TrimData bmm150TrimData;
 	bool bmm150XYClipped = false;
 	bool bmm150ZHallClipped = false;
+	uint8_t _analogEnablePin;
 	
   
   EmotiBit();
@@ -201,15 +213,16 @@ private:
 	SamplingRates _samplingRates;
 	SamplesAveraged _samplesAveraged;
 	uint8_t _batteryReadPin;
-  uint8_t _analogEnablePin;
-  uint8_t _edlPin;
-  uint8_t _edrPin;
+	uint8_t _edlPin;
+	uint8_t _edrPin;
 	float _vcc;
 	uint8_t _adcBits;
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)
 	float _gyroRange; // supported values: 125, 250, 500, 1000, 2000 (degrees/second)
 	Version _version;
-
+	uint8_t _imuFifoFrameLen = 0; // in bytes
+	const uint8_t _maxImuFifoFrameLen = 40; // in bytes
+	uint8_t _imuBuffer[40];
 
 	DoubleBufferFloat eda;
 	DoubleBufferFloat edl;
@@ -240,11 +253,13 @@ private:
 	// Oversampling buffers
 	// Single buffered arrays must only be accessed from ISR functions, not in the main loop
 	// ToDo: add assignment for dynamic allocation;
-	BufferFloat edlBuffer = BufferFloat(8);	
-	BufferFloat edrBuffer = BufferFloat(8);	
+	BufferFloat edlBuffer = BufferFloat(20);	
+	BufferFloat edrBuffer = BufferFloat(20);	
 	BufferFloat thermistorBuffer = BufferFloat(8);	
 	BufferFloat temperatureBuffer = BufferFloat(8);	
 	BufferFloat humidityBuffer = BufferFloat(8);
+	BufferFloat batteryVoltageBuffer = BufferFloat(8);
+	BufferFloat batteryPercentBuffer = BufferFloat(8);
 
 	const uint8_t SCOPE_TEST_PIN = A0;
 	bool scopeTestPinOn = false;

@@ -76,9 +76,21 @@ size_t DoubleBufferFloat::getData(float ** data, uint32_t * timestamp) {
 //	_buffer2->autoResize = b;
 //}
 
+size_t DoubleBufferFloat::inSize() {
+	if (_inputBuffer != nullptr) {
+		_inputBuffer->size();
+	}
+}
+
 size_t DoubleBufferFloat::outSize() {
 	if (_outputBuffer != nullptr) {
 		_outputBuffer->size();
+	}
+}
+
+size_t DoubleBufferFloat::inCapacity() {
+	if (_inputBuffer != nullptr) {
+		_inputBuffer->capacity();
 	}
 }
 

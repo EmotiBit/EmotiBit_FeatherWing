@@ -47,15 +47,17 @@ uint8_t BufferFloat::push_back(float f, uint32_t * dataTimestamp) {
 		//}
 		return ERROR_BUFFER_OVERFLOW;
 	}
-	if (dataTimestamp == nullptr) {
-		timestamp = millis();
-	}
 	else {
-		timestamp = *dataTimestamp;
+		if (dataTimestamp == nullptr) {
+			timestamp = millis();
+		}
+		else {
+			timestamp = *dataTimestamp;
+		}
+		data[_size] = f;
+		_size++;
+		return SUCCESS;
 	}
-	data[_size] = f;
-	_size++;
-	return SUCCESS;
 }
 
 void BufferFloat::clear() {

@@ -21,7 +21,9 @@ public:
 	uint8_t push_back(float f, uint32_t * timestamp = nullptr);
 	size_t getData(float ** data, uint32_t * timestamp = nullptr);
 	//void setAutoResize(bool b);
+	size_t inSize();
 	size_t outSize();
+	size_t inCapacity();
 	size_t outCapacity();
 	void resize(size_t capacity);
 };
