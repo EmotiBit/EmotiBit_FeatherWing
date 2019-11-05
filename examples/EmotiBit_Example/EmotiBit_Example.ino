@@ -144,10 +144,11 @@ const uint32_t SERIAL_BAUD = 2000000; //115200
 uint16_t loopCount = 0;
 
 #define BASE_SAMPLING_FREQ 120
-#define IMU_SAMPLING_DIV 2
+#define IMU_SAMPLING_DIV 1
+#define PPG_SAMPLING_DIV 1
 #define EDA_SAMPLING_DIV 1
 #define TEMPERATURE_SAMPLING_DIV 4
-#define BATTERY_SAMPLING_DIV 15
+#define BATTERY_SAMPLING_DIV 20
 //#define N_DATA_TYPES 17
 
 bool errorStatus = false;
@@ -1084,20 +1085,18 @@ void readSensors() {
 
 	// EDA
 	if (acquireData.eda) {
-		static uint16_t edaCounter;
+		static uint16_t edaCounter = 0;
+		edaCounter++;
 		if (edaCounter == EDA_SAMPLING_DIV) {
 			int8_t tempStatus = emotibit.updateEDAData();
-			//if (dataStatus.eda == 0) {
-			//	dataStatus.eda = tempStatus;
-			//}
 			edaCounter = 0;
 		}
-		edaCounter++;
 	}
 
 	// Temperature / Humidity Sensor
 	if (acquireData.tempHumidity) {
-		static uint16_t temperatureCounter;
+		static uint16_t temperatureCounter = 0;
+		temperatureCounter++;
 		if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
 			// Note: Temperature/humidity and the thermistor are alternately sampled 
 			// on every other call of updateTempHumidityData()
@@ -1125,40 +1124,35 @@ void readSensors() {
 				}
 			}
 		}
-		temperatureCounter++;
 	}
 
 	// IMU
 	if (acquireData.imu) {
-    static uint16_t imuCounter;
-    if (imuCounter == IMU_SAMPLING_DIV) {
-      imuCounter = 0;
-  		int8_t tempStatus = emotibit.updateIMUData();
-  		//if (dataStatus.imu == 0) {
-  		//	dataStatus.imu = tempStatus;
-  		//}
-    }
-    imuCounter++;
+		static uint16_t imuCounter = 0;
+		imuCounter++;
+		if (imuCounter == IMU_SAMPLING_DIV) {
+  			int8_t tempStatus = emotibit.updateIMUData();
+			imuCounter = 0;
+		}
 	}
 
 	// PPG
 	if (acquireData.ppg) {
-    
-		  int8_t tempStatus = emotibit.updatePPGData();
-      
-  		//if (dataStatus.ppg == 0) {
-  		//	dataStatus.ppg = tempStatus;
-  		//}
-
+		static uint16_t ppgCounter = 0;
+		ppgCounter++;
+		if (ppgCounter == PPG_SAMPLING_DIV) {
+			int8_t tempStatus = emotibit.updatePPGData();
+			ppgCounter = 0;
+		}
 	}
 
 	// Battery (all analog reads must be in the ISR)
-	static uint16_t batteryCounter;
-	if (batteryCounter > BATTERY_SAMPLING_DIV) {
+	static uint16_t batteryCounter = 0;
+	batteryCounter++;
+	if (batteryCounter == BATTERY_SAMPLING_DIV) {
 		emotibit.updateBatteryPercentData();
 		batteryCounter = 0;
 	}
-	batteryCounter++;
 }
 
 void setTimerFrequency(int frequencyHz) {
