@@ -154,8 +154,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	_analogEnablePin = 6; // gpio pin assigned to the mosfet
 	switchPin = 12;
 	_batteryReadPin = A7;
-	_edlPin = A3;
-	_edrPin = A4;
+	_edlPin = A4;
+	_edrPin = A3;
 	_sdCardChipSelectPin = 19;
 	_adcBits = 12;
 	adcRes = pow(2, _adcBits);	// adc bit resolution
