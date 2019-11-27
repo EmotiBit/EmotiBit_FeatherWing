@@ -14,6 +14,7 @@ bool sendConsole = false;
 #include <Adafruit_SleepyDog.h>
 #include <SdFat.h>
 #include <ArduinoJson.h>
+#include <ArduinoLowPower.h>
 
 SdFat SD; 
 
@@ -1296,19 +1297,56 @@ void hibernate() {
 	WiFi.end();
 #endif
 
+	//IMU Suspend Mode
+	Serial.println("Suspending IMU...");
+	BMI160.suspendIMU();
+
+	SPI.end(); // shutdown the SPI interface
+
+	Wire.end();
+
+	//// pinMode(LED_BUILTIN, OUTPUT);
+
+	//pinMode(emotibit._sdCardChipSelectPin, OUTPUT);//cs
+	//digitalWrite(emotibit._sdCardChipSelectPin, LOW);
+	//pinMode(PIN_SPI_MISO, OUTPUT);
+	//digitalWrite(PIN_SPI_MISO, LOW);
+	//pinMode(PIN_SPI_MOSI, OUTPUT);
+	//digitalWrite(PIN_SPI_MOSI, LOW);
+	//pinMode(PIN_SPI_SCK, OUTPUT);
+	//digitalWrite(PIN_SPI_SCK, LOW);
+
+	//pinMode(PIN_WIRE_SCL, OUTPUT);
+	//digitalWrite(PIN_WIRE_SCL, LOW);
+	//pinMode(PIN_WIRE_SDA, OUTPUT);
+	//digitalWrite(PIN_WIRE_SDA, LOW);
+
+	//pinMode(PIN_UART, OUTPUT);
+	//digitalWrite(PIN_WIRE_SCL, LOW);
+	//pinMode(PIN_WIRE_SDA, OUTPUT);
+	//digitalWrite(PIN_WIRE_SDA, LOW);
+
+	while (ledPinBusy)
+
+	// Setup all pins (digital and analog) in INPUT mode (default is nothing)  
+	//for (uint32_t ul = 0; ul < NUM_DIGITAL_PINS; ul++)
+	for (uint32_t ul = 0; ul < PINS_COUNT; ul++)
+	{
+		pinMode(ul, OUTPUT);
+		digitalWrite(ul, LOW);
+		pinMode(ul, INPUT);
+	}
+
 	//GSRToggle, write 1 to the PMO
 	Serial.println("Disabling analog circuitry...");
 	pinMode(emotibit._analogEnablePin, OUTPUT);
 	digitalWrite(emotibit._analogEnablePin, HIGH);
 
 
-
-	//IMU Suspend Mode
-	Serial.println("Suspending IMU...");
-	BMI160.suspendIMU();
-
-	while (ledPinBusy)
-	pinMode(LED_BUILTIN, OUTPUT);
+	//LowPower.deepSleep();
+	//deepSleep();
+	Serial.println("Entering deep sleep...");
+	LowPower.deepSleep();
 
 	Serial.println("Entering sleep loop...");
 	while (true) {
