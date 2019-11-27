@@ -151,12 +151,12 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 
 	// Set board specific pins and constants
 #if defined(ADAFRUIT_FEATHER_M0)
-	_analogEnablePin = 5; // gpio pin assigned to the mosfet
-	switchPin = 13;
+	_analogEnablePin = 6; // gpio pin assigned to the mosfet
+	switchPin = 12;
 	_batteryReadPin = A7;
 	_edlPin = A3;
 	_edrPin = A4;
-	_sdCardChipSelectPin = 6;
+	_sdCardChipSelectPin = 19;
 	_adcBits = 12;
 	adcRes = pow(2, _adcBits);	// adc bit resolution
 #elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
