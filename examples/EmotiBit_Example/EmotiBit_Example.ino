@@ -14,6 +14,7 @@ bool sendConsole = false;
 #include <Adafruit_SleepyDog.h>
 #include <SdFat.h>
 #include <ArduinoJson.h>
+#include <ArduinoLowPower.h>
 
 SdFat SD; 
 
@@ -1309,6 +1310,10 @@ void hibernate() {
 
 	while (ledPinBusy)
 	pinMode(LED_BUILTIN, OUTPUT);
+
+	//LowPower.deepSleep();
+	//deepSleep();
+	LowPower.deepSleep();
 
 	Serial.println("Entering sleep loop...");
 	while (true) {
