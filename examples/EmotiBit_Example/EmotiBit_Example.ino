@@ -1297,19 +1297,24 @@ void hibernate() {
 	WiFi.end();
 #endif
 
-	//GSRToggle, write 1 to the PMO
-	Serial.println("Disabling analog circuitry...");
-	pinMode(emotibit._analogEnablePin, OUTPUT);
-	digitalWrite(emotibit._analogEnablePin, HIGH);
-
-
-
 	//IMU Suspend Mode
 	Serial.println("Suspending IMU...");
 	BMI160.suspendIMU();
 
 	while (ledPinBusy)
-	pinMode(LED_BUILTIN, OUTPUT);
+	// pinMode(LED_BUILTIN, OUTPUT);
+
+	// Setup all pins (digital and analog) in INPUT mode (default is nothing)  
+	for (uint32_t ul = 0; ul < NUM_DIGITAL_PINS; ul++)
+	{
+		pinMode(ul, INPUT);
+	}
+
+	//GSRToggle, write 1 to the PMO
+	Serial.println("Disabling analog circuitry...");
+	pinMode(emotibit._analogEnablePin, OUTPUT);
+	digitalWrite(emotibit._analogEnablePin, HIGH);
+
 
 	//LowPower.deepSleep();
 	//deepSleep();
