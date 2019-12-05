@@ -211,24 +211,27 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 
 	// Flush the I2C
 	Serial.println("Flushing I2C....");
-	Wire.begin();
-	Wire.flush();
-	Wire.endTransmission();
-	Wire.clearWriteError();
-	Wire.end();
+	EmotiBit_i2c.begin();
+	pinPeripheral(11, PIO_SERCOM);
+	pinPeripheral(13, PIO_SERCOM);
+	EmotiBit_i2c.flush();
+	EmotiBit_i2c.endTransmission();
+	EmotiBit_i2c.clearWriteError();
+	EmotiBit_i2c.end();
 
 	//// Setup PPG sensor
 	Serial.println("Initializing MAX30101....");
 	// Initialize sensor
-	while (ppgSensor.begin() == false) // reads the part number to confirm device
-	{
-		Serial.println("MAX30101 was not found. Please check wiring/power. ");
-		Wire.flush();
-		Wire.endTransmission();
-		Wire.clearWriteError();
-		Wire.end();
-		//while (1);
-	}
+	// NOT REQUIRED ONCE ALTERNATE I2C IS ESTABLISHED
+	//while (ppgSensor.begin() == false) // reads the part number to confirm device
+	//{
+	//	Serial.println("MAX30101 was not found. Please check wiring/power. ");
+	//	Wire.flush();
+	//	Wire.endTransmission();
+	//	Wire.clearWriteError();
+	//	Wire.end();
+	//	//while (1);
+	//}
 	ppgSensor.wakeUp();
 	ppgSensor.softReset();
 
@@ -244,7 +247,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 
 	// Setup IMU
 	Serial.println("Initializing IMU device....");
-	BMI160.begin(BMI160GenClass::I2C_MODE);
+	BMI160.begin(BMI160GenClass::I2C_MODE, EmotiBit_i2c);
 	uint8_t dev_id = BMI160.getDeviceID();
 	Serial.print("DEVICE ID: ");
 	Serial.println(dev_id, HEX);
@@ -350,7 +353,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 
 	// Setup Temperature / Humidity Sensor
 	Serial.println("Configuring Temperature / Humidity Sensor");
-	tempHumiditySensor.setup();
+	tempHumiditySensor.setup(EmotiBit_i2c);
 	tempHumiditySensor.changeSetting(Si7013::Settings::RESOLUTION_H11_T11);
 	tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NORMAL);
 	tempHumiditySensor.changeSetting(Si7013::Settings::VIN_UNBUFFERED);
