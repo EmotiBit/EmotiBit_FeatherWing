@@ -8,6 +8,8 @@ bool sendSerial = false;
 volatile bool sdWrite = false;
 bool sendConsole = false;
 
+
+
 #include "EmotiBit.h"
 #include <Wire.h>
 #include <SPI.h>

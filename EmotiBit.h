@@ -14,12 +14,12 @@
 #include <SdFat.h>
 #include "wiring_private.h"
 
-TwoWire EmotiBit_i2c(&sercom1, 11, 13);
+
 
 class EmotiBit {
   
 public:
-
+	
 	enum class SensorTimer {
 		MANUAL
 	};
@@ -158,12 +158,11 @@ public:
   	TIME_FILESYNC  //time taken for file syncing
   };
 	
-
 	Si7013 tempHumiditySensor;
 	uint8_t switchPin;
 	PPGSettings ppgSettings;
 	IMUSettings imuSettings;
-	MAX30105 ppgSensor();
+	MAX30105 ppgSensor;
 	float edrAmplification;
 	float vGnd;
 	float adcRes;

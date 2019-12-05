@@ -1,7 +1,7 @@
 #include "EmotiBit.h"
-
+TwoWire EmotiBit_i2c(&sercom1, 11, 13);
 EmotiBit::EmotiBit() {
-
+	
 }
 
 bool EmotiBit::setSamplingRates(SamplingRates s) {
@@ -212,26 +212,26 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	// Flush the I2C
 	Serial.println("Flushing I2C....");
 	EmotiBit_i2c.begin();
+	EmotiBit_i2c.setClock(100000);
 	pinPeripheral(11, PIO_SERCOM);
 	pinPeripheral(13, PIO_SERCOM);
 	EmotiBit_i2c.flush();
-	EmotiBit_i2c.endTransmission();
-	EmotiBit_i2c.clearWriteError();
-	EmotiBit_i2c.end();
+	//EmotiBit_i2c.endTransmission();
+	//EmotiBit_i2c.clearWriteError();
+	//EmotiBit_i2c.end();
 
 	//// Setup PPG sensor
 	Serial.println("Initializing MAX30101....");
 	// Initialize sensor
-	// NOT REQUIRED ONCE ALTERNATE I2C IS ESTABLISHED
-	//while (ppgSensor.begin() == false) // reads the part number to confirm device
-	//{
-	//	Serial.println("MAX30101 was not found. Please check wiring/power. ");
-	//	Wire.flush();
-	//	Wire.endTransmission();
-	//	Wire.clearWriteError();
-	//	Wire.end();
-	//	//while (1);
-	//}
+	while (ppgSensor.begin(EmotiBit_i2c) == false) // reads the part number to confirm device
+	{
+		Serial.println("MAX30101 was not found. Please check wiring/power. ");
+		EmotiBit_i2c.flush();
+		EmotiBit_i2c.endTransmission();
+		EmotiBit_i2c.clearWriteError();
+		EmotiBit_i2c.end();
+		//while (1);
+	}
 	ppgSensor.wakeUp();
 	ppgSensor.softReset();
 
