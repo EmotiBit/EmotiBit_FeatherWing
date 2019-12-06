@@ -10,6 +10,7 @@
 #include <BMI160Gen.h>
 #include <MAX30105.h>
 #include <EmotiBit_NCP5623.h>
+#include <SparkFun_MLX90632_Arduino_Library.h>
 #include "DoubleBufferFloat.h"
 #include <ArduinoJson.h>
 #include <SdFat.h>
@@ -53,7 +54,9 @@ public:
 	//uint8_t ADD_BMM_MEASURE = 0x4C; 
 	//uint8_t ADD_BMM_DATA = 0x42;
 	//};
-
+	struct DeviceAddress {
+		uint8_t MLX = 0x3A;
+	};
 	struct BMM150TrimData {
 		int8_t dig_x1;
 		int8_t dig_y1;
@@ -167,7 +170,7 @@ public:
   };
 
   enum class BattLevel {
-	  THRESHOLD_HIGH = 30,
+	  THRESHOLD_HIGH = 30, // Set thrhsolds for changing led indication on board for battery
 	  THRESHOLD_MED  = 20,
 	  THRESHOLD_LOW  = 10,
 	  INDICATION_SEQ_HIGH = 1,
@@ -177,11 +180,13 @@ public:
 
 	
 	Si7013 tempHumiditySensor;
+	DeviceAddress deviceAddress;
 	uint8_t switchPin;
 	PPGSettings ppgSettings;
 	IMUSettings imuSettings;
 	MAX30105 ppgSensor;
 	NCP5623 led;
+	MLX90632 thermopile;
 	float edrAmplification;
 	float vGnd;
 	float adcRes;

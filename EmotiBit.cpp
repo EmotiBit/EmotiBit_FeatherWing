@@ -365,6 +365,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	tempHumiditySensor.changeSetting(Si7013::Settings::VREFP_VDDA);
 	tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NO_HOLD);
 	tempHumiditySensor.startHumidityTempMeasurement();
+	
+	// Thermopile
+	MLX90632::status returnError; // Required as a parameter for begin() function in the MLX library 
+	thermopile.begin(deviceAddress.MLX, EmotiBit_i2c, returnError);
+
 
 
 

@@ -1191,6 +1191,12 @@ void readSensors() {
 		}
 	}
 
+	// Thermopile
+	if (1) {
+		Serial.print("Thermopile:");
+		Serial.println(emotibit.thermopile.getObjectTemp());
+	}
+
 	// IMU
 	if (acquireData.imu) {
 		static uint16_t imuCounter = 0;
