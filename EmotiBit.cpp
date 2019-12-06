@@ -1,5 +1,7 @@
 #include "EmotiBit.h"
+
 TwoWire EmotiBit_i2c(&sercom1, 11, 13);
+
 EmotiBit::EmotiBit() {
 	
 }
@@ -219,6 +221,9 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	//EmotiBit_i2c.endTransmission();
 	//EmotiBit_i2c.clearWriteError();
 	//EmotiBit_i2c.end();
+	
+	// setup LED DRIVER
+	led.begin(EmotiBit_i2c);
 
 	//// Setup PPG sensor
 	Serial.println("Initializing MAX30101....");

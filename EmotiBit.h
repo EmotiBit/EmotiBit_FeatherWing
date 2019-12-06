@@ -9,6 +9,7 @@
 #include <EmotiBit_Si7013.h>
 #include <BMI160Gen.h>
 #include <MAX30105.h>
+#include <EmotiBit_NCP5623.h>
 #include "DoubleBufferFloat.h"
 #include <ArduinoJson.h>
 #include <SdFat.h>
@@ -157,12 +158,30 @@ public:
   	TIME_FILECLOSE,  // time taken for file close
   	TIME_FILESYNC  //time taken for file syncing
   };
+
+  //TODO: Make enum classs for led's
+  enum class Led {
+	  LED_RED = 1,
+	  LED_BLUE,
+	  LED_YELLOW
+  };
+
+  enum class BattLevel {
+	  THRESHOLD_HIGH = 30,
+	  THRESHOLD_MED  = 20,
+	  THRESHOLD_LOW  = 10,
+	  INDICATION_SEQ_HIGH = 1,
+	  INDICATION_SEQ_MED,
+	  INDICATION_SEQ_LOW
+  };
+
 	
 	Si7013 tempHumiditySensor;
 	uint8_t switchPin;
 	PPGSettings ppgSettings;
 	IMUSettings imuSettings;
 	MAX30105 ppgSensor;
+	NCP5623 led;
 	float edrAmplification;
 	float vGnd;
 	float adcRes;

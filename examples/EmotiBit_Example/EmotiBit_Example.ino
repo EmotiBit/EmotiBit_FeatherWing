@@ -1,5 +1,5 @@
 //#define DEBUG_GET_DATA
-
+#define LED_BUILTIN 10
 #include <DoubleBufferFloat.h>
 #include <BufferFloat.h>
 #define SEND_UDP
@@ -112,7 +112,14 @@ uint8_t defaultDataReliabilityScore = 100;
 uint32_t setupTimerStart = 0;
 const uint32_t SETUP_TIMEOUT = 61500;          //Enough time to run through list of network credentials twice
 bool sendResetPacket = false;
-
+uint32_t recordBlinkDuration = millis();
+bool recordLedStatus = false;
+bool UDPtxLed = false;
+bool battLed = false;
+uint32_t BattLedstatusChangeTime = millis();
+uint8_t battLevel = 100;
+uint8_t battIndicationSeq = 0;
+uint8_t BattLedDuration = INT_MAX;
 //TODO: find a better way to Debug ::DBTAG1
 uint8_t debugWifiRecord[40]; // = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -151,6 +158,8 @@ uint16_t loopCount = 0;
 #define EDA_SAMPLING_DIV 1
 #define TEMPERATURE_SAMPLING_DIV 10
 #define BATTERY_SAMPLING_DIV 50
+
+
 //#define N_DATA_TYPES 17
 
 bool errorStatus = false;
@@ -1069,6 +1078,23 @@ void loop() {
 			}
 		// }
 	}
+	
+	// To update Battery level variable for LED indication
+	if (battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH))
+		battIndicationSeq = 0;
+	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_MED)) {
+		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_HIGH);
+		BattLedDuration = 1000;
+	}
+	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_MED) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
+		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_MED);
+		BattLedDuration = 500;
+	}
+	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
+		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_LOW);
+		BattLedDuration = 100;
+	}
+	
 
 	if (!newData) {
 		loopCount++;
@@ -1095,6 +1121,48 @@ void readSensors() {
 #endif // DEBUG
 
 	// ToDo: Move readSensors and timer into EmotiBit
+	
+	// LED STATUS CHANGE SEGMENT
+	if (UDPtxLed) 
+		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), 255);
+	else
+		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), 0);
+
+	if (battIndicationSeq) {
+		if (battLed && BattLedstatusChangeTime - millis() > BattLedDuration) {
+			emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), 0);
+			battLed = false;
+			BattLedstatusChangeTime = millis();
+		}
+		else if (!battLed && BattLedstatusChangeTime - millis() > BattLedDuration) {
+			emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), 255);
+			battLed = true;
+			BattLedstatusChangeTime = millis();
+		}
+	}
+	else {
+		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), 0);
+		battLed = false;
+	}
+
+
+	if (sdWrite) {
+		if (millis() - recordBlinkDuration >= 500) {
+			if (recordLedStatus == true) {
+				emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), 0);
+				recordLedStatus = false;
+			}
+			else {
+				emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), 255);
+				recordLedStatus = true;
+			}
+			recordBlinkDuration = millis();
+		}
+	}
+	else if (!sdWrite && recordLedStatus == true) {
+		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), 0);
+		recordLedStatus = false;
+	}
 
 	// EDA
 	if (acquireData.eda) {
@@ -1120,22 +1188,6 @@ void readSensors() {
 			//	dataStatus.tempHumidity = tempStatus;
 			//}
 			temperatureCounter = 0;
-
-			if (!sdWrite) {	// If we're not recording, blink quickly
-				if (!ledPinBusy) {	// only change the LED if it's not busy to avoid crashes
-					ledPinBusy = true;
-					if (ledOn) {
-						pinMode(LED_BUILTIN, INPUT);
-						ledOn = false;
-					}
-					else {
-						pinMode(LED_BUILTIN, OUTPUT);
-						digitalWrite(LED_BUILTIN, HIGH);
-						ledOn = true;
-					}
-					ledPinBusy = false;
-				}
-			}
 		}
 	}
 
@@ -1160,6 +1212,8 @@ void readSensors() {
 	}
 
 	// Battery (all analog reads must be in the ISR)
+	// TODO: use the stored BAtt value instead of calling readBatteryPercent again
+	battLevel = emotibit.readBatteryPercent();
 	static uint16_t batteryCounter = 0;
 	batteryCounter++;
 	if (batteryCounter == BATTERY_SAMPLING_DIV) {
@@ -1565,6 +1619,7 @@ bool sendMessage(String & s) {
 		start_udpSend = millis();
 		sendUdpMessage(s);
 		duration_udpSend = millis() - start_udpSend;
+		UDPtxLed = !UDPtxLed;
 		
 #endif // SEND_UDP	
 		// Write to SD card after sending network messages
