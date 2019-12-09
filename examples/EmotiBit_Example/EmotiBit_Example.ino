@@ -120,6 +120,8 @@ uint32_t BattLedstatusChangeTime = millis();
 uint8_t battLevel = 100;
 uint8_t battIndicationSeq = 0;
 uint8_t BattLedDuration = INT_MAX;
+
+
 //TODO: find a better way to Debug ::DBTAG1
 uint8_t debugWifiRecord[40]; // = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -192,6 +194,17 @@ uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
 bool sendData[(uint8_t)EmotiBit::DataType::length];
 
 void setup() {
+	//if (0) {
+	//	SD.cardBegin(19, SD_SCK_MHZ(50));
+	//	cardSize = SD.card()->cardSize();
+	//	cardSize_f = 0.000512*cardSize;
+	//	start_time = millis();
+	//	digitalWrite(LED_BUILTIN, HIGH);
+	//	SD.fsBegin();
+	//	volFree = SD.vol()->freeClusterCount();
+	//	fs = 0.000512*volFree*SD.vol()->blocksPerCluster();
+	//	digitalWrite(LED_BUILTIN, LOW);
+	//}
 	// DBTAG
 	for (uint8_t i = 0; i < 40; i++)
 		debugWifiRecord[i] = 0;
@@ -1129,12 +1142,12 @@ void readSensors() {
 		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), 0);
 
 	if (battIndicationSeq) {
-		if (battLed && BattLedstatusChangeTime - millis() > BattLedDuration) {
+		if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) {
 			emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), 0);
 			battLed = false;
 			BattLedstatusChangeTime = millis();
 		}
-		else if (!battLed && BattLedstatusChangeTime - millis() > BattLedDuration) {
+		else if (!battLed && millis() - BattLedstatusChangeTime > BattLedDuration) {
 			emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), 255);
 			battLed = true;
 			BattLedstatusChangeTime = millis();

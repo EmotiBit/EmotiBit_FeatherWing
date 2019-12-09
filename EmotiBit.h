@@ -119,7 +119,6 @@ public:
 	PPG_INFRARED,
 	PPG_RED,
 	PPG_GREEN,
-	//TODO: Add a debug data type
 	EDA,
 	EDL,
 	EDR,
@@ -183,7 +182,9 @@ public:
 	MAX30105 ppgSensor;
 	NCP5623 led;
 	float edrAmplification;
-	float vGnd;
+	float vRef1; // Reference voltage of first voltage divider(15/100)
+	float vRef2; // Reference voltage from second voltage divider(100/100)
+	float rSkinAmp;
 	float adcRes;
 	float edaVDivR;
 	uint8_t _sdCardChipSelectPin;	// ToDo: create getter and make private

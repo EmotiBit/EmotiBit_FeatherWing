@@ -149,7 +149,9 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 
 	_version = version;
 	_vcc = 3.3f;						// Vcc voltage
-	vGnd = _vcc / 2.f;	// Virtual GND Voltage for eda
+	// vGnd = _vcc / 2.f;	// Virtual GND Voltage for eda
+	vRef1 = _vcc * (15.f / 115.f); // First Voltage divider refernce
+	vRef2 = _vcc / 2.f; // Second voltage Divider reference
 
 	// Set board specific pins and constants
 #if defined(ADAFRUIT_FEATHER_M0)
@@ -176,7 +178,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	}
 	else if (version == Version::V01C) {
 		edaVDivR = 5000000.f;           //R17 5MOhm
-		edrAmplification = 10; // 10x
+		edrAmplification = 83.33; // 83.33x
+		rSkinAmp = 4.99; // RskinAmp in Mega Ohms
 	}
 	// Print board-specific settings
 	Serial.println("Board-specific settings:");
@@ -435,10 +438,12 @@ int8_t EmotiBit::updateEDAData() {
 			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
 		}
 
-		edaTemp = (edrTemp - vGnd) / edrAmplification;	// Remove VGND bias and amplification from EDR measurement
+		edaTemp = (edrTemp - vRef2) / edrAmplification;	// Remove VGND bias and amplification from EDR measurement
 		edaTemp = edaTemp + edlTemp;											// Add EDR to EDL in Volts
 
-		edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
+		//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
+		edaTemp = vRef1 / (rSkinAmp * (edaTemp - vRef1)); // Conductance in uSiemens
+
 
 		// Add to data double buffer
 		status = status | pushData(EmotiBit::DataType::EDA, edaTemp, &edrBuffer.timestamp);
