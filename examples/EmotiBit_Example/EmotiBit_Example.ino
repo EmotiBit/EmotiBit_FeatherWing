@@ -16,6 +16,7 @@ bool sendConsole = false;
 #include <Adafruit_SleepyDog.h>
 #include <SdFat.h>
 #include <ArduinoJson.h>
+#include <ArduinoLowPower.h>
 
 SdFat SD; 
 
@@ -1348,14 +1349,14 @@ int freeMemory() {
 #endif  // __arm__
 }
 
-//Currently Down to ~2.5mA draw (0.01 W)
+// NEW Hibernate
 void hibernate() {
 	Serial.println("hibernate()");
 	Serial.println("Stopping timer...");
 	stopTimer();
 
-  //PPGToggle
-  // For an unknown reason, this need to be before WiFi diconnect/end
+	//PPGToggle
+	// For an unknown reason, this need to be before WiFi diconnect/end
 	Serial.println("Shutting down ppg...");
 	emotibit.ppgSensor.shutDown();
 
@@ -1368,23 +1369,62 @@ void hibernate() {
 	WiFi.end();
 #endif
 
-	//GSRToggle, write 1 to the PMO
-	Serial.println("Disabling analog circuitry...");
-	pinMode(emotibit._analogEnablePin, OUTPUT);
-	digitalWrite(emotibit._analogEnablePin, HIGH);
-
-
-
 	//IMU Suspend Mode
 	Serial.println("Suspending IMU...");
 	BMI160.suspendIMU();
 
-	while (ledPinBusy)
-	pinMode(LED_BUILTIN, OUTPUT);
+	SPI.end(); // shutdown the SPI interface
+
+	Wire.end();
+
+	//// pinMode(LED_BUILTIN, OUTPUT);
+
+	//pinMode(emotibit._sdCardChipSelectPin, OUTPUT);//cs
+	//digitalWrite(emotibit._sdCardChipSelectPin, LOW);
+	//pinMode(PIN_SPI_MISO, OUTPUT);
+	//digitalWrite(PIN_SPI_MISO, LOW);
+	//pinMode(PIN_SPI_MOSI, OUTPUT);
+	//digitalWrite(PIN_SPI_MOSI, LOW);
+	//pinMode(PIN_SPI_SCK, OUTPUT);
+	//digitalWrite(PIN_SPI_SCK, LOW);
+
+	//pinMode(PIN_WIRE_SCL, OUTPUT);
+	//digitalWrite(PIN_WIRE_SCL, LOW);
+	//pinMode(PIN_WIRE_SDA, OUTPUT);
+	//digitalWrite(PIN_WIRE_SDA, LOW);
+
+	//pinMode(PIN_UART, OUTPUT);
+	//digitalWrite(PIN_WIRE_SCL, LOW);
+	//pinMode(PIN_WIRE_SDA, OUTPUT);
+	//digitalWrite(PIN_WIRE_SDA, LOW);
+
+	/*while (ledPinBusy)*/
+
+		// Setup all pins (digital and analog) in INPUT mode (default is nothing)  
+		//for (uint32_t ul = 0; ul < NUM_DIGITAL_PINS; ul++)
+	for (uint32_t ul = 0; ul < PINS_COUNT; ul++)
+	{
+		if (ul != emotibit._analogEnablePin) {
+			pinMode(ul, OUTPUT);
+			digitalWrite(ul, LOW);
+			pinMode(ul, INPUT);
+		}
+	}
+
+	//GSRToggle, write 1 to the PMO
+	Serial.println("Disabling MOSFET ");
+	pinMode(emotibit._analogEnablePin, OUTPUT);
+	digitalWrite(emotibit._analogEnablePin, HIGH);
+
+
+	//LowPower.deepSleep();
+	//deepSleep();
+	Serial.println("Entering deep sleep...");
+	LowPower.deepSleep();
 
 	Serial.println("Entering sleep loop...");
 	while (true) {
-		
+
 		digitalWrite(LED_BUILTIN, LOW); // Show we're asleep
 		int sleepMS = Watchdog.sleep();
 		digitalWrite(LED_BUILTIN, HIGH); // Show we're awake again
@@ -1431,6 +1471,91 @@ void hibernate() {
 
 
 }
+
+// OLD Hibernate
+//Currently Down to ~2.5mA draw (0.01 W)
+//void hibernate() {
+//	Serial.println("hibernate()");
+//	Serial.println("Stopping timer...");
+//	stopTimer();
+//
+//  //PPGToggle
+//  // For an unknown reason, this need to be before WiFi diconnect/end
+//	Serial.println("Shutting down ppg...");
+//	emotibit.ppgSensor.shutDown();
+//
+//#ifdef SEND_UDP || SEND_TCP
+//	if (wifiStatus == WL_CONNECTED) {
+//		Serial.println("Disconnecting WiFi...");
+//		WiFi.disconnect();
+//	}
+//	Serial.println("Ending WiFi...");
+//	WiFi.end();
+//#endif
+//
+//	//GSRToggle, write 1 to the PMO
+//	Serial.println("Disabling analog circuitry...");
+//	pinMode(emotibit._analogEnablePin, OUTPUT);
+//	digitalWrite(emotibit._analogEnablePin, HIGH);
+//
+//
+//
+//	//IMU Suspend Mode
+//	Serial.println("Suspending IMU...");
+//	BMI160.suspendIMU();
+//
+//	while (ledPinBusy)
+//	pinMode(LED_BUILTIN, OUTPUT);
+//
+//	Serial.println("Entering sleep loop...");
+//	while (true) {
+//		
+//		digitalWrite(LED_BUILTIN, LOW); // Show we're asleep
+//		int sleepMS = Watchdog.sleep();
+//		digitalWrite(LED_BUILTIN, HIGH); // Show we're awake again
+//		delay(1);
+//
+//		//	// Log the battery voltage to the SD card
+//		//	if (SD.begin(emotibit._sdCardChipSelectPin)) {
+//		//		dataFile = SD.open("HibernateBatteryLog.csv", FILE_WRITE);
+//		//		if (dataFile) {
+//		//			static float data;
+//		//			static EmotiBit::DataType t = EmotiBit::DataType::BATTERY_VOLTAGE;
+//
+//		//			data = emotibit.readBatteryVoltage();
+//
+//		//			static String message;
+//		//			message = "";
+//		//			message += createPacketHeader(millis(), typeTags[(uint8_t)t], 1);
+//		//			message += ",";
+//		//			message += String(data, printLen[(uint8_t)t]);
+//		//			message += "\n";
+//		//			packetCount++;
+//		//			dataFile.print(message);
+//		//			dataFile.close();
+//		//		}
+//		//}
+//
+//		// Try to reattach USB connection on "native USB" boards (connection is
+//		// lost on sleep). Host will also need to reattach to the Serial monitor.
+//		// Seems not entirely reliable, hence the LED indicator fallback.
+////#ifdef USBCON
+////		USBDevice.attach();
+////#endif
+//	}
+//
+//	//sleepmgr_sleep(SLEEPMGR_STANDBY);
+//
+//	//// Set sleep to full power down.  Only external interrupts or
+//	//// the watchdog timer can wake the CPU!
+//	//	set_sleep_mode(SLEEP_MODE_PWR_DOWN); 
+//	//	power_all_disable();	// disable all functions
+//	//	sleep_bod_disable(); // disable brown out detect to lower power consumption
+//	//	// Enable sleep and enter sleep mode.
+//	//	sleep_mode();
+//
+//
+//}
 
 int8_t switchRead() {
 	// ToDo: Consider reading pin mode https://arduino.stackexchange.com/questions/13165/how-to-read-pinmode-for-digital-pin
