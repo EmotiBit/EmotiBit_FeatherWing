@@ -527,6 +527,9 @@ int8_t EmotiBit::updateTempHumidityData() {
 			}
 			tempHumiditySensor.startAdcMeasurement();
 		}
+		else {
+			tempHumiditySensor.startHumidityTempMeasurement();
+		}
 		//else if (tempHumiditySensor.isAdcNew() == true) {
 		//	static float thermTemp;
 		//	thermTemp = tempHumiditySensor.getAdc();
