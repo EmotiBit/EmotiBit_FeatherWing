@@ -125,6 +125,7 @@ uint8_t BattLedDuration = INT_MAX;
 //TODO: find a better way to Debug ::DBTAG1
 uint8_t debugWifiRecord[40]; // = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0 , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+
 // DBTAG1
 bool connected = false;// used in updateWifi
 uint32_t start_udpSend = 0;// used in sendMessage
@@ -1203,6 +1204,8 @@ void readSensors() {
 			temperatureCounter = 0;
 		}
 	}
+
+	
 
 	// IMU
 	if (acquireData.imu) {
