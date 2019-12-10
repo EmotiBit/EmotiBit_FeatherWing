@@ -196,6 +196,8 @@ public:
 	bool bmm150XYClipped = false;
 	bool bmm150ZHallClipped = false;
 	uint8_t _analogEnablePin;
+	bool thermopileBegun = false;
+	uint32_t lastThermopileBegin;
 	
   
   EmotiBit();

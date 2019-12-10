@@ -369,7 +369,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	// Thermopile
 	MLX90632::status returnError; // Required as a parameter for begin() function in the MLX library 
 	thermopile.begin(deviceAddress.MLX, EmotiBit_i2c, returnError);
-
+	lastThermopileBegin = millis();
 
 
 
@@ -522,37 +522,52 @@ int8_t EmotiBit::updateTempHumidityData() {
 			}
 			tempHumiditySensor.startAdcMeasurement();
 		}
-		else if (tempHumiditySensor.isAdcNew() == true) {
-			static float thermTemp;
-			thermTemp = tempHumiditySensor.getAdc();
-			thermistorBuffer.push_back(thermTemp);
-			if (thermistorBuffer.size() >= _samplesAveraged.thermistor) {
-				// ToDo: Convert  to degrees
-				//thermTemp = thermTemp * _vcc / _thermistorAdcResolution;	// Convert ADC to Volts
-				//thermTemp = (thermTemp - vGnd) / thermistorAmplification;	// Remove VGND bias and amplification from thermistor measurement
-				//thermTemp = thermTemp / (1 - thermTemp) / thermistorToDividerRatio;	// Convert Volts to Ohms
-				// rDivVal
-				// rThermVal
-				// ohmToC
+		//else if (tempHumiditySensor.isAdcNew() == true) {
+		//	static float thermTemp;
+		//	thermTemp = tempHumiditySensor.getAdc();
+		//	thermistorBuffer.push_back(thermTemp);
+		//	if (thermistorBuffer.size() >= _samplesAveraged.thermistor) {
+		//		// ToDo: Convert  to degrees
+		//		//thermTemp = thermTemp * _vcc / _thermistorAdcResolution;	// Convert ADC to Volts
+		//		//thermTemp = (thermTemp - vGnd) / thermistorAmplification;	// Remove VGND bias and amplification from thermistor measurement
+		//		//thermTemp = thermTemp / (1 - thermTemp) / thermistorToDividerRatio;	// Convert Volts to Ohms
+		//		// rDivVal
+		//		// rThermVal
+		//		// ohmToC
 
-				// ToDo: Add clipping check
+		//		// ToDo: Add clipping check
 
-				// Steps:
-				// Convert adc to volts: adcVal 
-				// Remove VGND bias and amplification from EDR measurement
-				// Convert to Ohms
-				// Convert to degrees
-				// B constant 3380
-				// 20C = 12.09kOhm
-				// 25C = 10KOhm
-				// 30C = 8.31kOhm
-				// Amplification 10x
-				status = status | pushData(EmotiBit::DataType::TEMPERATURE_HP0, average(thermistorBuffer), &(thermistorBuffer.timestamp));
-				thermistorBuffer.clear();
-			}
-			tempHumiditySensor.startHumidityTempMeasurement();
-
+		//		// Steps:
+		//		// Convert adc to volts: adcVal 
+		//		// Remove VGND bias and amplification from EDR measurement
+		//		// Convert to Ohms
+		//		// Convert to degrees
+		//		// B constant 3380
+		//		// 20C = 12.09kOhm
+		//		// 25C = 10KOhm
+		//		// 30C = 8.31kOhm
+		//		// Amplification 10x
+		//		status = status | pushData(EmotiBit::DataType::TEMPERATURE_HP0, average(thermistorBuffer), &(thermistorBuffer.timestamp));
+		//		thermistorBuffer.clear();
+		//	}
+		//	tempHumiditySensor.startHumidityTempMeasurement();
+		//}
+		// Thermopile
+		if (!thermopileBegun) {// for the first time
+			thermopile.start_getObjectTemp();
+			thermopileBegun = true;
+			lastThermopileBegin = millis();
 		}
+		else {
+			if (millis() - lastThermopileBegin > 600) {
+				/*Serial.print("Thermopile:");
+				Serial.println(emotibit.thermopile.end_getObjectTemp());*/
+				uint32_t time_stamp = millis();
+				status = status | pushData(EmotiBit::DataType::TEMPERATURE_HP0, thermopile.end_getObjectTemp(), &(time_stamp));
+				thermopile.start_getObjectTemp();
+				lastThermopileBegin = millis();
+			}
+		}	
 	}
 	return status;
 }
