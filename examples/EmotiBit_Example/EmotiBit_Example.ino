@@ -91,7 +91,7 @@ uint32_t networkBeginStart;
 uint32_t WIFI_BEGIN_ATTEMPT_DELAY = 5000;
 uint32_t WIFI_BEGIN_SWITCH_CRED = 300000;      //Set to 30000 for debug, 300000 for Release
 bool hibernateButtonPressed = false;
-uint32_t hibernateButtonStart;
+uint32_t hibernateButtonStart = millis();
 uint32_t hibernateButtonDelay = 2000;
 uint32_t hibernateBeginStart;
 uint32_t hibernateBeginDelay = 1000;
@@ -120,6 +120,9 @@ uint32_t BattLedstatusChangeTime = millis();
 uint8_t battLevel = 100;
 uint8_t battIndicationSeq = 0;
 uint8_t BattLedDuration = INT_MAX;
+uint8_t wifiState = 0; // 0 for normal operation
+bool attachWifiControlToShortPress = false;
+bool attachHibernateToLongPress = false;
 
 
 //TODO: find a better way to Debug ::DBTAG1
@@ -193,6 +196,30 @@ struct AcquireData {
 String typeTags[(uint8_t) EmotiBit::DataType::length];
 uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
 bool sendData[(uint8_t)EmotiBit::DataType::length];
+/*
+Function called when short press is detected in main loop.
+calls the function attached to it by the attachToShortButtonPress()
+*/
+void(*onShortPress)(void){};
+/*
+Function called when long press is detected in main loop.
+calls the function attached to it by the attachToLongButtonPress()
+*/
+void(*onLongPress)(void){};
+
+/*
+Function to attch callback to short press
+*/
+void attachToShortButtonPress(void(&shortSwitchPressFunction)(void)) {
+	onShortPress = &shortSwitchPressFunction;
+
+}
+/*
+Function to attch callback to short press
+*/
+void attachToLongButtonPress(void(&longSwitchPressFunction)(void)) {
+	onLongPress = &longSwitchPressFunction;
+}
 
 void setup() {
 	//if (0) {
@@ -469,6 +496,9 @@ void setup() {
 	// ToDo: utilize separate strings for SD card writable messages vs transmit acks
 
 	sendResetPacket = true;
+	//assignButtonCallbacks((uint8_t)EmotiBit::FunctionalityShortPress::WIFI, (uint8_t)EmotiBit::FunctionalityLongPress::HIBERNATE);
+	attachToShortButtonPress(*wifiModeControl);
+	attachToLongButtonPress(*initHibernate);
 }
 
 String createPacketHeader(uint32_t timestamp, String typeTag, size_t dataLen) {
@@ -937,6 +967,7 @@ bool performTimestampSyncing() {
 	}
 }
 
+
 void loop() {
 #ifdef DEBUG_GET_DATA
 	Serial.println("loop()");
@@ -966,31 +997,18 @@ void loop() {
 	if (switchRead() == 0) {
 		hibernateButtonPressed = false;
 	}
-	else if (switchRead() == 1) {
+	// TODO: When a switch debouncer is added, remove the 500ms delay in polling
+	else if (switchRead() == 1 && millis() - hibernateButtonStart > 500) { // poll only after 500mSec, until aswitch  debouncer is added
 		if (hibernateButtonPressed) {
+			// Long Press
 			// hibernate button was already pressed -- check how long
-			if (!startHibernate && millis() - hibernateButtonStart > hibernateButtonDelay) {
-				// delay exceeded
-				startHibernate = true; // hibernate after writing data
-				hibernateBeginStart = millis();
-
-				// ToDo: Devise a better communication method than ACK for state changes
-				String tempMessage;
-				tempMessage = "\n";
-				tempMessage += createPacketHeader(millis(), "AK", 2);
-				tempMessage += ',';
-				tempMessage += "-1";
-				tempMessage += ',';
-				tempMessage += "MH";
-				Serial.println(tempMessage);
-				outputMessage += tempMessage;
-				packetCount++;
-			}
+			onLongPress();
 		}
 		else {
-			// start timer
+			// start timer for hibernate
 			hibernateButtonPressed = true;
 			hibernateButtonStart = millis();
+			onShortPress();
 		}
 	}
 	//DBTAG1
@@ -1102,6 +1120,7 @@ void loop() {
 		sdWrite = false;
 		stopSDWrite = false;
 	}
+	
 
 	//if (true && sdWrite) {
 	//	config.ssid = "garbage";
@@ -1109,6 +1128,70 @@ void loop() {
 	//}
 }
 
+/*
+StartHibernate
+*/
+void initHibernate() {
+	if (!startHibernate && millis() - hibernateButtonStart > hibernateButtonDelay) {
+		// delay exceeded
+		//call Long Press Function
+		startHibernate = true; // hibernate after writing data
+		hibernateBeginStart = millis();
+		// ToDo: Devise a better communication method than ACK for state changes
+		String tempMessage;
+		tempMessage = "\n";
+		tempMessage += createPacketHeader(millis(), "AK", 2);
+		tempMessage += ',';
+		tempMessage += "-1";
+		tempMessage += ',';
+		tempMessage += "MH";
+		Serial.println(tempMessage);
+		outputMessage += tempMessage;
+		packetCount++;
+	}
+}
+
+/*
+Function to update the Wifi status on the EmotiBit
+*/
+void wifiModeControl() {
+	if (1) {
+		switch (wifiState) {
+		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL:
+			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_LOWPOWER;
+			Serial.print("WifiMode:In Low Power Mode");
+			break;
+		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_LOWPOWER:
+			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_MAX_LOWPOWER;
+			Serial.print("WifiMode:In Max Low Power mode");
+			break;
+		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_MAX_LOWPOWER:
+			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END;
+			Serial.print("WifiMode: End Wifi");
+			break;
+		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END:
+			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL;
+			Serial.print("WifiMode: In Normal Mode");
+			break;
+		}
+	}
+	//  TODO: declare a variable to track changing between 2 states.
+	else {// for toggling between states
+		if (wifiState != (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL || wifiState != (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END) {
+			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL;
+		}
+		switch (wifiState) {
+		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL:
+			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END;
+			Serial.print("WifiMode:In Low Power Mode");
+			break;
+		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END:
+			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL;
+			Serial.print("WifiMode: In Normal Mode");
+			break;
+		}
+	}
+}
 void readSensors() {
 #ifdef DEBUG_GET_DATA
 	Serial.println("readSensors()");
@@ -1630,10 +1713,19 @@ bool sendMessage(String & s) {
 #endif // SEND_UDP
 #ifdef SEND_UDP
 		//DBTAG1
-		start_udpSend = millis();
-		sendUdpMessage(s);
-		duration_udpSend = millis() - start_udpSend;
-		UDPtxLed = !UDPtxLed;
+		if (!wifiState) { // only transmit if the WifiState is ON
+			start_udpSend = millis();
+			sendUdpMessage(s);
+			duration_udpSend = millis() - start_udpSend;
+			UDPtxLed = !UDPtxLed;
+		}
+		else {
+			UDPtxLed = false;
+		}
+		if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END) {
+			WiFi.disconnect();
+			WiFi.end();
+		}
 		
 #endif // SEND_UDP	
 		// Write to SD card after sending network messages
@@ -1682,7 +1774,7 @@ void updateWiFi() {
 			addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_TIMELOSTCONN, momentLost);// for reporting Wifi Lost moment
 		}
 
-		if (millis() - networkBeginStart > WIFI_BEGIN_ATTEMPT_DELAY) {
+		if (wifiState != (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END && millis() - networkBeginStart > WIFI_BEGIN_ATTEMPT_DELAY) {
 				if ((millis() - momentLost > WIFI_BEGIN_SWITCH_CRED) && (attempts >= 2)) {
 					switchCred = true;
 					gotIP = false;
