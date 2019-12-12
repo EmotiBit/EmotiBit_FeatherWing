@@ -1,5 +1,4 @@
 //#define DEBUG_GET_DATA
-#define LED_BUILTIN 10
 #include <DoubleBufferFloat.h>
 #include <BufferFloat.h>
 #define SEND_UDP
@@ -201,20 +200,16 @@ void setup() {
 	//	cardSize = SD.card()->cardSize();
 	//	cardSize_f = 0.000512*cardSize;
 	//	start_time = millis();
-	//	digitalWrite(LED_BUILTIN, HIGH);
 	//	SD.fsBegin();
 	//	volFree = SD.vol()->freeClusterCount();
 	//	fs = 0.000512*volFree*SD.vol()->blocksPerCluster();
-	//	digitalWrite(LED_BUILTIN, LOW);
+	
 	//}
 	// DBTAG
 	for (uint8_t i = 0; i < 40; i++)
 		debugWifiRecord[i] = 0;
 	Serial.println("setup()");
 	// DBTAG1
-	pinMode(LED_BUILTIN, OUTPUT);
-	digitalWrite(LED_BUILTIN, HIGH);
-	ledOn = true;
 	// }
 
 	setupTimerStart = millis();
@@ -1076,22 +1071,6 @@ void loop() {
 		addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_SDCARDTX, duration_sdcardSend);
 		// addDebugPacket((uint8_t)EmotiBit::DebugTags::TIME_MSGTX, millis() - start_timeSendMessage); // commented to stop printing the total TX time
 		//DBTAG1
-		// if (false){
-		// Blink the LED slowly if we're writing to the SD card
-			if (sdWrite && !ledPinBusy) {	// only change the LED if it's not busy to avoid crashes
-				ledPinBusy = true;
-				if (ledOn) {
-					pinMode(LED_BUILTIN, INPUT);
-					ledOn = false;
-				}
-				else {
-					pinMode(LED_BUILTIN, OUTPUT);
-					digitalWrite(LED_BUILTIN, HIGH);
-					ledOn = true;
-				}
-				ledPinBusy = false;
-			}
-		// }
 	}
 	
 	// To update Battery level variable for LED indication
@@ -1377,7 +1356,6 @@ void hibernate() {
 
 	Wire.end();
 
-	//// pinMode(LED_BUILTIN, OUTPUT);
 
 	//pinMode(emotibit._sdCardChipSelectPin, OUTPUT);//cs
 	//digitalWrite(emotibit._sdCardChipSelectPin, LOW);
@@ -1425,10 +1403,7 @@ void hibernate() {
 	Serial.println("Entering sleep loop...");
 	while (true) {
 
-		digitalWrite(LED_BUILTIN, LOW); // Show we're asleep
-		int sleepMS = Watchdog.sleep();
-		digitalWrite(LED_BUILTIN, HIGH); // Show we're awake again
-		delay(1);
+
 
 		//	// Log the battery voltage to the SD card
 		//	if (SD.begin(emotibit._sdCardChipSelectPin)) {
@@ -1472,114 +1447,12 @@ void hibernate() {
 
 }
 
-// OLD Hibernate
-//Currently Down to ~2.5mA draw (0.01 W)
-//void hibernate() {
-//	Serial.println("hibernate()");
-//	Serial.println("Stopping timer...");
-//	stopTimer();
-//
-//  //PPGToggle
-//  // For an unknown reason, this need to be before WiFi diconnect/end
-//	Serial.println("Shutting down ppg...");
-//	emotibit.ppgSensor.shutDown();
-//
-//#ifdef SEND_UDP || SEND_TCP
-//	if (wifiStatus == WL_CONNECTED) {
-//		Serial.println("Disconnecting WiFi...");
-//		WiFi.disconnect();
-//	}
-//	Serial.println("Ending WiFi...");
-//	WiFi.end();
-//#endif
-//
-//	//GSRToggle, write 1 to the PMO
-//	Serial.println("Disabling analog circuitry...");
-//	pinMode(emotibit._analogEnablePin, OUTPUT);
-//	digitalWrite(emotibit._analogEnablePin, HIGH);
-//
-//
-//
-//	//IMU Suspend Mode
-//	Serial.println("Suspending IMU...");
-//	BMI160.suspendIMU();
-//
-//	while (ledPinBusy)
-//	pinMode(LED_BUILTIN, OUTPUT);
-//
-//	Serial.println("Entering sleep loop...");
-//	while (true) {
-//		
-//		digitalWrite(LED_BUILTIN, LOW); // Show we're asleep
-//		int sleepMS = Watchdog.sleep();
-//		digitalWrite(LED_BUILTIN, HIGH); // Show we're awake again
-//		delay(1);
-//
-//		//	// Log the battery voltage to the SD card
-//		//	if (SD.begin(emotibit._sdCardChipSelectPin)) {
-//		//		dataFile = SD.open("HibernateBatteryLog.csv", FILE_WRITE);
-//		//		if (dataFile) {
-//		//			static float data;
-//		//			static EmotiBit::DataType t = EmotiBit::DataType::BATTERY_VOLTAGE;
-//
-//		//			data = emotibit.readBatteryVoltage();
-//
-//		//			static String message;
-//		//			message = "";
-//		//			message += createPacketHeader(millis(), typeTags[(uint8_t)t], 1);
-//		//			message += ",";
-//		//			message += String(data, printLen[(uint8_t)t]);
-//		//			message += "\n";
-//		//			packetCount++;
-//		//			dataFile.print(message);
-//		//			dataFile.close();
-//		//		}
-//		//}
-//
-//		// Try to reattach USB connection on "native USB" boards (connection is
-//		// lost on sleep). Host will also need to reattach to the Serial monitor.
-//		// Seems not entirely reliable, hence the LED indicator fallback.
-////#ifdef USBCON
-////		USBDevice.attach();
-////#endif
-//	}
-//
-//	//sleepmgr_sleep(SLEEPMGR_STANDBY);
-//
-//	//// Set sleep to full power down.  Only external interrupts or
-//	//// the watchdog timer can wake the CPU!
-//	//	set_sleep_mode(SLEEP_MODE_PWR_DOWN); 
-//	//	power_all_disable();	// disable all functions
-//	//	sleep_bod_disable(); // disable brown out detect to lower power consumption
-//	//	// Enable sleep and enter sleep mode.
-//	//	sleep_mode();
-//
-//
-//}
+
 
 int8_t switchRead() {
 	// ToDo: Consider reading pin mode https://arduino.stackexchange.com/questions/13165/how-to-read-pinmode-for-digital-pin
 
-	if (LED_BUILTIN == emotibit.switchPin) {
-		if (ledPinBusy) {
-			return -1;
-		}
-		else {
-			ledPinBusy = true;
-			pinMode(LED_BUILTIN, INPUT);
-			int8_t switchState = (int8_t) digitalRead(emotibit.switchPin);
-			if (ledOn) {
-				pinMode(LED_BUILTIN, OUTPUT);
-				digitalWrite(LED_BUILTIN, HIGH);
-			}
-			ledPinBusy = false;
-			return switchState;
-		}
-	}
-	else {
-		pinMode(LED_BUILTIN, INPUT);
-		return (int8_t) digitalRead(emotibit.switchPin);
-	}
+	return (int8_t) digitalRead(emotibit.switchPin);
 }
 
 // Loads the configuration from a file
