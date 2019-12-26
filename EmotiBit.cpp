@@ -215,7 +215,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	Wire.flush();
 	Wire.endTransmission();
 	Wire.clearWriteError();
-	Wire.end();
+	//Wire.end();
 
 	//// Setup PPG sensor
 	Serial.println("Initializing MAX30101....");
