@@ -1118,7 +1118,7 @@ void readSensors() {
 	
 	// LED STATUS CHANGE SEGMENT
 	if (UDPtxLed) 
-		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), 255);
+		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), 31);
 	else
 		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), 0);
 
@@ -1129,7 +1129,7 @@ void readSensors() {
 			BattLedstatusChangeTime = millis();
 		}
 		else if (!battLed && millis() - BattLedstatusChangeTime > BattLedDuration) {
-			emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), 255);
+			emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), 31);
 			battLed = true;
 			BattLedstatusChangeTime = millis();
 		}
@@ -1147,7 +1147,7 @@ void readSensors() {
 				recordLedStatus = false;
 			}
 			else {
-				emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), 255);
+				emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), 31);
 				recordLedStatus = true;
 			}
 			recordBlinkDuration = millis();
