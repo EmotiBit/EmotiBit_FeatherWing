@@ -177,6 +177,14 @@ public:
 	  INDICATION_SEQ_LOW
   };
 
+  enum class WiFiPowerMode {
+	  WIFI_NORMAL,
+	  WIFI_LOWPOWER,
+	  WIFI_MAX_LOWPOWER,
+	  WIFI_END
+  };
+
+
 	
 	Si7013 tempHumiditySensor;
 	DeviceAddress deviceAddress;
