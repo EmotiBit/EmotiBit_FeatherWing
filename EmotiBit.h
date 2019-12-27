@@ -148,9 +148,9 @@ public:
   	WIFI_DISCONNECT,  // Add message at wifi disconnect 
   	WIFI_TIMELOSTCONN,  // add message indicating time of disconnect
   	WIFI_CONNECT,  // add message indicating established connection
-  	WIFI_UPDATECONNRECORDTIME = 0,// NO LONGER IN USE
+  	WIFI_UPDATECONNRECORDTIME,// NO LONGER IN USE
   	TIME_PARSEINCOMINGMSG = 6,  // time taken to parse incoming message
-  	TIME_TIMESTAMPSYNC = 0,  // time taken for time stamp syncing
+  	TIME_TIMESTAMPSYNC,  // time taken for time stamp syncing
   	TIME_MSGGENERATION = 8,  // time taken for message generation
   	TIME_MSGTX,  // time taken for comlpete transmission(udp_sdcard)
   	TIME_UDPTX,  // time taken for udp transmission
