@@ -1118,24 +1118,24 @@ void readSensors() {
 	
 	// LED STATUS CHANGE SEGMENT
 	if (UDPtxLed) 
-		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), 31);
+		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), true);
 	else
-		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), 0);
+		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), false);
 
 	if (battIndicationSeq) {
 		if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) {
-			emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), 0);
+			emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), false);
 			battLed = false;
 			BattLedstatusChangeTime = millis();
 		}
 		else if (!battLed && millis() - BattLedstatusChangeTime > BattLedDuration) {
-			emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), 31);
+			emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), true);
 			battLed = true;
 			BattLedstatusChangeTime = millis();
 		}
 	}
 	else {
-		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), 0);
+		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), false);
 		battLed = false;
 	}
 
@@ -1143,18 +1143,18 @@ void readSensors() {
 	if (sdWrite) {
 		if (millis() - recordBlinkDuration >= 500) {
 			if (recordLedStatus == true) {
-				emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), 0);
+				emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), false);
 				recordLedStatus = false;
 			}
 			else {
-				emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), 31);
+				emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), true);
 				recordLedStatus = true;
 			}
 			recordBlinkDuration = millis();
 		}
 	}
 	else if (!sdWrite && recordLedStatus == true) {
-		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), 0);
+		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), false);
 		recordLedStatus = false;
 	}
 
