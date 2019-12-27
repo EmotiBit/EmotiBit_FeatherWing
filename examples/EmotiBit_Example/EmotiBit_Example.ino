@@ -201,11 +201,14 @@ Function called when short press is detected in main loop.
 calls the function attached to it by the attachToShortButtonPress()
 */
 void(*onShortPress)(void){};
+
+
 /*
 Function called when long press is detected in main loop.
 calls the function attached to it by the attachToLongButtonPress()
 */
 void(*onLongPress)(void){};
+
 
 /*
 Function to attch callback to short press
@@ -1155,40 +1158,36 @@ void initHibernate() {
 Function to update the Wifi status on the EmotiBit
 */
 void wifiModeControl() {
-	if (1) {
-		switch (wifiState) {
-		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL:
+	if (0) { // to toggle between 4 states
+		if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_LOWPOWER;
-			Serial.print("WifiMode:In Low Power Mode");
-			break;
-		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_LOWPOWER:
+			Serial.println("WifiMode:In Low Power Mode");
+		}
+		else if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_LOWPOWER) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_MAX_LOWPOWER;
-			Serial.print("WifiMode:In Max Low Power mode");
-			break;
-		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_MAX_LOWPOWER:
+			Serial.println("WifiMode:In Max Low Power mode");
+		}
+		else if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_MAX_LOWPOWER) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END;
-			Serial.print("WifiMode: End Wifi");
-			break;
-		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END:
+			Serial.println("WifiMode: End Wifi");
+		}
+		else if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL;
-			Serial.print("WifiMode: In Normal Mode");
-			break;
+			Serial.println("WifiMode: In Normal Mode");
 		}
 	}
 	//  TODO: declare a variable to track changing between 2 states.
-	else {// for toggling between states
-		if (wifiState != (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL || wifiState != (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END) {
+	else {// for toggling between 2 states
+		if (wifiState != (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL && wifiState != (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL;
 		}
-		switch (wifiState) {
-		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL:
+		if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END;
-			Serial.print("WifiMode:In Low Power Mode");
-			break;
-		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END:
+			Serial.print("WifiMode:End Wifi");
+		}
+		else if(wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END){
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL;
 			Serial.print("WifiMode: In Normal Mode");
-			break;
 		}
 	}
 }
