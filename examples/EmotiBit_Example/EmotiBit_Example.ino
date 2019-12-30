@@ -164,6 +164,8 @@ uint16_t loopCount = 0;
 #define EDA_SAMPLING_DIV 1
 #define TEMPERATURE_SAMPLING_DIV 10
 #define BATTERY_SAMPLING_DIV 50
+// TODO: This should change according to the rate set on the thermopile begin function 
+#define TTHERMOPILE_SAMPLING_DIV 38
 
 
 //#define N_DATA_TYPES 17
@@ -1268,6 +1270,16 @@ void readSensors() {
 		}
 	}
 
+	// Thermopile
+
+	if (acquireData.tempHumidity) {
+		static uint16_t thermopileCounter = 0;
+		thermopileCounter++;
+		if (thermopileCounter == TTHERMOPILE_SAMPLING_DIV) {
+			int8_t tempStatus = emotibit.updateThermopileData();
+			thermopileCounter = 0;
+		}
+	}
 	
 
 	// IMU
@@ -1690,9 +1702,13 @@ bool sendUdpMessage(String & s) {
 					Udp.endPacket();
 					wifiRebootCounter++;
 				}
+				if (firstIndex == 0) {
+					UDPtxLed = !UDPtxLed;
+				}
 			}
 			firstIndex = lastIndex + 1;	// increment substring indexes for breaking up sends
 		}
+		
 	}
 }
 #endif
@@ -1722,7 +1738,7 @@ bool sendMessage(String & s) {
 			start_udpSend = millis();
 			sendUdpMessage(s);
 			duration_udpSend = millis() - start_udpSend;
-			UDPtxLed = !UDPtxLed;
+			//UDPtxLed = !UDPtxLed;
 		}
 		else {
 			UDPtxLed = false;
