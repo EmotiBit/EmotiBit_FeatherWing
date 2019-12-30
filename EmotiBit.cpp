@@ -227,6 +227,10 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	
 	// setup LED DRIVER
 	led.begin(EmotiBit_i2c);
+	led.setCurrent(26);
+	led.setLEDpwm((uint8_t)Led::LED_RED, 8);
+	led.setLEDpwm((uint8_t)Led::LED_BLUE, 8);
+	led.setLEDpwm((uint8_t)Led::LED_YELLOW, 8);
 
 	//// Setup PPG sensor
 	Serial.println("Initializing MAX30101....");
