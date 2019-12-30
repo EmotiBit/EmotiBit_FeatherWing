@@ -227,6 +227,10 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	
 	// setup LED DRIVER
 	led.begin(EmotiBit_i2c);
+	led.setCurrent(26);
+	led.setLEDpwm((uint8_t)Led::LED_RED, 8);
+	led.setLEDpwm((uint8_t)Led::LED_BLUE, 8);
+	led.setLEDpwm((uint8_t)Led::LED_YELLOW, 8);
 
 	//// Setup PPG sensor
 	Serial.println("Initializing MAX30101....");
@@ -372,6 +376,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity) {
 	// Thermopile
 	MLX90632::status returnError; // Required as a parameter for begin() function in the MLX library 
 	thermopile.begin(deviceAddress.MLX, EmotiBit_i2c, returnError);
+	thermopile.setMeasurementRate(8);
 	lastThermopileBegin = millis();
 
 
@@ -560,26 +565,30 @@ int8_t EmotiBit::updateTempHumidityData() {
 		//	}
 		//	tempHumiditySensor.startHumidityTempMeasurement();
 		//}
-		// Thermopile
-		if (!thermopileBegun) {// for the first time
-			thermopile.start_getObjectTemp();
-			thermopileBegun = true;
-			lastThermopileBegin = millis();
-		}
-		else {
-			if (millis() - lastThermopileBegin > 600) {
-				/*Serial.print("Thermopile:");
-				Serial.println(emotibit.thermopile.end_getObjectTemp());*/
-				uint32_t time_stamp = millis();
-				status = status | pushData(EmotiBit::DataType::TEMPERATURE_HP0, thermopile.end_getObjectTemp(), &(time_stamp));
-				thermopile.start_getObjectTemp();
-				lastThermopileBegin = millis();
-			}
-		}	
+			
 	}
 	return status;
 }
 
+
+int8_t EmotiBit::updateThermopileData() {
+	int8_t status = 0;
+	// Thermopile
+	if (!thermopileBegun) {// for the first time
+		thermopile.start_getObjectTemp();
+		thermopileBegun = true;
+		//lastThermopileBegin = millis();
+	}
+	else {
+		/*Serial.print("Thermopile:");
+		Serial.println(emotibit.thermopile.end_getObjectTemp());*/
+		uint32_t time_stamp = millis();
+		status = status | pushData(EmotiBit::DataType::TEMPERATURE_HP0, thermopile.end_getObjectTemp(), &(time_stamp));
+		thermopile.start_getObjectTemp();
+		//lastThermopileBegin = millis();
+	}
+	return status;
+}
 //rslt = bmi160_get_fifo_data(dev);
 
 int8_t EmotiBit::updateIMUData() {
