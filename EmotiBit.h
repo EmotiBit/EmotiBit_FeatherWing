@@ -216,6 +216,7 @@ public:
 	int8_t updatePPGData();                /**< Read any available PPG data from the sensor FIFO into the inputBuffers */
 	int8_t updateEDAData();                /**< Take EDA reading and put into the inputBuffer */
 	int8_t updateTempHumidityData();       /**< Read any available temperature and humidity data into the inputBuffers */
+	int8_t updateThermopileData();         /**< Read Thermopile data into the buffers*/
 	int8_t updateBatteryVoltageData();     /**< Take battery voltage reading and put into the inputBuffer */
 	int8_t updateBatteryPercentData();     /**< Take battery percent reading and put into the inputBuffer */
 	float convertRawGyro(int16_t gRaw);

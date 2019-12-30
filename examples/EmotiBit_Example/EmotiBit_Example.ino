@@ -164,6 +164,8 @@ uint16_t loopCount = 0;
 #define EDA_SAMPLING_DIV 1
 #define TEMPERATURE_SAMPLING_DIV 10
 #define BATTERY_SAMPLING_DIV 50
+// TODO: This should change according to the rate set on the thermopile begin function 
+#define TTHERMOPILE_SAMPLING_DIV 38
 
 
 //#define N_DATA_TYPES 17
@@ -201,11 +203,14 @@ Function called when short press is detected in main loop.
 calls the function attached to it by the attachToShortButtonPress()
 */
 void(*onShortPress)(void){};
+
+
 /*
 Function called when long press is detected in main loop.
 calls the function attached to it by the attachToLongButtonPress()
 */
 void(*onLongPress)(void){};
+
 
 /*
 Function to attch callback to short press
@@ -688,6 +693,7 @@ void addDebugPacket(uint8_t type, uint32_t timestamp)
 			break;
 
 	}
+	packetCount++;
 }
 
 bool addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision = 4) {
@@ -975,7 +981,9 @@ void loop() {
 	//DBTAG1
 	uint32_t start_timeSendMessage = 0;
 	uint32_t start_getdata;
-	updateWiFi();
+	if (wifiState != (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END) {
+		updateWiFi();
+	}
 	// DBTAG1
 	// uint32_t start_WifiRecordAdjust = millis();
 	for (uint8_t i=0;i<MAX_WIFI_CONNECT_HISTORY - 1;i++){
@@ -996,19 +1004,24 @@ void loop() {
 	// Check for hibernate button press
 	if (switchRead() == 0) {
 		hibernateButtonPressed = false;
+		//Serial.println("SwitchNotPressed");
 	}
 	// TODO: When a switch debouncer is added, remove the 500ms delay in polling
 	else if (switchRead() == 1 && millis() - hibernateButtonStart > 500) { // poll only after 500mSec, until aswitch  debouncer is added
 		if (hibernateButtonPressed) {
+			Serial.println("Switch long Pressed");
 			// Long Press
 			// hibernate button was already pressed -- check how long
 			onLongPress();
+			Serial.println("onLongPress");
 		}
 		else {
+			Serial.println("Switch short Pressed");
 			// start timer for hibernate
 			hibernateButtonPressed = true;
 			hibernateButtonStart = millis();
 			onShortPress();
+			Serial.println("onShortPress");
 		}
 	}
 	//DBTAG1
@@ -1155,42 +1168,39 @@ void initHibernate() {
 Function to update the Wifi status on the EmotiBit
 */
 void wifiModeControl() {
-	if (1) {
-		switch (wifiState) {
-		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL:
+	if (0) { // to toggle between 4 states
+		if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_LOWPOWER;
-			Serial.print("WifiMode:In Low Power Mode");
-			break;
-		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_LOWPOWER:
+			Serial.println("WifiMode:In Low Power Mode");
+		}
+		else if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_LOWPOWER) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_MAX_LOWPOWER;
-			Serial.print("WifiMode:In Max Low Power mode");
-			break;
-		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_MAX_LOWPOWER:
+			Serial.println("WifiMode:In Max Low Power mode");
+		}
+		else if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_MAX_LOWPOWER) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END;
-			Serial.print("WifiMode: End Wifi");
-			break;
-		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END:
+			Serial.println("WifiMode: End Wifi");
+		}
+		else if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL;
-			Serial.print("WifiMode: In Normal Mode");
-			break;
+			Serial.println("WifiMode: In Normal Mode");
 		}
 	}
 	//  TODO: declare a variable to track changing between 2 states.
-	else {// for toggling between states
-		if (wifiState != (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL || wifiState != (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END) {
+	else {// for toggling between 2 states
+		if (wifiState != (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL && wifiState != (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL;
 		}
-		switch (wifiState) {
-		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL:
+		if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END;
-			Serial.print("WifiMode:In Low Power Mode");
-			break;
-		case (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END:
+			Serial.println("WifiMode:End Wifi");
+		}
+		else if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL;
-			Serial.print("WifiMode: In Normal Mode");
-			break;
+			Serial.println("WifiMode: In Normal Mode");
 		}
 	}
+	
 }
 void readSensors() {
 #ifdef DEBUG_GET_DATA
@@ -1268,6 +1278,16 @@ void readSensors() {
 		}
 	}
 
+	// Thermopile
+
+	if (acquireData.tempHumidity) {
+		static uint16_t thermopileCounter = 0;
+		thermopileCounter++;
+		if (thermopileCounter == TTHERMOPILE_SAMPLING_DIV) {
+			int8_t tempStatus = emotibit.updateThermopileData();
+			thermopileCounter = 0;
+		}
+	}
 	
 
 	// IMU
@@ -1690,9 +1710,13 @@ bool sendUdpMessage(String & s) {
 					Udp.endPacket();
 					wifiRebootCounter++;
 				}
+				if (firstIndex == 0) {
+					UDPtxLed = !UDPtxLed;
+				}
 			}
 			firstIndex = lastIndex + 1;	// increment substring indexes for breaking up sends
 		}
+		
 	}
 }
 #endif
@@ -1722,7 +1746,7 @@ bool sendMessage(String & s) {
 			start_udpSend = millis();
 			sendUdpMessage(s);
 			duration_udpSend = millis() - start_udpSend;
-			UDPtxLed = !UDPtxLed;
+			//UDPtxLed = !UDPtxLed;
 		}
 		else {
 			UDPtxLed = false;
