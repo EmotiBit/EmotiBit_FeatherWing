@@ -165,7 +165,7 @@ uint16_t loopCount = 0;
 #define TEMPERATURE_SAMPLING_DIV 10
 #define BATTERY_SAMPLING_DIV 50
 // TODO: This should change according to the rate set on the thermopile begin function 
-#define TTHERMOPILE_SAMPLING_DIV 38
+#define THERMOPILE_SAMPLING_DIV 38
 
 
 //#define N_DATA_TYPES 17
@@ -1009,19 +1009,19 @@ void loop() {
 	// TODO: When a switch debouncer is added, remove the 500ms delay in polling
 	else if (switchRead() == 1 && millis() - hibernateButtonStart > 500) { // poll only after 500mSec, until aswitch  debouncer is added
 		if (hibernateButtonPressed) {
-			Serial.println("Switch long Pressed");
+			//Serial.println("Switch long Pressed");
 			// Long Press
 			// hibernate button was already pressed -- check how long
 			onLongPress();
 			Serial.println("onLongPress");
 		}
 		else {
-			Serial.println("Switch short Pressed");
+			//Serial.println("Switch short Pressed");
 			// start timer for hibernate
 			hibernateButtonPressed = true;
 			hibernateButtonStart = millis();
 			onShortPress();
-			Serial.println("onShortPress");
+			//Serial.println("onShortPress");
 		}
 	}
 	//DBTAG1
@@ -1193,20 +1193,13 @@ void wifiModeControl() {
 		}
 		if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END;
-<<<<<<< HEAD
 			Serial.print("WifiMode:End Wifi");
 		}
 		else if(wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END){
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL;
-			Serial.print("WifiMode: In Normal Mode");
-=======
-			Serial.println("WifiMode:End Wifi");
+			Serial.println("WifiMode:End Normal Mode");
 		}
-		else if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END) {
-			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL;
-			Serial.println("WifiMode: In Normal Mode");
->>>>>>> 9d540c1db907fadb1ec628d680a3c3a842c53c26
-		}
+
 	}
 	
 }
@@ -1291,7 +1284,7 @@ void readSensors() {
 	if (acquireData.tempHumidity) {
 		static uint16_t thermopileCounter = 0;
 		thermopileCounter++;
-		if (thermopileCounter == TTHERMOPILE_SAMPLING_DIV) {
+		if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
 			int8_t tempStatus = emotibit.updateThermopileData();
 			thermopileCounter = 0;
 		}
