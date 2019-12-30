@@ -981,7 +981,9 @@ void loop() {
 	//DBTAG1
 	uint32_t start_timeSendMessage = 0;
 	uint32_t start_getdata;
-	updateWiFi();
+	if (wifiState != (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END) {
+		updateWiFi();
+	}
 	// DBTAG1
 	// uint32_t start_WifiRecordAdjust = millis();
 	for (uint8_t i=0;i<MAX_WIFI_CONNECT_HISTORY - 1;i++){
@@ -1002,19 +1004,24 @@ void loop() {
 	// Check for hibernate button press
 	if (switchRead() == 0) {
 		hibernateButtonPressed = false;
+		//Serial.println("SwitchNotPressed");
 	}
 	// TODO: When a switch debouncer is added, remove the 500ms delay in polling
 	else if (switchRead() == 1 && millis() - hibernateButtonStart > 500) { // poll only after 500mSec, until aswitch  debouncer is added
 		if (hibernateButtonPressed) {
+			Serial.println("Switch long Pressed");
 			// Long Press
 			// hibernate button was already pressed -- check how long
 			onLongPress();
+			Serial.println("onLongPress");
 		}
 		else {
+			Serial.println("Switch short Pressed");
 			// start timer for hibernate
 			hibernateButtonPressed = true;
 			hibernateButtonStart = millis();
 			onShortPress();
+			Serial.println("onShortPress");
 		}
 	}
 	//DBTAG1
@@ -1186,13 +1193,14 @@ void wifiModeControl() {
 		}
 		if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END;
-			Serial.print("WifiMode:End Wifi");
+			Serial.println("WifiMode:End Wifi");
 		}
-		else if(wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END){
+		else if (wifiState == (uint8_t)EmotiBit::WiFiPowerMode::WIFI_END) {
 			wifiState = (uint8_t)EmotiBit::WiFiPowerMode::WIFI_NORMAL;
-			Serial.print("WifiMode: In Normal Mode");
+			Serial.println("WifiMode: In Normal Mode");
 		}
 	}
+	
 }
 void readSensors() {
 #ifdef DEBUG_GET_DATA
