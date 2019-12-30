@@ -691,6 +691,7 @@ void addDebugPacket(uint8_t type, uint32_t timestamp)
 			break;
 
 	}
+	packetCount++;
 }
 
 bool addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision = 4) {
