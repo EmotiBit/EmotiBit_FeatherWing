@@ -15,8 +15,12 @@
 #include <ArduinoJson.h>
 #include <SdFat.h>
 #include "wiring_private.h"
-
-
+#include "EmotiBitWiFi.h"
+#include <SPI.h>
+#include <SdFat.h>
+#include <ArduinoJson.h>
+#include <ArduinoLowPower.h>
+//#include <Adafruit_SleepyDog.h>
 
 class EmotiBit {
   
@@ -28,7 +32,9 @@ public:
 
 	enum class Version {
 		V01B,
-		V01C
+		V01C,
+		V02F,
+		V02H
 	};
 
 	//struct IMUSettings {
@@ -207,10 +213,74 @@ public:
 	uint8_t _analogEnablePin;
 	bool thermopileBegun = false;
 	uint32_t lastThermopileBegin;
+
+	// ---------- BEGIN ino refactoring --------------
+	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
+
+	// Timer constants
+#define TIMER_PRESCALER_DIV 1024
+	const uint32_t CPU_HZ = 48000000;
+	const uint32_t SERIAL_BAUD = 2000000; //115200
+	uint16_t loopCount = 0;
+
+	// ToDo: Make sampling variables changeable
+#define BASE_SAMPLING_FREQ 300
+#define IMU_SAMPLING_DIV 3
+#define PPG_SAMPLING_DIV 3
+#define EDA_SAMPLING_DIV 1
+#define TEMPERATURE_SAMPLING_DIV 10
+#define BATTERY_SAMPLING_DIV 50
+	// TODO: This should change according to the rate set on the thermopile begin function 
+#define THERMOPILE_SAMPLING_DIV 38
+
+	struct AcquireData {
+		bool eda = true;
+		bool tempHumidity = true;
+		bool imu = true;
+		bool ppg = true;
+	} acquireData;
+
+	String typeTags[(uint8_t)EmotiBit::DataType::length];
+	uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
+	bool sendData[(uint8_t)EmotiBit::DataType::length];
+
+	SdFat SD;
+	bool recording = false;
+	uint32_t recordBlinkDuration = millis();
+	bool recordLedStatus = false;
+	bool UDPtxLed = false;
+	bool battLed = false;
+	uint32_t BattLedstatusChangeTime = millis();
+	uint8_t battLevel = 100;
+	uint8_t battIndicationSeq = 0;
+	uint8_t BattLedDuration = INT_MAX;
+	uint8_t wifiState = 0; // 0 for normal operation
+
+	uint32_t dataSendTimer;
+
+	EmotiBitWiFi _emotiBitWiFi; 
+	TwoWire _EmotiBit_i2c(&sercom1, 11, 13);
+	String _outDataPackets;		// Packets that will be sent over wireless (if enabled) and written to SD card (if recording)
+	String _outSdPackets;		// Packts that will be written to SD card (if recording) but not sent over wireless
+	String _inControlPackets;	// Control packets recieved over wireless
+	String _sdCardFilename = "datalog.csv";
+	String _configFilename = "config.txt"; 
+	File _dataFile;
+	bool stopSDWrite;
+
+	uint16_t outDataPacketCounter = 0;
+
+	void EmotiBit::sdCardSetup()
+	void startTimer(int frequencyHz);
+	void setTimerFrequency(int frequencyHz);
+	void TC3_Handler();
+
+	// ----------- END ino refactoring ---------------
+
 	
-  
   EmotiBit();
-  uint8_t setup(Version version = Version::V01C, size_t bufferCapacity = 64);   /**< Setup all the sensors */
+  uint8_t setup(Version version = Version::V02H, size_t bufferCapacity = 64);   /**< Setup all the sensors */
+	uint8_t update();
   void setAnalogEnablePin(uint8_t i); /**< Power on/off the analog circuitry */
   int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
 	int8_t updatePPGData();                /**< Read any available PPG data from the sensor FIFO into the inputBuffers */
