@@ -116,4 +116,5 @@ public:
 	void setTimeSyncInterval(uint32_t interval);
 	int8_t addCredential(String ssid, String password);
 	void printWiFiStatus();
+	uint8_t listNetworks();
 };

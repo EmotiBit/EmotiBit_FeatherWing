@@ -183,11 +183,11 @@ public:
 	  INDICATION_SEQ_LOW
   };
 
-  enum class WiFiPowerMode {
-	  WIFI_NORMAL,
-	  WIFI_LOWPOWER,
-	  WIFI_MAX_LOWPOWER,
-	  WIFI_END
+  enum class WirelessMode {
+	  OFF,					// fully shutdown wireless
+	  MAX_LOWPOWER,	// data not sent, time-syncing accuracy low
+	  LOWPOWER,			// data not sent, time-syncing accuracy high
+		NORMAL				// data sending, time-syncing accuracy high
   };
 
 
@@ -216,6 +216,7 @@ public:
 
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
+	uint16_t OUT_PACKET_MAX_SIZE = 1024;
 
 	// Timer constants
 #define TIMER_PRESCALER_DIV 1024
@@ -256,6 +257,7 @@ public:
 	uint8_t BattLedDuration = INT_MAX;
 	uint8_t wifiState = 0; // 0 for normal operation
 
+
 	uint32_t dataSendTimer;
 
 	EmotiBitWiFi _emotiBitWiFi; 
@@ -267,13 +269,25 @@ public:
 	String _configFilename = "config.txt"; 
 	File _dataFile;
 	bool stopSDWrite;
+	WirelessMode _wirelessMode;
 
 	uint16_t outDataPacketCounter = 0;
 
-	void EmotiBit::sdCardSetup()
+	void EmotiBit::setupSdCard();
+	void updateButtonPress();
+	void readButton();
+	void hibernate();
 	void startTimer(int frequencyHz);
 	void setTimerFrequency(int frequencyHz);
 	void TC3_Handler();
+	void(*onShortPressCallback)(void) {};
+	void(*onLongPressCallback)(void) {};
+	void(*onDataReadyCallback)(void) {};
+	void attachToShortButtonPress(void(&shortButtonPressFunction)(void));
+	void attachToLongButtonPress(void(&longButtonPressFunction)(void));
+	void attachToDataReady(void(&dataReadyFunction)(void));
+	WirelessMode getWirelessMode();
+	void setWirelessMode(WirelessMode mode);
 
 	// ----------- END ino refactoring ---------------
 

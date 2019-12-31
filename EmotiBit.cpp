@@ -665,7 +665,7 @@ void EmotiBit::parseIncomingControlMessages() {
 			}
 			else if (typeTag.equals(header.typeTag.equals(EmotiBitPacket::TagType::MODE_HIBERNATE)) {
 				startHibernate = true; // hibernate after writing data
-					hibernateBeginStart = millis();
+				hibernateBeginStart = millis();
 			}
 			else if (typeTag.equals(header.typeTag.equals(EmotiBitPacket::TagType::EMOTIBIT_DISCONNECT)) {
 				_emotiBitWiFi.disconnect();
@@ -675,13 +675,95 @@ void EmotiBit::parseIncomingControlMessages() {
 	}
 }
 
+bool EmotiBit::readButton()
+{
+	// ToDo: Consider reading pin mode https://arduino.stackexchange.com/questions/13165/how-to-read-pinmode-for-digital-pin
+	return digitalRead(emotibit.switchPin);
+}
 
+void EmotiBit::updateButtonPress()
+{
+	uint16_t minShortButtonPress = 500;
+	uint16_t minLongButtonPress = 3000;
+	static uint32_t buttonPressTimer = millis();
+
+	bool buttonPressed = readButton();
+	if (!buttonPressed)
+	{
+		if (millis() - buttonPressTimer > minShortButtonPress && millis() - buttonPressTimer < minLongButtonPress)
+		{
+			onShortPress();
+			Serial.println("onShortPress");
+		}
+		if (millis() - buttonPressTimer > minLongButtonPress)
+		{
+			onLongPress();
+			Serial.println("onLongPress");
+		}
+		buttonPressTimer = millis();	// reset the timer until the button is pressed
+	}
+}
 
 uint8_t EmotiBit::update()
 {
 	emotiBitWifi.update();
 	parseIncomingControlMessages();
-	checkButton();
+	updateButtonPress();
+
+	// Handle data buffer reading and sending
+	static uint32_t dataSendTimer = millis();
+	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
+	{
+		dataSendTimer = millis();
+		bool newData = false;
+		for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
+		{
+			newData = addPacket((EmotiBit::DataType) i);
+			if (_outDataPackets.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE)
+			{
+				// Avoid overrunning our reserve memory
+				sendMessage(_outDataPackets);
+				_outDataPackets = "";
+			}
+		}
+		if (_outDataPackets.length() > 0)
+		{
+			sendMessage(_outDataPackets);
+			_outDataPackets = "";
+		}
+	}
+
+	if (_inControlPackets.length() > 0)
+	{
+		writeSdMessage(_inControlPackets);
+		_inControlPackets = "";
+	}
+
+	// To update Battery level variable for LED indication
+	if (battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH))
+		battIndicationSeq = 0;
+	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_MED)) {
+		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_HIGH);
+		BattLedDuration = 1000;
+	}
+	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_MED) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
+		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_MED);
+		BattLedDuration = 500;
+	}
+	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
+		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_LOW);
+		BattLedDuration = 100;
+	}
+
+	// Hibernate after writing data
+	if (startHibernate) {
+		hibernate();
+	}
+
+	if (stopSDWrite) {
+		sdWrite = false;
+		stopSDWrite = false;
+	}
 }
 
 int8_t EmotiBit::updateEDAData() 
@@ -1680,5 +1762,422 @@ void EmotiBit::scopeTimingTest() {
 	else {
 		digitalWrite(SCOPE_TEST_PIN, HIGH);
 		scopeTestPinOn = true;
+	}
+}
+
+// Function to attach callback to short press
+void EmotiBit::attachToShortButtonPress(void(&shortButtonPressFunction)(void))
+{
+	onShortPressCallback = &shortButtonPressFunction;
+}
+
+// Function to attach callback to long press
+void EmotiBit::attachToLongButtonPress(void(&longButtonPressFunction)(void)) {
+	onLongPressCallback = &longButtonPressFunction;
+}
+
+// Function to attach callback to long press
+void EmotiBit::attachToDataReady(void(&dataReadyFunction)(void)) {
+	onDataReadyCallback = &dataReadyFunction;
+}
+
+
+void EmotiBit::readSensors() {
+#ifdef DEBUG_GET_DATA
+	Serial.println("readSensors()");
+#endif // DEBUG
+
+	// ToDo: Move readSensors and timer into EmotiBit
+
+	// LED STATUS CHANGE SEGMENT
+	if (UDPtxLed)
+		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), true);
+	else
+		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), false);
+
+	if (battIndicationSeq) {
+		if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) {
+			emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), false);
+			battLed = false;
+			BattLedstatusChangeTime = millis();
+		}
+		else if (!battLed && millis() - BattLedstatusChangeTime > BattLedDuration) {
+			emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), true);
+			battLed = true;
+			BattLedstatusChangeTime = millis();
+		}
+	}
+	else {
+		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), false);
+		battLed = false;
+	}
+
+
+	if (sdWrite) {
+		if (millis() - recordBlinkDuration >= 500) {
+			if (recordLedStatus == true) {
+				emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), false);
+				recordLedStatus = false;
+			}
+			else {
+				emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), true);
+				recordLedStatus = true;
+			}
+			recordBlinkDuration = millis();
+		}
+	}
+	else if (!sdWrite && recordLedStatus == true) {
+		emotibit.led.setLED(uint8_t(EmotiBit::Led::LED_RED), false);
+		recordLedStatus = false;
+	}
+
+	// EDA
+	if (acquireData.eda) {
+		static uint16_t edaCounter = 0;
+		edaCounter++;
+		if (edaCounter == EDA_SAMPLING_DIV) {
+			int8_t tempStatus = emotibit.updateEDAData();
+			edaCounter = 0;
+		}
+	}
+
+	// Temperature / Humidity Sensor
+	if (acquireData.tempHumidity) {
+		static uint16_t temperatureCounter = 0;
+		temperatureCounter++;
+		if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
+			// Note: Temperature/humidity and the thermistor are alternately sampled 
+			// on every other call of updateTempHumidityData()
+			// I.e. you must call updateTempHumidityData() 2x with a sufficient measurement 
+			// delay between calls to sample both temperature/humidity and the thermistor
+			int8_t tempStatus = emotibit.updateTempHumidityData();
+			//if (dataStatus.tempHumidity == 0) {
+			//	dataStatus.tempHumidity = tempStatus;
+			//}
+			temperatureCounter = 0;
+		}
+	}
+
+	// Thermopile
+
+	if (acquireData.tempHumidity) {
+		static uint16_t thermopileCounter = 0;
+		thermopileCounter++;
+		if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
+			int8_t tempStatus = emotibit.updateThermopileData();
+			thermopileCounter = 0;
+		}
+	}
+
+
+	// IMU
+	if (acquireData.imu) {
+		static uint16_t imuCounter = 0;
+		imuCounter++;
+		if (imuCounter == IMU_SAMPLING_DIV) {
+			int8_t tempStatus = emotibit.updateIMUData();
+			imuCounter = 0;
+		}
+	}
+
+	// PPG
+	if (acquireData.ppg) {
+		static uint16_t ppgCounter = 0;
+		ppgCounter++;
+		if (ppgCounter == PPG_SAMPLING_DIV) {
+			int8_t tempStatus = emotibit.updatePPGData();
+			ppgCounter = 0;
+		}
+	}
+
+	// Battery (all analog reads must be in the ISR)
+	// TODO: use the stored BAtt value instead of calling readBatteryPercent again
+	battLevel = emotibit.readBatteryPercent();
+	static uint16_t batteryCounter = 0;
+	batteryCounter++;
+	if (batteryCounter == BATTERY_SAMPLING_DIV) {
+		emotibit.updateBatteryPercentData();
+		batteryCounter = 0;
+	}
+}
+
+void EmotiBit::setTimerFrequency(int frequencyHz) {
+	int compareValue = (CPU_HZ / (TIMER_PRESCALER_DIV * frequencyHz)) - 1;
+	TcCount16* TC = (TcCount16*)TC3;
+	// Make sure the count is in a proportional position to where it was
+	// to prevent any jitter or disconnect when changing the compare value.
+	TC->COUNT.reg = map(TC->COUNT.reg, 0, TC->CC[0].reg, 0, compareValue);
+	TC->CC[0].reg = compareValue;
+	//Serial.println(TC->COUNT.reg);
+	//Serial.println(TC->CC[0].reg);
+	while (TC->STATUS.bit.SYNCBUSY == 1);
+}
+
+void EmotiBit::startTimer(int frequencyHz) {
+	REG_GCLK_CLKCTRL = (uint16_t)(GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID_TCC2_TC3);
+	while (GCLK->STATUS.bit.SYNCBUSY == 1); // wait for sync
+
+	TcCount16* TC = (TcCount16*)TC3;
+
+	TC->CTRLA.reg &= ~TC_CTRLA_ENABLE;
+	while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
+
+																				// Use the 16-bit timer
+	TC->CTRLA.reg |= TC_CTRLA_MODE_COUNT16;
+	while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
+
+																				// Use match mode so that the timer counter resets when the count matches the compare register
+	TC->CTRLA.reg |= TC_CTRLA_WAVEGEN_MFRQ;
+	while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
+
+																				// Set prescaler to 1024
+	TC->CTRLA.reg |= TC_CTRLA_PRESCALER_DIV1024;
+	while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
+
+	setTimerFrequency(frequencyHz);
+
+	// Enable the compare interrupt
+	TC->INTENSET.reg = 0;
+	TC->INTENSET.bit.MC0 = 1;
+
+	NVIC_EnableIRQ(TC3_IRQn);
+
+	TC->CTRLA.reg |= TC_CTRLA_ENABLE;
+	while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
+}
+
+void EmotiBit::stopTimer() {
+	// ToDo: Verify implementation
+	TcCount16* TC = (TcCount16*)TC3;
+	TC->CTRLA.reg &= ~TC_CTRLA_ENABLE;
+}
+
+void TC3_Handler() {
+	TcCount16* TC = (TcCount16*)TC3;
+	// If this interrupt is due to the compare register matching the timer count
+	// we toggle the LED.
+	if (TC->INTFLAG.bit.MC0 == 1) {
+		TC->INTFLAG.bit.MC0 = 1;
+		//emotibit.scopeTimingTest();
+		// Write callback here!!!
+		readSensors();
+
+	}
+}
+
+
+#ifdef __arm__
+// should use uinstd.h to define sbrk but Due causes a conflict
+extern "C" char* sbrk(int incr);
+#else  // __ARM__
+extern char *__brkval;
+#endif  // __arm__
+
+int EmotiBit::freeMemory() {
+	char top;
+#ifdef __arm__
+	return &top - reinterpret_cast<char*>(sbrk(0));
+#elif defined(CORE_TEENSY) || (ARDUINO > 103 && ARDUINO != 151)
+	return &top - __brkval;
+#else  // __arm__
+	return __brkval ? &top - __brkval : &top - __malloc_heap_start;
+#endif  // __arm__
+}
+
+
+// NEW Hibernate
+void EmotiBit::hibernate() {
+	Serial.println("hibernate()");
+	Serial.println("Stopping timer...");
+	stopTimer();
+
+	//PPGToggle
+	// For an unknown reason, this need to be before WiFi diconnect/end
+	Serial.println("Shutting down ppg...");
+	emotibit.ppgSensor.shutDown();
+
+#ifdef SEND_UDP || SEND_TCP
+	if (wifiStatus == WL_CONNECTED) {
+		Serial.println("Disconnecting WiFi...");
+		WiFi.disconnect();
+	}
+	Serial.println("Ending WiFi...");
+	WiFi.end();
+#endif
+
+	//IMU Suspend Mode
+	Serial.println("Suspending IMU...");
+	BMI160.suspendIMU();
+
+	SPI.end(); // shutdown the SPI interface
+	Wire.end();
+
+
+	//pinMode(emotibit._sdCardChipSelectPin, OUTPUT);//cs
+	//digitalWrite(emotibit._sdCardChipSelectPin, LOW);
+	//pinMode(PIN_SPI_MISO, OUTPUT);
+	//digitalWrite(PIN_SPI_MISO, LOW);
+	//pinMode(PIN_SPI_MOSI, OUTPUT);
+	//digitalWrite(PIN_SPI_MOSI, LOW);
+	//pinMode(PIN_SPI_SCK, OUTPUT);
+	//digitalWrite(PIN_SPI_SCK, LOW);
+
+	//pinMode(PIN_WIRE_SCL, OUTPUT);
+	//digitalWrite(PIN_WIRE_SCL, LOW);
+	//pinMode(PIN_WIRE_SDA, OUTPUT);
+	//digitalWrite(PIN_WIRE_SDA, LOW);
+
+	//pinMode(PIN_UART, OUTPUT);
+	//digitalWrite(PIN_WIRE_SCL, LOW);
+	//pinMode(PIN_WIRE_SDA, OUTPUT);
+	//digitalWrite(PIN_WIRE_SDA, LOW);
+
+	/*while (ledPinBusy)*/
+
+		// Setup all pins (digital and analog) in INPUT mode (default is nothing)  
+		//for (uint32_t ul = 0; ul < NUM_DIGITAL_PINS; ul++)
+	for (uint32_t ul = 0; ul < PINS_COUNT; ul++)
+	{
+		if (ul != emotibit._analogEnablePin) {
+			pinMode(ul, OUTPUT);
+			digitalWrite(ul, LOW);
+			pinMode(ul, INPUT);
+		}
+	}
+
+	//GSRToggle, write 1 to the PMO
+	Serial.println("Disabling MOSFET ");
+	pinMode(emotibit._analogEnablePin, OUTPUT);
+	digitalWrite(emotibit._analogEnablePin, HIGH);
+
+
+	//LowPower.deepSleep();
+	//deepSleep();
+	Serial.println("Entering deep sleep...");
+	LowPower.deepSleep();
+	}
+}
+
+
+// Loads the configuration from a file
+bool EmotiBit::loadConfigFile(String filename) {
+	// Open file for reading
+	File file = SD.open(filename);
+
+	if (!file) {
+		Serial.print("File ");
+		Serial.print(filename);
+		Serial.println(" not found");
+		return false;
+	}
+
+	Serial.print("Parsing: ");
+	Serial.println(filename);
+
+	// Allocate the memory pool on the stack.
+	// Don't forget to change the capacity to match your JSON document.
+	// Use arduinojson.org/assistant to compute the capacity.
+	//StaticJsonBuffer<1024> jsonBuffer;
+	StaticJsonBuffer<1024> jsonBuffer;
+
+	// Parse the root object
+	JsonObject &root = jsonBuffer.parseObject(file);
+
+	if (!root.success()) {
+		Serial.println(F("Failed to parse config file"));
+		return false;
+	}
+
+	// Copy values from the JsonObject to the Config
+	configSize = root.get<JsonVariant>("WifiCredentials").as<JsonArray>().size();
+	Serial.print("ConfigSize: ");
+	Serial.println(configSize);
+	for (size_t i = 0; i < configSize; i++) {
+		configList[i].ssid = root["WifiCredentials"][i]["ssid"] | "";
+		configList[i].password = root["WifiCredentials"][i]["password"] | "";
+		Serial.println(configList[i].ssid);
+		Serial.println(configList[i].password);
+	}
+
+	//strlcpy(config.hostname,                   // <- destination
+	//	root["hostname"] | "example.com",  // <- source
+	//	sizeof(config.hostname));          // <- destination's capacity
+
+	// Close the file (File's destructor doesn't close the file)
+	// ToDo: Handle multiple credentials
+
+	file.close();
+	return true;
+}
+
+
+bool sendSdCardMessage(String & s) {
+	// Break up the message in to bite-size chunks to avoid over running the UDP or SD card write buffers
+	// UDP buffer seems to be about 1400 char. SD card buffer seems to be about 2500 char.
+	if (sdWrite && s.length() > 0) {
+		//DBTAG1
+		// dataFile = SD.open(sdCardFilename, FILE_WRITE);//O_CREAT | O_WRITE
+
+		uint8_t writeCounter = 0;
+		uint32_t start_timeWriteFile;
+		for (uint8_t k = 0; k < MAX_SD_WRITE_TIMES; k++) {
+			duration_timeWriteFile[k] = 0;  //{0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+		}
+		// uint32_t start_timeOpenFile = millis();
+		// dataFile = SD.open(sdCardFilename, O_CREAT | O_WRITE | O_AT_END);
+		// duration_timeOpenFile =  millis() - start_timeOpenFile;
+		if (dataFile) {
+			static int16_t firstIndex;
+			firstIndex = 0;
+			while (firstIndex < s.length()) {
+				static int16_t lastIndex;
+				if (s.length() - firstIndex > MAX_SD_WRITE_LEN) {
+					lastIndex = firstIndex + MAX_SD_WRITE_LEN;
+				}
+				else {
+					lastIndex = s.length();
+				}
+
+				////Serial.println(firstIndex);
+				//static int16_t lastIndex;
+				//lastIndex = s.length();
+				//while (lastIndex - firstIndex > MAX_SD_WRITE_LEN) {
+				//	lastIndex = s.lastIndexOf('\n', lastIndex - 1);
+				//	//Serial.println(lastIndex);
+				//}
+				////Serial.println(outputMessage.substring(firstIndex, lastIndex));
+
+#ifdef DEBUG_GET_DATA
+				Serial.println("writing to SD card");
+#endif // DEBUG
+				//sdCardFilename = "DATALOGLOGLOG.CSV";
+				// DBTAG1
+				start_timeWriteFile = millis();
+				dataFile.print(s.substring(firstIndex, lastIndex));
+				if (writeCounter < MAX_SD_WRITE_TIMES) {
+					duration_timeWriteFile[writeCounter] = millis() - start_timeWriteFile;
+					writeCounter++;
+				}
+				else {
+					duration_timeWriteFile[MAX_SD_WRITE_TIMES - 1] = 255;
+				}
+				firstIndex = lastIndex;
+
+				//dataFile.flush();
+				//firstIndex = lastIndex + 1;	// increment substring indexes for breaking up sends
+			}
+
+			// uint32_t start_timeFileClose = millis();
+			// dataFile.close();
+			// duration_timeFileClose = millis() - start_timeFileClose;// to add the file close times
+			uint32_t start_timeFileSync = millis();
+			dataFile.sync();
+			duration_timeFileSync = millis() - start_timeFileSync;// to add the file close times
+		}
+		else {
+			Serial.print("Data file didn't open properly: ");
+			Serial.println(sdCardFilename);
+			sdWrite = false;
+		}
 	}
 }

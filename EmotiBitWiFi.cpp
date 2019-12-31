@@ -518,3 +518,38 @@ int8_t EmotiBitWiFi::addCredential(String ssid, String password)
 		numCredentials++;
 	}
 }
+
+uint8_t listNetworks() {
+	// scan for nearby networks:
+	Serial.println("xxxxxxx Scan Networks xxxxxxx");
+	Serial.println(millis());
+	int numSsid = WiFi.scanNetworks();
+	if (numSsid == -1)
+	{
+		Serial.println("Couldn't get a wifi connection");
+		//while (true);
+	}
+	Serial.println(millis());
+
+	// print the list of networks seen:
+	Serial.print("number of available networks:");
+	Serial.println(numSsid);
+
+	// print the network number and name for each network found:
+	for (int thisNet = 0; thisNet < numSsid; thisNet++) {
+		Serial.print(thisNet);
+		Serial.print(") ");
+		Serial.print(WiFi.SSID(thisNet));
+		Serial.print("\tSignal: ");
+		Serial.print(WiFi.RSSI(thisNet));
+		Serial.print(" dBm");
+		Serial.print(" \n");
+		//Serial.print("\tEncryption: ");
+		//printEncryptionType(WiFi.encryptionType(thisNet));
+		//Serial.flush();
+	}
+	Serial.println(millis());
+	Serial.println("xxxxxxx  xxxxxxx");
+
+	return numSsid;
+}
