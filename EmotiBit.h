@@ -132,7 +132,7 @@ public:
 	EDL,
 	EDR,
 	TEMPERATURE_0,
-	TEMPERATURE_HP0,
+	THERMOPILE,
 	HUMIDITY_0,
 	ACCELEROMETER_X,
 	ACCELEROMETER_Y,
@@ -183,10 +183,10 @@ public:
 	  INDICATION_SEQ_LOW
   };
 
-  enum class WirelessMode {
+  enum class WiFiMode {
 	  OFF,					// fully shutdown wireless
-	  MAX_LOWPOWER,	// data not sent, time-syncing accuracy low
-	  LOWPOWER,			// data not sent, time-syncing accuracy high
+	  MAX_LOW_POWER,	// data not sent, time-syncing accuracy low
+	  LOW_POWER,			// data not sent, time-syncing accuracy high
 		NORMAL				// data sending, time-syncing accuracy high
   };
 
@@ -194,7 +194,7 @@ public:
 	
 	Si7013 tempHumiditySensor;
 	DeviceAddress deviceAddress;
-	uint8_t switchPin;
+	uint8_t buttonPin;
 	PPGSettings ppgSettings;
 	IMUSettings imuSettings;
 	MAX30105 ppgSensor;
@@ -203,25 +203,27 @@ public:
 	float edrAmplification;
 	float vRef1; // Reference voltage of first voltage divider(15/100)
 	float vRef2; // Reference voltage from second voltage divider(100/100)
-	float rSkinAmp;
+	//float rSkinAmp;
 	float adcRes;
 	float edaVDivR;
+	float edaFeedbackAmpR;
 	uint8_t _sdCardChipSelectPin;	// ToDo: create getter and make private
 	BMM150TrimData bmm150TrimData;
 	bool bmm150XYClipped = false;
 	bool bmm150ZHallClipped = false;
-	uint8_t _analogEnablePin;
+	uint8_t _hibernatePin;
 	bool thermopileBegun = false;
 	uint32_t lastThermopileBegin;
 
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
 	uint16_t OUT_PACKET_MAX_SIZE = 1024;
+	static const uint16_t DATA_SEND_INTERVAL = 100;
+	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
 
 	// Timer constants
 #define TIMER_PRESCALER_DIV 1024
 	const uint32_t CPU_HZ = 48000000;
-	const uint32_t SERIAL_BAUD = 2000000; //115200
 	uint16_t loopCount = 0;
 
 	// ToDo: Make sampling variables changeable
@@ -243,7 +245,7 @@ public:
 
 	String typeTags[(uint8_t)EmotiBit::DataType::length];
 	uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
-	bool sendData[(uint8_t)EmotiBit::DataType::length];
+	bool _sendData[(uint8_t)EmotiBit::DataType::length];
 
 	SdFat SD;
 	bool recording = false;
@@ -261,33 +263,43 @@ public:
 	uint32_t dataSendTimer;
 
 	EmotiBitWiFi _emotiBitWiFi; 
-	TwoWire _EmotiBit_i2c(&sercom1, 11, 13);
+	TwoWire* _EmotiBit_i2c = nullptr;
 	String _outDataPackets;		// Packets that will be sent over wireless (if enabled) and written to SD card (if recording)
 	String _outSdPackets;		// Packts that will be written to SD card (if recording) but not sent over wireless
 	String _inControlPackets;	// Control packets recieved over wireless
 	String _sdCardFilename = "datalog.csv";
 	String _configFilename = "config.txt"; 
 	File _dataFile;
+	bool _sdWrite;
 	bool stopSDWrite;
-	WirelessMode _wirelessMode;
+	WiFiMode _wifiMode;
+	bool _startHibernate;
 
 	uint16_t outDataPacketCounter = 0;
 
-	void EmotiBit::setupSdCard();
+	void setupSdCard();
 	void updateButtonPress();
-	void readButton();
+	bool readButton();
 	void hibernate();
 	void startTimer(int frequencyHz);
 	void setTimerFrequency(int frequencyHz);
 	void TC3_Handler();
-	void(*onShortPressCallback)(void) {};
-	void(*onLongPressCallback)(void) {};
-	void(*onDataReadyCallback)(void) {};
-	void attachToShortButtonPress(void(&shortButtonPressFunction)(void));
-	void attachToLongButtonPress(void(&longButtonPressFunction)(void));
-	void attachToDataReady(void(&dataReadyFunction)(void));
-	WirelessMode getWirelessMode();
-	void setWirelessMode(WirelessMode mode);
+	void stopTimer();
+	void(*onShortPressCallback)(void);
+	void(*onLongPressCallback)(void);
+	void(*onDataReadyCallback)(void);
+	void attachToShortButtonPress(void(*shortButtonPressFunction)(void));
+	void attachToLongButtonPress(void(*longButtonPressFunction)(void));
+	void attachToDataReady(void(*dataReadyFunction)(void));
+	WiFiMode getWiFiMode();
+	void setWiFiMode(WiFiMode mode);
+	bool writeSdCardMessage(String & s);
+	int freeMemory();
+	bool loadConfigFile(const String &filename);
+	bool addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision = 4);
+	bool addPacket(EmotiBit::DataType t);
+	void parseIncomingControlMessages();
+	void readSensors();
 
 	// ----------- END ino refactoring ---------------
 

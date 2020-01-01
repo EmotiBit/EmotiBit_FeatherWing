@@ -8,15 +8,15 @@ EmotiBit emotibit;
 void onShortButtonPress()
 {
 	// ToDo: toggle wifi on/off
-	if (emotibit.getWirelessMode() == EmotiBit::WirelessMode::NORMAL)
+	if (emotibit.getWiFiMode() == EmotiBit::WiFiMode::NORMAL)
 	{
-		emotibit.setWirelessMode(EmotiBit::WirelessMode::OFF);
-		Serial.println("WirelessMode::OFF");
+		emotibit.setWiFiMode(EmotiBit::WiFiMode::OFF);
+		Serial.println("WiFiMode::OFF");
 	}
 	else
 	{
-		emotibit.setWirelessMode(EmotiBit::WirelessMode::NORMAL);
-		Serial.println("WirelessMode::NORMAL");
+		emotibit.setWiFiMode(EmotiBit::WiFiMode::NORMAL);
+		Serial.println("WiFiMode::NORMAL");
 	}
 }
 
