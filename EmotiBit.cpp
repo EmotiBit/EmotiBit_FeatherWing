@@ -686,11 +686,13 @@ void EmotiBit::updateButtonPress()
 		if (millis() - buttonPressTimer > minShortButtonPress && millis() - buttonPressTimer < minLongButtonPress)
 		{
 			Serial.println("onShortPress");
+			// ToDo: Send BS packet
 			(*onShortPressCallback);
 		}
 		if (millis() - buttonPressTimer > minLongButtonPress)
 		{
 			Serial.println("onLongPress");
+			// ToDo: Send BL packet
 			(*onLongPressCallback);
 		}
 		buttonPressTimer = millis();	// reset the timer until the button is pressed
@@ -2157,4 +2159,21 @@ void EmotiBit::setWiFiMode(WiFiMode mode)
 	{
 		_emotiBitWiFi.end();
 	}
+}
+
+size_t readData(EmotiBit::DataType t, float data[], size_t dataSize) 
+{
+	float * dataBuffer;
+	size_t bufferSize = readData(t, dataBuffer);
+	for (size_t i = 0; i < bufferSize && i < dataSize; i++)
+	{
+		data[i] = dataBuffer[i];
+	}
+	return bufferSize; // Return size of available buffer even if we're only able to copy some of it
+}
+
+size_t readData(EmotiBit::DataType t, float **data)
+{
+	// ToDo: return pointer to actual data
+	return 0;
 }

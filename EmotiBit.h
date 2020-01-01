@@ -1,6 +1,5 @@
 //#define DEBUG
 
-
 #ifndef _EMOTIBIT_H_
 #define _EMOTIBIT_H_
 
@@ -220,6 +219,7 @@ public:
 	uint16_t OUT_PACKET_MAX_SIZE = 1024;
 	static const uint16_t DATA_SEND_INTERVAL = 100;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
+	static const uint16_t MAX_DATA_BUFFER_SIZE = 64;
 
 	// Timer constants
 #define TIMER_PRESCALER_DIV 1024
@@ -287,9 +287,8 @@ public:
 	void(*onShortPressCallback)(void);
 	void(*onLongPressCallback)(void);
 	void(*onDataReadyCallback)(void);
-	void attachToShortButtonPress(void(*shortButtonPressFunction)(void));
-	void attachToLongButtonPress(void(*longButtonPressFunction)(void));
-	void attachToDataReady(void(*dataReadyFunction)(void));
+	void attachShortButtonPress(void(*shortButtonPressFunction)(void));
+	void attachLongButtonPress(void(*longButtonPressFunction)(void));
 	WiFiMode getWiFiMode();
 	void setWiFiMode(WiFiMode mode);
 	bool writeSdCardMessage(String & s);
@@ -299,6 +298,8 @@ public:
 	bool addPacket(EmotiBit::DataType t);
 	void parseIncomingControlMessages();
 	void readSensors();
+	size_t readData(EmotiBit::DataType t, float data[], size_t dataSize);		// Copies available data buffer into data
+	size_t readData(EmotiBit::DataType t, float **data);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
 
 	// ----------- END ino refactoring ---------------
 

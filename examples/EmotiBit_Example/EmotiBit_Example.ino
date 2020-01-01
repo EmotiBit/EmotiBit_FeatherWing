@@ -4,6 +4,8 @@
 const uint32_t SERIAL_BAUD = 2000000; //115200
 
 EmotiBit emotibit;
+const size_t dataSize = EmotiBit::MAX_DATA_BUFFER_SIZE;
+float data[dataSize];
 
 void onShortButtonPress()
 {
@@ -25,27 +27,36 @@ void onLongButtonPress()
 	emotibit.hibernate();
 }
 
-void onDataReady()
-{
-	// This is a placeholder
-	// ToDo: attach this function
-}
-
 void setup() 
 {
 	Serial.begin(SERIAL_BAUD);
 	Serial.println("Serial started");
 	delay(2000);	// short delay to allow user to connect to serial, if desired
-	//while (!Serial);
 
 	emotibit.setup(EmotiBit::Version::V02H);
 
 	// Attach callback functions
-	emotibit.attachToShortButtonPress(&onShortButtonPress);
-	emotibit.attachToLongButtonPress(&onLongButtonPress);
+	emotibit.attachShortButtonPress(&onShortButtonPress);
+	emotibit.attachLongButtonPress(&onLongButtonPress);
 }
 
-void loop() 
+void loop()
 {
 	emotibit.update();
+
+	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::EDA, data, dataSize);
+	if (dataAvailable > 0)
+	{
+		// Hey cool, I got some data! Maybe I can light up my shoes whenever I get excited!
+
+		// print the data to view in the serial plotter
+		bool printData = false;
+		if (printData)
+		{
+			for (size_t i; i < dataAvailable && i < dataSize; i++)
+			{
+				Serial.println(data[i]);
+			}
+		}
+	}
 }
