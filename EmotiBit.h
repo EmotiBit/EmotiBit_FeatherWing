@@ -259,7 +259,6 @@ public:
 	uint8_t BattLedDuration = INT_MAX;
 	uint8_t wifiState = 0; // 0 for normal operation
 
-
 	uint32_t dataSendTimer;
 
 	EmotiBitWiFi _emotiBitWiFi; 

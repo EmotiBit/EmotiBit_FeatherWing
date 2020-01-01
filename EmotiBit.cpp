@@ -642,6 +642,7 @@ void EmotiBit::parseIncomingControlMessages() {
 				if (_dataFile) {
 					_dataFile.close();
 				}
+				_sdWrite = false;
 				Serial.println("** Recording End **");
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_NORMAL_POWER)) {
@@ -684,13 +685,13 @@ void EmotiBit::updateButtonPress()
 	{
 		if (millis() - buttonPressTimer > minShortButtonPress && millis() - buttonPressTimer < minLongButtonPress)
 		{
-			(*onShortPressCallback);
 			Serial.println("onShortPress");
+			(*onShortPressCallback);
 		}
 		if (millis() - buttonPressTimer > minLongButtonPress)
 		{
-			(*onLongPressCallback);
 			Serial.println("onLongPress");
+			(*onLongPressCallback);
 		}
 		buttonPressTimer = millis();	// reset the timer until the button is pressed
 	}
@@ -1775,7 +1776,8 @@ void EmotiBit::attachToLongButtonPress(void(*longButtonPressFunction)(void)) {
 	onLongPressCallback = longButtonPressFunction;
 }
 
-// Function to attach callback to long press
+// Function to attach callback to dataReady
+// ToDo: call the callback when data buffer is updated
 void EmotiBit::attachToDataReady(void(*dataReadyFunction)(void)) {
 	onDataReadyCallback = dataReadyFunction;
 }
@@ -1789,7 +1791,7 @@ void EmotiBit::readSensors() {
 	// ToDo: Move readSensors and timer into EmotiBit
 
 	// LED STATUS CHANGE SEGMENT
-	if (UDPtxLed)
+	if (_emotiBitWiFi._isConnected)
 		led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), true);
 	else
 		led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), false);
@@ -1810,7 +1812,6 @@ void EmotiBit::readSensors() {
 		led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), false);
 		battLed = false;
 	}
-
 
 	if (_sdWrite) {
 		if (millis() - recordBlinkDuration >= 500) {
@@ -1858,7 +1859,6 @@ void EmotiBit::readSensors() {
 	}
 
 	// Thermopile
-
 	if (acquireData.tempHumidity) {
 		static uint16_t thermopileCounter = 0;
 		thermopileCounter++;
@@ -1867,7 +1867,6 @@ void EmotiBit::readSensors() {
 			thermopileCounter = 0;
 		}
 	}
-
 
 	// IMU
 	if (acquireData.imu) {
@@ -1995,14 +1994,8 @@ void EmotiBit::hibernate() {
 	Serial.println("Shutting down ppg...");
 	ppgSensor.shutDown();
 
-#ifdef SEND_UDP || SEND_TCP
-	if (wifiStatus == WL_CONNECTED) {
-		Serial.println("Disconnecting WiFi...");
-		WiFi.disconnect();
-	}
 	Serial.println("Ending WiFi...");
-	WiFi.end();
-#endif
+	_emotiBitWiFi.end();
 
 	//IMU Suspend Mode
 	Serial.println("Suspending IMU...");
@@ -2010,7 +2003,7 @@ void EmotiBit::hibernate() {
 
 	SPI.end(); // shutdown the SPI interface
 	Wire.end();
-
+	_EmotiBit_i2c->end();
 
 	//pinMode(_sdCardChipSelectPin, OUTPUT);//cs
 	//digitalWrite(_sdCardChipSelectPin, LOW);
@@ -2049,8 +2042,6 @@ void EmotiBit::hibernate() {
 	pinMode(_hibernatePin, OUTPUT);
 	digitalWrite(_hibernatePin, HIGH);
 
-
-	//LowPower.deepSleep();
 	//deepSleep();
 	Serial.println("Entering deep sleep...");
 	LowPower.deepSleep();

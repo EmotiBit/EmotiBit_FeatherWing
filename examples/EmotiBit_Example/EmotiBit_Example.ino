@@ -7,7 +7,7 @@ EmotiBit emotibit;
 
 void onShortButtonPress()
 {
-	// ToDo: toggle wifi on/off
+	// toggle wifi on/off
 	if (emotibit.getWiFiMode() == EmotiBit::WiFiMode::NORMAL)
 	{
 		emotibit.setWiFiMode(EmotiBit::WiFiMode::OFF);
@@ -40,16 +40,12 @@ void setup()
 
 	emotibit.setup(EmotiBit::Version::V02H);
 
-	//assignButtonCallbacks((uint8_t)EmotiBit::FunctionalityShortPress::WIFI, (uint8_t)EmotiBit::FunctionalityLongPress::HIBERNATE);
+	// Attach callback functions
 	emotibit.attachToShortButtonPress(&onShortButtonPress);
 	emotibit.attachToLongButtonPress(&onLongButtonPress);
 }
 
 void loop() 
 {
-#ifdef DEBUG_GET_DATA
-	Serial.println("loop()");
-#endif // DEBUG
-
 	emotibit.update();
 }
