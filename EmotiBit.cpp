@@ -2163,8 +2163,14 @@ void EmotiBit::setWiFiMode(WiFiMode mode)
 
 size_t readData(EmotiBit::DataType t, float data[], size_t dataSize) 
 {
+	uint32_t timestamp;
+	return readData(t, data, dataSize, timestamp);
+}
+
+size_t readData(EmotiBit::DataType t, float data[], size_t dataSize, uint32_t &timestamp)
+{
 	float * dataBuffer;
-	size_t bufferSize = readData(t, dataBuffer);
+	size_t bufferSize = readData(t, dataBuffer, timestamp);
 	for (size_t i = 0; i < bufferSize && i < dataSize; i++)
 	{
 		data[i] = dataBuffer[i];
@@ -2174,6 +2180,11 @@ size_t readData(EmotiBit::DataType t, float data[], size_t dataSize)
 
 size_t readData(EmotiBit::DataType t, float **data)
 {
-	// ToDo: return pointer to actual data
-	return 0;
+	uint32_t timestamp;
+	return getDataPointer(data, timestamp);
+}
+
+size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp)
+{
+	return getDataPointer(data, timestamp);
 }

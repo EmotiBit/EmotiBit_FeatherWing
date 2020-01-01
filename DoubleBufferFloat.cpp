@@ -71,6 +71,15 @@ size_t DoubleBufferFloat::getData(float ** data, uint32_t * timestamp) {
 	_isGetting = false;
 }
 
+size_t DoubleBufferFloat::getDataPointer(float ** data, uint32_t * timestamp = nullptr)
+{
+	(*data) = _outputBuffer->data;
+	if (timestamp != nullptr) {
+		(*timestamp) = _outputBuffer->timestamp;
+	}
+	return _outputBuffer->size();
+}
+
 //void DoubleBufferFloat::setAutoResize(bool b) {
 //	_buffer1->autoResize = b;
 //	_buffer2->autoResize = b;

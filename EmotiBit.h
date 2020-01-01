@@ -299,7 +299,9 @@ public:
 	void parseIncomingControlMessages();
 	void readSensors();
 	size_t readData(EmotiBit::DataType t, float data[], size_t dataSize);		// Copies available data buffer into data
+	size_t readData(EmotiBit::DataType t, float data[], size_t dataSize, uint32_t &timestamp);		// Copies available data buffer into data
 	size_t readData(EmotiBit::DataType t, float **data);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
+	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
 
 	// ----------- END ino refactoring ---------------
 
