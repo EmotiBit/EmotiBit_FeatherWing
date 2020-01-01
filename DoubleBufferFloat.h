@@ -19,8 +19,7 @@ public:
 	//DoubleBufferFloat operator=(const DoubleBufferFloat &doubleBuffer);
 	~DoubleBufferFloat();
 	uint8_t push_back(float f, uint32_t * timestamp = nullptr);
-	size_t getData(float ** data, uint32_t * timestamp = nullptr);				// Swaps the input and output buffers
-	size_t getDataPointer(float ** data, uint32_t * timestamp = nullptr);	// Doesn't swap the input and output buffers
+	size_t getData(float ** data, uint32_t * timestamp = nullptr, bool swapBuffers = true);				// Swaps the input and output buffers
 	//void setAutoResize(bool b);
 	size_t inSize();
 	size_t outSize();

@@ -246,6 +246,7 @@ public:
 	String typeTags[(uint8_t)EmotiBit::DataType::length];
 	uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
 	bool _sendData[(uint8_t)EmotiBit::DataType::length];
+	bool _newDataAvailable[(uint8_t)EmotiBit::DataType::length];
 
 	SdFat SD;
 	bool recording = false;

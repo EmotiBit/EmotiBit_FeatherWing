@@ -509,6 +509,29 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	_sendData[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = true;
 	_sendData[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = true;
 
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::EDA] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::EDL] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::EDR] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::PPG_INFRARED] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::PPG_RED] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::PPG_GREEN] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::THERMOPILE] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Y] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Z] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::GYROSCOPE_X] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::GYROSCOPE_Y] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::GYROSCOPE_Z] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::MAGNETOMETER_X] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Y] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Z] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::BATTERY_VOLTAGE] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::BATTERY_PERCENT] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = false;
+
 	dataSendTimer = millis();
 
 	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
@@ -1253,6 +1276,7 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 	Serial.println((uint8_t) t);
 #endif // DEBUG
 	if ((uint8_t)type < (uint8_t)EmotiBit::DataType::length) {
+		_newDataAvailable[(uint8_t)type] = true;	// new data is available in the buffer
 		return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
 	}
 	else {
@@ -2181,10 +2205,17 @@ size_t readData(EmotiBit::DataType t, float data[], size_t dataSize, uint32_t &t
 size_t readData(EmotiBit::DataType t, float **data)
 {
 	uint32_t timestamp;
-	return getDataPointer(data, timestamp);
+	return readData(t, data, timestamp);
 }
 
 size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp)
 {
-	return getDataPointer(data, timestamp);
+	if ((uint8_t)t < (uint8_t)EmotiBit::DataType::length) {
+		if (_newDataAvailable[(uint8_t)t]) // if there is new data available on the outBuffer
+		{
+			_newDataAvailable[(uint8_t)t] = false;	
+			return dataDoubleBuffers[(uint8_t)t]->getData(data, timestamp, false);	// read data without swapping buffers
+		}
+	}
+	return (int8_t)EmotiBit::Error::NONE;
 }
