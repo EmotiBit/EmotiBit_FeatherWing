@@ -1,25 +1,14 @@
 #include "EmotiBitWiFi.h"
 
-int8_t EmotiBitWiFi::setup()
-{
-#if defined(ADAFRUIT_FEATHER_M0)
-	WiFi.setPins(8, 7, 4, 2);
-#endif
-
-	if (WiFi.status() == WL_NO_SHIELD) 
-	{
-		return WL_NO_SHIELD;
-	}
-
-	WiFi.lowPowerMode();
-
-	return SUCCESS;
-}
-
 uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 {
-	uint8_t status = WL_IDLE_STATUS;
+	uint8_t status = WiFi.status();
 	uint32_t startBegin = millis();
+
+	if (status == WL_NO_SHIELD) {
+		Serial.println("No WiFi shield found. Try WiFi.setPins().");
+		return WL_NO_SHIELD;
+	}
 
 	while (status != WL_CONNECTED)
 	{
@@ -55,8 +44,13 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 
 uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxAttempts, uint16_t attemptDelay)
 {
-	int8_t status;
+	int8_t status = WiFi.status();
 	int8_t attempt = 0;
+
+	if (status == WL_NO_SHIELD) {
+		Serial.println("No WiFi shield found. Try WiFi.setPins().");
+		return WL_NO_SHIELD;
+	}
 
 	while (status != WL_CONNECTED) 
 	{
@@ -552,4 +546,8 @@ uint8_t listNetworks() {
 	Serial.println("xxxxxxx  xxxxxxx");
 
 	return numSsid;
+}
+bool isConnected()
+{
+	return isConnected;
 }

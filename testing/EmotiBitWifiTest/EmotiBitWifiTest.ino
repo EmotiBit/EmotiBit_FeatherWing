@@ -8,7 +8,7 @@
 #include "arduino_secrets.h" 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 
-EmotiBitWiFi emotibitWifi;
+EmotiBitWiFi emotibitWiFi;
 uint16_t controlPacketNumber = 0;
 String dataMessage;
 const uint16_t DATA_SEND_INTERVAL = 100;
@@ -56,24 +56,26 @@ void setup()
 
 	dataMessage.reserve(DATA_MESSAGE_RESERVE_SIZE);
 
-	emotibitWifi.addCredential(SECRET_SSID_0, SECRET_PASS_0);
-	emotibitWifi.addCredential(SECRET_SSID_1, SECRET_PASS_1);
+	emotibitWiFi.addCredential(SECRET_SSID_0, SECRET_PASS_0);
+	emotibitWiFi.addCredential(SECRET_SSID_1, SECRET_PASS_1);
 
-	emotibitWifi.setup();
-	emotibitWifi.begin();
-	
+#if defined(ADAFRUIT_FEATHER_M0)
+	WiFi.setPins(8, 7, 4, 2);
+#endif
+	emotibitWiFi.begin();
+
 	setupDataTypes();
 }
 
 void loop() { 
 	
-	emotibitWifi.update(updatePackets);
+	emotibitWiFi.update(updatePackets);
 	//Serial.print(updatePackets);
 
-  if (emotibitWifi._isConnected) {
+  if (emotibitWiFi.isConnected()) {
 		// Read control packets
 		String controlPacket;
-		while (emotibitWifi.readControl(controlPacket))
+		while (emotibitWiFi.readControl(controlPacket))
 		{
 			// ToDo: handling some packets (e.g. disconnect behind the scenes)
 			Serial.print("Receiving control msg: ");
@@ -82,7 +84,7 @@ void loop() {
 			EmotiBitPacket::getHeader(controlPacket, header);
 			if (header.typeTag.equals(EmotiBitPacket::TypeTag::EMOTIBIT_DISCONNECT))
 			{
-				emotibitWifi.disconnect();
+				emotibitWiFi.disconnect();
 			}
 			dataMessage += controlPacket;
 		}
@@ -109,11 +111,11 @@ void loop() {
 						k = i * 50 + random(50);
 						data += k;
 					}
-					dataMessage += EmotiBitPacket::createPacket(typeTags[t], emotibitWifi.dataPacketCounter++, data, nData);
+					dataMessage += EmotiBitPacket::createPacket(typeTags[t], emotibitWiFi.dataPacketCounter++, data, nData);
 				}
 			}
 
-			emotibitWifi.sendData(dataMessage);
+			emotibitWiFi.sendData(dataMessage);
 			dataMessage = "";
 	  }
   }

@@ -61,8 +61,7 @@ public:
 	WiFiUDP _advertisingCxn;
 	WiFiUDP _dataCxn;
 
-	bool _isConnected = false;
-	int _wifiStatus = WL_IDLE_STATUS;
+	volatile bool _isConnected = false;
 	int _keyIndex = 0;            // your network key Index number (needed only for WEP)
 	//bool gotIp = false;
 	uint8_t _nDataSends = 1; // Number of times to send the same packet (e.g. for UDPx3 = 3)
@@ -94,7 +93,7 @@ public:
 	uint16_t controlPacketCounter = 0;
 	uint16_t dataPacketCounter = 0;
 
-	int8_t setup();
+	//int8_t setup();
 	uint8_t begin(uint16_t timeout = 61500, uint16_t attemptDelay = 1000);
 	//uint8_t begin(uint8_t credentialIndex, uint8_t maxAttempts = 10, uint16_t attemptDelay = 1000);
 	uint8_t begin(const String &ssid, const String &pass, uint8_t maxAttempts = 10, uint16_t attemptDelay = 1000);
@@ -117,4 +116,5 @@ public:
 	int8_t addCredential(const String &ssid, const String &password);
 	void printWiFiStatus();
 	uint8_t listNetworks();
+	bool isConnected();
 };
