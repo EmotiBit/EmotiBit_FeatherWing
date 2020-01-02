@@ -1276,7 +1276,7 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 	Serial.println((uint8_t) t);
 #endif // DEBUG
 	if ((uint8_t)type < (uint8_t)EmotiBit::DataType::length) {
-		_newDataAvailable[(uint8_t)type] = true;	// new data is available in the buffer
+		_newDataAvailable[(uint8_t)type] = true;	// set new data is available in the outputBuffer
 		return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
 	}
 	else {
@@ -1792,22 +1792,15 @@ void EmotiBit::scopeTimingTest() {
 }
 
 // Function to attach callback to short press
-void EmotiBit::attachToShortButtonPress(void(*shortButtonPressFunction)(void))
+void EmotiBit::attachShortButtonPress(void(*shortButtonPressFunction)(void))
 {
 	onShortPressCallback = shortButtonPressFunction;
 }
 
 // Function to attach callback to long press
-void EmotiBit::attachToLongButtonPress(void(*longButtonPressFunction)(void)) {
+void EmotiBit::attachLongButtonPress(void(*longButtonPressFunction)(void)) {
 	onLongPressCallback = longButtonPressFunction;
 }
-
-// Function to attach callback to dataReady
-// ToDo: call the callback when data buffer is updated
-void EmotiBit::attachToDataReady(void(*dataReadyFunction)(void)) {
-	onDataReadyCallback = dataReadyFunction;
-}
-
 
 void EmotiBit::readSensors() {
 #ifdef DEBUG_GET_DATA
@@ -2185,13 +2178,13 @@ void EmotiBit::setWiFiMode(WiFiMode mode)
 	}
 }
 
-size_t readData(EmotiBit::DataType t, float data[], size_t dataSize) 
+size_t EmotiBit::readData(EmotiBit::DataType t, float data[], size_t dataSize)
 {
 	uint32_t timestamp;
 	return readData(t, data, dataSize, timestamp);
 }
 
-size_t readData(EmotiBit::DataType t, float data[], size_t dataSize, uint32_t &timestamp)
+size_t EmotiBit::readData(EmotiBit::DataType t, float data[], size_t dataSize, uint32_t &timestamp)
 {
 	float * dataBuffer;
 	size_t bufferSize = readData(t, dataBuffer, timestamp);
@@ -2202,20 +2195,20 @@ size_t readData(EmotiBit::DataType t, float data[], size_t dataSize, uint32_t &t
 	return bufferSize; // Return size of available buffer even if we're only able to copy some of it
 }
 
-size_t readData(EmotiBit::DataType t, float **data)
+size_t EmotiBit::readData(EmotiBit::DataType t, float **data)
 {
 	uint32_t timestamp;
 	return readData(t, data, timestamp);
 }
 
-size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp)
+size_t EmotiBit::readData(EmotiBit::DataType t, float **data, uint32_t &timestamp)
 {
 	if ((uint8_t)t < (uint8_t)EmotiBit::DataType::length) {
-		if (_newDataAvailable[(uint8_t)t]) // if there is new data available on the outBuffer
+		if (_newDataAvailable[(uint8_t)t]) // if there is new data available on the outputBuffer
 		{
 			_newDataAvailable[(uint8_t)t] = false;	
-			return dataDoubleBuffers[(uint8_t)t]->getData(data, timestamp, false);	// read data without swapping buffers
+			return dataDoubleBuffers[(uint8_t)t]->getData(data, &timestamp, false);	// read data without swapping buffers
 		}
 	}
-	return (int8_t)EmotiBit::Error::NONE;
+	return 0;
 }

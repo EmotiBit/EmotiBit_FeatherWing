@@ -63,13 +63,26 @@ void loop() {
 
 	  // Send data periodically
 	  static uint32_t dataSendTimer = millis();
-	  if (millis() - dataSendTimer > DATA_SEND_INTERVAL) {
+	  if (millis() - dataSendTimer > DATA_SEND_INTERVAL) 
+		{
 			dataSendTimer = millis();
-			String data = "0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9";
-			static uint16_t counter = 0;
-			for (int i = 0; i < 20; i++)
+			//static uint16_t counter = 0;
+			for (int i = 0; i < 11; i++)
 			{
-				dataMessage += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, emotibitWifi.dataPacketCounter++, data, 50);
+				//String data = "0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9";
+				String data;
+				int k;
+				int nData = 7;
+				for (int j = 0; j < nData; j++)
+				{
+					if (j != 0)
+					{
+						data += ",";
+					}
+					k = i*10 + random(50);
+					data += k;
+				}
+				dataMessage += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::PPG_INFRARED, emotibitWifi.dataPacketCounter++, data, nData);
 			}
 
 			emotibitWifi.sendData(dataMessage);
