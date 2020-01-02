@@ -540,8 +540,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
 	Serial.println("EmotiBit Setup complete");
 
-	Serial.println("Starting interrupts");
-	startTimer(BASE_SAMPLING_FREQ);
+	if (!_sendTestData)
+	{
+		Serial.println("Starting interrupts");
+		startTimer(BASE_SAMPLING_FREQ);
+	}
 
 } // Setup
 
@@ -625,7 +628,7 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 	return false;
 }
 
-void EmotiBit::parseIncomingControlPackets(String &controlPackets) {
+void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber) {
 	static String packet;
 	static EmotiBitPacket::Header header;
 	int16_t dataStartChar = 0;
@@ -662,7 +665,10 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets) {
 				else {
 					Serial.println("Failed to open data file for writing");
 				}
-				startTimer(BASE_SAMPLING_FREQ); // start up the data sampling timer
+				if (!_sendTestData)
+				{
+					startTimer(BASE_SAMPLING_FREQ); // start up the data sampling timer
+				}
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::RECORD_END)) { // Recording end
 				if (_dataFile) {
@@ -689,7 +695,8 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets) {
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::EMOTIBIT_DISCONNECT)) {
 				_emotiBitWiFi.disconnect();
 			}
-			controlPackets += packet;
+
+			controlPackets += EmotiBitPacket::createPacket(header.typeTag, packetNumber++, packet.substring(dataStartChar, packet.length() - 1), header.dataLength);
 		}
 	}
 }
@@ -728,9 +735,17 @@ void EmotiBit::updateButtonPress()
 uint8_t EmotiBit::update()
 {
 	//Serial.println("_emotiBitWiFi.update");
-	_emotiBitWiFi.update(_outSdPackets);
+	static String inSyncPackets;
+	_emotiBitWiFi.update(inSyncPackets, _outDataPacketCounter);
+	Serial.print(inSyncPackets);
+	_outDataPackets += inSyncPackets;
+	inSyncPackets = "";
 	//Serial.println("parseIncomingControlMessages");
-	parseIncomingControlPackets(_inControlPackets);
+	static String inControlPackets;
+	parseIncomingControlPackets(inControlPackets, _outDataPacketCounter);
+	Serial.print(inControlPackets);
+	_outDataPackets += inControlPackets;
+	inControlPackets = "";
 	//Serial.println("updateButtonPress");
 	updateButtonPress();
 
@@ -738,16 +753,14 @@ uint8_t EmotiBit::update()
 	static uint32_t dataSendTimer = millis();
 	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
 	{
-		Serial.println("dataSendTimer");
+		//Serial.println("dataSendTimer");
 		dataSendTimer = millis();
 
-		bool sendTestData = false;
-		if (sendTestData)
+		if (_sendTestData)
 		{
 			appendTestData(_outDataPackets);
-			Serial.print("Sending Test Data: length = ");
-			Serial.println(_outDataPackets.length());
 			_emotiBitWiFi.sendData(_outDataPackets);
+			writeSdCardMessage(_outDataPackets);
 			_outDataPackets = "";
 		}
 		else
@@ -755,47 +768,43 @@ uint8_t EmotiBit::update()
 			bool newData = false;
 			for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
 			{
-				newData = newData || addPacket((EmotiBit::DataType) i);
-				if (newData)
+				addPacket((EmotiBit::DataType) i);
+				if (_outDataPackets.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE)
 				{
-					if (_outDataPackets.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE)
-					{
-						// Avoid overrunning our reserve memory
-						if (_wifiMode == WiFiMode::NORMAL)
-						{
-							_emotiBitWiFi.sendData(_outDataPackets);
-						}
-						_outDataPackets = "";
-					}
-				}
-			}
-			if (newData)
-			{
-				if (_outDataPackets.length() > 0)
-				{
+					// Avoid overrunning our reserve memory
 					if (_wifiMode == WiFiMode::NORMAL)
 					{
 						_emotiBitWiFi.sendData(_outDataPackets);
 					}
+					writeSdCardMessage(_outDataPackets);
 					_outDataPackets = "";
 				}
+			}
+			if (_outDataPackets.length() > 0)
+			{
+				if (_wifiMode == WiFiMode::NORMAL)
+				{
+					_emotiBitWiFi.sendData(_outDataPackets);
+				}
+				writeSdCardMessage(_outDataPackets);
+				_outDataPackets = "";
 			}
 		}
 	}
 
-	if (_inControlPackets.length() > 0)
-	{
-		Serial.println("writeSdCardMessage(_inControlPackets);");
-		writeSdCardMessage(_inControlPackets);
-		_inControlPackets = "";
-	}
+	//if (_inControlPackets.length() > 0)
+	//{
+	//	Serial.println("writeSdCardMessage(_inControlPackets);");
+	//	writeSdCardMessage(_inControlPackets);
+	//	_inControlPackets = "";
+	//}
 
-	if (_outSdPackets.length() > 0)
-	{
-		Serial.println("writeSdCardMessage(_outSdPackets);");
-		writeSdCardMessage(_outSdPackets);
-		_outSdPackets = "";
-	}
+	//if (_outSdPackets.length() > 0)
+	//{
+	//	Serial.println("writeSdCardMessage(_outSdPackets);");
+	//	writeSdCardMessage(_outSdPackets);
+	//	_outSdPackets = "";
+	//}
 
 	// Hibernate after writing data
 	if (_startHibernate) {

@@ -248,21 +248,22 @@ public:
 	SdFat SD;
 	volatile uint8_t battLevel = 100;
 	volatile uint8_t battIndicationSeq = 0;
-	volatile uint8_t BattLedDuration = INT_MAX;
+	volatile uint16_t BattLedDuration = 65535;
 
 	EmotiBitWiFi _emotiBitWiFi; 
 	TwoWire* _EmotiBit_i2c = nullptr;
 	String _outDataPackets;		// Packets that will be sent over wireless (if enabled) and written to SD card (if recording)
-	String _outSdPackets;		// Packts that will be written to SD card (if recording) but not sent over wireless
-	String _inControlPackets;	// Control packets recieved over wireless
+	uint16_t _outDataPacketCounter = 0;
+	//String _outSdPackets;		// Packts that will be written to SD card (if recording) but not sent over wireless
+	//String _inControlPackets;	// Control packets recieved over wireless
 	String _sdCardFilename = "datalog.csv";
 	const char *_configFilename = "config.txt"; 
 	File _dataFile;
 	volatile bool _sdWrite;
 	WiFiMode _wifiMode;
 	bool _startHibernate;
+	bool _sendTestData = true;
 
-	uint16_t _outDataPacketCounter = 0;
 
 	void setupSdCard();
 	void updateButtonPress();
@@ -284,7 +285,7 @@ public:
 	bool loadConfigFile(const String &filename);
 	bool addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision = 4);
 	bool addPacket(EmotiBit::DataType t);
-	void parseIncomingControlPackets(String & controlPackets);
+	void parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber);
 	void readSensors();
 	size_t readData(EmotiBit::DataType t, float data[], size_t dataSize);		// Copies available data buffer into data
 	size_t readData(EmotiBit::DataType t, float data[], size_t dataSize, uint32_t &timestamp);		// Copies available data buffer into data

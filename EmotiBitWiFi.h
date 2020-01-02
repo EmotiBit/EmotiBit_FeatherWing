@@ -91,7 +91,7 @@ public:
 
 	uint16_t advertisingPacketCounter = 0;
 	uint16_t controlPacketCounter = 0;
-	uint16_t dataPacketCounter = 0;
+	//uint16_t dataPacketCounter = 0;
 
 	//int8_t setup();
 	uint8_t begin(uint16_t timeout = 61500, uint16_t attemptDelay = 1000);
@@ -102,14 +102,14 @@ public:
 	int8_t connect(const IPAddress &hostIp, const String &connectPayload);
 	int8_t connect(const IPAddress &hostIp, uint16_t controlPort, uint16_t dataPort);
 	int8_t disconnect();
-	int8_t update(String &logPackets);	// Handles advertising and time syncing. Can take up to 
-	int8_t processAdvertising(String &logPackets);
+	int8_t update(String &syncPackets, uint16_t &syncPacketCounter);	// Handles advertising and time syncing. Can take up to 
+	int8_t processAdvertising();
 	uint8_t readControl(String &packet);
 	int8_t sendControl(const String &message);
 	int8_t sendData(const String &message);
 	int8_t readUdp(WiFiUDP &udp, String &message);
 	int8_t sendAdvertising(const String &message, const IPAddress &ip, uint16_t port);
-	int8_t processTimeSync(String &syncPackets);
+	int8_t processTimeSync(String &syncPackets, uint16_t &syncPacketCounter);
 	int8_t sendUdp(WiFiUDP &udp, const String &message, const IPAddress &ip, uint16_t port);
 	String createPongPacket();
 	void setTimeSyncInterval(const uint32_t &interval);

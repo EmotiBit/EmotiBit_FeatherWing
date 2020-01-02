@@ -154,7 +154,7 @@ int8_t EmotiBitWiFi::readUdp(WiFiUDP &udp, String &message)
 	return FAIL;
 }
 
-int8_t EmotiBitWiFi::processAdvertising(String &logPackets)
+int8_t EmotiBitWiFi::processAdvertising()
 {
 	EmotiBitPacket::Header outPacketHeader;
 	String outMessage = "";
@@ -227,7 +227,7 @@ int8_t EmotiBitWiFi::processAdvertising(String &logPackets)
 			{
 				if (DEBUG_PRINT) Serial.print("Sending: ");
 				if (DEBUG_PRINT) Serial.print(outMessage);
-				//logPackets + outMessage;
+				//syncPackets + outMessage;
 				sendAdvertising(outMessage, senderIp, senderPort);
 			}
 		}
@@ -404,11 +404,11 @@ String EmotiBitWiFi::createPongPacket()
 	return outMessage;
 }
 
-int8_t EmotiBitWiFi::update(String &logPackets)
+int8_t EmotiBitWiFi::update(String &syncPackets, uint16_t &syncPacketCounter)
 {
 	updateWiFi();
 
-	processAdvertising(logPackets);
+	processAdvertising();
 
 	if (_isConnected)
 	{
@@ -417,27 +417,26 @@ int8_t EmotiBitWiFi::update(String &logPackets)
 		if (millis() - timeSyncTimer > TIME_SYNC_INTERVAL)
 		{
 			timeSyncTimer = millis();
-			processTimeSync(logPackets);
+			processTimeSync(syncPackets, syncPacketCounter);
 		}
 	}
 }
 
-int8_t EmotiBitWiFi::processTimeSync(String &logPackets)
+int8_t EmotiBitWiFi::processTimeSync(String &syncPackets, uint16_t &syncPacketCounter)
 {
 	if (_isConnected)
 	{
+		int16_t rdPacketNumber = syncPacketCounter;
+
 		String payload;
 		payload += EmotiBitPacket::TypeTag::TIMESTAMP_LOCAL;
 		payload += ",";
 		payload += EmotiBitPacket::TypeTag::TIMESTAMP_UTC;
-		String packet = EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::REQUEST_DATA, dataPacketCounter, payload, 2);
+		String packet = EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::REQUEST_DATA, syncPacketCounter++, payload, 2);
 		sendData(packet);
 		if (DEBUG_PRINT) Serial.print("Sync Sent: ");
 		if (DEBUG_PRINT) Serial.print(packet);
-		logPackets += packet;
-
-		int32_t rdPacketNumber = dataPacketCounter;
-		dataPacketCounter++;
+		syncPackets += packet;
 
 		uint32_t syncWaitTimer = millis();
 
@@ -459,19 +458,19 @@ int8_t EmotiBitWiFi::processTimeSync(String &logPackets)
 				{
 					if (header.typeTag.equals(EmotiBitPacket::TypeTag::TIMESTAMP_LOCAL))
 					{
-						logPackets += EmotiBitPacket::createPacket(header.typeTag, dataPacketCounter++,
+						syncPackets += EmotiBitPacket::createPacket(header.typeTag, syncPacketCounter++,
 							syncMessage.substring(dataStartChar, syncMessage.length() - 1), header.dataLength);
-						//logPackets += EmotiBitPacket::headerToString(EmotiBitPacket::createHeader(header.typeTag, millis(), dataPacketCounter++, header.dataLength));
-						//logPackets += syncMessage.substring(dataStartChar);
+						//syncPackets += EmotiBitPacket::headerToString(EmotiBitPacket::createHeader(header.typeTag, millis(), syncPacketCounter++, header.dataLength));
+						//syncPackets += syncMessage.substring(dataStartChar);
 					}
 					else if (header.typeTag.equals(EmotiBitPacket::TypeTag::TIMESTAMP_UTC))
 					{
-						logPackets += EmotiBitPacket::createPacket(header.typeTag, dataPacketCounter++,
+						syncPackets += EmotiBitPacket::createPacket(header.typeTag, syncPacketCounter++,
 							syncMessage.substring(dataStartChar, syncMessage.length() - 1), header.dataLength);
 					}
 					else if (header.typeTag.equals(EmotiBitPacket::TypeTag::ACK))
 					{
-						logPackets += EmotiBitPacket::createPacket(header.typeTag, dataPacketCounter++,
+						syncPackets += EmotiBitPacket::createPacket(header.typeTag, syncPacketCounter++,
 							syncMessage.substring(dataStartChar, syncMessage.length() - 1), header.dataLength);
 						String ackPacketNumber;
 						EmotiBitPacket::getPacketElement(syncMessage, ackPacketNumber, dataStartChar);

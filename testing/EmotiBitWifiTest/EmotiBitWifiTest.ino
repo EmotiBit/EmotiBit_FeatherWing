@@ -14,6 +14,7 @@ String dataMessage;
 const uint16_t DATA_SEND_INTERVAL = 100;
 const uint16_t DATA_MESSAGE_RESERVE_SIZE = 4096;
 String updatePackets;
+uint16_t dataPacketCounter = 0;
 
 enum class DataType {
 	PPG_INFRARED,
@@ -69,7 +70,7 @@ void setup()
 
 void loop() { 
 	
-	emotibitWiFi.update(updatePackets);
+	emotibitWiFi.update(updatePackets, dataPacketCounter);
 	//Serial.print(updatePackets);
 
   if (emotibitWiFi.isConnected()) {
@@ -111,7 +112,7 @@ void loop() {
 						k = i * 50 + random(50);
 						data += k;
 					}
-					dataMessage += EmotiBitPacket::createPacket(typeTags[t], emotibitWiFi.dataPacketCounter++, data, nData);
+					dataMessage += EmotiBitPacket::createPacket(typeTags[t], dataPacketCounter++, data, nData);
 				}
 			}
 
