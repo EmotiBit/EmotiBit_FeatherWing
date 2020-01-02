@@ -486,28 +486,28 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	printLen[(uint8_t)EmotiBit::DataType::BATTERY_VOLTAGE] = 2;
 	printLen[(uint8_t)EmotiBit::DataType::BATTERY_PERCENT] = 0;
 
-	_sendData[(uint8_t)EmotiBit::DataType::EDA] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::EDL] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::EDR] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::PPG_INFRARED] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::PPG_RED] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::PPG_GREEN] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::THERMOPILE] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Y] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Z] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::GYROSCOPE_X] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::GYROSCOPE_Y] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::GYROSCOPE_Z] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::MAGNETOMETER_X] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Y] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Z] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::BATTERY_VOLTAGE] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::BATTERY_PERCENT] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = true;
-	_sendData[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = true;
+	sendData[(uint8_t)EmotiBit::DataType::EDA] = true;
+	sendData[(uint8_t)EmotiBit::DataType::EDL] = true;
+	sendData[(uint8_t)EmotiBit::DataType::EDR] = true;
+	sendData[(uint8_t)EmotiBit::DataType::PPG_INFRARED] = true;
+	sendData[(uint8_t)EmotiBit::DataType::PPG_RED] = true;
+	sendData[(uint8_t)EmotiBit::DataType::PPG_GREEN] = true;
+	sendData[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = true;
+	sendData[(uint8_t)EmotiBit::DataType::THERMOPILE] = true;
+	sendData[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = true;
+	sendData[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = true;
+	sendData[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Y] = true;
+	sendData[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Z] = true;
+	sendData[(uint8_t)EmotiBit::DataType::GYROSCOPE_X] = true;
+	sendData[(uint8_t)EmotiBit::DataType::GYROSCOPE_Y] = true;
+	sendData[(uint8_t)EmotiBit::DataType::GYROSCOPE_Z] = true;
+	sendData[(uint8_t)EmotiBit::DataType::MAGNETOMETER_X] = true;
+	sendData[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Y] = true;
+	sendData[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Z] = true;
+	sendData[(uint8_t)EmotiBit::DataType::BATTERY_VOLTAGE] = true;
+	sendData[(uint8_t)EmotiBit::DataType::BATTERY_PERCENT] = true;
+	sendData[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = true;
+	sendData[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = true;
 
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::EDA] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::EDL] = false;
@@ -537,7 +537,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
 	Serial.println("EmotiBit Setup complete");
 	Serial.println("Starting interrupts");
-	startTimer(BASE_SAMPLING_FREQ);
+	//startTimer(BASE_SAMPLING_FREQ);
 
 } // Setup
 
@@ -615,13 +615,13 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 
 	dataLen = getData(t, &data, &timestamp);
 
-	if (_sendData[(uint8_t)t]) {
+	if (sendData[(uint8_t)t]) {
 		return addPacket(timestamp, t, data, dataLen, printLen[(uint8_t)t]);
 	}
 	return false;
 }
 
-void EmotiBit::parseIncomingControlMessages() {
+void EmotiBit::parseIncomingControlPackets(String &controlPackets) {
 	static String packet;
 	static EmotiBitPacket::Header header;
 	int16_t dataStartChar = 0;
@@ -630,7 +630,8 @@ void EmotiBit::parseIncomingControlMessages() {
 		dataStartChar = EmotiBitPacket::getHeader(packet, header);
 		if (dataStartChar > 0)
 		{
-			if (header.typeTag.equals(EmotiBitPacket::TypeTag::RECORD_BEGIN)) {
+			if (header.typeTag.equals(EmotiBitPacket::TypeTag::RECORD_BEGIN)) 
+			{
 				stopTimer();	// stop the data sampling timer
 				String datetimeString = packet.substring(dataStartChar, packet.length() - 1);
 				// Write the configuration info to json file
@@ -685,7 +686,7 @@ void EmotiBit::parseIncomingControlMessages() {
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::EMOTIBIT_DISCONNECT)) {
 				_emotiBitWiFi.disconnect();
 			}
-			_inControlPackets += packet;
+			controlPackets += packet;
 		}
 	}
 }
@@ -726,7 +727,7 @@ uint8_t EmotiBit::update()
 	Serial.println("_emotiBitWiFi.update");
 	_emotiBitWiFi.update(_outSdPackets);
 	Serial.println("parseIncomingControlMessages");
-	parseIncomingControlMessages();
+	parseIncomingControlPackets(_inControlPackets);
 	Serial.println("updateButtonPress");
 	updateButtonPress();
 
@@ -1393,7 +1394,7 @@ bool EmotiBit::setSensorTimer(SensorTimer t) {
 
 
 
-bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
+bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 #ifdef DEBUG
 	Serial.println("printConfigInfo");
 #endif
@@ -1428,6 +1429,8 @@ bool EmotiBit::printConfigInfo(File &file, String datetimeString) {
 		JsonObject* setups[nInfo];
 		uint8_t i = 0;
 		infos[i] = &(root.createNestedObject("info"));
+
+		// ToDo: Use EmotiBitPacket::TypeTag rather than fallable constants to set typeTags
 
 		// Accelerometer
 		//indices[i] = &(root.createNestedObject());
@@ -2130,7 +2133,7 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 }
 
 
-bool EmotiBit::writeSdCardMessage(String & s) {
+bool EmotiBit::writeSdCardMessage(const String & s) {
 	// Break up the message in to bite-size chunks to avoid over running the UDP or SD card write buffers
 	// UDP buffer seems to be about 1400 char. SD card writes should be 512 char.
 	if (_sdWrite && s.length() > 0) {

@@ -189,8 +189,6 @@ public:
 		NORMAL				// data sending, time-syncing accuracy high
   };
 
-
-	
 	Si7013 tempHumiditySensor;
 	DeviceAddress deviceAddress;
 	uint8_t buttonPin;
@@ -216,7 +214,7 @@ public:
 
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
-	uint16_t OUT_PACKET_MAX_SIZE = 1024;
+	static const uint16_t OUT_PACKET_MAX_SIZE = 1024;
 	static const uint16_t DATA_SEND_INTERVAL = 100;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
 	static const uint16_t MAX_DATA_BUFFER_SIZE = 64;
@@ -224,7 +222,6 @@ public:
 	// Timer constants
 #define TIMER_PRESCALER_DIV 1024
 	const uint32_t CPU_HZ = 48000000;
-	uint16_t loopCount = 0;
 
 	// ToDo: Make sampling variables changeable
 #define BASE_SAMPLING_FREQ 300
@@ -243,10 +240,10 @@ public:
 		bool ppg = true;
 	} acquireData;
 
-	String typeTags[(uint8_t)EmotiBit::DataType::length];
-	uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
-	bool _sendData[(uint8_t)EmotiBit::DataType::length];
+	const char *typeTags[(uint8_t)EmotiBit::DataType::length];
 	bool _newDataAvailable[(uint8_t)EmotiBit::DataType::length];
+	uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
+	bool sendData[(uint8_t)EmotiBit::DataType::length];
 
 	SdFat SD;
 	bool recording = false;
@@ -292,12 +289,12 @@ public:
 	void attachLongButtonPress(void(*longButtonPressFunction)(void));
 	WiFiMode getWiFiMode();
 	void setWiFiMode(WiFiMode mode);
-	bool writeSdCardMessage(String & s);
+	bool writeSdCardMessage(const String &s);
 	int freeMemory();
 	bool loadConfigFile(const String &filename);
 	bool addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision = 4);
 	bool addPacket(EmotiBit::DataType t);
-	void parseIncomingControlMessages();
+	void parseIncomingControlPackets(String & controlPackets);
 	void readSensors();
 	size_t readData(EmotiBit::DataType t, float data[], size_t dataSize);		// Copies available data buffer into data
 	size_t readData(EmotiBit::DataType t, float data[], size_t dataSize, uint32_t &timestamp);		// Copies available data buffer into data
@@ -335,8 +332,7 @@ public:
 	float readBatteryVoltage();
 	int8_t readBatteryPercent();
 	bool setSensorTimer(SensorTimer t);
-	bool printConfigInfo(File &file, String datetimeString);
-	//bool printConfigInfo(File file, String datetimeString);
+	bool printConfigInfo(File &file, const String &datetimeString);
 	bool setSamplingRates(SamplingRates s);
 	bool setSamplesAveraged(SamplesAveraged s);
 	void scopeTimingTest();

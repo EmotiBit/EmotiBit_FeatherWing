@@ -42,6 +42,7 @@ void setup()
 
 void loop()
 {
+	//Serial.println("emotibit.update()");
 	emotibit.update();
 
 	//size_t dataAvailable = emotibit.readData(EmotiBit::DataType::EDA, data, dataSize);

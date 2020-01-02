@@ -14,7 +14,7 @@ public:
 
 
 
-	DoubleBufferFloat(size_t capacity = 64);
+	DoubleBufferFloat(size_t capacity = 32);
 	//DoubleBufferFloat(const DoubleBufferFloat &doubleBuffer);
 	//DoubleBufferFloat operator=(const DoubleBufferFloat &doubleBuffer);
 	~DoubleBufferFloat();

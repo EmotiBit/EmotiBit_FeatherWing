@@ -36,7 +36,7 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 		{
 			currentCredential = (currentCredential + 1) % numCredentials;
 			Serial.println("<<<<<<< Switching WiFi Networks >>>>>>>");
-			status = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1);
+			status = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1, attemptDelay);
 			if (status == WL_CONNECTED) {
 				break;
 			}
@@ -53,7 +53,7 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 //	return WL_CONNECT_FAILED;
 //}
 
-uint8_t EmotiBitWiFi::begin(String ssid, String pass, uint8_t maxAttempts, uint16_t attemptDelay)
+uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxAttempts, uint16_t attemptDelay)
 {
 	int8_t status;
 	int8_t attempt = 0;
@@ -250,12 +250,12 @@ int8_t EmotiBitWiFi::processAdvertising(String &logPackets)
 	return SUCCESS;
 }
 
-int8_t EmotiBitWiFi::sendAdvertising(const String& message, const IPAddress& ip, const uint16_t& port)
+int8_t EmotiBitWiFi::sendAdvertising(const String& message, const IPAddress& ip, uint16_t port)
 {
 	sendUdp(_advertisingCxn, message, ip, port);
 }
 
-int8_t EmotiBitWiFi::sendData(String & message)
+int8_t EmotiBitWiFi::sendData(const String &message)
 {
 	if (_isConnected)
 	{
@@ -263,7 +263,7 @@ int8_t EmotiBitWiFi::sendData(String & message)
 	}
 }
 
-int8_t EmotiBitWiFi::sendUdp(WiFiUDP& udp, const String& message, const IPAddress& ip, const uint16_t& port)
+int8_t EmotiBitWiFi::sendUdp(WiFiUDP& udp, const String& message, const IPAddress& ip, uint16_t port)
 {
 	static int16_t firstIndex;
 	firstIndex = 0;
@@ -318,7 +318,7 @@ uint8_t EmotiBitWiFi::readControl(String& packet)
 	return numPackets;
 }
 
-int8_t EmotiBitWiFi::connect(IPAddress hostIp, const String& connectPayload) {
+int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, const String& connectPayload) {
 
 	bool gotControlPort = false;
 	bool gotDataPort = false;
@@ -348,7 +348,7 @@ int8_t EmotiBitWiFi::connect(IPAddress hostIp, const String& connectPayload) {
 		return FAIL;
 	}
 }
-int8_t EmotiBitWiFi::connect(IPAddress hostIp, uint16_t controlPort, uint16_t dataPort) {
+int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, uint16_t controlPort, uint16_t dataPort) {
 	if (!_isConnected)
 	{
 		// if we aren't already connected to a computer
@@ -509,7 +509,7 @@ void EmotiBitWiFi::printWiFiStatus() {
 	Serial.println(" dBm");
 }
 
-int8_t EmotiBitWiFi::addCredential(String ssid, String password)
+int8_t EmotiBitWiFi::addCredential(const String &ssid, const String &password)
 {
 	if (numCredentials < MAX_CREDENTIALS)
 	{
