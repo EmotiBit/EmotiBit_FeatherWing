@@ -539,7 +539,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	Serial.println("Starting interrupts");
 	startTimer(BASE_SAMPLING_FREQ);
 
-	//sendResetPacket = true;	// ToDo: Consider better solutions to communicate modes to the visualizer
 } // Setup
 
 void EmotiBit::setupSdCard()
@@ -724,14 +723,18 @@ void EmotiBit::updateButtonPress()
 
 uint8_t EmotiBit::update()
 {
+	Serial.println("_emotiBitWiFi.update");
 	_emotiBitWiFi.update(_outSdPackets);
+	Serial.println("parseIncomingControlMessages");
 	parseIncomingControlMessages();
+	Serial.println("updateButtonPress");
 	updateButtonPress();
 
 	// Handle data buffer reading and sending
 	static uint32_t dataSendTimer = millis();
 	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
 	{
+		Serial.println("dataSendTimer");
 		dataSendTimer = millis();
 		bool newData = false;
 		for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
@@ -759,16 +762,19 @@ uint8_t EmotiBit::update()
 
 	if (_inControlPackets.length() > 0)
 	{
+		Serial.println("writeSdCardMessage(_inControlPackets);");
 		writeSdCardMessage(_inControlPackets);
 		_inControlPackets = "";
 	}
 
 	if (_outSdPackets.length() > 0)
 	{
+		Serial.println("writeSdCardMessage(_outSdPackets);");
 		writeSdCardMessage(_outSdPackets);
 		_outSdPackets = "";
 	}
 
+	Serial.println("update Battery level");
 	// To update Battery level variable for LED indication
 	if (battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH))
 		battIndicationSeq = 0;
@@ -787,6 +793,7 @@ uint8_t EmotiBit::update()
 
 	// Hibernate after writing data
 	if (_startHibernate) {
+		Serial.println("Hibernate");
 		hibernate();
 	}
 }
@@ -2104,6 +2111,8 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 	for (size_t i = 0; i < configSize; i++) {
 		String ssid = root["WifiCredentials"][i]["ssid"] | "";
 		String pass = root["WifiCredentials"][i]["password"] | "";
+		Serial.print("Adding SSID: ");
+		Serial.println(ssid);
 		_emotiBitWiFi.addCredential( ssid, pass);
 		Serial.println(ssid);
 		Serial.println(pass);
