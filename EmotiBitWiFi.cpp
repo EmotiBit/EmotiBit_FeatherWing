@@ -547,7 +547,7 @@ uint8_t listNetworks() {
 
 	return numSsid;
 }
-bool isConnected()
+bool EmotiBitWiFi::isConnected()
 {
-	return isConnected;
+	return _isConnected;
 }

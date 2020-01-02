@@ -262,9 +262,9 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	// setup LED DRIVER
 	led.begin(*_EmotiBit_i2c);
 	led.setCurrent(26);
-	led.setLEDpwm((uint8_t)Led::LED_RED, 8);
-	led.setLEDpwm((uint8_t)Led::LED_BLUE, 8);
-	led.setLEDpwm((uint8_t)Led::LED_YELLOW, 8);
+	led.setLEDpwm((uint8_t)Led::RED, 8);
+	led.setLEDpwm((uint8_t)Led::BLUE, 8);
+	led.setLEDpwm((uint8_t)Led::YELLOW, 8);
 
 	//// Setup PPG sensor
 	Serial.println("Initializing MAX30101....");
@@ -412,7 +412,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	MLX90632::status returnError; // Required as a parameter for begin() function in the MLX library 
 	thermopile.begin(deviceAddress.MLX, *_EmotiBit_i2c, returnError);
 	thermopile.setMeasurementRate(8);
-	lastThermopileBegin = millis();
+	//lastThermopileBegin = millis();
 
 	// ------------ BEGIN ino refactoring ------------//
 	// ToDo: move into separate functions
@@ -440,7 +440,12 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	delay(500);
 
 	setupSdCard();
-	_emotiBitWiFi.setup();
+	//_emotiBitWiFi.setup();
+#if defined(ADAFRUIT_FEATHER_M0)
+	WiFi.setPins(8, 7, 4, 2);
+#endif
+	WiFi.lowPowerMode();
+	_emotiBitWiFi.begin();
 
 	typeTags[(uint8_t)EmotiBit::DataType::EDA] = EmotiBitPacket::TypeTag::EDA;
 	typeTags[(uint8_t)EmotiBit::DataType::EDL] = EmotiBitPacket::TypeTag::EDL;
@@ -532,12 +537,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = false;
 
-	dataSendTimer = millis();
-
 	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
 	Serial.println("EmotiBit Setup complete");
+
 	Serial.println("Starting interrupts");
-	//startTimer(BASE_SAMPLING_FREQ);
+	startTimer(BASE_SAMPLING_FREQ);
 
 } // Setup
 
@@ -584,7 +588,7 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 		//	addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_CONNHISTORY, timestamp);  // addDebugPacket(case, timestamp) 
 		//}
 
-		header = EmotiBitPacket::createHeader(typeTags[(uint8_t)t], millis(), outDataPacketCounter++, dataLen);
+		header = EmotiBitPacket::createHeader(typeTags[(uint8_t)t], millis(), _outDataPacketCounter++, dataLen);
 		_outDataPackets += EmotiBitPacket::headerToString(header);
 		for (uint16_t i = 0; i < dataLen; i++) {
 			_outDataPackets += ",";
@@ -658,7 +662,6 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets) {
 				else {
 					Serial.println("Failed to open data file for writing");
 				}
-				dataSendTimer = millis();
 				startTimer(BASE_SAMPLING_FREQ); // start up the data sampling timer
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::RECORD_END)) { // Recording end
@@ -724,11 +727,11 @@ void EmotiBit::updateButtonPress()
 
 uint8_t EmotiBit::update()
 {
-	Serial.println("_emotiBitWiFi.update");
+	//Serial.println("_emotiBitWiFi.update");
 	_emotiBitWiFi.update(_outSdPackets);
-	Serial.println("parseIncomingControlMessages");
+	//Serial.println("parseIncomingControlMessages");
 	parseIncomingControlPackets(_inControlPackets);
-	Serial.println("updateButtonPress");
+	//Serial.println("updateButtonPress");
 	updateButtonPress();
 
 	// Handle data buffer reading and sending
@@ -737,27 +740,46 @@ uint8_t EmotiBit::update()
 	{
 		Serial.println("dataSendTimer");
 		dataSendTimer = millis();
-		bool newData = false;
-		for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
+
+		bool sendTestData = false;
+		if (sendTestData)
 		{
-			newData = addPacket((EmotiBit::DataType) i);
-			if (_outDataPackets.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE)
-			{
-				// Avoid overrunning our reserve memory
-				if (_wifiMode == WiFiMode::NORMAL)
-				{
-					_emotiBitWiFi.sendData(_outDataPackets);
-				}
-				_outDataPackets = "";
-			}
-		}
-		if (_outDataPackets.length() > 0)
-		{
-			if (_wifiMode == WiFiMode::NORMAL)
-			{
-				_emotiBitWiFi.sendData(_outDataPackets);
-			}
+			appendTestData(_outDataPackets);
+			Serial.print("Sending Test Data: length = ");
+			Serial.println(_outDataPackets.length());
+			_emotiBitWiFi.sendData(_outDataPackets);
 			_outDataPackets = "";
+		}
+		else
+		{
+			bool newData = false;
+			for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
+			{
+				newData = newData || addPacket((EmotiBit::DataType) i);
+				if (newData)
+				{
+					if (_outDataPackets.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE)
+					{
+						// Avoid overrunning our reserve memory
+						if (_wifiMode == WiFiMode::NORMAL)
+						{
+							_emotiBitWiFi.sendData(_outDataPackets);
+						}
+						_outDataPackets = "";
+					}
+				}
+			}
+			if (newData)
+			{
+				if (_outDataPackets.length() > 0)
+				{
+					if (_wifiMode == WiFiMode::NORMAL)
+					{
+						_emotiBitWiFi.sendData(_outDataPackets);
+					}
+					_outDataPackets = "";
+				}
+			}
 		}
 	}
 
@@ -773,23 +795,6 @@ uint8_t EmotiBit::update()
 		Serial.println("writeSdCardMessage(_outSdPackets);");
 		writeSdCardMessage(_outSdPackets);
 		_outSdPackets = "";
-	}
-
-	Serial.println("update Battery level");
-	// To update Battery level variable for LED indication
-	if (battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH))
-		battIndicationSeq = 0;
-	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_MED)) {
-		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_HIGH);
-		BattLedDuration = 1000;
-	}
-	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_MED) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
-		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_MED);
-		BattLedDuration = 500;
-	}
-	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
-		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_LOW);
-		BattLedDuration = 100;
 	}
 
 	// Hibernate after writing data
@@ -1812,52 +1817,75 @@ void EmotiBit::attachLongButtonPress(void(*longButtonPressFunction)(void)) {
 	onLongPressCallback = longButtonPressFunction;
 }
 
-void EmotiBit::readSensors() {
+void EmotiBit::readSensors() 
+{
 #ifdef DEBUG_GET_DATA
 	Serial.println("readSensors()");
 #endif // DEBUG
 
-	// ToDo: Move readSensors and timer into EmotiBit
-
 	// LED STATUS CHANGE SEGMENT
-	if (_emotiBitWiFi._isConnected)
-		led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), true);
-	else
-		led.setLED(uint8_t(EmotiBit::Led::LED_BLUE), false);
+	static uint16_t ledCounter = 0;
+	ledCounter++;
+	if (ledCounter == LED_REFRESH_DIV) 
+	{
+		ledCounter == 0;
 
-	if (battIndicationSeq) {
-		if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) {
-			led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), false);
+		if (_emotiBitWiFi.isConnected())
+		{
+			led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+		}
+		else
+		{
+			led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+		}
+
+		static bool battLed = false;
+		if (battIndicationSeq) 
+		{
+			static uint32_t BattLedstatusChangeTime = millis();
+			if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
+			{
+				led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+				battLed = false;
+				BattLedstatusChangeTime = millis();
+			}
+			else if (!battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
+			{
+				led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+				battLed = true;
+				BattLedstatusChangeTime = millis();
+			}
+		}
+		else 
+		{
+			led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
 			battLed = false;
-			BattLedstatusChangeTime = millis();
 		}
-		else if (!battLed && millis() - BattLedstatusChangeTime > BattLedDuration) {
-			led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), true);
-			battLed = true;
-			BattLedstatusChangeTime = millis();
-		}
-	}
-	else {
-		led.setLED(uint8_t(EmotiBit::Led::LED_YELLOW), false);
-		battLed = false;
-	}
 
-	if (_sdWrite) {
-		if (millis() - recordBlinkDuration >= 500) {
-			if (recordLedStatus == true) {
-				led.setLED(uint8_t(EmotiBit::Led::LED_RED), false);
-				recordLedStatus = false;
+		static bool recordLedStatus = false;
+		if (_sdWrite) 
+		{
+			static uint32_t recordBlinkDuration = millis();
+			if (millis() - recordBlinkDuration >= 500) 
+			{
+				if (recordLedStatus == true) 
+				{
+					led.setLED(uint8_t(EmotiBit::Led::RED), false);
+					recordLedStatus = false;
+				}
+				else 
+				{
+					led.setLED(uint8_t(EmotiBit::Led::RED), true);
+					recordLedStatus = true;
+				}
+				recordBlinkDuration = millis();
 			}
-			else {
-				led.setLED(uint8_t(EmotiBit::Led::LED_RED), true);
-				recordLedStatus = true;
-			}
-			recordBlinkDuration = millis();
 		}
-	}
-	else if (!_sdWrite && recordLedStatus == true) {
-		led.setLED(uint8_t(EmotiBit::Led::LED_RED), false);
-		recordLedStatus = false;
+		else if (!_sdWrite && recordLedStatus == true)
+		{
+			led.setLED(uint8_t(EmotiBit::Led::RED), false);
+			recordLedStatus = false;
+		}
 	}
 
 	// EDA
@@ -1919,10 +1947,11 @@ void EmotiBit::readSensors() {
 
 	// Battery (all analog reads must be in the ISR)
 	// TODO: use the stored BAtt value instead of calling readBatteryPercent again
-	battLevel = readBatteryPercent();
 	static uint16_t batteryCounter = 0;
 	batteryCounter++;
 	if (batteryCounter == BATTERY_SAMPLING_DIV) {
+		battLevel = readBatteryPercent();
+		updateBatteryIndication();
 		updateBatteryPercentData();
 		batteryCounter = 0;
 	}
@@ -2223,4 +2252,48 @@ size_t EmotiBit::readData(EmotiBit::DataType t, float **data, uint32_t &timestam
 		}
 	}
 	return 0;
+}
+
+void EmotiBit::updateBatteryIndication()
+{
+	// To update Battery level variable for LED indication
+	if (battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH))
+		battIndicationSeq = 0;
+	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_MED)) {
+		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_HIGH);
+		BattLedDuration = 1000;
+	}
+	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_MED) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
+		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_MED);
+		BattLedDuration = 500;
+	}
+	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
+		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_LOW);
+		BattLedDuration = 100;
+	}
+}
+
+void EmotiBit::appendTestData(String &dataMessage)
+{
+	for (uint8_t t = ((uint8_t)EmotiBit::DataType::DATA_CLIPPING) + 1; t < (uint8_t)DataType::length; t++)
+	{
+		String payload;
+		int m = 5;
+		int n = 2;
+		for (int i = 0; i < m; i++)
+		{
+			//String data = "0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9";
+			int k;
+			for (int j = 0; j < n; j++)
+			{
+				if (i > 0 || j > 0)
+				{
+					payload += ",";
+				}
+				k = i * 250 / m + random(50);
+				payload += k;
+			}
+		}
+		dataMessage += EmotiBitPacket::createPacket(typeTags[t], _outDataPacketCounter++, payload, m * n);
+	}
 }

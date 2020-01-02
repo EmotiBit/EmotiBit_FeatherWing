@@ -123,29 +123,29 @@ public:
 
   enum class DataType{
   	DATA_OVERFLOW,
-	DATA_CLIPPING,
-	PPG_INFRARED,
-	PPG_RED,
-	PPG_GREEN,
-	EDA,
-	EDL,
-	EDR,
-	TEMPERATURE_0,
-	THERMOPILE,
-	HUMIDITY_0,
-	ACCELEROMETER_X,
-	ACCELEROMETER_Y,
-	ACCELEROMETER_Z,
-	GYROSCOPE_X,
-	GYROSCOPE_Y,
-	GYROSCOPE_Z,
-	MAGNETOMETER_X,
-	MAGNETOMETER_Y,
-	MAGNETOMETER_Z,
-	BATTERY_VOLTAGE,
-	BATTERY_PERCENT,
-	//PUSH_WHILE_GETTING,
-	length
+		DATA_CLIPPING,
+		PPG_INFRARED,
+		PPG_RED,
+		PPG_GREEN,
+		EDA,
+		EDL,
+		EDR,
+		TEMPERATURE_0,
+		THERMOPILE,
+		HUMIDITY_0,
+		ACCELEROMETER_X,
+		ACCELEROMETER_Y,
+		ACCELEROMETER_Z,
+		GYROSCOPE_X,
+		GYROSCOPE_Y,
+		GYROSCOPE_Z,
+		MAGNETOMETER_X,
+		MAGNETOMETER_Y,
+		MAGNETOMETER_Z,
+		BATTERY_VOLTAGE,
+		BATTERY_PERCENT,
+		//PUSH_WHILE_GETTING,
+		length
   };
 
   enum class DebugTags{
@@ -168,9 +168,9 @@ public:
 
   //TODO: Make enum classs for led's
   enum class Led {
-	  LED_RED = 1,
-	  LED_BLUE,
-	  LED_YELLOW
+	  RED = 1,
+	  BLUE,
+	  YELLOW
   };
 
   enum class BattLevel {
@@ -210,7 +210,6 @@ public:
 	bool bmm150ZHallClipped = false;
 	uint8_t _hibernatePin;
 	bool thermopileBegun = false;
-	uint32_t lastThermopileBegin;
 
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
@@ -232,6 +231,7 @@ public:
 #define BATTERY_SAMPLING_DIV 50
 	// TODO: This should change according to the rate set on the thermopile begin function 
 #define THERMOPILE_SAMPLING_DIV 38
+#define LED_REFRESH_DIV 10
 
 	struct AcquireData {
 		bool eda = true;
@@ -246,18 +246,9 @@ public:
 	bool sendData[(uint8_t)EmotiBit::DataType::length];
 
 	SdFat SD;
-	bool recording = false;
-	uint32_t recordBlinkDuration = millis();
-	bool recordLedStatus = false;
-	bool UDPtxLed = false;
-	bool battLed = false;
-	uint32_t BattLedstatusChangeTime = millis();
-	uint8_t battLevel = 100;
-	uint8_t battIndicationSeq = 0;
-	uint8_t BattLedDuration = INT_MAX;
-	uint8_t wifiState = 0; // 0 for normal operation
-
-	uint32_t dataSendTimer;
+	volatile uint8_t battLevel = 100;
+	volatile uint8_t battIndicationSeq = 0;
+	volatile uint8_t BattLedDuration = INT_MAX;
 
 	EmotiBitWiFi _emotiBitWiFi; 
 	TwoWire* _EmotiBit_i2c = nullptr;
@@ -265,14 +256,13 @@ public:
 	String _outSdPackets;		// Packts that will be written to SD card (if recording) but not sent over wireless
 	String _inControlPackets;	// Control packets recieved over wireless
 	String _sdCardFilename = "datalog.csv";
-	String _configFilename = "config.txt"; 
+	const char *_configFilename = "config.txt"; 
 	File _dataFile;
-	bool _sdWrite;
-	bool stopSDWrite;
+	volatile bool _sdWrite;
 	WiFiMode _wifiMode;
 	bool _startHibernate;
 
-	uint16_t outDataPacketCounter = 0;
+	uint16_t _outDataPacketCounter = 0;
 
 	void setupSdCard();
 	void updateButtonPress();
@@ -300,6 +290,8 @@ public:
 	size_t readData(EmotiBit::DataType t, float data[], size_t dataSize, uint32_t &timestamp);		// Copies available data buffer into data
 	size_t readData(EmotiBit::DataType t, float **data);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
 	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
+	void updateBatteryIndication();
+	void appendTestData(String &dataMessage);
 
 	// ----------- END ino refactoring ---------------
 
