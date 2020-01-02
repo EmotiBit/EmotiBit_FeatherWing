@@ -756,6 +756,11 @@ uint8_t EmotiBit::update()
 		//Serial.println("dataSendTimer");
 		dataSendTimer = millis();
 
+		// Create packets to inform the host about our mode
+		// ToDo: This should probably be over TCP in response to specific messages from Host (but will require writing TCP ingest)
+		createModePacket(_outDataPackets, _outDataPacketCounter);
+		_emotiBitWiFi.sendData(_outDataPackets);
+
 		if (_sendTestData)
 		{
 			appendTestData(_outDataPackets);
@@ -2305,4 +2310,47 @@ void EmotiBit::appendTestData(String &dataMessage)
 		}
 		dataMessage += EmotiBitPacket::createPacket(typeTags[t], _outDataPacketCounter++, payload, m * n);
 	}
+}
+
+bool EmotiBit::createModePacket(String &modePacket, uint16_t &packetNumber)
+{
+	String payload;
+	uint8_t dataCount = 0;
+	payload += EmotiBitPacket::PayloadLabel::RECORDING_STATUS;
+	dataCount++;
+	payload += ',';
+	if (_sdWrite)
+	{
+		payload += EmotiBitPacket::TypeTag::RECORD_BEGIN;
+	}
+	else
+	{
+		payload += EmotiBitPacket::TypeTag::RECORD_END;
+	}
+	dataCount++;
+	payload += ',';
+	payload += EmotiBitPacket::PayloadLabel::EMOTIBIT_MODE;
+	dataCount++;
+	payload += ',';
+	if (_wifiMode == WiFiMode::NORMAL)
+	{
+		payload += EmotiBitPacket::TypeTag::MODE_NORMAL_POWER;
+	}
+	else if (_wifiMode == WiFiMode::LOW_POWER)
+	{
+		payload += EmotiBitPacket::TypeTag::MODE_LOW_POWER;
+	}
+	elseif(_wifiMode == WiFiMode::MAX_LOW_POWER)
+	{
+		payload += EmotiBitPacket::TypeTag::MODE_MAX_LOW_POWER;
+	}
+	elseif(_wifiMode == WiFiMode::OFF)
+	{
+		payload += EmotiBitPacket::TypeTag::MODE_WIRELESS_OFF;
+	}
+	dataCount++;
+
+	modePacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_MODE, packetNumber++, payload, dataCount);
+
+	return true;
 }
