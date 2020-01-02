@@ -15,6 +15,30 @@ const uint16_t DATA_SEND_INTERVAL = 100;
 const uint16_t DATA_MESSAGE_RESERVE_SIZE = 4096;
 String updatePackets;
 
+enum class DataType {
+	PPG_INFRARED,
+	PPG_RED,
+	PPG_GREEN,
+	EDA,
+	EDL,
+	EDR,
+	TEMPERATURE_0,
+	THERMOPILE,
+	HUMIDITY_0,
+	ACCELEROMETER_X,
+	ACCELEROMETER_Y,
+	ACCELEROMETER_Z,
+	GYROSCOPE_X,
+	GYROSCOPE_Y,
+	GYROSCOPE_Z,
+	MAGNETOMETER_X,
+	MAGNETOMETER_Y,
+	MAGNETOMETER_Z,
+	BATTERY_PERCENT,
+	length
+};
+
+const char *typeTags[(uint8_t)DataType::length];
 
 void setup() 
 {
@@ -37,6 +61,8 @@ void setup()
 
 	emotibitWifi.setup();
 	emotibitWifi.begin();
+	
+	setupDataTypes();
 }
 
 void loop() { 
@@ -66,23 +92,25 @@ void loop() {
 	  if (millis() - dataSendTimer > DATA_SEND_INTERVAL) 
 		{
 			dataSendTimer = millis();
-			//static uint16_t counter = 0;
-			for (int i = 0; i < 11; i++)
+			for (uint8_t t = 0; t < (uint8_t)DataType::length; t++)
 			{
-				//String data = "0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9";
-				String data;
-				int k;
-				int nData = 7;
-				for (int j = 0; j < nData; j++)
+				for (int i = 0; i < 5; i++)
 				{
-					if (j != 0)
+					//String data = "0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9";
+					String data;
+					int k;
+					int nData = 3;
+					for (int j = 0; j < nData; j++)
 					{
-						data += ",";
+						if (j != 0)
+						{
+							data += ",";
+						}
+						k = i * 50 + random(50);
+						data += k;
 					}
-					k = i*10 + random(50);
-					data += k;
+					dataMessage += EmotiBitPacket::createPacket(typeTags[t], emotibitWifi.dataPacketCounter++, data, nData);
 				}
-				dataMessage += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::PPG_INFRARED, emotibitWifi.dataPacketCounter++, data, nData);
 			}
 
 			emotibitWifi.sendData(dataMessage);
@@ -91,4 +119,26 @@ void loop() {
   }
 }
 
+void setupDataTypes()
+{
+	typeTags[(uint8_t)DataType::EDA] = EmotiBitPacket::TypeTag::EDA;
+	typeTags[(uint8_t)DataType::EDL] = EmotiBitPacket::TypeTag::EDL;
+	typeTags[(uint8_t)DataType::EDR] = EmotiBitPacket::TypeTag::EDR;
+	typeTags[(uint8_t)DataType::PPG_INFRARED] = EmotiBitPacket::TypeTag::PPG_INFRARED;
+	typeTags[(uint8_t)DataType::PPG_RED] = EmotiBitPacket::TypeTag::PPG_RED;
+	typeTags[(uint8_t)DataType::PPG_GREEN] = EmotiBitPacket::TypeTag::PPG_GREEN;
+	typeTags[(uint8_t)DataType::TEMPERATURE_0] = EmotiBitPacket::TypeTag::TEMPERATURE_0;
+	typeTags[(uint8_t)DataType::THERMOPILE] = EmotiBitPacket::TypeTag::THERMOPILE;
+	typeTags[(uint8_t)DataType::HUMIDITY_0] = EmotiBitPacket::TypeTag::HUMIDITY_0;
+	typeTags[(uint8_t)DataType::ACCELEROMETER_X] = EmotiBitPacket::TypeTag::ACCELEROMETER_X;
+	typeTags[(uint8_t)DataType::ACCELEROMETER_Y] = EmotiBitPacket::TypeTag::ACCELEROMETER_Y;
+	typeTags[(uint8_t)DataType::ACCELEROMETER_Z] = EmotiBitPacket::TypeTag::ACCELEROMETER_Z;
+	typeTags[(uint8_t)DataType::GYROSCOPE_X] = EmotiBitPacket::TypeTag::GYROSCOPE_X;
+	typeTags[(uint8_t)DataType::GYROSCOPE_Y] = EmotiBitPacket::TypeTag::GYROSCOPE_Y;
+	typeTags[(uint8_t)DataType::GYROSCOPE_Z] = EmotiBitPacket::TypeTag::GYROSCOPE_Z;
+	typeTags[(uint8_t)DataType::MAGNETOMETER_X] = EmotiBitPacket::TypeTag::MAGNETOMETER_X;
+	typeTags[(uint8_t)DataType::MAGNETOMETER_Y] = EmotiBitPacket::TypeTag::MAGNETOMETER_Y;
+	typeTags[(uint8_t)DataType::MAGNETOMETER_Z] = EmotiBitPacket::TypeTag::MAGNETOMETER_Z;
+	typeTags[(uint8_t)DataType::BATTERY_PERCENT] = EmotiBitPacket::TypeTag::BATTERY_PERCENT;
+}
 
