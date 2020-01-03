@@ -2,6 +2,8 @@
 
 uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 {
+	wifiEnded = false;
+
 	uint8_t status = WiFi.status();
 	uint32_t startBegin = millis();
 
@@ -44,6 +46,8 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 
 uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxAttempts, uint16_t attemptDelay)
 {
+	wifiEnded = false;
+
 	int8_t status = WiFi.status();
 	int8_t attempt = 0;
 
@@ -79,58 +83,67 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 
 int8_t EmotiBitWiFi::end()
 {
+	if (_isConnected)
+	{
+		Serial.println("Disconnecting EmotiBitWiFi");
+		disconnect();
+	}
 	if (WiFi.status() == WL_CONNECTED) {
 		Serial.println("Disconnecting WiFi...");
 		WiFi.disconnect();
 	}
 	Serial.println("Ending WiFi...");
+	wifiEnded = true;
 	WiFi.end();
 }
 
 int8_t EmotiBitWiFi::updateWiFi()
 {
-	int wifiStatus = WiFi.status();
-	if (wifiStatus != WL_CONNECTED)
+	if (!wifiEnded)
 	{
-		static bool getLostWifiTime = true;
-		static uint32_t lostWifiTime;
-
-		if (getLostWifiTime) {
-			lostWifiTime = millis();
-			getLostWifiTime = false;
-			//DBTAG1
-			//addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_TIMELOSTCONN, lostWifiTime);// for reporting Wifi Lost moment
-		}
-
-		static uint8_t wifiReconnectAttempts = 0;
-		if (millis() - wifiBeginStart > WIFI_BEGIN_ATTEMPT_DELAY)
+		int wifiStatus = WiFi.status();
+		if (wifiStatus != WL_CONNECTED)
 		{
-			bool switchCredentials = false;
-			if ((millis() - lostWifiTime > WIFI_BEGIN_SWITCH_CRED) && (wifiReconnectAttempts >= MAX_WIFI_RECONNECT_ATTEMPTS))
-			{
-				switchCredentials = true;
-				wifiReconnectAttempts = 0;
-				//gotIP = false;
-				//sendResetPacket = true;
+			static bool getLostWifiTime = true;
+			static uint32_t lostWifiTime;
+
+			if (getLostWifiTime) {
+				lostWifiTime = millis();
+				getLostWifiTime = false;
+				//DBTAG1
+				//addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_TIMELOSTCONN, lostWifiTime);// for reporting Wifi Lost moment
 			}
 
-			if (switchCredentials && numCredentials > 0)
+			static uint8_t wifiReconnectAttempts = 0;
+			if (millis() - wifiBeginStart > WIFI_BEGIN_ATTEMPT_DELAY)
 			{
-				currentCredential = (currentCredential + 1) % numCredentials;
-				Serial.println("<<<<<<< Switching WiFi Networks >>>>>>>");
+				bool switchCredentials = false;
+				if ((millis() - lostWifiTime > WIFI_BEGIN_SWITCH_CRED) && (wifiReconnectAttempts >= MAX_WIFI_RECONNECT_ATTEMPTS))
+				{
+					switchCredentials = true;
+					wifiReconnectAttempts = 0;
+					//gotIP = false;
+					//sendResetPacket = true;
+				}
+
+				if (switchCredentials && numCredentials > 0)
+				{
+					currentCredential = (currentCredential + 1) % numCredentials;
+					Serial.println("<<<<<<< Switching WiFi Networks >>>>>>>");
+				}
+				Serial.print("WIFI_BEGIN_ATTEMPT_DELAY: ");
+				Serial.println(WIFI_BEGIN_ATTEMPT_DELAY);
+				//Serial.println(lostWifiTime);               //uncomment for debugging
+				wifiStatus = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1, 0);
+				wifiReconnectAttempts++;
+				wifiBeginStart = millis();
 			}
-			Serial.print("WIFI_BEGIN_ATTEMPT_DELAY: ");
-			Serial.println(WIFI_BEGIN_ATTEMPT_DELAY);
-			//Serial.println(lostWifiTime);               //uncomment for debugging
-			wifiStatus = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1, 0);
-			wifiReconnectAttempts++;
-			wifiBeginStart = millis();
-		}
-		if (wifiStatus == WL_CONNECTED) {
-			getLostWifiTime = true;
-			//For case where begin works immediately in this loop, but disconnects again within
-			// the attempt delay. Without changing nBS, the code is blocked from attempting to reconnect
-			wifiBeginStart = millis() - WIFI_BEGIN_ATTEMPT_DELAY - 1;
+			if (wifiStatus == WL_CONNECTED) {
+				getLostWifiTime = true;
+				//For case where begin works immediately in this loop, but disconnects again within
+				// the attempt delay. Without changing nBS, the code is blocked from attempting to reconnect
+				wifiBeginStart = millis() - WIFI_BEGIN_ATTEMPT_DELAY - 1;
+			}
 		}
 	}
 }
@@ -233,7 +246,6 @@ int8_t EmotiBitWiFi::processAdvertising()
 		}
 	}
 
-
 	if (_isConnected)
 	{
 		if (millis() - connectionTimer > connectionTimeout)
@@ -241,6 +253,8 @@ int8_t EmotiBitWiFi::processAdvertising()
 			disconnect();
 		}
 	}
+
+	// ToDo: Consider adding _controlCxn repairing mechanism
 	return SUCCESS;
 }
 
@@ -253,6 +267,7 @@ int8_t EmotiBitWiFi::sendData(const String &message)
 {
 	if (_isConnected)
 	{
+		// ToDo: Consider adding _controlCxn.connected() conditional
 		sendUdp(_dataCxn, message, _hostIp, _dataPort);
 	}
 }
@@ -304,6 +319,7 @@ uint8_t EmotiBitWiFi::readControl(String& packet)
 				}
 				else
 				{
+					//Serial.print((char)c);
 					_receivedControlMessage += (char) c;
 				}
 			}
@@ -424,6 +440,7 @@ int8_t EmotiBitWiFi::update(String &syncPackets, uint16_t &syncPacketCounter)
 
 int8_t EmotiBitWiFi::processTimeSync(String &syncPackets, uint16_t &syncPacketCounter)
 {
+	// ToDo: Consider whether time syncing should be performed on the advertising channel
 	if (_isConnected)
 	{
 		int16_t rdPacketNumber = syncPacketCounter;

@@ -10,14 +10,14 @@ float data[dataSize];
 void onShortButtonPress()
 {
 	// toggle wifi on/off
-	if (emotibit.getWiFiMode() == EmotiBit::WiFiMode::NORMAL)
+	if (emotibit.getPowerMode() == EmotiBit::PowerMode::NORMAL_POWER)
 	{
-		emotibit.setWiFiMode(EmotiBit::WiFiMode::OFF);
+		emotibit.setPowerMode(EmotiBit::PowerMode::WIRELESS_OFF);
 		Serial.println("WiFiMode::OFF");
 	}
 	else
 	{
-		emotibit.setWiFiMode(EmotiBit::WiFiMode::NORMAL);
+		emotibit.setPowerMode(EmotiBit::PowerMode::NORMAL_POWER);
 		Serial.println("WiFiMode::NORMAL");
 	}
 }

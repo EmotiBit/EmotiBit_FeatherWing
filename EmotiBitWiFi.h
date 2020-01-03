@@ -57,6 +57,8 @@ public:
 
 	IPAddress _hostIp;
 
+	bool wifiEnded = false;
+
 	WiFiClient _controlCxn;
 	WiFiUDP _advertisingCxn;
 	WiFiUDP _dataCxn;
@@ -102,7 +104,7 @@ public:
 	int8_t connect(const IPAddress &hostIp, const String &connectPayload);
 	int8_t connect(const IPAddress &hostIp, uint16_t controlPort, uint16_t dataPort);
 	int8_t disconnect();
-	int8_t update(String &syncPackets, uint16_t &syncPacketCounter);	// Handles advertising and time syncing. Can take up to 
+	int8_t update(String &syncPackets, uint16_t &syncPacketCounter);	// Handles advertising and time syncing. Can take up to MAX_SYNC_WAIT_INTERVAL.
 	int8_t processAdvertising();
 	uint8_t readControl(String &packet);
 	int8_t sendControl(const String &message);
@@ -113,6 +115,7 @@ public:
 	int8_t sendUdp(WiFiUDP &udp, const String &message, const IPAddress &ip, uint16_t port);
 	String createPongPacket();
 	void setTimeSyncInterval(const uint32_t &interval);
+	void setAdvertisingInterval(const uint32_t &interval);
 	int8_t addCredential(const String &ssid, const String &password);
 	void printWiFiStatus();
 	uint8_t listNetworks();

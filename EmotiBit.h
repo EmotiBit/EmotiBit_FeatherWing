@@ -182,12 +182,14 @@ public:
 	  INDICATION_SEQ_LOW
   };
 
-  enum class WiFiMode {
-	  OFF,					// fully shutdown wireless
-	  MAX_LOW_POWER,	// data not sent, time-syncing accuracy low
-	  LOW_POWER,			// data not sent, time-syncing accuracy high
-		NORMAL				// data sending, time-syncing accuracy high
-  };
+	enum class PowerMode {
+		HIBERNATE,
+		WIRELESS_OFF,				// fully shutdown wireless
+		MAX_LOW_POWER,			// data not sent, time-syncing accuracy low
+		LOW_POWER,					// data not sent, time-syncing accuracy high
+		NORMAL_POWER,				// data sending, time-syncing accuracy high
+		length
+	};
 
 	Si7013 tempHumiditySensor;
 	DeviceAddress deviceAddress;
@@ -214,9 +216,10 @@ public:
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
 	static const uint16_t OUT_PACKET_MAX_SIZE = 1024;
-	static const uint16_t DATA_SEND_INTERVAL = 100;
+	static const uint16_t DATA_SEND_INTERVAL = 500;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
 	static const uint16_t MAX_DATA_BUFFER_SIZE = 64;
+	uint16_t modePacketInterval = 1000;
 
 	// Timer constants
 #define TIMER_PRESCALER_DIV 1024
@@ -260,9 +263,9 @@ public:
 	const char *_configFilename = "config.txt"; 
 	File _dataFile;
 	volatile bool _sdWrite;
-	WiFiMode _wifiMode;
-	bool _startHibernate;
+	PowerMode _powerMode;
 	bool _sendTestData = true;
+	bool _sendModePacket = false;
 
 
 	void setupSdCard();
@@ -278,8 +281,8 @@ public:
 	void(*onDataReadyCallback)(void);
 	void attachShortButtonPress(void(*shortButtonPressFunction)(void));
 	void attachLongButtonPress(void(*longButtonPressFunction)(void));
-	WiFiMode getWiFiMode();
-	void setWiFiMode(WiFiMode mode);
+	PowerMode getPowerMode();
+	void setPowerMode(PowerMode mode);
 	bool writeSdCardMessage(const String &s);
 	int freeMemory();
 	bool loadConfigFile(const String &filename);
@@ -293,7 +296,8 @@ public:
 	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
 	void updateBatteryIndication();
 	void appendTestData(String &dataMessage);
-	void createModePacket(String &modePacket, uint16_t &packetNumber);
+	bool createModePacket(String &modePacket, uint16_t &packetNumber);
+	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
 
 	// ----------- END ino refactoring ---------------
 

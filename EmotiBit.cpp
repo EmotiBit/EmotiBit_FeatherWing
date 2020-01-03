@@ -447,6 +447,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	WiFi.lowPowerMode();
 	_emotiBitWiFi.begin();
 
+	setPowerMode(PowerMode::NORMAL_POWER);
+
 	typeTags[(uint8_t)EmotiBit::DataType::EDA] = EmotiBitPacket::TypeTag::EDA;
 	typeTags[(uint8_t)EmotiBit::DataType::EDL] = EmotiBitPacket::TypeTag::EDL;
 	typeTags[(uint8_t)EmotiBit::DataType::EDR] = EmotiBitPacket::TypeTag::EDR;
@@ -634,6 +636,7 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 	int16_t dataStartChar = 0;
 	while (_emotiBitWiFi.readControl(packet) > 0)
 	{
+		Serial.println(packet);
 		dataStartChar = EmotiBitPacket::getHeader(packet, header);
 		if (dataStartChar > 0)
 		{
@@ -669,6 +672,7 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 				{
 					startTimer(BASE_SAMPLING_FREQ); // start up the data sampling timer
 				}
+				_sendModePacket = true;
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::RECORD_END)) { // Recording end
 				if (_dataFile) {
@@ -676,26 +680,28 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 				}
 				_sdWrite = false;
 				Serial.println("** Recording End **");
+				_sendModePacket = true;
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_NORMAL_POWER)) {
-				setWiFiMode(EmotiBit::WiFiMode::NORMAL);
+				setPowerMode(EmotiBit::PowerMode::NORMAL_POWER);
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_LOW_POWER)) {
-				setWiFiMode(EmotiBit::WiFiMode::LOW_POWER);
+				setPowerMode(EmotiBit::PowerMode::LOW_POWER);
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_MAX_LOW_POWER)) {
-				setWiFiMode(EmotiBit::WiFiMode::MAX_LOW_POWER);
+				setPowerMode(EmotiBit::PowerMode::MAX_LOW_POWER);
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_WIRELESS_OFF)) {
-				setWiFiMode(EmotiBit::WiFiMode::OFF);
+				setPowerMode(EmotiBit::PowerMode::WIRELESS_OFF);
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_HIBERNATE)) {
-				_startHibernate = true; // hibernate after writing data
+				setPowerMode(EmotiBit::PowerMode::HIBERNATE);
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::EMOTIBIT_DISCONNECT)) {
 				_emotiBitWiFi.disconnect();
 			}
 
+			// Create a packet that can be logged with incrementing EmotiBit packet number
 			controlPackets += EmotiBitPacket::createPacket(header.typeTag, packetNumber++, packet.substring(dataStartChar, packet.length() - 1), header.dataLength);
 		}
 	}
@@ -749,6 +755,16 @@ uint8_t EmotiBit::update()
 	//Serial.println("updateButtonPress");
 	updateButtonPress();
 
+	// Handle Mode Packets
+	static uint32_t modePacketTimer = millis();
+	if (millis() - modePacketTimer > modePacketInterval)
+	{
+		modePacketTimer = millis();
+		String sentModePacket;
+		sendModePacket(sentModePacket, _outDataPacketCounter);
+		Serial.print(sentModePacket);
+	}
+
 	// Handle data buffer reading and sending
 	static uint32_t dataSendTimer = millis();
 	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
@@ -756,15 +772,17 @@ uint8_t EmotiBit::update()
 		//Serial.println("dataSendTimer");
 		dataSendTimer = millis();
 
-		// Create packets to inform the host about our mode
-		// ToDo: This should probably be over TCP in response to specific messages from Host (but will require writing TCP ingest)
-		createModePacket(_outDataPackets, _outDataPacketCounter);
-		_emotiBitWiFi.sendData(_outDataPackets);
+		//// Create packets to inform the host about our mode
+		//createModePacket(_outDataPackets, _outDataPacketCounter);
+		//_emotiBitWiFi.sendData(_outDataPackets);
 
 		if (_sendTestData)
 		{
 			appendTestData(_outDataPackets);
-			_emotiBitWiFi.sendData(_outDataPackets);
+			if (getPowerMode() == PowerMode::NORMAL_POWER)
+			{
+				_emotiBitWiFi.sendData(_outDataPackets);
+			}
 			writeSdCardMessage(_outDataPackets);
 			_outDataPackets = "";
 		}
@@ -777,7 +795,7 @@ uint8_t EmotiBit::update()
 				if (_outDataPackets.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE)
 				{
 					// Avoid overrunning our reserve memory
-					if (_wifiMode == WiFiMode::NORMAL)
+					if (getPowerMode() == PowerMode::NORMAL_POWER)
 					{
 						_emotiBitWiFi.sendData(_outDataPackets);
 					}
@@ -787,7 +805,7 @@ uint8_t EmotiBit::update()
 			}
 			if (_outDataPackets.length() > 0)
 			{
-				if (_wifiMode == WiFiMode::NORMAL)
+				if (getPowerMode() == PowerMode::NORMAL_POWER)
 				{
 					_emotiBitWiFi.sendData(_outDataPackets);
 				}
@@ -812,8 +830,17 @@ uint8_t EmotiBit::update()
 	//}
 
 	// Hibernate after writing data
-	if (_startHibernate) {
+	if (getPowerMode() == PowerMode::HIBERNATE) {
 		Serial.println("Hibernate");
+
+		// Clear the remaining data buffer
+		if (getPowerMode() == PowerMode::NORMAL_POWER)
+		{
+			_emotiBitWiFi.sendData(_outDataPackets);
+		}
+		writeSdCardMessage(_outDataPackets);
+		_outDataPackets = "";
+
 		hibernate();
 	}
 }
@@ -2207,29 +2234,39 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 	}
 }
 
-EmotiBit::WiFiMode EmotiBit::getWiFiMode()
+EmotiBit::PowerMode EmotiBit::getPowerMode()
 {
-	return _wifiMode;
+	return _powerMode;
 }
 
-void EmotiBit::setWiFiMode(WiFiMode mode)
+void EmotiBit::setPowerMode(PowerMode mode)
 {
-	_wifiMode = mode;
-	if (_wifiMode == WiFiMode::NORMAL)
+	_powerMode = mode;
+	String modePacket;
+	sendModePacket(modePacket, _outDataPacketCounter);
+	if (getPowerMode() == PowerMode::NORMAL_POWER)
 	{
 		WiFi.lowPowerMode();
+		Serial.println("PowerMode::NORMAL_POWER");
 	}
-	else if (_wifiMode == WiFiMode::LOW_POWER)
+	else if (getPowerMode() == PowerMode::LOW_POWER)
 	{
 		WiFi.lowPowerMode();
+		Serial.println("PowerMode::LOW_POWER");
 	}
-	else if (_wifiMode == WiFiMode::MAX_LOW_POWER)
+	else if (getPowerMode() == PowerMode::MAX_LOW_POWER)
 	{
 		WiFi.maxLowPowerMode();
+		Serial.println("PowerMode::MAX_LOW_POWER");
 	}
-	else if (_wifiMode == WiFiMode::OFF)
+	else if (getPowerMode() == PowerMode::WIRELESS_OFF)
 	{
 		_emotiBitWiFi.end();
+		Serial.println("PowerMode::WIRELESS_OFF");
+	}
+	else if (getPowerMode() == PowerMode::HIBERNATE)
+	{
+		Serial.println("PowerMode::HIBERNATE");
 	}
 }
 
@@ -2329,28 +2366,41 @@ bool EmotiBit::createModePacket(String &modePacket, uint16_t &packetNumber)
 	}
 	dataCount++;
 	payload += ',';
-	payload += EmotiBitPacket::PayloadLabel::EMOTIBIT_MODE;
+	payload += EmotiBitPacket::PayloadLabel::POWER_STATUS;
 	dataCount++;
 	payload += ',';
-	if (_wifiMode == WiFiMode::NORMAL)
+	if (getPowerMode() == PowerMode::NORMAL_POWER)
 	{
 		payload += EmotiBitPacket::TypeTag::MODE_NORMAL_POWER;
 	}
-	else if (_wifiMode == WiFiMode::LOW_POWER)
+	else if (getPowerMode() == PowerMode::LOW_POWER)
 	{
 		payload += EmotiBitPacket::TypeTag::MODE_LOW_POWER;
 	}
-	elseif(_wifiMode == WiFiMode::MAX_LOW_POWER)
+	else if(getPowerMode() == PowerMode::MAX_LOW_POWER)
 	{
 		payload += EmotiBitPacket::TypeTag::MODE_MAX_LOW_POWER;
 	}
-	elseif(_wifiMode == WiFiMode::OFF)
+	else if(getPowerMode() == PowerMode::WIRELESS_OFF)
 	{
 		payload += EmotiBitPacket::TypeTag::MODE_WIRELESS_OFF;
+	}
+	else if (getPowerMode() == PowerMode::HIBERNATE)
+	{
+		payload += EmotiBitPacket::TypeTag::MODE_HIBERNATE;
 	}
 	dataCount++;
 
 	modePacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_MODE, packetNumber++, payload, dataCount);
 
 	return true;
+}
+
+void EmotiBit::sendModePacket(String &sentModePacket, uint16_t &packetNumber)
+{
+	createModePacket(sentModePacket, packetNumber);
+	// ToDo: This should probably be over TCP in response to specific messages from Host (but will require writing TCP ingest)
+	Serial.print(sentModePacket);
+	_emotiBitWiFi.sendData(sentModePacket);	// Send packet immediately to update host
+	_outDataPackets += sentModePacket;			// Add packet to slower data logging bucket
 }
