@@ -216,10 +216,12 @@ public:
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
 	static const uint16_t OUT_PACKET_MAX_SIZE = 1024;
-	static const uint16_t DATA_SEND_INTERVAL = 500;
+	static const uint16_t DATA_SEND_INTERVAL = 100;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
 	static const uint16_t MAX_DATA_BUFFER_SIZE = 64;
-	uint16_t modePacketInterval = 1000;
+	static const uint16_t NORMAL_POWER_MODE_PACKET_INTERVAL = 200;
+	static const uint16_t LOW_POWER_MODE_PACKET_INTERVAL = 1000;
+	uint16_t modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
 
 	// Timer constants
 #define TIMER_PRESCALER_DIV 1024

@@ -579,7 +579,6 @@ void EmotiBit::setupSdCard()
 
 }
 
-
 bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) {
 #ifdef DEBUG_GET_DATA
 	Serial.print("addPacket: ");
@@ -740,41 +739,36 @@ void EmotiBit::updateButtonPress()
 
 uint8_t EmotiBit::update()
 {
-	//Serial.println("_emotiBitWiFi.update");
+	// Handle updating WiFi connction + syncing
 	static String inSyncPackets;
 	_emotiBitWiFi.update(inSyncPackets, _outDataPacketCounter);
-	Serial.print(inSyncPackets);
 	_outDataPackets += inSyncPackets;
 	inSyncPackets = "";
-	//Serial.println("parseIncomingControlMessages");
+	
+	// Process incoming controll packets
 	static String inControlPackets;
 	parseIncomingControlPackets(inControlPackets, _outDataPacketCounter);
 	Serial.print(inControlPackets);
 	_outDataPackets += inControlPackets;
 	inControlPackets = "";
-	//Serial.println("updateButtonPress");
+	
+	// Update the button status and handle callbacks
 	updateButtonPress();
 
-	// Handle Mode Packets
+	// Handle sending mode packets
 	static uint32_t modePacketTimer = millis();
 	if (millis() - modePacketTimer > modePacketInterval)
 	{
 		modePacketTimer = millis();
 		String sentModePacket;
 		sendModePacket(sentModePacket, _outDataPacketCounter);
-		Serial.print(sentModePacket);
 	}
 
 	// Handle data buffer reading and sending
 	static uint32_t dataSendTimer = millis();
 	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
 	{
-		//Serial.println("dataSendTimer");
 		dataSendTimer = millis();
-
-		//// Create packets to inform the host about our mode
-		//createModePacket(_outDataPackets, _outDataPacketCounter);
-		//_emotiBitWiFi.sendData(_outDataPackets);
 
 		if (_sendTestData)
 		{
@@ -814,20 +808,6 @@ uint8_t EmotiBit::update()
 			}
 		}
 	}
-
-	//if (_inControlPackets.length() > 0)
-	//{
-	//	Serial.println("writeSdCardMessage(_inControlPackets);");
-	//	writeSdCardMessage(_inControlPackets);
-	//	_inControlPackets = "";
-	//}
-
-	//if (_outSdPackets.length() > 0)
-	//{
-	//	Serial.println("writeSdCardMessage(_outSdPackets);");
-	//	writeSdCardMessage(_outSdPackets);
-	//	_outSdPackets = "";
-	//}
 
 	// Hibernate after writing data
 	if (getPowerMode() == PowerMode::HIBERNATE) {
@@ -2247,16 +2227,19 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	if (getPowerMode() == PowerMode::NORMAL_POWER)
 	{
 		WiFi.lowPowerMode();
+		modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
 		Serial.println("PowerMode::NORMAL_POWER");
 	}
 	else if (getPowerMode() == PowerMode::LOW_POWER)
 	{
 		WiFi.lowPowerMode();
+		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
 		Serial.println("PowerMode::LOW_POWER");
 	}
 	else if (getPowerMode() == PowerMode::MAX_LOW_POWER)
 	{
 		WiFi.maxLowPowerMode();
+		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
 		Serial.println("PowerMode::MAX_LOW_POWER");
 	}
 	else if (getPowerMode() == PowerMode::WIRELESS_OFF)
@@ -2400,7 +2383,6 @@ void EmotiBit::sendModePacket(String &sentModePacket, uint16_t &packetNumber)
 {
 	createModePacket(sentModePacket, packetNumber);
 	// ToDo: This should probably be over TCP in response to specific messages from Host (but will require writing TCP ingest)
-	Serial.print(sentModePacket);
 	_emotiBitWiFi.sendData(sentModePacket);	// Send packet immediately to update host
 	_outDataPackets += sentModePacket;			// Add packet to slower data logging bucket
 }
