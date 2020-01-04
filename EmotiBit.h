@@ -22,7 +22,6 @@
 #include "EmotiBitTimers.h"
 //#include <Adafruit_SleepyDog.h>
 
-class EmotiBitTimers; // Forward declare
 
 class EmotiBit {
   
@@ -304,7 +303,6 @@ public:
 	void appendTestData(String &dataMessage);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
-	void TC3_Callback();
 
 	// ----------- END ino refactoring ---------------
 
@@ -403,5 +401,9 @@ private:
 	bool scopeTestPinOn = false;
 
 };
+
+void attachEmotiBit(EmotiBit*e = nullptr);
+void attachToInterruptTC3(void(*readFunction)(void), EmotiBit*e = nullptr);
+void ReadSensors();
 
 #endif
