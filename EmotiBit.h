@@ -275,7 +275,7 @@ public:
 	void hibernate();
 	void startTimer(int frequencyHz);
 	void setTimerFrequency(int frequencyHz);
-	void TC3_Handler();
+	//void TC3_Handler();
 	void stopTimer();
 	void(*onShortPressCallback)(void);
 	void(*onLongPressCallback)(void);

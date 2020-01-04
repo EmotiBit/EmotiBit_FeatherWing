@@ -46,7 +46,6 @@ void loop()
 	emotibit.update();
 
 	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::PPG_GREEN, &data[0], dataSize);
-	//Serial.println(dataAvailable);
 	if (dataAvailable > 0)
 	{
 		// Hey cool, I got some data! Maybe I can light up my shoes whenever I get excited!

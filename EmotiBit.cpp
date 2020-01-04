@@ -547,10 +547,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 
 	if (!_sendTestData)
 	{
-		//attachToInterruptTC3(&EmotiBitReadSensors, this);
-		//emotiBitTimer::attachToInterruptTC3(this);
-		//emotiBitTimer.attachToInterruptTC3(&EmotiBit::TC3_Callback, this);
-		//emotiBitTimer::attachToInterruptTC3( this);
 		attachToInterruptTC3(&ReadSensors, this);
 		Serial.println("Starting interrupts");
 		startTimer(BASE_SAMPLING_FREQ);
@@ -1847,27 +1843,6 @@ void EmotiBit::attachLongButtonPress(void(*longButtonPressFunction)(void)) {
 	onLongPressCallback = longButtonPressFunction;
 }
 
-void attachToInterruptTC3(void(*readFunction)(void), EmotiBit* e)
-{
-	attachEmotiBit(e);
-	onInterruptCallback = readFunction;
-}
-
-void attachEmotiBit(EmotiBit*e)
-{
-	myEmotiBit = e;
-}
-
-void ReadSensors()
-{
-	if (myEmotiBit != nullptr)
-	{
-		myEmotiBit->readSensors();
-
-	}
-}
-
-
 void EmotiBit::readSensors() 
 {
 #ifdef DEBUG_GET_DATA
@@ -2229,11 +2204,11 @@ size_t EmotiBit::readData(EmotiBit::DataType t, float *data, size_t dataSize)
 size_t EmotiBit::readData(EmotiBit::DataType t, float *data, size_t dataSize, uint32_t &timestamp)
 {
 	float * dataBuffer;
+	size_t bufferSize = 0;
 
 	bool testing = false;
 	if (testing)
 	{
-		size_t bufferSize = 0;
 		if (_newDataAvailable[(uint8_t)t]) // if there is new data available on the outputBuffer
 		{
 			_newDataAvailable[(uint8_t)t] = false;
@@ -2439,5 +2414,25 @@ void TC3_Handler() {
 #else
 		onInterruptCallback();
 #endif
+	}
+}
+
+void attachToInterruptTC3(void(*readFunction)(void), EmotiBit* e)
+{
+	attachEmotiBit(e);
+	onInterruptCallback = readFunction;
+}
+
+void attachEmotiBit(EmotiBit*e)
+{
+	myEmotiBit = e;
+}
+
+void ReadSensors()
+{
+	if (myEmotiBit != nullptr)
+	{
+		myEmotiBit->readSensors();
+
 	}
 }
