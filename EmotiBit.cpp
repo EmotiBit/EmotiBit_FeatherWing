@@ -2262,7 +2262,7 @@ size_t EmotiBit::readData(EmotiBit::DataType t, float data[], size_t dataSize)
 size_t EmotiBit::readData(EmotiBit::DataType t, float data[], size_t dataSize, uint32_t &timestamp)
 {
 	float * dataBuffer;
-	size_t bufferSize = readData(t, dataBuffer, timestamp);
+	size_t bufferSize = readData(t, &dataBuffer, timestamp);
 	for (size_t i = 0; i < bufferSize && i < dataSize; i++)
 	{
 		data[i] = dataBuffer[i];

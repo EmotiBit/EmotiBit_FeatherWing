@@ -13,12 +13,12 @@ void onShortButtonPress()
 	if (emotibit.getPowerMode() == EmotiBit::PowerMode::NORMAL_POWER)
 	{
 		emotibit.setPowerMode(EmotiBit::PowerMode::WIRELESS_OFF);
-		Serial.println("WiFiMode::OFF");
+		Serial.println("PowerMode::WIRELESS_OFF");
 	}
 	else
 	{
 		emotibit.setPowerMode(EmotiBit::PowerMode::NORMAL_POWER);
-		Serial.println("WiFiMode::NORMAL");
+		Serial.println("PowerMode::NORMAL_POWER");
 	}
 }
 
@@ -36,8 +36,8 @@ void setup()
 	emotibit.setup(EmotiBit::Version::V02H);
 
 	// Attach callback functions
-	//emotibit.attachShortButtonPress(&onShortButtonPress);
-	//emotibit.attachLongButtonPress(&onLongButtonPress);
+	emotibit.attachShortButtonPress(&onShortButtonPress);
+	emotibit.attachLongButtonPress(&onLongButtonPress);
 }
 
 void loop()
@@ -45,19 +45,19 @@ void loop()
 	//Serial.println("emotibit.update()");
 	emotibit.update();
 
-	//size_t dataAvailable = emotibit.readData(EmotiBit::DataType::EDA, data, dataSize);
-	//if (dataAvailable > 0)
-	//{
-	//	// Hey cool, I got some data! Maybe I can light up my shoes whenever I get excited!
+	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::EDA, data, dataSize);
+	if (dataAvailable > 0)
+	{
+		// Hey cool, I got some data! Maybe I can light up my shoes whenever I get excited!
 
-	//	// print the data to view in the serial plotter
-	//	bool printData = false;
-	//	if (printData)
-	//	{
-	//		for (size_t i; i < dataAvailable && i < dataSize; i++)
-	//		{
-	//			Serial.println(data[i]);
-	//		}
-	//	}
-	//}
+		// print the data to view in the serial plotter
+		bool printData = true;
+		if (printData)
+		{
+			for (size_t i; i < dataAvailable && i < dataSize; i++)
+			{
+				Serial.println(data[i]);
+			}
+		}
+	}
 }
