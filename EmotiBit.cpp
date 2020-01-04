@@ -544,6 +544,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 
 	if (!_sendTestData)
 	{
+		//attachToInterruptTC3(&EmotiBitReadSensors, this);
+		//emotiBitTimer::attachToInterruptTC3(this);
+		//emotiBitTimer.attachToInterruptTC3(&EmotiBit::TC3_Callback, this);
+		emotiBitTimer.attachToInterruptTC3( this);
+		//attachToInterruptTC3(&ReadSensors, this);
 		Serial.println("Starting interrupts");
 		startTimer(BASE_SAMPLING_FREQ);
 	}
@@ -2385,4 +2390,9 @@ void EmotiBit::sendModePacket(String &sentModePacket, uint16_t &packetNumber)
 	// ToDo: This should probably be over TCP in response to specific messages from Host (but will require writing TCP ingest)
 	_emotiBitWiFi.sendData(sentModePacket);	// Send packet immediately to update host
 	_outDataPackets += sentModePacket;			// Add packet to slower data logging bucket
+}
+
+void EmotiBit::TC3_Callback()
+{
+	readSensors();
 }

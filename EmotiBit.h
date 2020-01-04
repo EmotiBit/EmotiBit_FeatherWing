@@ -19,7 +19,10 @@
 #include <SdFat.h>
 #include <ArduinoJson.h>
 #include <ArduinoLowPower.h>
+#include "EmotiBitTimers.h"
 //#include <Adafruit_SleepyDog.h>
+
+class EmotiBitTimers; // Forward declare
 
 class EmotiBit {
   
@@ -268,6 +271,7 @@ public:
 	PowerMode _powerMode;
 	bool _sendTestData = true;
 	bool _sendModePacket = false;
+	EmotiBitTimers emotiBitTimer;
 
 
 	void setupSdCard();
@@ -300,6 +304,7 @@ public:
 	void appendTestData(String &dataMessage);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
+	void TC3_Callback();
 
 	// ----------- END ino refactoring ---------------
 
