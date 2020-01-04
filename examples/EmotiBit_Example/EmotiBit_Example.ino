@@ -45,7 +45,8 @@ void loop()
 	//Serial.println("emotibit.update()");
 	emotibit.update();
 
-	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::EDA, data, dataSize);
+	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::PPG_GREEN, &data[0], dataSize);
+	//Serial.println(dataAvailable);
 	if (dataAvailable > 0)
 	{
 		// Hey cool, I got some data! Maybe I can light up my shoes whenever I get excited!
@@ -56,6 +57,7 @@ void loop()
 		{
 			for (size_t i; i < dataAvailable && i < dataSize; i++)
 			{
+				// Note that dataAvailable can be larger than dataSize
 				Serial.println(data[i]);
 			}
 		}

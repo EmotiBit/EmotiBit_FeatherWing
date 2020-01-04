@@ -19,7 +19,6 @@
 #include <SdFat.h>
 #include <ArduinoJson.h>
 #include <ArduinoLowPower.h>
-#include "EmotiBitTimers.h"
 //#include <Adafruit_SleepyDog.h>
 
 
@@ -268,10 +267,7 @@ public:
 	File _dataFile;
 	volatile bool _sdWrite;
 	PowerMode _powerMode;
-	bool _sendTestData = true;
-	bool _sendModePacket = false;
-	EmotiBitTimers emotiBitTimer;
-
+	bool _sendTestData = false;
 
 	void setupSdCard();
 	void updateButtonPress();
@@ -295,8 +291,8 @@ public:
 	bool addPacket(EmotiBit::DataType t);
 	void parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber);
 	void readSensors();
-	size_t readData(EmotiBit::DataType t, float data[], size_t dataSize);		// Copies available data buffer into data
-	size_t readData(EmotiBit::DataType t, float data[], size_t dataSize, uint32_t &timestamp);		// Copies available data buffer into data
+	size_t readData(EmotiBit::DataType t, float *data, size_t dataSize);		// Copies available data buffer into data
+	size_t readData(EmotiBit::DataType t, float *data, size_t dataSize, uint32_t &timestamp);		// Copies available data buffer into data
 	size_t readData(EmotiBit::DataType t, float **data);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
 	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
 	void updateBatteryIndication();
