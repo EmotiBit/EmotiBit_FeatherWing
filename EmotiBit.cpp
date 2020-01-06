@@ -1869,57 +1869,57 @@ void EmotiBit::readSensors()
 			led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 		}
 
-		static bool battLed = false;
+		//static bool battLed = false;
 		if (battIndicationSeq) 
 		{
 			static uint32_t BattLedstatusChangeTime = millis();
-			// Replace if-else by getLED-setLED functions
-			//if (millis() - BattLedstatusChangeTime > BattLedDuration)
+			if (millis() - BattLedstatusChangeTime > BattLedDuration)
+			{
+				led.setLED(uint8_t(EmotiBit::Led::YELLOW), !led.getLED(uint8_t(EmotiBit::Led::YELLOW)));
+			}
+			//if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
 			//{
-			//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), !led.getLED(uint8_t(EmotiBit::Led::YELLOW)));
+			//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+			//	battLed = false;
+			//	BattLedstatusChangeTime = millis();
 			//}
-			if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
-			{
-				led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-				battLed = false;
-				BattLedstatusChangeTime = millis();
-			}
-			else if (!battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
-			{
-				led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-				battLed = true;
-				BattLedstatusChangeTime = millis();
-			}
+			//else if (!battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
+			//{
+			//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+			//	battLed = true;
+			//	BattLedstatusChangeTime = millis();
+			//}
 		}
 		else 
 		{
 			led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-			battLed = false;
+			//battLed = false;
 		}
 
-		static bool recordLedStatus = false;
+		//static bool recordLedStatus = false;
 		if (_sdWrite) 
 		{
 			static uint32_t recordBlinkDuration = millis();
 			if (millis() - recordBlinkDuration >= 500) 
 			{
-				if (recordLedStatus == true) 
-				{
-					led.setLED(uint8_t(EmotiBit::Led::RED), false);
-					recordLedStatus = false;
-				}
-				else 
-				{
-					led.setLED(uint8_t(EmotiBit::Led::RED), true);
-					recordLedStatus = true;
-				}
+				//if (recordLedStatus == true) 
+				//{
+				//	led.setLED(uint8_t(EmotiBit::Led::RED), false);
+				//	recordLedStatus = false;
+				//}
+				//else 
+				//{
+				//	led.setLED(uint8_t(EmotiBit::Led::RED), true);
+				//	recordLedStatus = true;
+				//}
+				led.setLED(uint8_t(EmotiBit::Led::RED), !led.getLED(uint8_t(EmotiBit::Led::RED)));
 				recordBlinkDuration = millis();
 			}
 		}
-		else if (!_sdWrite && recordLedStatus == true)
+		else if (!_sdWrite && led.getLED(uint8_t(EmotiBit::Led::RED)) == true)
 		{
 			led.setLED(uint8_t(EmotiBit::Led::RED), false);
-			recordLedStatus = false;
+			// recordLedStatus = false;
 		}
 	}
 
