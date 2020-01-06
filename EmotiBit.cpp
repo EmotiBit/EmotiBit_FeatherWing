@@ -1854,10 +1854,12 @@ void EmotiBit::readSensors()
 	// LED STATUS CHANGE SEGMENT
 	static uint16_t ledCounter = 0;
 	ledCounter++;
+	/*Serial.print("ledCounter:");
+	Serial.println(ledCounter);*/
 	if (ledCounter == LED_REFRESH_DIV) 
 	{
-		ledCounter == 0;
-
+		ledCounter = 0;
+		// Serial.println("Time to update LED");
 		if (_emotiBitWiFi.isConnected())
 		{
 			led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
@@ -1871,6 +1873,11 @@ void EmotiBit::readSensors()
 		if (battIndicationSeq) 
 		{
 			static uint32_t BattLedstatusChangeTime = millis();
+			// Replace if-else by getLED-setLED functions
+			//if (millis() - BattLedstatusChangeTime > BattLedDuration)
+			//{
+			//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), !led.getLED(uint8_t(EmotiBit::Led::YELLOW)));
+			//}
 			if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
 			{
 				led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
