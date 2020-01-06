@@ -484,7 +484,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	printLen[(uint8_t)EmotiBit::DataType::PPG_RED] = 0;
 	printLen[(uint8_t)EmotiBit::DataType::PPG_GREEN] = 0;
 	printLen[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = 3;
-	printLen[(uint8_t)EmotiBit::DataType::THERMOPILE] = 0;
+	printLen[(uint8_t)EmotiBit::DataType::THERMOPILE] = 3;
 	printLen[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = 3;
 	printLen[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = 3;
 	printLen[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Y] = 3;
@@ -1032,10 +1032,7 @@ int8_t EmotiBit::updateThermopileData() {
 		/*Serial.print("Thermopile:");
 		Serial.println(thermopile.end_getObjectTemp());*/
 		uint32_t time_stamp = millis();
-		float dat = thermopile.end_getObjectTemp();
-		Serial.print("temp data:");
-		Serial.println(dat);
-		status = status | pushData(EmotiBit::DataType::THERMOPILE, dat, &(time_stamp));
+		status = status | pushData(EmotiBit::DataType::THERMOPILE, thermopile.end_getObjectTemp(), &(time_stamp));
 		thermopile.start_getObjectTemp();
 		//lastThermopileBegin = millis();
 	}
