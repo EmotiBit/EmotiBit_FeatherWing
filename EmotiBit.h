@@ -236,7 +236,7 @@ public:
 #define TEMPERATURE_SAMPLING_DIV 10
 #define BATTERY_SAMPLING_DIV 50
 	// TODO: This should change according to the rate set on the thermopile begin function 
-#define THERMOPILE_SAMPLING_DIV 38
+#define THERMOPILE_SAMPLING_DIV 40
 #define LED_REFRESH_DIV 10
 
 	struct AcquireData {

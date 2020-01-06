@@ -195,6 +195,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_edlPin = A4;
 		_edrPin = A3;
 		_sdCardChipSelectPin = 19;
+		edrAmplification = 100.f / 3.3f;
+		edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
 	}
 #elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
 	if (version == Version::V01B || version == Version::V01C)
@@ -207,11 +209,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	analogReadResolution(_adcBits);
 #endif
 
-	else if (version == Version::V02H)
-	{
-		edrAmplification = 100.f / 3.3f;
-		edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
-	}
+	//else if (version == Version::V02H)
+	//{
+	//	edrAmplification = 100.f / 3.3f;
+	//	edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
+	//}
 	// Print board-specific settings
 	Serial.println("Board-specific settings:");
 	Serial.print("buttonPin = "); Serial.println(buttonPin);
@@ -1030,7 +1032,10 @@ int8_t EmotiBit::updateThermopileData() {
 		/*Serial.print("Thermopile:");
 		Serial.println(thermopile.end_getObjectTemp());*/
 		uint32_t time_stamp = millis();
-		status = status | pushData(EmotiBit::DataType::THERMOPILE, thermopile.end_getObjectTemp(), &(time_stamp));
+		float dat = thermopile.end_getObjectTemp();
+		Serial.print("temp data:");
+		Serial.println(dat);
+		status = status | pushData(EmotiBit::DataType::THERMOPILE, dat, &(time_stamp));
 		thermopile.start_getObjectTemp();
 		//lastThermopileBegin = millis();
 	}
