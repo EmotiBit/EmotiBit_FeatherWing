@@ -733,13 +733,13 @@ void EmotiBit::updateButtonPress()
 		{
 			Serial.println("onShortPress");
 			// ToDo: Send BS packet
-			(*onShortPressCallback);
+			(onShortPressCallback());
 		}
 		if (millis() - buttonPressTimer > minLongButtonPress)
 		{
 			Serial.println("onLongPress");
 			// ToDo: Send BL packet
-			(*onLongPressCallback);
+			(onLongPressCallback());
 		}
 		buttonPressTimer = millis();	// reset the timer until the button is pressed
 	}
