@@ -198,6 +198,17 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		edrAmplification = 100.f / 3.3f;
 		edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
 	}
+	else if (version == Version::V02B)
+	{
+		_hibernatePin = 6; // gpio pin assigned to the mosfet
+		buttonPin = 12;
+		_edlPin = A4;
+		_edrPin = A3;
+		_sdCardChipSelectPin = 19;
+		edrAmplification = 100.f / 1.2f;
+		edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
+	
+	}
 #elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
 	if (version == Version::V01B || version == Version::V01C)
 	{
@@ -896,9 +907,10 @@ int8_t EmotiBit::updateEDAData()
 		if (edrClipped) {
 			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
 		}
-
+		// Link to diff amp biasing: https://ocw.mit.edu/courses/media-arts-and-sciences/mas-836-sensor-technologies-for-interactive-environments-spring-2011/readings/MITMAS_836S11_read02_bias.pdf
 		edaTemp = (edrTemp - vRef2) / edrAmplification;	// Remove VGND bias and amplification from EDR measurement
-		edaTemp = edaTemp + edlTemp;											// Add EDR to EDL in Volts
+		edaTemp = edaTemp + edlTemp;                     // Add EDR to EDL in Volts
+											
 
 		//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
 		edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in uSiemens
