@@ -57,7 +57,7 @@ public:
 
 	IPAddress _hostIp;
 
-	bool wifiEnded = false;
+	bool _wifiOff = true;
 
 	WiFiClient _controlCxn;
 	WiFiUDP _advertisingCxn;
@@ -99,7 +99,7 @@ public:
 	uint8_t begin(uint16_t timeout = 61500, uint16_t attemptDelay = 1000);
 	//uint8_t begin(uint8_t credentialIndex, uint8_t maxAttempts = 10, uint16_t attemptDelay = 1000);
 	uint8_t begin(const String &ssid, const String &pass, uint8_t maxAttempts = 10, uint16_t attemptDelay = 1000);
-	int8_t end();
+	void end();
 	int8_t updateWiFi();
 	int8_t connect(const IPAddress &hostIp, const String &connectPayload);
 	int8_t connect(const IPAddress &hostIp, uint16_t controlPort, uint16_t dataPort);
@@ -120,4 +120,5 @@ public:
 	void printWiFiStatus();
 	uint8_t listNetworks();
 	bool isConnected();
+	bool isOff();
 };
