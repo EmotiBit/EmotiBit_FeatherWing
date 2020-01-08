@@ -2,7 +2,7 @@
 
 uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 {
-	wifiEnded = false;
+	_wifiOff = false;
 
 	uint8_t status = WiFi.status();
 	uint32_t startBegin = millis();
@@ -46,7 +46,7 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 
 uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxAttempts, uint16_t attemptDelay)
 {
-	wifiEnded = false;
+	_wifiOff = false;
 
 	int8_t status = WiFi.status();
 	int8_t attempt = 0;
@@ -81,7 +81,7 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 	return status;
 }
 
-int8_t EmotiBitWiFi::end()
+void EmotiBitWiFi::end()
 {
 	if (_isConnected)
 	{
@@ -93,13 +93,18 @@ int8_t EmotiBitWiFi::end()
 		WiFi.disconnect();
 	}
 	Serial.println("Ending WiFi...");
-	wifiEnded = true;
+	_wifiOff = true;
 	WiFi.end();
+}
+
+bool EmotiBitWiFi::isOff()
+{
+	return _wifiOff;
 }
 
 int8_t EmotiBitWiFi::updateWiFi()
 {
-	if (!wifiEnded)
+	if (!_wifiOff)
 	{
 		int wifiStatus = WiFi.status();
 		if (wifiStatus != WL_CONNECTED)
