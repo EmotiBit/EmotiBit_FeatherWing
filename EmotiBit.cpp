@@ -166,10 +166,24 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	// vGnd = _vcc / 2.f;	// Virtual GND Voltage for eda
 	//vRef1 = _vcc * (15.f / 115.f); // First Voltage divider refernce
 #ifdef GSR_CALIBRATION
-	vRef1 = 3.3;// Setting it to maximum for 
+	// variables used for GSR calibration
+	Serial.println("Entered GSR Calibration mode");
+	Serial.println("At the End of the Test, copy the vref1 Value and paste it in the definition of vRef1 in setup");
+	Serial.println("To continue with Calibration, press c on the serial monitor and hit enter");
+	Serial.println("To exit press e and enter");
+	while (!Serial.available());
+	if (Serial.read() != 'c')
+	{
+		Serial.println("Stopped code execution.");
+		Serial.println("Comment definition of GSR_CALIBRATION in emotibit.h");
+		Serial.println("upload code and run again");
+		while (1);
+	}
+	edlAvgCount = 1;
+	edlCumSum = 0;
 #else
 	// enter the value here if not calibrating the GSR
-	vRef1 = 0.442994;
+	vRef1 = 0.44372341;
 #endif
 	vRef2 = _vcc / 2.f; // Second voltage Divider reference
 
@@ -203,7 +217,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_sdCardChipSelectPin = 19;
 		edrAmplification = 100.f / 3.3f;
 		edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
-		min_eda = INT16_MAX;
 	}
 	else if (version == Version::V02B)
 	{
@@ -214,7 +227,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_sdCardChipSelectPin = 19;
 		edrAmplification = 100.f / 1.2f;
 		edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
-		min_eda = INT16_MAX;
 	}
 #elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
 	if (version == Version::V01B || version == Version::V01C)
@@ -906,14 +918,27 @@ int8_t EmotiBit::updateEDAData()
 		edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
 
 #ifdef GSR_CALIBRATION
-		if (edlTemp < vRef1)
+		if (edlAvgCount < MAX_EDL_AVG_COUNT)
 		{
-			Serial.print("EDl:");
-			Serial.println(edlTemp, 6);
-			vRef1 = edlTemp;
-			Serial.print("Vref1:");
-			Serial.println(vRef1,6);
+			edlCumSum += edlTemp;
+			edlAvgCount++;
+			Serial.print("edlCumSum:");
+			Serial.println(edlCumSum,8);
+			Serial.print("edlAvgCount:");
+			Serial.println(edlAvgCount);
 		}
+		else if (edlAvgCount == MAX_EDL_AVG_COUNT)
+		{
+			edlCumSum = edlCumSum / edlAvgCount;
+			edlAvgCount++;
+		}
+		else
+		{
+			Serial.print("vref1 for the board is: ");
+			Serial.println(edlCumSum,8);
+			while (1);
+		}
+
 #endif
 		pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
 		if (edlClipped) {
@@ -927,27 +952,7 @@ int8_t EmotiBit::updateEDAData()
 		// Link to diff amp biasing: https://ocw.mit.edu/courses/media-arts-and-sciences/mas-836-sensor-technologies-for-interactive-environments-spring-2011/readings/MITMAS_836S11_read02_bias.pdf
 		edaTemp = (edrTemp - vRef2) / edrAmplification;	// Remove VGND bias and amplification from EDR measurement
 		edaTemp = edaTemp + edlTemp;                     // Add EDR to EDL in Volts
-		
-		//if (edaTemp < min_eda)
-		//{
-		//	Serial.print("Old min_eda:");
-		//	Serial.println(min_eda,6);
-		//	min_eda = min(edaTemp, min_eda);
-		//	Serial.print("New min_eda:");
-		//	Serial.println(min_eda,6);
-		//}
-		//if (min_eda < vRef1)
-		//{
-		//	Serial.print("edl_measurement:");
-		//	Serial.println(edlTemp,6);
-		//	Serial.print("edr_measurement:");
-		//	Serial.println(edrTemp,6);
-		//	Serial.print("Old min_vref1:");
-		//	Serial.println(vRef1,6);
-		//	vRef1 = min(vRef1, min_eda);
-		//	Serial.print("new min_vref1:");
-		//	Serial.println(vRef1,6);
-		//}
+
 		//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
 		edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in uSiemens
 
@@ -1483,7 +1488,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	int hardware_version = (int)_version;
 	String feather_version = "Adafruit Feather M0 WiFi";
-	String firmware_version = "0.5.8";
+	String firmware_version = "0.7.0";
 
 	const uint16_t bufferSize = 1024;
 
