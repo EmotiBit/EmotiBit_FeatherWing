@@ -164,7 +164,13 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	_version = version;
 	_vcc = 3.3f;						// Vcc voltage
 	// vGnd = _vcc / 2.f;	// Virtual GND Voltage for eda
-	vRef1 = _vcc * (15.f / 115.f); // First Voltage divider refernce
+	//vRef1 = _vcc * (15.f / 115.f); // First Voltage divider refernce
+#ifdef GSR_CALIBRATION
+	vRef1 = 3.3;// Setting it to maximum for 
+#else
+	// enter the value here if not calibrating the GSR
+	vRef1 = 0.442994;
+#endif
 	vRef2 = _vcc / 2.f; // Second voltage Divider reference
 
 	_adcBits = 12;
@@ -197,6 +203,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_sdCardChipSelectPin = 19;
 		edrAmplification = 100.f / 3.3f;
 		edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
+		min_eda = INT16_MAX;
 	}
 	else if (version == Version::V02B)
 	{
@@ -207,7 +214,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_sdCardChipSelectPin = 19;
 		edrAmplification = 100.f / 1.2f;
 		edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
-	
+		min_eda = INT16_MAX;
 	}
 #elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
 	if (version == Version::V01B || version == Version::V01C)
@@ -893,11 +900,21 @@ int8_t EmotiBit::updateEDAData()
 		// Perform data averaging
 		edlTemp = average(edlBuffer);
 		edrTemp = average(edrBuffer);
-
+		
 		// Perform data conversion
 		edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
 		edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
 
+#ifdef GSR_CALIBRATION
+		if (edlTemp < vRef1)
+		{
+			Serial.print("EDl:");
+			Serial.println(edlTemp, 6);
+			vRef1 = edlTemp;
+			Serial.print("Vref1:");
+			Serial.println(vRef1,6);
+		}
+#endif
 		pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
 		if (edlClipped) {
 			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDL, &edlBuffer.timestamp);
@@ -910,8 +927,27 @@ int8_t EmotiBit::updateEDAData()
 		// Link to diff amp biasing: https://ocw.mit.edu/courses/media-arts-and-sciences/mas-836-sensor-technologies-for-interactive-environments-spring-2011/readings/MITMAS_836S11_read02_bias.pdf
 		edaTemp = (edrTemp - vRef2) / edrAmplification;	// Remove VGND bias and amplification from EDR measurement
 		edaTemp = edaTemp + edlTemp;                     // Add EDR to EDL in Volts
-											
-
+		
+		//if (edaTemp < min_eda)
+		//{
+		//	Serial.print("Old min_eda:");
+		//	Serial.println(min_eda,6);
+		//	min_eda = min(edaTemp, min_eda);
+		//	Serial.print("New min_eda:");
+		//	Serial.println(min_eda,6);
+		//}
+		//if (min_eda < vRef1)
+		//{
+		//	Serial.print("edl_measurement:");
+		//	Serial.println(edlTemp,6);
+		//	Serial.print("edr_measurement:");
+		//	Serial.println(edrTemp,6);
+		//	Serial.print("Old min_vref1:");
+		//	Serial.println(vRef1,6);
+		//	vRef1 = min(vRef1, min_eda);
+		//	Serial.print("new min_vref1:");
+		//	Serial.println(vRef1,6);
+		//}
 		//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
 		edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in uSiemens
 
