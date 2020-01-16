@@ -46,7 +46,6 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 
 uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxAttempts, uint16_t attemptDelay)
 {
-	_wifiOff = false;
 
 	int8_t status = WiFi.status();
 	int8_t attempt = 0;
@@ -65,6 +64,7 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		Serial.print("Attempting to connect to SSID: ");
 		Serial.println(ssid);
 		// ToDo: Add WEP support
+		_wifiOff = false;
 		status = WiFi.begin(ssid, pass);
 		delay(attemptDelay);
 		attempt++;
