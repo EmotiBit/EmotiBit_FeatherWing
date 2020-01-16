@@ -2,8 +2,6 @@
 
 uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 {
-	_wifiOff = false;
-
 	uint8_t status = WiFi.status();
 	uint32_t startBegin = millis();
 
