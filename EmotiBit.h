@@ -297,7 +297,7 @@ public:
 	size_t readData(EmotiBit::DataType t, float **data);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
 	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
 	void updateBatteryIndication();
-	void appendTestData(String &dataMessage);
+	void appendTestData(String &dataMessage, uint16_t &packetNumber);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
 

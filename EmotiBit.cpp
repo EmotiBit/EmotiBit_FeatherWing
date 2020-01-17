@@ -791,7 +791,7 @@ uint8_t EmotiBit::update()
 
 		if (_sendTestData)
 		{
-			appendTestData(_outDataPackets);
+			appendTestData(_outDataPackets, _outDataPacketCounter);
 			if (getPowerMode() == PowerMode::NORMAL_POWER)
 			{
 				_emotiBitWiFi.sendData(_outDataPackets);
@@ -2226,6 +2226,10 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	{
 		Serial.println("PowerMode::HIBERNATE");
 	}
+	else
+	{
+		Serial.println("PowerMode Not Recognized");
+	}
 }
 
 size_t EmotiBit::readData(EmotiBit::DataType t, float *data, size_t dataSize)
@@ -2301,7 +2305,7 @@ void EmotiBit::updateBatteryIndication()
 	}
 }
 
-void EmotiBit::appendTestData(String &dataMessage)
+void EmotiBit::appendTestData(String &dataMessage, uint16_t &packetNumber)
 {
 	for (uint8_t t = ((uint8_t)EmotiBit::DataType::DATA_CLIPPING) + 1; t < (uint8_t)DataType::length; t++)
 	{
@@ -2310,7 +2314,6 @@ void EmotiBit::appendTestData(String &dataMessage)
 		int n = 2;
 		for (int i = 0; i < m; i++)
 		{
-			//String data = "0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9";
 			int k;
 			for (int j = 0; j < n; j++)
 			{
@@ -2322,7 +2325,7 @@ void EmotiBit::appendTestData(String &dataMessage)
 				payload += k;
 			}
 		}
-		dataMessage += EmotiBitPacket::createPacket(typeTags[t], _outDataPacketCounter++, payload, m * n);
+		dataMessage += EmotiBitPacket::createPacket(typeTags[t], packetNumber++, payload, m * n);
 	}
 }
 
