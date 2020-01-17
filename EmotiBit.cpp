@@ -736,22 +736,35 @@ void EmotiBit::updateButtonPress()
 	uint16_t minShortButtonPress = 500;
 	uint16_t minLongButtonPress = 3000;
 	static uint32_t buttonPressTimer = millis();
+	static bool buttonPreviouslyPressed = false;
+
+	// ToDo: create a mechanism
 
 	bool buttonPressed = readButton();
-	if (!buttonPressed)
+	if (buttonPressed)
 	{
-		if (millis() - buttonPressTimer > minShortButtonPress && millis() - buttonPressTimer < minLongButtonPress)
+		buttonPreviouslyPressed = true;
+	}
+	else
+	{
+		if (buttonPreviouslyPressed) // Make sure button was actually pressed (not just a loop lag)
 		{
-			Serial.println("onShortPress");
-			// ToDo: Send BS packet
-			(onShortPressCallback());
+			if (millis() - buttonPressTimer > minShortButtonPress && millis() - buttonPressTimer < minLongButtonPress)
+			{
+				Serial.print("onShortPress: ");
+				Serial.println(millis() - buttonPressTimer);
+				// ToDo: Send BS packet
+				(onShortPressCallback());
+			}
+			if (millis() - buttonPressTimer > minLongButtonPress)
+			{
+				Serial.print("onLongPress: ");
+				Serial.println(millis() - buttonPressTimer);
+				// ToDo: Send BL packet
+				(onLongPressCallback());
+			}
 		}
-		if (millis() - buttonPressTimer > minLongButtonPress)
-		{
-			Serial.println("onLongPress");
-			// ToDo: Send BL packet
-			(onLongPressCallback());
-		}
+		buttonPreviouslyPressed = false;
 		buttonPressTimer = millis();	// reset the timer until the button is pressed
 	}
 }
@@ -2192,7 +2205,7 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		Serial.println("PowerMode::NORMAL_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin();
+			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
 		WiFi.lowPowerMode();
 		modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;

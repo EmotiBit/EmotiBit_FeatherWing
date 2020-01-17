@@ -12,24 +12,24 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 
 	while (status != WL_CONNECTED)
 	{
-		if (millis() - startBegin > timeout)
-		{
-			Serial.println("*********** EmotiBitWiFi.begin() Timeout ***********");
-			break;
-		}
 		if (numCredentials == 0)
 		{
 			Serial.println("NO WIFI CREDENTIALS FOUND");
 		}
 		else
 		{
-			currentCredential = (currentCredential + 1) % numCredentials;
 			Serial.println("<<<<<<< Switching WiFi Networks >>>>>>>");
 			status = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1, attemptDelay);
 			if (status == WL_CONNECTED) {
 				break;
 			}
 		}
+		if (millis() - startBegin > timeout)
+		{
+			Serial.println("*********** EmotiBitWiFi.begin() Timeout ***********");
+			break;
+		}
+		currentCredential = (currentCredential + 1) % numCredentials;
 	}
 	return status;
 }
