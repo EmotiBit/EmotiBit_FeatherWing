@@ -102,57 +102,64 @@ bool EmotiBitWiFi::isOff()
 
 int8_t EmotiBitWiFi::updateWiFi()
 {
-	if (!_wifiOff)
+	if (_wifiOff)
 	{
-		int wifiStatus = WiFi.status();
-		if (wifiStatus != WL_CONNECTED)
+		return WL_DISCONNECTED;
+	}
+
+	int wifiStatus = WiFi.status();
+	if (wifiStatus != WL_CONNECTED)
+	{
+		static bool getLostWifiTime = true;
+		static uint32_t lostWifiTime;
+
+		if (getLostWifiTime) {
+			lostWifiTime = millis();
+			getLostWifiTime = false;
+			//DBTAG1
+			//addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_TIMELOSTCONN, lostWifiTime);// for reporting Wifi Lost moment
+		}
+
+		static uint8_t wifiReconnectAttempts = 0;
+		if (millis() - wifiBeginStart > WIFI_BEGIN_ATTEMPT_DELAY)
 		{
-			static bool getLostWifiTime = true;
-			static uint32_t lostWifiTime;
-
-			if (getLostWifiTime) {
-				lostWifiTime = millis();
-				getLostWifiTime = false;
-				//DBTAG1
-				//addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_TIMELOSTCONN, lostWifiTime);// for reporting Wifi Lost moment
-			}
-
-			static uint8_t wifiReconnectAttempts = 0;
-			if (millis() - wifiBeginStart > WIFI_BEGIN_ATTEMPT_DELAY)
+			bool switchCredentials = false;
+			if ((millis() - lostWifiTime > WIFI_BEGIN_SWITCH_CRED) && (wifiReconnectAttempts >= MAX_WIFI_RECONNECT_ATTEMPTS))
 			{
-				bool switchCredentials = false;
-				if ((millis() - lostWifiTime > WIFI_BEGIN_SWITCH_CRED) && (wifiReconnectAttempts >= MAX_WIFI_RECONNECT_ATTEMPTS))
-				{
-					switchCredentials = true;
-					wifiReconnectAttempts = 0;
-					//gotIP = false;
-					//sendResetPacket = true;
-				}
+				switchCredentials = true;
+				wifiReconnectAttempts = 0;
+				//gotIP = false;
+				//sendResetPacket = true;
+			}
 
-				if (switchCredentials && numCredentials > 0)
-				{
-					currentCredential = (currentCredential + 1) % numCredentials;
-					Serial.println("<<<<<<< Switching WiFi Networks >>>>>>>");
-				}
-				Serial.print("WIFI_BEGIN_ATTEMPT_DELAY: ");
-				Serial.println(WIFI_BEGIN_ATTEMPT_DELAY);
-				//Serial.println(lostWifiTime);               //uncomment for debugging
-				wifiStatus = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1, 0);
-				wifiReconnectAttempts++;
-				wifiBeginStart = millis();
+			if (switchCredentials && numCredentials > 0)
+			{
+				currentCredential = (currentCredential + 1) % numCredentials;
+				Serial.println("<<<<<<< Switching WiFi Networks >>>>>>>");
 			}
-			if (wifiStatus == WL_CONNECTED) {
-				getLostWifiTime = true;
-				//For case where begin works immediately in this loop, but disconnects again within
-				// the attempt delay. Without changing nBS, the code is blocked from attempting to reconnect
-				wifiBeginStart = millis() - WIFI_BEGIN_ATTEMPT_DELAY - 1;
-			}
+			Serial.print("WIFI_BEGIN_ATTEMPT_DELAY: ");
+			Serial.println(WIFI_BEGIN_ATTEMPT_DELAY);
+			//Serial.println(lostWifiTime);               //uncomment for debugging
+			wifiStatus = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1, 0);
+			wifiReconnectAttempts++;
+			wifiBeginStart = millis();
+		}
+		if (wifiStatus == WL_CONNECTED) {
+			getLostWifiTime = true;
+			//For case where begin works immediately in this loop, but disconnects again within
+			// the attempt delay. Without changing nBS, the code is blocked from attempting to reconnect
+			wifiBeginStart = millis() - WIFI_BEGIN_ATTEMPT_DELAY - 1;
 		}
 	}
 }
 
 int8_t EmotiBitWiFi::readUdp(WiFiUDP &udp, String &message)
 {
+	if (_wifiOff)
+	{
+		return WL_DISCONNECTED;
+	}
+
 	// ToDo: Consider need for a while loop here handle packet backlog
 	int packetSize = udp.parsePacket();
 	if (packetSize)
@@ -172,6 +179,11 @@ int8_t EmotiBitWiFi::readUdp(WiFiUDP &udp, String &message)
 
 int8_t EmotiBitWiFi::processAdvertising()
 {
+	if (_wifiOff)
+	{
+		return WL_DISCONNECTED;
+	}
+
 	EmotiBitPacket::Header outPacketHeader;
 	String outMessage = "";
 
@@ -277,6 +289,11 @@ int8_t EmotiBitWiFi::sendData(const String &message)
 
 int8_t EmotiBitWiFi::sendUdp(WiFiUDP& udp, const String& message, const IPAddress& ip, uint16_t port)
 {
+	if (_wifiOff)
+	{
+		return WL_DISCONNECTED;
+	}
+
 	static int16_t firstIndex;
 	firstIndex = 0;
 	while (firstIndex < message.length()) {
@@ -294,6 +311,8 @@ int8_t EmotiBitWiFi::sendUdp(WiFiUDP& udp, const String& message, const IPAddres
 		}
 		firstIndex = lastIndex + 1;	// increment substring indexes for breaking up sends
 	}
+	
+	return SUCCESS;
 }
 
 uint8_t EmotiBitWiFi::readControl(String& packet) 
@@ -333,6 +352,11 @@ uint8_t EmotiBitWiFi::readControl(String& packet)
 
 int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, const String& connectPayload) {
 
+	if (_wifiOff)
+	{
+		return WL_DISCONNECTED;
+	}
+
 	bool gotControlPort = false;
 	bool gotDataPort = false;
 	String value;
@@ -362,39 +386,50 @@ int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, const String& connectPaylo
 	}
 }
 int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, uint16_t controlPort, uint16_t dataPort) {
-	if (!_isConnected)
-	{
-		// if we aren't already connected to a computer
 
-		Serial.print("\nStarting control connection to server: ");
+	if (_wifiOff)
+	{
+		return WL_DISCONNECTED;
+	}
+
+	if (_isConnected)
+	{
+		disconnect();
+	}
+
+	Serial.print("\nStarting control connection to server: ");
+	Serial.print(hostIp);
+	Serial.print(" : ");
+	Serial.print(controlPort);
+	Serial.print(" ... ");
+	if (_controlCxn.connect(hostIp, controlPort))
+	{
+		_isConnected = true;
+		_controlCxn.flush();
+		Serial.println("connected");
+
+		_hostIp = hostIp;
+		_dataPort = dataPort;
+		_controlPort = controlPort;
+
+		// ToDo: Send a message to host to confirm connection
+
+		Serial.print("Starting data connection to server: ");
 		Serial.print(hostIp);
 		Serial.print(" : ");
-		Serial.print(controlPort);
-		Serial.print(" ... ");
-		if (_controlCxn.connect(hostIp, controlPort))
-		{
-			_isConnected = true;
-			_controlCxn.flush();
-			Serial.println("connected");
-
-			_hostIp = hostIp;
-			_dataPort = dataPort;
-			_controlPort = controlPort;
-
-			// ToDo: Send a message to host to confirm connection
-
-			Serial.print("Starting data connection to server: ");
-			Serial.print(hostIp);
-			Serial.print(" : ");
-			Serial.println(dataPort);
-			_dataCxn.begin(dataPort);
-			return SUCCESS;
-		}
+		Serial.println(dataPort);
+		_dataCxn.begin(dataPort);
+		return SUCCESS;
 	}
 	return FAIL;
 }
 
 int8_t EmotiBitWiFi::disconnect() {
+	if (_wifiOff)
+	{
+		return WL_DISCONNECTED;
+	}
+
 	if (_isConnected) {
 		Serial.println("Disconnecting... ");
 		Serial.println("Stopping Control Cxn... ");
@@ -532,7 +567,12 @@ int8_t EmotiBitWiFi::addCredential(const String &ssid, const String &password)
 	}
 }
 
-uint8_t listNetworks() {
+uint8_t EmotiBitWiFi::listNetworks() {
+	if (_wifiOff)
+	{
+		return 0;
+	}
+
 	// scan for nearby networks:
 	Serial.println("xxxxxxx Scan Networks xxxxxxx");
 	Serial.println(millis());
@@ -566,6 +606,7 @@ uint8_t listNetworks() {
 
 	return numSsid;
 }
+
 bool EmotiBitWiFi::isConnected()
 {
 	return _isConnected;

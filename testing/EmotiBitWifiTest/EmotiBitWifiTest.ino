@@ -25,8 +25,6 @@ enum class PowerMode {
 	length
 };
 
-
-
 enum class DataType {
 	PPG_INFRARED,
 	PPG_RED,
@@ -82,53 +80,57 @@ void setup()
 void loop() {
 	parseSerialInput();
 	
-	if (WiFi.status() == WL_CONNECTED) {
-		emotibitWiFi.update(updatePackets, dataPacketCounter);
-		//Serial.print(updatePackets);
+	emotibitWiFi.update(updatePackets, dataPacketCounter);
+	//Serial.print(updatePackets);
 
-
-		if (emotibitWiFi.isConnected()) {
-			// Read control packets
-			String controlPacket;
-			while (emotibitWiFi.readControl(controlPacket))
+	if (emotibitWiFi.isConnected()) 
+	{
+		// Read control packets
+		String controlPacket;
+		while (emotibitWiFi.readControl(controlPacket))
+		{
+			// ToDo: handling some packets (e.g. disconnect behind the scenes)
+			Serial.print("\nReceiving control msg: ");
+			Serial.println(controlPacket);
+			EmotiBitPacket::Header header;
+			EmotiBitPacket::getHeader(controlPacket, header);
+			if (header.typeTag.equals(EmotiBitPacket::TypeTag::EMOTIBIT_DISCONNECT))
 			{
-				// ToDo: handling some packets (e.g. disconnect behind the scenes)
-				Serial.print("\nReceiving control msg: ");
-				Serial.println(controlPacket);
-				EmotiBitPacket::Header header;
-				EmotiBitPacket::getHeader(controlPacket, header);
-				if (header.typeTag.equals(EmotiBitPacket::TypeTag::EMOTIBIT_DISCONNECT))
-				{
-					emotibitWiFi.disconnect();
-				}
-				dataMessage += controlPacket;
+				emotibitWiFi.disconnect();
 			}
-
-			// Send data periodically
-			static uint32_t dataSendTimer = millis();
-			if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
-			{
-				dataSendTimer = millis();
-				appendTestData(dataMessage, dataPacketCounter);
-
-				emotibitWiFi.sendData(dataMessage);
-				dataMessage = "";
-			}
+			dataMessage += controlPacket;
 		}
 
+		// Send data periodically
+		static uint32_t dataSendTimer = millis();
+		if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
+		{
+			dataSendTimer = millis();
+			appendTestData(dataMessage, dataPacketCounter);
+
+			emotibitWiFi.sendData(dataMessage);
+			dataMessage = "";
+		}
 	}
+
+	// Print * to show we're still groovy
 	static uint32_t serialPrintTimer = millis();
 	if (millis() - serialPrintTimer > 500)
 	{
 		serialPrintTimer = millis();
 		Serial.print("*");
+		static uint8_t lineCounter = 0;
+		lineCounter++;
+		if (lineCounter > 100)
+		{
+			lineCounter = 0;
+			Serial.println("");
+		}
 	}
 }
 
-
 void setPowerMode(PowerMode mode)
 {
-	//_powerMode = mode;
 	if (mode == PowerMode::NORMAL_POWER)
 	{
 		Serial.println("\nPowerMode::NORMAL_POWER");
@@ -171,7 +173,6 @@ void setPowerMode(PowerMode mode)
 	}
 }
 
-
 void parseSerialInput()
 {
 	int inByte = 0;
@@ -208,7 +209,6 @@ void setupDataTypes()
 	typeTags[(uint8_t)DataType::MAGNETOMETER_Z] = EmotiBitPacket::TypeTag::MAGNETOMETER_Z;
 	typeTags[(uint8_t)DataType::BATTERY_PERCENT] = EmotiBitPacket::TypeTag::BATTERY_PERCENT;
 }
-
 
 void appendTestData(String &dataMessage, uint16_t &packetNumber)
 {
