@@ -2202,7 +2202,7 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		Serial.println("PowerMode::LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin();
+			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
 		WiFi.lowPowerMode();
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
@@ -2212,7 +2212,7 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		Serial.println("PowerMode::MAX_LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin();
+			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
 		WiFi.maxLowPowerMode();
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;

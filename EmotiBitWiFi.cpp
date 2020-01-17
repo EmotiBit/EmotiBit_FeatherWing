@@ -445,6 +445,10 @@ int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, uint16_t controlPort, uint
 }
 
 int8_t EmotiBitWiFi::disconnect() {
+	_isConnected = false;
+	_dataPort = -1;
+	_controlPort = -1;
+
 	int8_t wifiStatus = status();
 	if (wifiStatus != WL_CONNECTED)
 	{
@@ -461,9 +465,7 @@ int8_t EmotiBitWiFi::disconnect() {
 		Serial.println("Stopping Data Cxn... ");
 		_dataCxn.stop();
 		Serial.println("Stopped... ");
-		_isConnected = false;
-		_dataPort = -1;
-		_controlPort = -1;
+
 		return SUCCESS;
 	}
 	return FAIL;
