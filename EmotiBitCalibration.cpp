@@ -1,10 +1,10 @@
-//#include "EmotiBitCalibration.h"
-#include "EmotiBit.h"
+#include "EmotiBitCalibration.h"
+//#include "EmotiBit.h"
 EmotiBitCalibration::EmotiBitCalibration()
 {
 	calibrateSensor[(uint8_t)EmotiBitCalibration::SensorType::GSR] = false;
 	// TODO : set it to false for all other sensors
-	calibrationTags[(uint8_t)SensorType::GSR] = "GSR_C\0";
+	// calibrationTags[(uint8_t)SensorType::GSR] = "GSR_C\0";
 
 	// TODO: for all other sensor types
 }
@@ -12,6 +12,13 @@ EmotiBitCalibration::GsrCalibration::GsrCalibration()
 {
 	edlCumSum = 0;
 	edlAvgCount = 1;
+	calibrationTag = "GC\0";
+	finishedSensorCalibration = false;
+}
+
+void EmotiBitCalibration::GsrCalibration::finishedCalibration()
+{
+	finishedSensorCalibration = true;
 }
 
 void EmotiBitCalibration::GsrCalibration::performCalibration(float newVal)
@@ -35,23 +42,28 @@ void EmotiBitCalibration::GsrCalibration::performCalibration(float newVal)
 	{
 		// send this data over to the computer
 		// set "calibrated tag"
-		Serial.println("done with data");
-		sendGsrCalibration();
+		// Serial.println("done with data");
+		finishedCalibration();
 	}
 }
 
-void EmotiBitCalibration::GsrCalibration::sendGsrCalibration()
-{
-	// write code to generate and send the apcket over Wifi
-	static EmotiBitPacket::Header header;
-	header = EmotiBitPacket::createHeader(EmotiBitCalibration::calibrationTags[(uint8_t)EmotiBitCalibration::SensorType::GSR], millis(), 0/*Find a way to share packetCunter*/, 1);
-	_outDataPackets += EmotiBitPacket::headerToString(header);
-	Serial.println("Sending the data:");
-	Serial.println(edlCumSum);
-	Serial.println("Ending Execution");
-	while (1);
-	//_emotiBitWiFi.sendData(_outDataPackets);
-}
+//void EmotiBitCalibration::sendCalibrationPacket()
+//{
+//	uint8_t precision = 10;
+//	// write code to generate and send the apcket over Wifi
+//	EmotiBitPacket::Header header;
+//	header = EmotiBitPacket::createHeader(gsrcalibration.calibrationTag, millis(), 0/*Find a way to share packetCunter*/, 1);
+//	_outCalibrationPacket = "";
+//	_outCalibrationPacket += EmotiBitPacket::headerToString(header);
+//	_outCalibrationPacket += ',';
+//	_outCalibrationPacket += String(gsrcalibration.edlCumSum, precision);
+//	myEmotiBitWiFi.sendData(_outCalibrationPacket);
+//	Serial.println("Sending the data:");
+//	Serial.println(gsrcalibration.edlCumSum);
+//	Serial.println("Ending Execution");
+//	while (1);
+//	//_emotiBitWiFi.sendData(_outDataPackets);
+//}
 
 //void EmotiBitCalibration::calibrateSensor(EmotiBitCalibration::SensorType sensor, float edlVal)
 //{

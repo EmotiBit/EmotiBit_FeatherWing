@@ -901,6 +901,12 @@ uint8_t EmotiBit::update()
 				writeSdCardMessage(_outDataPackets);
 				_outDataPackets = "";
 			}
+			// TODO: modify for all sensor calibration compatibility
+			if (emotibitcalibration.gsrcalibration.finishedSensorCalibration)
+			{
+				Serial.println("Entered to TX onver WIfi");
+				sendCalibrationPacket();
+			}
 		}
 	}
 
@@ -918,6 +924,26 @@ uint8_t EmotiBit::update()
 
 		hibernate();
 	}
+}
+
+void EmotiBit::sendCalibrationPacket()
+{
+	uint8_t precision = 10;
+	String outCalibrationPacket;
+	// write code to generate and send the apcket over Wifi
+	EmotiBitPacket::Header header;
+	header = EmotiBitPacket::createHeader(emotibitcalibration.gsrcalibration.calibrationTag, millis(), _outDataPacketCounter++, 1);
+	outCalibrationPacket = "";
+	outCalibrationPacket += EmotiBitPacket::headerToString(header);
+	outCalibrationPacket += ',';
+	outCalibrationPacket += String(emotibitcalibration.gsrcalibration.edlCumSum, precision);
+	outCalibrationPacket += "\n";
+	_emotiBitWiFi.sendData(outCalibrationPacket);
+	Serial.println(outCalibrationPacket);
+	Serial.println("Sending the data:");
+	Serial.println(emotibitcalibration.gsrcalibration.edlCumSum);
+	Serial.println("Ending Execution");
+	while (1);
 }
 
 int8_t EmotiBit::updateEDAData() 

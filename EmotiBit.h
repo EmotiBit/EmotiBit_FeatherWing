@@ -310,6 +310,7 @@ public:
 	void appendTestData(String &dataMessage);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
+	void sendCalibrationPacket();
 
 	// ----------- END ino refactoring ---------------
 
