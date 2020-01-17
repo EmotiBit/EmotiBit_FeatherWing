@@ -320,29 +320,36 @@ uint8_t EmotiBitWiFi::readControl(String& packet)
 	uint8_t numPackets = 0;
 	if (_isConnected) 
 	{
-
-		while (_controlCxn.available()) 
+		if (!_controlCxn.connected())
 		{
-			int c = _controlCxn.read();
-			
-			if (c == (int) EmotiBitPacket::PACKET_DELIMITER_CSV) 
+			// We lost our Control connection
+			disconnect();
+		}
+		else
+		{
+			while (_controlCxn.available())
 			{
-				numPackets++;
-				packet = "";
-				packet += _receivedControlMessage;
-				_receivedControlMessage = "";
-				return numPackets;
-			}
-			else
-			{
-				if (c == 0) {
-					// Throw out null term
-					// ToDo: handle this more properly
+				int c = _controlCxn.read();
+
+				if (c == (int)EmotiBitPacket::PACKET_DELIMITER_CSV)
+				{
+					numPackets++;
+					packet = "";
+					packet += _receivedControlMessage;
+					_receivedControlMessage = "";
+					return numPackets;
 				}
 				else
 				{
-					//Serial.print((char)c);
-					_receivedControlMessage += (char) c;
+					if (c == 0) {
+						// Throw out null term
+						// ToDo: handle this more properly
+					}
+					else
+					{
+						//Serial.print((char)c);
+						_receivedControlMessage += (char)c;
+					}
 				}
 			}
 		}
@@ -431,9 +438,12 @@ int8_t EmotiBitWiFi::disconnect() {
 	}
 
 	if (_isConnected) {
-		Serial.println("Disconnecting... ");
-		Serial.println("Stopping Control Cxn... ");
-		_controlCxn.stop();
+		if (_controlCxn.connected())
+		{
+			Serial.println("Disconnecting... ");
+			Serial.println("Stopping Control Cxn... ");
+			_controlCxn.stop();
+		}
 		Serial.println("Stopping Data Cxn... ");
 		_dataCxn.stop();
 		Serial.println("Stopped... ");

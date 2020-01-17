@@ -2189,38 +2189,38 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	sendModePacket(modePacket, _outDataPacketCounter);
 	if (getPowerMode() == PowerMode::NORMAL_POWER)
 	{
+		Serial.println("PowerMode::NORMAL_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
 			_emotiBitWiFi.begin();
 		}
 		WiFi.lowPowerMode();
 		modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
-		Serial.println("PowerMode::NORMAL_POWER");
 	}
 	else if (getPowerMode() == PowerMode::LOW_POWER)
 	{
+		Serial.println("PowerMode::LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
 			_emotiBitWiFi.begin();
 		}
 		WiFi.lowPowerMode();
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
-		Serial.println("PowerMode::LOW_POWER");
 	}
 	else if (getPowerMode() == PowerMode::MAX_LOW_POWER)
 	{
+		Serial.println("PowerMode::MAX_LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
 			_emotiBitWiFi.begin();
 		}
 		WiFi.maxLowPowerMode();
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
-		Serial.println("PowerMode::MAX_LOW_POWER");
 	}
 	else if (getPowerMode() == PowerMode::WIRELESS_OFF)
 	{
-		_emotiBitWiFi.end();
 		Serial.println("PowerMode::WIRELESS_OFF");
+		_emotiBitWiFi.end();
 	}
 	else if (getPowerMode() == PowerMode::HIBERNATE)
 	{

@@ -19,11 +19,12 @@ uint16_t dataPacketCounter = 0;
 enum class PowerMode {
 	HIBERNATE,
 	WIRELESS_OFF,				// fully shutdown wireless
-	MAX_LOW_POWER,			// data not sent, time-syncing accuracy low
 	LOW_POWER,					// data not sent, time-syncing accuracy high
 	NORMAL_POWER,				// data sending, time-syncing accuracy high
 	length
 };
+
+PowerMode powerMode = PowerMode::NORMAL_POWER;
 
 enum class DataType {
 	PPG_INFRARED,
@@ -108,7 +109,10 @@ void loop() {
 			dataSendTimer = millis();
 			appendTestData(dataMessage, dataPacketCounter);
 
-			emotibitWiFi.sendData(dataMessage);
+			if (powerMode == PowerMode::NORMAL_POWER)
+			{
+				emotibitWiFi.sendData(dataMessage);
+			}
 			dataMessage = "";
 		}
 	}
@@ -149,15 +153,6 @@ void setPowerMode(PowerMode mode)
 		}
 		WiFi.lowPowerMode();
 	}
-	else if (mode == PowerMode::MAX_LOW_POWER)
-	{
-		Serial.println("\nPowerMode::MAX_LOW_POWER");
-		if (emotibitWiFi.isOff())
-		{
-			emotibitWiFi.begin();
-		}
-		WiFi.maxLowPowerMode();
-	}
 	else if (mode == PowerMode::WIRELESS_OFF)
 	{
 		Serial.println("\nPowerMode::WIRELESS_OFF");
@@ -171,6 +166,7 @@ void setPowerMode(PowerMode mode)
 	{
 		Serial.println("\nPowerMode Not Recognized");
 	}
+	powerMode = mode;
 }
 
 void parseSerialInput()
@@ -183,6 +179,31 @@ void parseSerialInput()
 		if (inByte > 47 && inByte < 48 + (int) PowerMode::length)
 		{
 			setPowerMode((PowerMode)(inByte - 48));
+		}
+		else if (inByte == 's')
+		{
+			Serial.println("");
+			if (emotibitWiFi.isOff())
+			{
+				Serial.println("WiFi: Off");
+			}
+			else
+			{
+				Serial.println("WiFi: On");
+			}
+
+			if (emotibitWiFi.isConnected())
+			{
+				Serial.println("EmotiBit: Connected");
+			}
+			else
+			{
+				Serial.println("EmotiBit: Not Connected");
+			}
+		}
+		else if (inByte == 'd')
+		{
+			emotibitWiFi.disconnect();
 		}
 	}
 }
