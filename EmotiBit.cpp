@@ -165,26 +165,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	_vcc = 3.3f;						// Vcc voltage
 	// vGnd = _vcc / 2.f;	// Virtual GND Voltage for eda
 	//vRef1 = _vcc * (15.f / 115.f); // First Voltage divider refernce
-// #ifdef GSR_CALIBRATION
-	// variables used for GSR calibration
-	//Serial.println("Entered GSR Calibration mode");
-	//Serial.println("At the End of the Test, copy the vref1 Value and paste it in the definition of vRef1 in setup");
-	//Serial.println("To continue with Calibration, press c on the serial monitor and hit enter");
-	//Serial.println("To exit press e and enter");
-	//while (!Serial.available());
-	//if (Serial.read() != 'c')
-	//{
-	//	Serial.println("Stopped code execution.");
-	//	Serial.println("Comment definition of GSR_CALIBRATION in emotibit.h");
-	//	Serial.println("upload code and run again");
-	//	while (1);
-	//}
-	//edlAvgCount = 1;
-	//edlCumSum = 0;
-//#else
-	// enter the value here if not calibrating the GSR
+
 	vRef1 = 0.44372341;
-//#endif
 	vRef2 = _vcc / 2.f; // Second voltage Divider reference
 
 	_adcBits = 12;
@@ -301,38 +283,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	led.setLEDpwm((uint8_t)Led::BLUE, 8);
 	led.setLEDpwm((uint8_t)Led::YELLOW, 8);
 
-#ifdef HARDWARE_TEST
-	Serial.println("Initiating Hardware Test");
-	Serial.println("Press \"c\" and enter to continue else press \"e\"");
-	while (!Serial.available());
-	if (Serial.read() != 'c')
-	{
-		Serial.println("Exiting test");
-		Serial.println("modify HARDWARE_TEST in emotiBit.h to stop hardware test routine");
-		while (1);
-	}
-	Serial.println("You should see the 3 led's light up in sequence Red, Blue and then Yellow");
-	delay(1000);
-	for (int ledPos = 1; ledPos < 4; ledPos++) {
-		Serial.println(ledPos);
-		led.setLED(ledPos, !led.getLED(ledPos));
-		delay(500);
-	}
-	Serial.println("If not, the Led driver is not working");
-	Serial.println("Press any character and enter to continue");
-	while (!Serial.available());
-	Serial.read();// to clear the buffer
-	Serial.println("Switching off all LED's and continuing with the test");
-	delay(1000);
-	for (int ledPos = 1; ledPos < 4; ledPos++) {
-		Serial.println(ledPos);
-		led.setLED(ledPos, !led.getLED(ledPos));
-		delay(500);
-	}
-	Serial.println("Press any character and enter to continue");
-	while (!Serial.available());
-	Serial.read(); // to clear the buffer
-#endif
 	//// Setup PPG sensor
 	Serial.println("Initializing MAX30101....");
 	// Initialize sensor
@@ -357,28 +307,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		ppgSettings.adcRange
 	); 
 	ppgSensor.check();
-#ifdef HARDWARE_TEST
-	Serial.println("Starting PPG sensor Test");
-	Serial.println("To make sure the sensor is working, place a finger beneath the sensor and you will notice the values become bigger / change with presence");
-	Serial.println("or absence of object");
-	Serial.println("press and character and enter to stop");
-	delay(5000);
-	while (!Serial.available())
-	{
-		Serial.print(" R[");
-		Serial.print(ppgSensor.getRed());
-		Serial.print("] IR[");
-		Serial.print(ppgSensor.getIR());
-		Serial.print("] G[");
-		Serial.print(ppgSensor.getGreen());
-		Serial.print("]");
-		Serial.println();
-	}
-	Serial.read(); // to clear the buffer
-	Serial.println("Press any character and enter to continue");
-	while (!Serial.available());
-	Serial.read(); // to clear the buffer
-#endif
+
 
 	// Setup IMU
 	Serial.println("Initializing IMU device....");
@@ -480,10 +409,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		Serial.println("UNHANDLED CASE: _imuFifoFrameLen > _maxImuFifoFrameLen");
 		while (true);
 	}
-
-#ifdef HARDWARE_TEST
-	Serial.println("Testing IMU function")
-#endif
 
 	// ToDo: Add interrupts to accurately record timing of data capture
 

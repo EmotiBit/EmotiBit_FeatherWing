@@ -1,5 +1,5 @@
 #include "EmotiBitCalibration.h"
-//#include "EmotiBit.h"
+
 EmotiBitCalibration::EmotiBitCalibration()
 {
 	sensorsToCalibrate[(uint8_t)EmotiBitCalibration::SensorType::GSR] = false;
@@ -9,6 +9,7 @@ EmotiBitCalibration::EmotiBitCalibration()
 	// TODO: for all other sensor types
 	calibrationPointsPerSensor[(uint8_t)SensorType::GSR] = 1;
 }
+
 EmotiBitCalibration::GsrCalibration::GsrCalibration()
 {
 	edlCumSum = 0;
