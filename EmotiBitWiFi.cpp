@@ -64,6 +64,7 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		// ToDo: Add WEP support
 		_wifiOff = false;
 		status = WiFi.begin(ssid, pass);
+		_needsAdvertisingBegin = true;
 		delay(attemptDelay);
 		attempt++;
 	}
@@ -75,6 +76,7 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 	Serial.print("Starting EmotiBit advertising connection on port ");
 	Serial.println(_advertisingPort);
 	_advertisingCxn.begin(_advertisingPort);
+	_needsAdvertisingBegin = false;
 
 	return status;
 }
@@ -155,9 +157,10 @@ int8_t EmotiBitWiFi::updateWiFi()
 
 int8_t EmotiBitWiFi::readUdp(WiFiUDP &udp, String &message)
 {
-	if (_wifiOff)
+	int8_t wifiStatus = status();
+	if (wifiStatus != WL_CONNECTED)
 	{
-		return WL_DISCONNECTED;
+		return wifiStatus;
 	}
 
 	// ToDo: Consider need for a while loop here handle packet backlog
@@ -179,9 +182,16 @@ int8_t EmotiBitWiFi::readUdp(WiFiUDP &udp, String &message)
 
 int8_t EmotiBitWiFi::processAdvertising()
 {
-	if (_wifiOff)
+	int8_t wifiStatus = status();
+	if (wifiStatus != WL_CONNECTED)
 	{
-		return WL_DISCONNECTED;
+		return wifiStatus;
+	}
+
+	if (_needsAdvertisingBegin)
+	{
+		_advertisingCxn.begin(_advertisingPort);
+		_needsAdvertisingBegin = false;
 	}
 
 	EmotiBitPacket::Header outPacketHeader;
@@ -289,9 +299,10 @@ int8_t EmotiBitWiFi::sendData(const String &message)
 
 int8_t EmotiBitWiFi::sendUdp(WiFiUDP& udp, const String& message, const IPAddress& ip, uint16_t port)
 {
-	if (_wifiOff)
+	int8_t wifiStatus = status();
+	if (wifiStatus != WL_CONNECTED)
 	{
-		return WL_DISCONNECTED;
+		return wifiStatus;
 	}
 
 	static int16_t firstIndex;
@@ -359,9 +370,10 @@ uint8_t EmotiBitWiFi::readControl(String& packet)
 
 int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, const String& connectPayload) {
 
-	if (_wifiOff)
+	int8_t wifiStatus = status();
+	if (wifiStatus != WL_CONNECTED)
 	{
-		return WL_DISCONNECTED;
+		return wifiStatus;
 	}
 
 	bool gotControlPort = false;
@@ -394,9 +406,10 @@ int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, const String& connectPaylo
 }
 int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, uint16_t controlPort, uint16_t dataPort) {
 
-	if (_wifiOff)
+	int8_t wifiStatus = status();
+	if (wifiStatus != WL_CONNECTED)
 	{
-		return WL_DISCONNECTED;
+		return wifiStatus;
 	}
 
 	if (_isConnected)
@@ -432,9 +445,10 @@ int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, uint16_t controlPort, uint
 }
 
 int8_t EmotiBitWiFi::disconnect() {
-	if (_wifiOff)
+	int8_t wifiStatus = status();
+	if (wifiStatus != WL_CONNECTED)
 	{
-		return WL_DISCONNECTED;
+		return wifiStatus;
 	}
 
 	if (_isConnected) {
@@ -620,4 +634,13 @@ uint8_t EmotiBitWiFi::listNetworks() {
 bool EmotiBitWiFi::isConnected()
 {
 	return _isConnected;
+}
+
+int8_t EmotiBitWiFi::status()
+{
+	if (_wifiOff)
+	{
+		return WL_DISCONNECTED;
+	}
+	return (int8_t) WiFi.status();
 }

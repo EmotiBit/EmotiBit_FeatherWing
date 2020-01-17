@@ -203,7 +203,13 @@ void parseSerialInput()
 		}
 		else if (inByte == 'd')
 		{
+			Serial.println("\nDisconnecting");
 			emotibitWiFi.disconnect();
+		}
+		else if (inByte == 'a')
+		{
+			Serial.println("\nAdvertising.begin()");
+			emotibitWiFi._advertisingCxn.begin(emotibitWiFi._advertisingPort);
 		}
 	}
 }
