@@ -6,6 +6,7 @@ const uint32_t SERIAL_BAUD = 2000000; //115200
 
 EmotiBit emotibit;
 EmotiBitCalibration emotibitcalibration;
+
 const size_t dataSize = EmotiBit::MAX_DATA_BUFFER_SIZE;
 float data[dataSize];
 
@@ -34,6 +35,7 @@ void setup()
 	Serial.begin(SERIAL_BAUD);
 	Serial.println("Serial started");
 	delay(2000);	// short delay to allow user to connect to serial, if desired
+
 	Serial.println("Do you want to calibrate Sensors?");
 	Serial.println("press y for yes and n for no");
 	while (!Serial.available());

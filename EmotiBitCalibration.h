@@ -1,50 +1,47 @@
 #pragma once
 #include "Arduino.h"
-//#include "DoubleBufferFloat.h"
-//#include <ArduinoJson.h>
-//#include <SdFat.h>
-//#include "wiring_private.h"
-//#include "EmotiBitWiFi.h"
-//#include <SPI.h>
-//#include <SdFat.h>
-//#include <ArduinoJson.h>
-//#include <ArduinoLowPower.h>
-
 
 class EmotiBitCalibration {
 
+
 public:
-	EmotiBitCalibration();
 
 	enum class SensorType {
-
 		GSR,
+		// Add sensors for calibration below this.
 		length
 	};
-	
-	// An array to enable/disable sensor calibration 
-	bool calibrateSensor[(uint8_t)SensorType::length];
-	// typeTags to be added to the Output messages
-	// const char *calibrationTags[(uint8_t)SensorType::length];
+	const char* calibrationTag[(uint8_t)SensorType::length];
+	EmotiBitCalibration();
 
+	uint8_t calibrationPointsPerSensor[(uint8_t)SensorType::length];
+	
+private:
+	// An array to enable/disable sensor calibration 
+	bool sensorsToCalibrate[(uint8_t)SensorType::length];
+	
+public:
 	class GsrCalibration {
 		
-	public:
+	public: 
 		GsrCalibration();
+	private:
+		bool calibrationStatus;
+		
+	public:
 		float edlCumSum;
 		uint16_t edlAvgCount;
 		const uint16_t MAX_EDL_AVG_COUNT = 1000;
-		const char* calibrationTag;
-		bool finishedSensorCalibration;
+	
 	public:
 		void performCalibration(float newVal);
-		void finishedCalibration();
+		void setCalibrationStatus();
+		bool isCalibrated();
+		float getCalibratedValue();
 	} gsrcalibration;
 
 public:
 
-	void sendCalibration();
-	// void calibrateSensor(EmotiBitCalibration::SensorType sensor, float edlVal);
 	void setSensorToCalibrate(EmotiBitCalibration::SensorType sensor);
 	bool getSensorToCalibrate(EmotiBitCalibration::SensorType sensor);
 	bool sendCalibrationData();

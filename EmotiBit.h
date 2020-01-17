@@ -24,8 +24,6 @@
 extern EmotiBitCalibration emotibitcalibration;
 //#include <Adafruit_SleepyDog.h>
 
-// un-comment ot run GSR calibration
-// #define GSR_CALIBRATION
 
 class EmotiBit {
   

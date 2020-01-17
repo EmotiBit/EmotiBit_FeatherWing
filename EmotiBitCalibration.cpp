@@ -2,24 +2,31 @@
 //#include "EmotiBit.h"
 EmotiBitCalibration::EmotiBitCalibration()
 {
-	calibrateSensor[(uint8_t)EmotiBitCalibration::SensorType::GSR] = false;
+	sensorsToCalibrate[(uint8_t)EmotiBitCalibration::SensorType::GSR] = false;
 	// TODO : set it to false for all other sensors
 	// calibrationTags[(uint8_t)SensorType::GSR] = "GSR_C\0";
-
+	calibrationTag[(uint8_t)SensorType::GSR] = "CG\0"; // Calibrate Gsr
 	// TODO: for all other sensor types
+	calibrationPointsPerSensor[(uint8_t)SensorType::GSR] = 1;
 }
 EmotiBitCalibration::GsrCalibration::GsrCalibration()
 {
 	edlCumSum = 0;
 	edlAvgCount = 1;
-	calibrationTag = "GC\0";
-	finishedSensorCalibration = false;
+	calibrationStatus = false;
 }
 
-void EmotiBitCalibration::GsrCalibration::finishedCalibration()
+
+void EmotiBitCalibration::GsrCalibration::setCalibrationStatus()
 {
-	finishedSensorCalibration = true;
+	calibrationStatus = true;
 }
+
+bool EmotiBitCalibration::GsrCalibration::isCalibrated()
+{
+	return calibrationStatus;
+}
+
 
 void EmotiBitCalibration::GsrCalibration::performCalibration(float newVal)
 {
@@ -40,49 +47,33 @@ void EmotiBitCalibration::GsrCalibration::performCalibration(float newVal)
 	}
 	else
 	{
-		// send this data over to the computer
-		// set "calibrated tag"
-		// Serial.println("done with data");
-		finishedCalibration();
+		setCalibrationStatus();
 	}
 }
 
-//void EmotiBitCalibration::sendCalibrationPacket()
-//{
-//	uint8_t precision = 10;
-//	// write code to generate and send the apcket over Wifi
-//	EmotiBitPacket::Header header;
-//	header = EmotiBitPacket::createHeader(gsrcalibration.calibrationTag, millis(), 0/*Find a way to share packetCunter*/, 1);
-//	_outCalibrationPacket = "";
-//	_outCalibrationPacket += EmotiBitPacket::headerToString(header);
-//	_outCalibrationPacket += ',';
-//	_outCalibrationPacket += String(gsrcalibration.edlCumSum, precision);
-//	myEmotiBitWiFi.sendData(_outCalibrationPacket);
-//	Serial.println("Sending the data:");
-//	Serial.println(gsrcalibration.edlCumSum);
-//	Serial.println("Ending Execution");
-//	while (1);
-//	//_emotiBitWiFi.sendData(_outDataPackets);
-//}
+float EmotiBitCalibration::GsrCalibration::getCalibratedValue()
+{
+	if (isCalibrated())
+	{
+		return edlCumSum;
+	}
+	else
+	{
+		return -1; // indicates data not ready
+	}
+}
 
-//void EmotiBitCalibration::calibrateSensor(EmotiBitCalibration::SensorType sensor, float edlVal)
-//{
-//	if (sensor == EmotiBitCalibration::SensorType::GSR)
-//	{
-//		gsrcalibration.performCalibration();
-//	}
-//}
 
 void EmotiBitCalibration::setSensorToCalibrate(EmotiBitCalibration::SensorType sensor)
 {
 	if (sensor == EmotiBitCalibration::SensorType::GSR)
 	{
-		calibrateSensor[(uint8_t)sensor] = true;
+		sensorsToCalibrate[(uint8_t)sensor] = true;
 	}
 	// TODO: other statements for other sensor calibrations
 }
 
 bool EmotiBitCalibration::getSensorToCalibrate(EmotiBitCalibration::SensorType sensor)
 {
-	return calibrateSensor[(uint8_t)sensor];
+	return sensorsToCalibrate[(uint8_t)sensor];
 }
