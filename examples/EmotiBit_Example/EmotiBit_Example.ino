@@ -1,5 +1,5 @@
 #include "EmotiBit.h"
-#include "EmotiBitCalibration.h"
+// #include "EmotiBitCalibration.h"
 
 #define SerialUSB SERIAL_PORT_USBVIRTUAL // Required to work in Visual Micro / Visual Studio IDE
 const uint32_t SERIAL_BAUD = 2000000; //115200

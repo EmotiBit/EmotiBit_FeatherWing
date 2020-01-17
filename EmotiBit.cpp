@@ -165,7 +165,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	_vcc = 3.3f;						// Vcc voltage
 	// vGnd = _vcc / 2.f;	// Virtual GND Voltage for eda
 	//vRef1 = _vcc * (15.f / 115.f); // First Voltage divider refernce
-#ifdef GSR_CALIBRATION
+// #ifdef GSR_CALIBRATION
 	// variables used for GSR calibration
 	//Serial.println("Entered GSR Calibration mode");
 	//Serial.println("At the End of the Test, copy the vref1 Value and paste it in the definition of vRef1 in setup");
@@ -179,12 +179,12 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	//	Serial.println("upload code and run again");
 	//	while (1);
 	//}
-	edlAvgCount = 1;
-	edlCumSum = 0;
-#else
+	//edlAvgCount = 1;
+	//edlCumSum = 0;
+//#else
 	// enter the value here if not calibrating the GSR
 	vRef1 = 0.44372341;
-#endif
+//#endif
 	vRef2 = _vcc / 2.f; // Second voltage Divider reference
 
 	_adcBits = 12;
@@ -974,30 +974,36 @@ int8_t EmotiBit::updateEDAData()
 		edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
 		edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
 
-#ifdef GSR_CALIBRATION
-		if (edlAvgCount < MAX_EDL_AVG_COUNT)
+		if (emotibitcalibration.getSensorToCalibrate(EmotiBitCalibration::SensorType::GSR))
 		{
-			edlCumSum += edlTemp;
-			edlAvgCount++;
-			 Serial.print("edlCumSum:");
-			 Serial.println(edlCumSum,8);
-			 Serial.print("edlAvgCount:");
-			 Serial.println(edlAvgCount);
-		}
-		else if (edlAvgCount == MAX_EDL_AVG_COUNT)
-		{
-			edlCumSum = edlCumSum / edlAvgCount;
-			edlAvgCount++;
-		}
-		else
-		{	
-
-			Serial.print("vref1 for the board is: ");
-			Serial.println(edlCumSum,10);
-			while (1);
+			emotibitcalibration.gsrcalibration.performCalibration(edlTemp);
 		}
 
-#endif
+
+//#ifdef GSR_CALIBRATION
+//		if (edlAvgCount < MAX_EDL_AVG_COUNT)
+//		{
+//			edlCumSum += edlTemp;
+//			edlAvgCount++;
+//			 Serial.print("edlCumSum:");
+//			 Serial.println(edlCumSum,8);
+//			 Serial.print("edlAvgCount:");
+//			 Serial.println(edlAvgCount);
+//		}
+//		else if (edlAvgCount == MAX_EDL_AVG_COUNT)
+//		{
+//			edlCumSum = edlCumSum / edlAvgCount;
+//			edlAvgCount++;
+//		}
+//		else
+//		{	
+//
+//			Serial.print("vref1 for the board is: ");
+//			Serial.println(edlCumSum,10);
+//			while (1);
+//		}
+//
+//#endif
 		pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
 		if (edlClipped) {
 			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDL, &edlBuffer.timestamp);

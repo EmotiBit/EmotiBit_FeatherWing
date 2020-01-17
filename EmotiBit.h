@@ -19,10 +19,13 @@
 #include <SdFat.h>
 #include <ArduinoJson.h>
 #include <ArduinoLowPower.h>
+#include "EmotiBitCalibration.h"
+
+extern EmotiBitCalibration emotibitcalibration;
 //#include <Adafruit_SleepyDog.h>
 
 // un-comment ot run GSR calibration
-#define GSR_CALIBRATION
+// #define GSR_CALIBRATION
 
 class EmotiBit {
   
@@ -206,11 +209,11 @@ public:
 	float edrAmplification;
 	float vRef1; // Reference voltage of first voltage divider(15/100)
 	float vRef2; // Reference voltage from second voltage divider(100/100)
-#ifdef GSR_CALIBRATION
-	float edlCumSum;
-	uint16_t edlAvgCount;
-	const uint16_t MAX_EDL_AVG_COUNT = 1000;
-#endif
+//#ifdef GSR_CALIBRATION
+//	float edlCumSum;
+//	uint16_t edlAvgCount;
+//	const uint16_t MAX_EDL_AVG_COUNT = 1000;
+//#endif
 	//float rSkinAmp;
 	float adcRes;
 	float edaVDivR;
