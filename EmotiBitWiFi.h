@@ -58,6 +58,7 @@ public:
 	IPAddress _hostIp;
 
 	bool _wifiOff = true;
+	bool _needsAdvertisingBegin = true;		// Tracks whether advertising port has been started
 
 	WiFiClient _controlCxn;
 	WiFiUDP _advertisingCxn;
@@ -121,4 +122,5 @@ public:
 	uint8_t listNetworks();
 	bool isConnected();
 	bool isOff();
+	int8_t status();
 };

@@ -736,22 +736,35 @@ void EmotiBit::updateButtonPress()
 	uint16_t minShortButtonPress = 500;
 	uint16_t minLongButtonPress = 3000;
 	static uint32_t buttonPressTimer = millis();
+	static bool buttonPreviouslyPressed = false;
+
+	// ToDo: create a mechanism
 
 	bool buttonPressed = readButton();
-	if (!buttonPressed)
+	if (buttonPressed)
 	{
-		if (millis() - buttonPressTimer > minShortButtonPress && millis() - buttonPressTimer < minLongButtonPress)
+		buttonPreviouslyPressed = true;
+	}
+	else
+	{
+		if (buttonPreviouslyPressed) // Make sure button was actually pressed (not just a loop lag)
 		{
-			Serial.println("onShortPress");
-			// ToDo: Send BS packet
-			(onShortPressCallback());
+			if (millis() - buttonPressTimer > minShortButtonPress && millis() - buttonPressTimer < minLongButtonPress)
+			{
+				Serial.print("onShortPress: ");
+				Serial.println(millis() - buttonPressTimer);
+				// ToDo: Send BS packet
+				(onShortPressCallback());
+			}
+			if (millis() - buttonPressTimer > minLongButtonPress)
+			{
+				Serial.print("onLongPress: ");
+				Serial.println(millis() - buttonPressTimer);
+				// ToDo: Send BL packet
+				(onLongPressCallback());
+			}
 		}
-		if (millis() - buttonPressTimer > minLongButtonPress)
-		{
-			Serial.println("onLongPress");
-			// ToDo: Send BL packet
-			(onLongPressCallback());
-		}
+		buttonPreviouslyPressed = false;
 		buttonPressTimer = millis();	// reset the timer until the button is pressed
 	}
 }
@@ -791,7 +804,7 @@ uint8_t EmotiBit::update()
 
 		if (_sendTestData)
 		{
-			appendTestData(_outDataPackets);
+			appendTestData(_outDataPackets, _outDataPacketCounter);
 			if (getPowerMode() == PowerMode::NORMAL_POWER)
 			{
 				_emotiBitWiFi.sendData(_outDataPackets);
@@ -2189,42 +2202,46 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	sendModePacket(modePacket, _outDataPacketCounter);
 	if (getPowerMode() == PowerMode::NORMAL_POWER)
 	{
+		Serial.println("PowerMode::NORMAL_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin();
+			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
 		WiFi.lowPowerMode();
 		modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
-		Serial.println("PowerMode::NORMAL_POWER");
 	}
 	else if (getPowerMode() == PowerMode::LOW_POWER)
 	{
+		Serial.println("PowerMode::LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin();
+			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
 		WiFi.lowPowerMode();
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
-		Serial.println("PowerMode::LOW_POWER");
 	}
 	else if (getPowerMode() == PowerMode::MAX_LOW_POWER)
 	{
+		Serial.println("PowerMode::MAX_LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin();
+			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
 		WiFi.maxLowPowerMode();
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
-		Serial.println("PowerMode::MAX_LOW_POWER");
 	}
 	else if (getPowerMode() == PowerMode::WIRELESS_OFF)
 	{
-		_emotiBitWiFi.end();
 		Serial.println("PowerMode::WIRELESS_OFF");
+		_emotiBitWiFi.end();
 	}
 	else if (getPowerMode() == PowerMode::HIBERNATE)
 	{
 		Serial.println("PowerMode::HIBERNATE");
+	}
+	else
+	{
+		Serial.println("PowerMode Not Recognized");
 	}
 }
 
@@ -2301,7 +2318,7 @@ void EmotiBit::updateBatteryIndication()
 	}
 }
 
-void EmotiBit::appendTestData(String &dataMessage)
+void EmotiBit::appendTestData(String &dataMessage, uint16_t &packetNumber)
 {
 	for (uint8_t t = ((uint8_t)EmotiBit::DataType::DATA_CLIPPING) + 1; t < (uint8_t)DataType::length; t++)
 	{
@@ -2310,7 +2327,6 @@ void EmotiBit::appendTestData(String &dataMessage)
 		int n = 2;
 		for (int i = 0; i < m; i++)
 		{
-			//String data = "0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9";
 			int k;
 			for (int j = 0; j < n; j++)
 			{
@@ -2322,7 +2338,7 @@ void EmotiBit::appendTestData(String &dataMessage)
 				payload += k;
 			}
 		}
-		dataMessage += EmotiBitPacket::createPacket(typeTags[t], _outDataPacketCounter++, payload, m * n);
+		dataMessage += EmotiBitPacket::createPacket(typeTags[t], packetNumber++, payload, m * n);
 	}
 }
 
