@@ -19,6 +19,9 @@
 #include <SdFat.h>
 #include <ArduinoJson.h>
 #include <ArduinoLowPower.h>
+#include "EmotiBitCalibration.h"
+
+extern EmotiBitCalibration emotibitcalibration;
 //#include <Adafruit_SleepyDog.h>
 
 
@@ -204,6 +207,11 @@ public:
 	float edrAmplification;
 	float vRef1; // Reference voltage of first voltage divider(15/100)
 	float vRef2; // Reference voltage from second voltage divider(100/100)
+//#ifdef GSR_CALIBRATION
+//	float edlCumSum;
+//	uint16_t edlAvgCount;
+//	const uint16_t MAX_EDL_AVG_COUNT = 1000;
+//#endif
 	//float rSkinAmp;
 	float adcRes;
 	float edaVDivR;
@@ -297,9 +305,10 @@ public:
 	size_t readData(EmotiBit::DataType t, float **data);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
 	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
 	void updateBatteryIndication();
-	void appendTestData(String &dataMessage);
+	void appendTestData(String &dataMessage, uint16_t &packetNumber);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
+	void sendCalibrationPacket();
 
 	// ----------- END ino refactoring ---------------
 

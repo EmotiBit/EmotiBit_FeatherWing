@@ -164,6 +164,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	_version = version;
 	_vcc = 3.3f;						// Vcc voltage
 	// vGnd = _vcc / 2.f;	// Virtual GND Voltage for eda
+  //vRef1 = 0.44372341;
 	vRef1 = _vcc * (15.f / (15.f + 100.f)); // First Voltage divider refernce
 	vRef2 = _vcc * (100.f / (100.f + 100.f)); // Second voltage Divider reference
 
@@ -196,7 +197,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_edrPin = A3;
 		_sdCardChipSelectPin = 19;
 		edrAmplification = 100.f / 3.3f;
-		edaFeedbackAmpR = 4990000.f; // edaFeedbackAmpR in Mega Ohms
+		edaFeedbackAmpR = 4990000.f; // edaFeedbackAmpR in Ohms
 	}
 	else if (version == Version::V02B)
 	{
@@ -206,8 +207,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_edrPin = A3;
 		_sdCardChipSelectPin = 19;
 		edrAmplification = 100.f / 1.2f;
-		edaFeedbackAmpR = 4990000.f;; // edaFeedbackAmpR in Mega Ohms
-	
+		edaFeedbackAmpR = 4990000.f;; // edaFeedbackAmpR in Ohms
 	}
 #elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
 	if (version == Version::V01B || version == Version::V01C)
@@ -301,6 +301,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		ppgSettings.adcRange
 	); 
 	ppgSensor.check();
+
 
 	// Setup IMU
 	Serial.println("Initializing IMU device....");
@@ -402,7 +403,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		Serial.println("UNHANDLED CASE: _imuFifoFrameLen > _maxImuFifoFrameLen");
 		while (true);
 	}
-
 
 	// ToDo: Add interrupts to accurately record timing of data capture
 
@@ -731,22 +731,35 @@ void EmotiBit::updateButtonPress()
 	uint16_t minShortButtonPress = 500;
 	uint16_t minLongButtonPress = 3000;
 	static uint32_t buttonPressTimer = millis();
+	static bool buttonPreviouslyPressed = false;
+
+	// ToDo: create a mechanism
 
 	bool buttonPressed = readButton();
-	if (!buttonPressed)
+	if (buttonPressed)
 	{
-		if (millis() - buttonPressTimer > minShortButtonPress && millis() - buttonPressTimer < minLongButtonPress)
+		buttonPreviouslyPressed = true;
+	}
+	else
+	{
+		if (buttonPreviouslyPressed) // Make sure button was actually pressed (not just a loop lag)
 		{
-			Serial.println("onShortPress");
-			// ToDo: Send BS packet
-			(onShortPressCallback());
+			if (millis() - buttonPressTimer > minShortButtonPress && millis() - buttonPressTimer < minLongButtonPress)
+			{
+				Serial.print("onShortPress: ");
+				Serial.println(millis() - buttonPressTimer);
+				// ToDo: Send BS packet
+				(onShortPressCallback());
+			}
+			if (millis() - buttonPressTimer > minLongButtonPress)
+			{
+				Serial.print("onLongPress: ");
+				Serial.println(millis() - buttonPressTimer);
+				// ToDo: Send BL packet
+				(onLongPressCallback());
+			}
 		}
-		if (millis() - buttonPressTimer > minLongButtonPress)
-		{
-			Serial.println("onLongPress");
-			// ToDo: Send BL packet
-			(onLongPressCallback());
-		}
+		buttonPreviouslyPressed = false;
 		buttonPressTimer = millis();	// reset the timer until the button is pressed
 	}
 }
@@ -786,7 +799,7 @@ uint8_t EmotiBit::update()
 
 		if (_sendTestData)
 		{
-			appendTestData(_outDataPackets);
+			appendTestData(_outDataPackets, _outDataPacketCounter);
 			if (getPowerMode() == PowerMode::NORMAL_POWER)
 			{
 				_emotiBitWiFi.sendData(_outDataPackets);
@@ -820,6 +833,12 @@ uint8_t EmotiBit::update()
 				writeSdCardMessage(_outDataPackets);
 				_outDataPackets = "";
 			}
+			// TODO: modify for all sensor calibration compatibility
+			if (emotibitcalibration.gsrcalibration.isCalibrated()/*add other sensors .iscalibrated in this if*/)
+			{
+				Serial.println("Entered to TX onver WIfi");
+				sendCalibrationPacket();
+			}
 		}
 	}
 
@@ -837,6 +856,31 @@ uint8_t EmotiBit::update()
 
 		hibernate();
 	}
+}
+
+void EmotiBit::sendCalibrationPacket()
+{
+	uint8_t gsr_precision = 10;
+	for (int s = 0; s < (uint8_t)EmotiBitCalibration::SensorType::length; s++)
+	{
+		if (emotibitcalibration.getSensorToCalibrate((EmotiBitCalibration::SensorType)s))
+		{
+			EmotiBitPacket::Header header;
+			header = EmotiBitPacket::createHeader(emotibitcalibration.calibrationTag[s], millis(), _outDataPacketCounter++, emotibitcalibration.calibrationPointsPerSensor[s]);
+			_outDataPackets += EmotiBitPacket::headerToString(header);
+			_outDataPackets += ',';
+			_outDataPackets += String(emotibitcalibration.gsrcalibration.getCalibratedValue(), gsr_precision);
+			_outDataPackets += "\n";
+		}
+	}
+	_emotiBitWiFi.sendData(_outDataPackets);
+	// TODO: Do a check on availability on buffer space of _outDataPackets
+	Serial.println(_outDataPackets);
+	_outDataPackets = "";
+	Serial.println("Sending the data:");
+	Serial.println(emotibitcalibration.gsrcalibration.getCalibratedValue(), gsr_precision);
+	Serial.println("Ending Execution");
+	while (1);
 }
 
 int8_t EmotiBit::updateEDAData() 
@@ -888,10 +932,16 @@ int8_t EmotiBit::updateEDAData()
 		// Perform data averaging
 		edlTemp = average(edlBuffer);
 		edrTemp = average(edrBuffer);
-
+		
 		// Perform data conversion
 		edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
 		edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
+		
+		// CALIBRATION
+		if (emotibitcalibration.getSensorToCalibrate(EmotiBitCalibration::SensorType::GSR) && !emotibitcalibration.gsrcalibration.isCalibrated())
+		{
+			emotibitcalibration.gsrcalibration.performCalibration(edlTemp);
+		}
 
 		pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
 		if (edlClipped) {
@@ -905,7 +955,6 @@ int8_t EmotiBit::updateEDAData()
 		// Link to diff amp biasing: https://ocw.mit.edu/courses/media-arts-and-sciences/mas-836-sensor-technologies-for-interactive-environments-spring-2011/readings/MITMAS_836S11_read02_bias.pdf
 		edaTemp = (edrTemp - vRef2) / edrAmplification;	// Remove VGND bias and amplification from EDR measurement
 		edaTemp = edaTemp + edlTemp;                     // Add EDR to EDL in Volts
-											
 
 		//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
 		if (edaTemp <= vRef1) {
@@ -2191,42 +2240,46 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	sendModePacket(modePacket, _outDataPacketCounter);
 	if (getPowerMode() == PowerMode::NORMAL_POWER)
 	{
+		Serial.println("PowerMode::NORMAL_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin();
+			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
 		WiFi.lowPowerMode();
 		modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
-		Serial.println("PowerMode::NORMAL_POWER");
 	}
 	else if (getPowerMode() == PowerMode::LOW_POWER)
 	{
+		Serial.println("PowerMode::LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin();
+			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
 		WiFi.lowPowerMode();
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
-		Serial.println("PowerMode::LOW_POWER");
 	}
 	else if (getPowerMode() == PowerMode::MAX_LOW_POWER)
 	{
+		Serial.println("PowerMode::MAX_LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin();
+			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
 		WiFi.maxLowPowerMode();
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
-		Serial.println("PowerMode::MAX_LOW_POWER");
 	}
 	else if (getPowerMode() == PowerMode::WIRELESS_OFF)
 	{
-		_emotiBitWiFi.end();
 		Serial.println("PowerMode::WIRELESS_OFF");
+		_emotiBitWiFi.end();
 	}
 	else if (getPowerMode() == PowerMode::HIBERNATE)
 	{
 		Serial.println("PowerMode::HIBERNATE");
+	}
+	else
+	{
+		Serial.println("PowerMode Not Recognized");
 	}
 }
 
@@ -2303,7 +2356,7 @@ void EmotiBit::updateBatteryIndication()
 	}
 }
 
-void EmotiBit::appendTestData(String &dataMessage)
+void EmotiBit::appendTestData(String &dataMessage, uint16_t &packetNumber)
 {
 	for (uint8_t t = ((uint8_t)EmotiBit::DataType::DATA_CLIPPING) + 1; t < (uint8_t)DataType::length; t++)
 	{
@@ -2312,7 +2365,6 @@ void EmotiBit::appendTestData(String &dataMessage)
 		int n = 2;
 		for (int i = 0; i < m; i++)
 		{
-			//String data = "0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9";
 			int k;
 			for (int j = 0; j < n; j++)
 			{
@@ -2324,7 +2376,7 @@ void EmotiBit::appendTestData(String &dataMessage)
 				payload += k;
 			}
 		}
-		dataMessage += EmotiBitPacket::createPacket(typeTags[t], _outDataPacketCounter++, payload, m * n);
+		dataMessage += EmotiBitPacket::createPacket(typeTags[t], packetNumber++, payload, m * n);
 	}
 }
 
