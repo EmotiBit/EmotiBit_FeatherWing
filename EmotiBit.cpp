@@ -165,7 +165,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	_vcc = 3.3f;						// Vcc voltage
 	// vGnd = _vcc / 2.f;	// Virtual GND Voltage for eda
   //vRef1 = 0.44372341;
-	vRef1 = _vcc * (15.f / (15.f + 100.f)); // First Voltage divider refernce
+	vRef1 = 0.4289f;
+	//vRef1 = _vcc * (15.f / (15.f + 100.f)); // First Voltage divider refernce
 	vRef2 = _vcc * (100.f / (100.f + 100.f)); // Second voltage Divider reference
 
 	_adcBits = 12;
@@ -920,8 +921,9 @@ int8_t EmotiBit::updateEDAData()
 		edaTemp = edaTemp + edlTemp;                     // Add EDR to EDL in Volts
 
 		//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
-		if (edaTemp <= vRef1) {
-			edaTemp = 1; // Clamp the EDA measurement at 1 Ohm (1M uSiemens)
+		if (edaTemp - vRef1 < 0.000086f) // only track eda down to 1K Ohm
+		{
+			edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
 		}
 		else
 		{
@@ -1461,7 +1463,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	int hardware_version = (int)_version;
 	String feather_version = "Adafruit Feather M0 WiFi";
-	String firmware_version = "1.0.0";
+	String firmware_version = "1.0.1";
 
 	const uint16_t bufferSize = 1024;
 
