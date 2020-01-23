@@ -833,12 +833,6 @@ uint8_t EmotiBit::update()
 				writeSdCardMessage(_outDataPackets);
 				_outDataPackets = "";
 			}
-			// TODO: modify for all sensor calibration compatibility
-			if (emotibitcalibration.gsrcalibration.isCalibrated()/*add other sensors .iscalibrated in this if*/)
-			{
-				Serial.println("Entered to TX onver WIfi");
-				sendCalibrationPacket();
-			}
 		}
 	}
 
@@ -856,31 +850,6 @@ uint8_t EmotiBit::update()
 
 		hibernate();
 	}
-}
-
-void EmotiBit::sendCalibrationPacket()
-{
-	uint8_t gsr_precision = 10;
-	for (int s = 0; s < (uint8_t)EmotiBitCalibration::SensorType::length; s++)
-	{
-		if (emotibitcalibration.getSensorToCalibrate((EmotiBitCalibration::SensorType)s))
-		{
-			EmotiBitPacket::Header header;
-			header = EmotiBitPacket::createHeader(emotibitcalibration.calibrationTag[s], millis(), _outDataPacketCounter++, emotibitcalibration.calibrationPointsPerSensor[s]);
-			_outDataPackets += EmotiBitPacket::headerToString(header);
-			_outDataPackets += ',';
-			_outDataPackets += String(emotibitcalibration.gsrcalibration.getCalibratedValue(), gsr_precision);
-			_outDataPackets += "\n";
-		}
-	}
-	_emotiBitWiFi.sendData(_outDataPackets);
-	// TODO: Do a check on availability on buffer space of _outDataPackets
-	Serial.println(_outDataPackets);
-	_outDataPackets = "";
-	Serial.println("Sending the data:");
-	Serial.println(emotibitcalibration.gsrcalibration.getCalibratedValue(), gsr_precision);
-	Serial.println("Ending Execution");
-	while (1);
 }
 
 int8_t EmotiBit::updateEDAData() 
@@ -936,12 +905,6 @@ int8_t EmotiBit::updateEDAData()
 		// Perform data conversion
 		edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
 		edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
-		
-		// CALIBRATION
-		if (emotibitcalibration.getSensorToCalibrate(EmotiBitCalibration::SensorType::GSR) && !emotibitcalibration.gsrcalibration.isCalibrated())
-		{
-			emotibitcalibration.gsrcalibration.performCalibration(edlTemp);
-		}
 
 		pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
 		if (edlClipped) {
