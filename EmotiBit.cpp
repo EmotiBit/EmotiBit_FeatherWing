@@ -663,7 +663,7 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 			if (header.typeTag.equals(EmotiBitPacket::TypeTag::RECORD_BEGIN)) 
 			{
 				stopTimer();	// stop the data sampling timer
-				String datetimeString = packet.substring(dataStartChar, packet.length() - 1);
+				String datetimeString = packet.substring(dataStartChar, packet.length());
 				// Write the configuration info to json file
 				String infoFilename = datetimeString + "_info.json";
 				_dataFile = SD.open(infoFilename, FILE_WRITE);
@@ -720,7 +720,7 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 			}
 
 			// Create a packet that can be logged with incrementing EmotiBit packet number
-			controlPackets += EmotiBitPacket::createPacket(header.typeTag, packetNumber++, packet.substring(dataStartChar, packet.length() - 1), header.dataLength);
+			controlPackets += EmotiBitPacket::createPacket(header.typeTag, packetNumber++, packet.substring(dataStartChar, packet.length()), header.dataLength);
 		}
 	}
 }
@@ -1447,7 +1447,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	int hardware_version = (int)_version;
 	String feather_version = "Adafruit Feather M0 WiFi";
-	String firmware_version = "0.5.8";
+	String firmware_version = "1.0.0";
 
 	const uint16_t bufferSize = 1024;
 
