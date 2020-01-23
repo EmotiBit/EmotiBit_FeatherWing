@@ -164,8 +164,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	_version = version;
 	_vcc = 3.3f;						// Vcc voltage
 	// vGnd = _vcc / 2.f;	// Virtual GND Voltage for eda
-	vRef1 = _vcc * (15.f / 115.f); // First Voltage divider refernce
-	vRef2 = _vcc / 2.f; // Second voltage Divider reference
+	vRef1 = _vcc * (15.f / (15.f + 100.f)); // First Voltage divider refernce
+	vRef2 = _vcc * (100.f / (100.f + 100.f)); // Second voltage Divider reference
 
 	_adcBits = 12;
 	adcRes = pow(2, _adcBits);	// adc bit resolution
