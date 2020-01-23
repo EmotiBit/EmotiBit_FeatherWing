@@ -164,10 +164,9 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	_version = version;
 	_vcc = 3.3f;						// Vcc voltage
 	// vGnd = _vcc / 2.f;	// Virtual GND Voltage for eda
-	//vRef1 = _vcc * (15.f / 115.f); // First Voltage divider refernce
-
-	vRef1 = 0.44372341;
-	vRef2 = _vcc / 2.f; // Second voltage Divider reference
+  //vRef1 = 0.44372341;
+	vRef1 = _vcc * (15.f / (15.f + 100.f)); // First Voltage divider refernce
+	vRef2 = _vcc * (100.f / (100.f + 100.f)); // Second voltage Divider reference
 
 	_adcBits = 12;
 	adcRes = pow(2, _adcBits);	// adc bit resolution
@@ -198,7 +197,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_edrPin = A3;
 		_sdCardChipSelectPin = 19;
 		edrAmplification = 100.f / 3.3f;
-		edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
+		edaFeedbackAmpR = 4990000.f; // edaFeedbackAmpR in Ohms
 	}
 	else if (version == Version::V02B)
 	{
@@ -208,7 +207,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_edrPin = A3;
 		_sdCardChipSelectPin = 19;
 		edrAmplification = 100.f / 1.2f;
-		edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
+		edaFeedbackAmpR = 4990000.f;; // edaFeedbackAmpR in Ohms
 	}
 #elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
 	if (version == Version::V01B || version == Version::V01C)
@@ -221,11 +220,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	analogReadResolution(_adcBits);
 #endif
 
-	//else if (version == Version::V02H)
-	//{
-	//	edrAmplification = 100.f / 3.3f;
-	//	edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
-	//}
 	// Print board-specific settings
 	Serial.println("Board-specific settings:");
 	Serial.print("buttonPin = "); Serial.println(buttonPin);
@@ -963,7 +957,14 @@ int8_t EmotiBit::updateEDAData()
 		edaTemp = edaTemp + edlTemp;                     // Add EDR to EDL in Volts
 
 		//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
-		edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in uSiemens
+		if (edaTemp <= vRef1) {
+			edaTemp = 1; // Clamp the EDA measurement at 1 Ohm (1M uSiemens)
+		}
+		else
+		{
+			edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in Siemens
+		}
+		edaTemp = edaTemp * 1000000.f; // Convert to uSiemens
 
 
 		// Add to data double buffer
