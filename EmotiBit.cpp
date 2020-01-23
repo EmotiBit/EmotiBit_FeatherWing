@@ -913,7 +913,8 @@ int8_t EmotiBit::updateEDAData()
 											
 
 		//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
-		edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in uSiemens
+		edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in Siemens
+		edaTemp = edaTemp * 1000000.f; // Convert to uSiemens
 
 
 		// Add to data double buffer
