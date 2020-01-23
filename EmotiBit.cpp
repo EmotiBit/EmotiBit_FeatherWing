@@ -196,7 +196,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_edrPin = A3;
 		_sdCardChipSelectPin = 19;
 		edrAmplification = 100.f / 3.3f;
-		edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
+		edaFeedbackAmpR = 4990000.f; // edaFeedbackAmpR in Mega Ohms
 	}
 	else if (version == Version::V02B)
 	{
@@ -206,7 +206,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_edrPin = A3;
 		_sdCardChipSelectPin = 19;
 		edrAmplification = 100.f / 1.2f;
-		edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
+		edaFeedbackAmpR = 4990000.f;; // edaFeedbackAmpR in Mega Ohms
 	
 	}
 #elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
@@ -220,11 +220,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	analogReadResolution(_adcBits);
 #endif
 
-	//else if (version == Version::V02H)
-	//{
-	//	edrAmplification = 100.f / 3.3f;
-	//	edaFeedbackAmpR = 4.99f; // edaFeedbackAmpR in Mega Ohms
-	//}
 	// Print board-specific settings
 	Serial.println("Board-specific settings:");
 	Serial.print("buttonPin = "); Serial.println(buttonPin);
