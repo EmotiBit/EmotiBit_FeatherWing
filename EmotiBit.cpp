@@ -456,8 +456,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	if (version == Version::V02H)
 	{
 		float _edlDigFiltFc;
-		//float e = 2.718281828459045;
-		//float pi = 3.141592653589793;
 		_edlDigFiltFc = 1.f / (2.f * PI * 200000.f * 0.0000047f);
 		_edlDigFiltAlpha = pow(M_E, -2.f * PI * _edlDigFiltFc / (_samplingRates.eda / _samplesAveraged.eda));
 	}
@@ -1485,7 +1483,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	int hardware_version = (int)_version;
 	String feather_version = "Adafruit Feather M0 WiFi";
-	String firmware_version = "1.0.1";
+	String firmware_version = "1.0.2";
 
 	const uint16_t bufferSize = 1024;
 
@@ -1665,9 +1663,10 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		setups[i]->set("adc_bits", _adcBits);
 		setups[i]->set("voltage_divider_resistance", edaVDivR);
 		setups[i]->set("EDR_amplification", edrAmplification);
+		setups[i]->set("EDL_digital_filter_alpha", _edlDigFiltAlpha);
 		setups[i]->set("low_pass_filter_frequency", "15.91Hz");
 		setups[i]->set("samples_averaged", _samplesAveraged.eda);
-		setups[i]->set("oversampling_rate", _samplingRates.eda);
+		setups[i]->set("oversampling_rate", _samplingRates.eda);		
 		if (root.printTo(file) == 0) {
 #ifdef DEBUG
 			Serial.println(F("Failed to write to file"));
