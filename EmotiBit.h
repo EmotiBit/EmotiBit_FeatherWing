@@ -270,6 +270,8 @@ public:
 	volatile bool _sdWrite;
 	PowerMode _powerMode;
 	bool _sendTestData = false;
+	float _edlDigFiltAlpha = 0;
+	float _edlDigFilteredVal = -1;
 
 	void setupSdCard();
 	void updateButtonPress();

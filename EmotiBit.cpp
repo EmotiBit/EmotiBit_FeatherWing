@@ -172,6 +172,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	_adcBits = 12;
 	adcRes = pow(2, _adcBits);	// adc bit resolution
 
+
+
 	if (version == Version::V01B || version == Version::V01C)
 	{
 		Serial.println("This code is not compatible with V01 (Alpha) boards");
@@ -448,6 +450,17 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	samplesAveraged.thermistor = (float)BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2 / 7.5f;
 	samplesAveraged.battery = BASE_SAMPLING_FREQ / BATTERY_SAMPLING_DIV / 1;
 	setSamplesAveraged(samplesAveraged);
+
+
+	// EDL Filter Parameters
+	if (version == Version::V02H)
+	{
+		float _edlDigFiltFc;
+		//float e = 2.718281828459045;
+		//float pi = 3.141592653589793;
+		_edlDigFiltFc = 1.f / (2.f * PI * 200000.f * 0.0000047f);
+		_edlDigFiltAlpha = pow(M_E, -2.f * PI * _edlDigFiltFc / (_samplingRates.eda / _samplesAveraged.eda));
+	}
 
 	delay(500);
 
@@ -902,6 +915,15 @@ int8_t EmotiBit::updateEDAData()
 		// Perform data averaging
 		edlTemp = average(edlBuffer);
 		edrTemp = average(edrBuffer);
+
+		// EDL Digital Filter
+		if (_edlDigFilteredVal < 0)
+		{
+			// initialize filter
+			_edlDigFilteredVal = edlTemp;
+		}
+		_edlDigFilteredVal = edlTemp * (1. - _edlDigFiltAlpha) + _edlDigFilteredVal * _edlDigFiltAlpha;
+		edlTemp = _edlDigFilteredVal;
 		
 		// Perform data conversion
 		edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
