@@ -1483,7 +1483,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	int hardware_version = (int)_version;
 	String feather_version = "Adafruit Feather M0 WiFi";
-	String firmware_version = "1.0.2";
+	String firmware_version = "1.0.3";
 
 	const uint16_t bufferSize = 1024;
 
@@ -2376,6 +2376,9 @@ bool EmotiBit::createModePacket(String &modePacket, uint16_t &packetNumber)
 	if (_sdWrite)
 	{
 		payload += EmotiBitPacket::TypeTag::RECORD_BEGIN;
+		// ToDo: Consider if we want to send the sdCardFilename in a separate key-value pair
+		payload += ',';
+		payload += _sdCardFilename;
 	}
 	else
 	{
