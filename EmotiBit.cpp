@@ -432,15 +432,15 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	samplingRates.eda = BASE_SAMPLING_FREQ / EDA_SAMPLING_DIV;
 	samplingRates.humidity = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
 	samplingRates.temperature = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
-	samplingRates.thermopile = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
+	samplingRates.thermopile = (float) BASE_SAMPLING_FREQ / (float) THERMOPILE_SAMPLING_DIV;
 	setSamplingRates(samplingRates);
 
 	// ToDo: make target down-sampled rates more transparent
 	EmotiBit::SamplesAveraged samplesAveraged;
-	samplesAveraged.eda = BASE_SAMPLING_FREQ / EDA_SAMPLING_DIV / 15;
-	samplesAveraged.humidity = (float)BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2 / 7.5f;
-	samplesAveraged.temperature = (float)BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2 / 7.5f;
-	samplesAveraged.thermopile = (float)BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2 / 7.5f;
+	samplesAveraged.eda = samplingRates.eda / 15;
+	samplesAveraged.humidity = (float)samplingRates.humidity / 7.5f;
+	samplesAveraged.temperature = (float)samplingRates.temperature / 7.5f;
+	samplesAveraged.thermopile = (float)samplingRates.thermopile / 7.5f;
 	samplesAveraged.battery = BASE_SAMPLING_FREQ / BATTERY_SAMPLING_DIV / 1;
 	setSamplesAveraged(samplesAveraged);
 
@@ -732,9 +732,9 @@ bool EmotiBit::readButton()
 
 void EmotiBit::updateButtonPress()
 {
-	uint16_t minShortButtonPress = 500;
+	uint16_t minShortButtonPress = 250;
 	uint16_t minLongButtonPress = 3000;
-	static uint32_t buttonPressTimer = millis();
+	static uint32_t buttonPressedTimer = millis();
 	static bool buttonPreviouslyPressed = false;
 
 	// ToDo: create a mechanism
@@ -743,28 +743,29 @@ void EmotiBit::updateButtonPress()
 	if (buttonPressed)
 	{
 		buttonPreviouslyPressed = true;
+
+		if (millis() - buttonPressedTimer > minLongButtonPress)
+		{
+			Serial.print("onLongPress: ");
+			Serial.println(millis() - buttonPressedTimer);
+			// ToDo: Send BL packet
+			(onLongPressCallback());
+		}
 	}
 	else
 	{
 		if (buttonPreviouslyPressed) // Make sure button was actually pressed (not just a loop lag)
 		{
-			if (millis() - buttonPressTimer > minShortButtonPress && millis() - buttonPressTimer < minLongButtonPress)
+			if (millis() - buttonPressedTimer > minShortButtonPress && millis() - buttonPressedTimer < minLongButtonPress)
 			{
 				Serial.print("onShortPress: ");
-				Serial.println(millis() - buttonPressTimer);
+				Serial.println(millis() - buttonPressedTimer);
 				// ToDo: Send BS packet
 				(onShortPressCallback());
 			}
-			if (millis() - buttonPressTimer > minLongButtonPress)
-			{
-				Serial.print("onLongPress: ");
-				Serial.println(millis() - buttonPressTimer);
-				// ToDo: Send BL packet
-				(onLongPressCallback());
-			}
 		}
 		buttonPreviouslyPressed = false;
-		buttonPressTimer = millis();	// reset the timer until the button is pressed
+		buttonPressedTimer = millis();	// reset the timer until the button is pressed
 	}
 }
 
@@ -1475,7 +1476,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	int hardware_version = (int)_version;
 	String feather_version = "Adafruit Feather M0 WiFi";
-	String firmware_version = "1.0.4";
+	String firmware_version = "1.0.7";
 
 	const uint16_t bufferSize = 1024;
 
@@ -1516,8 +1517,6 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		typeTags[i]->add("AZ");
 		infos[i]->set("channel_count", 3);
 		infos[i]->set("nominal_srate", _samplingRates.accelerometer);
-		infos[i]->set("acc_bwp", imuSettings.acc_bwp);
-		infos[i]->set("acc_us", imuSettings.acc_us);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "g");
 		infos[i]->set("source_id", source_id);
@@ -1527,6 +1526,8 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		setups[i]->set("range", _accelerometerRange);
+		setups[i]->set("acc_bwp", imuSettings.acc_bwp);
+		setups[i]->set("acc_us", imuSettings.acc_us);
 
 		if (root.printTo(file) == 0) {
 #ifdef DEBUG
@@ -1562,8 +1563,6 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		typeTags[i]->add("GZ");
 		infos[i]->set("channel_count", 3);
 		infos[i]->set("nominal_srate", _samplingRates.gyroscope);
-		infos[i]->set("gyr_bwp", imuSettings.gyr_bwp);
-		infos[i]->set("gyr_us", imuSettings.gyr_us);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "degrees/second");
 		infos[i]->set("source_id", source_id);
@@ -1573,6 +1572,8 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		setups[i]->set("range", _gyroRange);
+		setups[i]->set("gyr_bwp", imuSettings.gyr_bwp);
+		setups[i]->set("gyr_us", imuSettings.gyr_us);
 		if (root.printTo(file) == 0) {
 #ifdef DEBUG
 			Serial.println(F("Failed to write to file"));
@@ -1776,7 +1777,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
 		typeTags[i]->add("TH");
 		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", thermopileFs);
+		infos[i]->set("nominal_srate", _samplingRates.thermopile / _samplesAveraged.thermopile);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "degrees celcius");
 		infos[i]->set("source_id", source_id);
