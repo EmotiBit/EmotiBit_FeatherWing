@@ -194,7 +194,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		edrAmplification = 100.f / 3.3f;
 		edaFeedbackAmpR = 5070000.f; // empirically derived average edaFeedbackAmpR in Ohms (theoretical 4990000.f)
 		vRef1 = 0.426f; // empirically derived minimum voltage divider value [theoretical 15/(15 + 100)]
-		vRef2 = 1.631733232f; // empirically derived average voltage divider value [theoretical _vcc * (100.f / (100.f + 100.f))]
+		vRef2 = 1.634591173; // empirically derived average voltage divider value [theoretical _vcc * (100.f / (100.f + 100.f))]
 	}
 	else if (version == Version::V02B)
 	{
