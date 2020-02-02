@@ -192,9 +192,9 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_edrPin = A3;
 		_sdCardChipSelectPin = 19;
 		edrAmplification = 100.f / 3.3f;
-		edaFeedbackAmpR = 5084000.f; // empirically derived average edaFeedbackAmpR in Ohms (theoretical 4990000.f)
-		vRef1 = 0.429f; // empirically derived average voltage divider [theoretical 15/(15 + 100)]
-		vRef2 = 1.6275f; // empirically derived average voltage divider [theoretical _vcc * (100.f / (100.f + 100.f))]
+		edaFeedbackAmpR = 5070000.f; // empirically derived average edaFeedbackAmpR in Ohms (theoretical 4990000.f)
+		vRef1 = 0.426f; // empirically derived average voltage divider [theoretical 15/(15 + 100)]
+		vRef2 = 1.631733232f; // empirically derived average voltage divider [theoretical _vcc * (100.f / (100.f + 100.f))]
 	}
 	else if (version == Version::V02B)
 	{
@@ -1476,7 +1476,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	int hardware_version = (int)_version;
 	String feather_version = "Adafruit Feather M0 WiFi";
-	String firmware_version = "1.0.7";
+	String firmware_version = "1.0.8";
 
 	const uint16_t bufferSize = 1024;
 
