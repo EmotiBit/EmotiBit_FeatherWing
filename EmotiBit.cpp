@@ -413,6 +413,16 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	tempHumiditySensor.changeSetting(Si7013::Settings::VIN_UNBUFFERED);
 	tempHumiditySensor.changeSetting(Si7013::Settings::VREFP_VDDA);
 	tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NO_HOLD);
+
+	tempHumiditySensor.readSerialNumber();
+	Serial.print("Si7013 Electronic Serial Number: ");
+	Serial.print(tempHumiditySensor.sernum_a);
+	Serial.print(", ");
+	Serial.print(tempHumiditySensor.sernum_b);
+	Serial.print("\n");
+	Serial.print("Model: ");
+	Serial.println(tempHumiditySensor._model);
+
 	tempHumiditySensor.startHumidityTempMeasurement();
 	
 	// Thermopile
@@ -1476,7 +1486,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	int hardware_version = (int)_version;
 	String feather_version = "Adafruit Feather M0 WiFi";
-	String firmware_version = "1.0.9";
+	String firmware_version = "1.0.10";
 
 	const uint16_t bufferSize = 1024;
 
@@ -1739,6 +1749,8 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("units", "degrees celcius");
 		infos[i]->set("source_id", source_id);
 		infos[i]->set("hardware_version", hardware_version);
+		infos[i]->set("sensor_serial_number_a", tempHumiditySensor.sernum_a);
+		infos[i]->set("sensor_serial_number_b", tempHumiditySensor.sernum_b);
 		infos[i]->set("feather_version", feather_version);
 		infos[i]->set("firmware_version", firmware_version);
 		infos[i]->set("created_at", datetimeString);
