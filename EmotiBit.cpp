@@ -163,16 +163,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 
 	_version = version;
 	_vcc = 3.3f;						// Vcc voltage
-	// vGnd = _vcc / 2.f;	// Virtual GND Voltage for eda
-  //vRef1 = 0.44372341;
-	vRef1 = 0.4289f;
-	//vRef1 = _vcc * (15.f / (15.f + 100.f)); // First Voltage divider refernce
-	vRef2 = _vcc * (100.f / (100.f + 100.f)); // Second voltage Divider reference
-
-	_adcBits = 12;
-	adcRes = pow(2, _adcBits);	// adc bit resolution
-
-
 
 	if (version == Version::V01B || version == Version::V01C)
 	{
@@ -184,6 +174,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	// Set board specific pins and constants
 #if defined(ADAFRUIT_FEATHER_M0)
 	_batteryReadPin = A7;
+	_adcBits = 12;
+	adcRes = pow(2, _adcBits);	// adc bit resolution
 	if (version == Version::V01B || version == Version::V01C)
 	{
 		_hibernatePin = 5; // gpio pin assigned to the mosfet
@@ -200,7 +192,9 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_edrPin = A3;
 		_sdCardChipSelectPin = 19;
 		edrAmplification = 100.f / 3.3f;
-		edaFeedbackAmpR = 4990000.f; // edaFeedbackAmpR in Ohms
+		edaFeedbackAmpR = 5070000.f; // empirically derived average edaFeedbackAmpR in Ohms (theoretical 4990000.f)
+		vRef1 = 0.426f; // empirically derived minimum voltage divider value [theoretical 15/(15 + 100)]
+		vRef2 = 1.634591173; // empirically derived average voltage divider value [theoretical _vcc * (100.f / (100.f + 100.f))]
 	}
 	else if (version == Version::V02B)
 	{
@@ -220,7 +214,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_gsrLowPin = A3;
 		_gsrHighPin = A4;
 	}
-	analogReadResolution(_adcBits);
 #endif
 
 	// Print board-specific settings
@@ -425,7 +418,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	// Thermopile
 	MLX90632::status returnError; // Required as a parameter for begin() function in the MLX library 
 	thermopile.begin(deviceAddress.MLX, *_EmotiBit_i2c, returnError);
-	thermopile.setMeasurementRate(8);
+	thermopile.setMeasurementRate(thermopileFs);
 	//lastThermopileBegin = millis();
 
 	// ------------ BEGIN ino refactoring ------------//
@@ -439,15 +432,15 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	samplingRates.eda = BASE_SAMPLING_FREQ / EDA_SAMPLING_DIV;
 	samplingRates.humidity = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
 	samplingRates.temperature = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
-	samplingRates.thermistor = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
+	samplingRates.thermopile = (float) BASE_SAMPLING_FREQ / (float) THERMOPILE_SAMPLING_DIV;
 	setSamplingRates(samplingRates);
 
 	// ToDo: make target down-sampled rates more transparent
 	EmotiBit::SamplesAveraged samplesAveraged;
-	samplesAveraged.eda = BASE_SAMPLING_FREQ / EDA_SAMPLING_DIV / 15;
-	samplesAveraged.humidity = (float)BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2 / 7.5f;
-	samplesAveraged.temperature = (float)BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2 / 7.5f;
-	samplesAveraged.thermistor = (float)BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2 / 7.5f;
+	samplesAveraged.eda = samplingRates.eda / 15;
+	samplesAveraged.humidity = (float)samplingRates.humidity / 7.5f;
+	samplesAveraged.temperature = (float)samplingRates.temperature / 7.5f;
+	samplesAveraged.thermopile = (float)samplingRates.thermopile / 7.5f;
 	samplesAveraged.battery = BASE_SAMPLING_FREQ / BATTERY_SAMPLING_DIV / 1;
 	setSamplesAveraged(samplesAveraged);
 
@@ -455,9 +448,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	// EDL Filter Parameters
 	if (version == Version::V02H)
 	{
-		float _edlDigFiltFc;
-		_edlDigFiltFc = 1.f / (2.f * PI * 200000.f * 0.0000047f);
-		_edlDigFiltAlpha = pow(M_E, -2.f * PI * _edlDigFiltFc / (_samplingRates.eda / _samplesAveraged.eda));
+		edaCrossoverFilterFreq = 1.f / (2.f * PI * 200000.f * 0.0000047f);
+		_edlDigFiltAlpha = pow(M_E, -2.f * PI * edaCrossoverFilterFreq / (_samplingRates.eda / _samplesAveraged.eda));
 	}
 
 	delay(500);
@@ -740,9 +732,9 @@ bool EmotiBit::readButton()
 
 void EmotiBit::updateButtonPress()
 {
-	uint16_t minShortButtonPress = 500;
+	uint16_t minShortButtonPress = 250;
 	uint16_t minLongButtonPress = 3000;
-	static uint32_t buttonPressTimer = millis();
+	static uint32_t buttonPressedTimer = millis();
 	static bool buttonPreviouslyPressed = false;
 
 	// ToDo: create a mechanism
@@ -751,28 +743,29 @@ void EmotiBit::updateButtonPress()
 	if (buttonPressed)
 	{
 		buttonPreviouslyPressed = true;
+
+		if (millis() - buttonPressedTimer > minLongButtonPress)
+		{
+			Serial.print("onLongPress: ");
+			Serial.println(millis() - buttonPressedTimer);
+			// ToDo: Send BL packet
+			(onLongPressCallback());
+		}
 	}
 	else
 	{
 		if (buttonPreviouslyPressed) // Make sure button was actually pressed (not just a loop lag)
 		{
-			if (millis() - buttonPressTimer > minShortButtonPress && millis() - buttonPressTimer < minLongButtonPress)
+			if (millis() - buttonPressedTimer > minShortButtonPress && millis() - buttonPressedTimer < minLongButtonPress)
 			{
 				Serial.print("onShortPress: ");
-				Serial.println(millis() - buttonPressTimer);
+				Serial.println(millis() - buttonPressedTimer);
 				// ToDo: Send BS packet
 				(onShortPressCallback());
 			}
-			if (millis() - buttonPressTimer > minLongButtonPress)
-			{
-				Serial.print("onLongPress: ");
-				Serial.println(millis() - buttonPressTimer);
-				// ToDo: Send BL packet
-				(onLongPressCallback());
-			}
 		}
 		buttonPreviouslyPressed = false;
-		buttonPressTimer = millis();	// reset the timer until the button is pressed
+		buttonPressedTimer = millis();	// reset the timer until the button is pressed
 	}
 }
 
@@ -1483,7 +1476,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	int hardware_version = (int)_version;
 	String feather_version = "Adafruit Feather M0 WiFi";
-	String firmware_version = "1.0.3";
+	String firmware_version = "1.0.9";
 
 	const uint16_t bufferSize = 1024;
 
@@ -1524,10 +1517,8 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		typeTags[i]->add("AZ");
 		infos[i]->set("channel_count", 3);
 		infos[i]->set("nominal_srate", _samplingRates.accelerometer);
-		infos[i]->set("acc_bwp", imuSettings.acc_bwp);
-		infos[i]->set("acc_us", imuSettings.acc_us);
 		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "G/second");
+		infos[i]->set("units", "g");
 		infos[i]->set("source_id", source_id);
 		infos[i]->set("hardware_version", hardware_version);
 		infos[i]->set("feather_version", feather_version);
@@ -1535,6 +1526,8 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		setups[i]->set("range", _accelerometerRange);
+		setups[i]->set("acc_bwp", imuSettings.acc_bwp);
+		setups[i]->set("acc_us", imuSettings.acc_us);
 
 		if (root.printTo(file) == 0) {
 #ifdef DEBUG
@@ -1570,8 +1563,6 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		typeTags[i]->add("GZ");
 		infos[i]->set("channel_count", 3);
 		infos[i]->set("nominal_srate", _samplingRates.gyroscope);
-		infos[i]->set("gyr_bwp", imuSettings.gyr_bwp);
-		infos[i]->set("gyr_us", imuSettings.gyr_us);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "degrees/second");
 		infos[i]->set("source_id", source_id);
@@ -1581,6 +1572,8 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		setups[i]->set("range", _gyroRange);
+		setups[i]->set("gyr_bwp", imuSettings.gyr_bwp);
+		setups[i]->set("gyr_us", imuSettings.gyr_us);
 		if (root.printTo(file) == 0) {
 #ifdef DEBUG
 			Serial.println(F("Failed to write to file"));
@@ -1616,7 +1609,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("channel_count", 3);
 		infos[i]->set("nominal_srate", _samplingRates.magnetometer);
 		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "raw samples");
+		infos[i]->set("units", "microhenries");
 		infos[i]->set("source_id", source_id);
 		infos[i]->set("hardware_version", hardware_version);
 		infos[i]->set("feather_version", feather_version);
@@ -1661,10 +1654,12 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		setups[i]->set("adc_bits", _adcBits);
-		setups[i]->set("voltage_divider_resistance", edaVDivR);
+		setups[i]->set("voltage_reference_1", vRef1);
+		setups[i]->set("voltage_reference_2", vRef2);
+		setups[i]->set("EDA_feedback_amp_resistance", edaFeedbackAmpR);
 		setups[i]->set("EDR_amplification", edrAmplification);
 		setups[i]->set("EDL_digital_filter_alpha", _edlDigFiltAlpha);
-		setups[i]->set("low_pass_filter_frequency", "15.91Hz");
+		setups[i]->set("EDA_crossover_filter_frequency", edaCrossoverFilterFreq);
 		setups[i]->set("samples_averaged", _samplesAveraged.eda);
 		setups[i]->set("oversampling_rate", _samplingRates.eda);		
 		if (root.printTo(file) == 0) {
@@ -1773,34 +1768,26 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		uint8_t i = 0;
 		infos[i] = &(root.createNestedObject("info"));
 
-		// Thermistor
+		// thermopile
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Thermistor");
-		infos[i]->set("type", "Thermistor");
+		infos[i]->set("name", "Thermopile");
+		infos[i]->set("type", "Temperature");
 		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
 		typeTags[i]->add("TH");
 		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", _samplingRates.thermistor / _samplesAveraged.thermistor);
+		infos[i]->set("nominal_srate", _samplingRates.thermopile / _samplesAveraged.thermopile);
 		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "raw adc units");
+		infos[i]->set("units", "degrees celcius");
 		infos[i]->set("source_id", source_id);
 		infos[i]->set("hardware_version", hardware_version);
 		infos[i]->set("feather_version", feather_version);
 		infos[i]->set("firmware_version", firmware_version);
 		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("ADC_speed", "ADC_NORMAL");
-		setups[i]->set("Vin_buffering", "VIN_UNBUFFERED");
-		setups[i]->set("VREFP", "VREFP_VDDA");
-		setups[i]->set("voltage_divider_resistance", 10000);
-		setups[i]->set("thermistor_resistance", 10000);
-		setups[i]->set("low_pass_filter_frequency", "15.91Hz");
-		setups[i]->set("low_pass_filter_frequency", "0.1591Hz");
-		setups[i]->set("amplification", 10);
-		setups[i]->set("samples_averaged", _samplesAveraged.thermistor);
-		setups[i]->set("oversampling_rate", _samplingRates.thermistor);
+		setups[i]->set("samples_averaged", _samplesAveraged.thermopile);
+		setups[i]->set("oversampling_rate", _samplingRates.thermopile);
 		if (root.printTo(file) == 0) {
 #ifdef DEBUG
 			Serial.println(F("Failed to write to file"));

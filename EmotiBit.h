@@ -105,7 +105,7 @@ public:
 		float magnetometer = 0.f;
 		float humidity = 0.f;
 		float temperature = 0.f;
-		float thermistor = 0.f;
+		float thermopile = 0.f;
 		float ppg = 0.f;
 	};
 
@@ -113,7 +113,7 @@ public:
 		uint8_t eda = 1;
 		uint8_t humidity = 1;
 		uint8_t temperature = 1;
-		uint8_t thermistor = 1;
+		uint8_t thermopile = 1;
 		uint8_t battery = 1;
 	};
 
@@ -209,12 +209,14 @@ public:
 	float adcRes;
 	float edaVDivR;
 	float edaFeedbackAmpR;
+	float edaCrossoverFilterFreq;
 	uint8_t _sdCardChipSelectPin;	// ToDo: create getter and make private
 	BMM150TrimData bmm150TrimData;
 	bool bmm150XYClipped = false;
 	bool bmm150ZHallClipped = false;
 	uint8_t _hibernatePin;
 	bool thermopileBegun = false;
+	int thermopileFs = 8; // Changing this may wear out the Melexis flash
 
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
@@ -391,7 +393,7 @@ private:
 	// ToDo: add assignment for dynamic allocation;
 	BufferFloat edlBuffer = BufferFloat(20);	
 	BufferFloat edrBuffer = BufferFloat(20);	
-	BufferFloat thermistorBuffer = BufferFloat(8);	
+	BufferFloat thermopileBuffer = BufferFloat(8);	
 	BufferFloat temperatureBuffer = BufferFloat(8);	
 	BufferFloat humidityBuffer = BufferFloat(8);
 	BufferFloat batteryVoltageBuffer = BufferFloat(8);
