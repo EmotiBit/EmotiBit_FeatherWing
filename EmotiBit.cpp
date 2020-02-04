@@ -923,15 +923,6 @@ int8_t EmotiBit::updateEDAData()
 		edlTemp = average(edlBuffer);
 		edrTemp = average(edrBuffer);
 
-		// EDL Digital Filter
-		if (_edlDigFilteredVal < 0)
-		{
-			// initialize filter
-			_edlDigFilteredVal = edlTemp;
-		}
-		_edlDigFilteredVal = edlTemp * (1. - _edlDigFiltAlpha) + _edlDigFilteredVal * _edlDigFiltAlpha;
-		edlTemp = _edlDigFilteredVal;
-		
 		// Perform data conversion
 		edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
 		edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
@@ -945,6 +936,16 @@ int8_t EmotiBit::updateEDAData()
 		if (edrClipped) {
 			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
 		}
+
+		// EDL Digital Filter
+		if (_edlDigFilteredVal < 0)
+		{
+			// initialize filter
+			_edlDigFilteredVal = edlTemp;
+		}
+		_edlDigFilteredVal = edlTemp * (1. - _edlDigFiltAlpha) + _edlDigFilteredVal * _edlDigFiltAlpha;
+		edlTemp = _edlDigFilteredVal;
+
 		// Link to diff amp biasing: https://ocw.mit.edu/courses/media-arts-and-sciences/mas-836-sensor-technologies-for-interactive-environments-spring-2011/readings/MITMAS_836S11_read02_bias.pdf
 		edaTemp = (edrTemp - vRef2) / edrAmplification;	// Remove VGND bias and amplification from EDR measurement
 		edaTemp = edaTemp + edlTemp;                     // Add EDR to EDL in Volts
@@ -1492,7 +1493,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	int hardware_version = (int)_version;
 	String feather_version = "Adafruit Feather M0 WiFi";
-	String firmware_version = "1.0.11";
+	String firmware_version = "1.0.12";
 
 	const uint16_t bufferSize = 1024;
 
