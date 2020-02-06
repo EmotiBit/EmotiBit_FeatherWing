@@ -89,6 +89,8 @@ void EmotiBit::bmm150ReadTrimRegisters()
 
 uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 {
+	bool status = true;
+
 	Serial.print("EmotiBit version: ");
 	Serial.println((int)version);
 	if (!_outDataPackets.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
@@ -272,7 +274,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 
 	// Setup IMU
 	Serial.println("Initializing IMU device....");
-	bool status = BMI160.begin(BMI160GenClass::I2C_MODE, *_EmotiBit_i2c);
+	status = BMI160.begin(BMI160GenClass::I2C_MODE, *_EmotiBit_i2c);
 	if (status)
 	{
 		uint8_t dev_id = BMI160.getDeviceID();
@@ -387,7 +389,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 
 	// Setup Temperature / Humidity Sensor
 	Serial.println("Configuring Temperature / Humidity Sensor");
-	bool status = tempHumiditySensor.setup(*_EmotiBit_i2c);
+	status = tempHumiditySensor.setup(*_EmotiBit_i2c);
 	if (status)
 	{
 		tempHumiditySensor.changeSetting(Si7013::Settings::RESOLUTION_H11_T11);
@@ -415,7 +417,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	
 	// Thermopile
 	MLX90632::status returnError; // Required as a parameter for begin() function in the MLX library 
-	bool status = thermopile.begin(deviceAddress.MLX, *_EmotiBit_i2c, returnError);
+	status = thermopile.begin(deviceAddress.MLX, *_EmotiBit_i2c, returnError);
 	if (status)
 	{
 		thermopile.setMeasurementRate(thermopileFs);
