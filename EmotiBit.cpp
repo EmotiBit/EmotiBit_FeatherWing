@@ -122,44 +122,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::BATTERY_PERCENT] = &batteryPercent;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = &dataOverflow;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = &dataClipping;
-	//dataDoubleBuffers[(uint8_t)EmotiBit::DataType::PUSH_WHILE_GETTING] = &pushWhileGetting;
-
-	//bufferCapacity = 32;
-	//eda = DoubleBufferFloat(bufferCapacity);
-	//ppgInfrared = DoubleBufferFloat(bufferCapacity);
-	//ppgRed = DoubleBufferFloat(bufferCapacity);
-	//ppgGreen = DoubleBufferFloat(bufferCapacity);
-	//temp0 = DoubleBufferFloat(bufferCapacity);
-	//tempHP0 = DoubleBufferFloat(bufferCapacity);
-	//humidity0 = DoubleBufferFloat(bufferCapacity);
-	//accelX = DoubleBufferFloat(bufferCapacity);
-	//accelY = DoubleBufferFloat(bufferCapacity);
-	//accelZ = DoubleBufferFloat(bufferCapacity);
-	//gyroX = DoubleBufferFloat(bufferCapacity);
-	//gyroY = DoubleBufferFloat(bufferCapacity);
-	//gyroZ = DoubleBufferFloat(bufferCapacity);
-	//magX = DoubleBufferFloat(bufferCapacity);
-	//magY = DoubleBufferFloat(bufferCapacity);
-	//magZ = DoubleBufferFloat(bufferCapacity);
-	//edl.resize(bufferCapacity);
-	//edr.resize(bufferCapacity);
-	//ppgInfrared.resize(bufferCapacity);
-	//ppgRed.resize(bufferCapacity);
-	//ppgGreen.resize(bufferCapacity);
-	//temp0.resize(bufferCapacity); 
-	//tempHP0.resize(bufferCapacity);
-	//humidity0.resize(bufferCapacity);
-	//accelX.resize(bufferCapacity);
-	//accelY.resize(bufferCapacity);
-	//accelZ.resize(bufferCapacity);
-	//gyroX.resize(bufferCapacity);
-	//gyroY.resize(bufferCapacity);
-	//gyroZ.resize(bufferCapacity);
-	//magX.resize(bufferCapacity);
-	//magY.resize(bufferCapacity);
-	//magZ.resize(bufferCapacity);
-	//batteryVoltage.resize(1);
-	//batteryPercent.resize(1);
 
 	_version = version;
 	_vcc = 3.3f;						// Vcc voltage
@@ -1952,6 +1914,14 @@ void EmotiBit::readSensors()
 			//battLed = false;
 		}
 
+		if (readButton())
+		{
+			// Turn on the LEDs when the button is pressed
+			led.setLED(uint8_t(EmotiBit::Led::RED), true);
+			led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+			led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+		}
+
 		//static bool recordLedStatus = false;
 		if (_sdWrite) 
 		{
@@ -2345,7 +2315,7 @@ void EmotiBit::updateBatteryIndication()
 	}
 	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
 		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_LOW);
-		BattLedDuration = 100;
+		BattLedDuration = 1;
 	}
 }
 
