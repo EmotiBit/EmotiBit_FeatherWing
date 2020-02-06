@@ -93,6 +93,9 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 
 	Serial.print("EmotiBit version: ");
 	Serial.println((int)version);
+	Serial.print("Firmware version: ");
+	Serial.println(firmware_version);
+
 	if (!_outDataPackets.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
 		Serial.println("Failed to reserve memory for output");
 		while (true) {
@@ -2097,7 +2100,7 @@ void EmotiBit::hibernate() {
 	chipBegun.NCP5623 = false;
 	chipBegun.MLX90632 = false;
 
-	Serial.println("Ending WiFi...");
+	Serial.println("Shutting down WiFi...");
 	_emotiBitWiFi.end();
 
 	Serial.println("Shutting down serial interfaces...");
