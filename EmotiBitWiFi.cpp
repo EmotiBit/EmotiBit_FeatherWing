@@ -92,9 +92,12 @@ void EmotiBitWiFi::end()
 		Serial.println("Disconnecting WiFi...");
 		WiFi.disconnect();
 	}
-	Serial.println("Ending WiFi...");
-	_wifiOff = true;
-	WiFi.end();
+	if (!_wifiOff)
+	{
+		Serial.println("Ending WiFi...");
+		_wifiOff = true;
+		WiFi.end();
+	}
 }
 
 bool EmotiBitWiFi::isOff()

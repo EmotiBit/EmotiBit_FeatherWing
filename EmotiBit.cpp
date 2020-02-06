@@ -2089,9 +2089,6 @@ void EmotiBit::hibernate() {
 	led.setLED(uint8_t(EmotiBit::Led::RED), true);
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-	
-	Serial.println("Ending WiFi...");
-	_emotiBitWiFi.end();
 
 	chipBegun.MAX30101 = false;
 	chipBegun.BMM150 = false;
@@ -2099,6 +2096,9 @@ void EmotiBit::hibernate() {
 	chipBegun.SI7013 = false;
 	chipBegun.NCP5623 = false;
 	chipBegun.MLX90632 = false;
+
+	Serial.println("Ending WiFi...");
+	_emotiBitWiFi.end();
 
 	Serial.println("Shutting down serial interfaces...");
 	SPI.end(); 
