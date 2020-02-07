@@ -123,4 +123,5 @@ public:
 	bool isConnected();
 	bool isOff();
 	int8_t status();
+	void checkWiFi101FirmwareVersion();
 };

@@ -240,9 +240,9 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	led.setLEDpwm((uint8_t)Led::RED, 8);
 	led.setLEDpwm((uint8_t)Led::BLUE, 8);
 	led.setLEDpwm((uint8_t)Led::YELLOW, 8);
-	led.setLED(uint8_t(EmotiBit::Led::RED), true);
-	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+	led.setLED(uint8_t(EmotiBit::Led::RED), false);
+	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
 	chipBegun.NCP5623 = true;
 
 	//// Setup PPG sensor
@@ -431,7 +431,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		hibernate();
 	}
 	
-	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 
 	// setup sampling rates
 	EmotiBit::SamplingRates samplingRates;
@@ -463,7 +463,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	delay(500);
 
 	setupSdCard();
-	led.setLED(uint8_t(EmotiBit::Led::RED), false);
+	led.setLED(uint8_t(EmotiBit::Led::RED), true);
 
 	//_emotiBitWiFi.setup();
 #if defined(ADAFRUIT_FEATHER_M0)
@@ -471,6 +471,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 #endif
 	WiFi.lowPowerMode();
 	_emotiBitWiFi.begin();
+	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 
 	setPowerMode(PowerMode::NORMAL_POWER);
 
@@ -580,7 +581,10 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		startTimer(BASE_SAMPLING_FREQ);
 	}
 
+	led.setLED(uint8_t(EmotiBit::Led::RED), false);
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+
 
 } // Setup
 
@@ -1908,6 +1912,16 @@ void EmotiBit::readSensors()
 	Serial.println("readSensors()");
 #endif // DEBUG
 
+	// EDA
+	if (acquireData.eda) {
+		static uint16_t edaCounter = 0;
+		edaCounter++;
+		if (edaCounter == EDA_SAMPLING_DIV) {
+			int8_t tempStatus = updateEDAData();
+			edaCounter = 0;
+		}
+	}
+
 	// LED STATUS CHANGE SEGMENT
 	if (chipBegun.NCP5623)
 	{
@@ -1929,11 +1943,12 @@ void EmotiBit::readSensors()
 			//static bool battLed = false;
 			if (battIndicationSeq)
 			{
-				static uint32_t BattLedstatusChangeTime = millis();
-				if (millis() - BattLedstatusChangeTime > BattLedDuration)
-				{
-					led.setLED(uint8_t(EmotiBit::Led::YELLOW), !led.getLED(uint8_t(EmotiBit::Led::YELLOW)));
-				}
+				led.setLED(uint8_t(EmotiBit::Led::YELLOW));
+				//static uint32_t BattLedstatusChangeTime = millis();
+				//if (millis() - BattLedstatusChangeTime > BattLedDuration)
+				//{
+				//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), !led.getLED(uint8_t(EmotiBit::Led::YELLOW)));
+				//}
 				//if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
 				//{
 				//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
@@ -1989,16 +2004,6 @@ void EmotiBit::readSensors()
 		}
 	}
 
-	// EDA
-	if (acquireData.eda) {
-		static uint16_t edaCounter = 0;
-		edaCounter++;
-		if (edaCounter == EDA_SAMPLING_DIV) {
-			int8_t tempStatus = updateEDAData();
-			edaCounter = 0;
-		}
-	}
-
 	// Temperature / Humidity Sensor
 	if (chipBegun.SI7013 && acquireData.tempHumidity) {
 		static uint16_t temperatureCounter = 0;
@@ -2047,7 +2052,7 @@ void EmotiBit::readSensors()
 	}
 
 	// Battery (all analog reads must be in the ISR)
-	// TODO: use the stored BAtt value instead of calling readBatteryPercent again
+	// TODO: use the stored/averaged Battery value instead of calling readBatteryPercent again
 	static uint16_t batteryCounter = 0;
 	batteryCounter++;
 	if (batteryCounter == BATTERY_SAMPLING_DIV) {
