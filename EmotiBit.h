@@ -27,7 +27,7 @@ class EmotiBit {
   
 public:
 
-	const String firmware_version = "1.0.15";
+	const String firmware_version = "1.0.16";
 	
 	enum class SensorTimer {
 		MANUAL

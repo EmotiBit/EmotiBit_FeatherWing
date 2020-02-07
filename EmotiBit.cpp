@@ -1954,34 +1954,11 @@ void EmotiBit::readSensors()
 			if (battIndicationSeq)
 			{
 				led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-			//static uint32_t BattLedstatusChangeTime = millis();
-			//if (millis() - BattLedstatusChangeTime > BattLedDuration)
-			//{
-			//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), !led.getLED(uint8_t(EmotiBit::Led::YELLOW)));
-			//}
 			}
 			else
 			{
 				led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
 			}
-			//if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
-			//{
-			//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-			//	battLed = false;
-			//	BattLedstatusChangeTime = millis();
-			//}
-			//else if (!battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
-			//{
-			//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-			//	battLed = true;
-			//	BattLedstatusChangeTime = millis();
-			//}
-		}
-		else 
-		{
-			led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-			//battLed = false;
-		}
 
 			// Recording status LED
 			if (_sdWrite)
