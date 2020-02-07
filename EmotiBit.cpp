@@ -679,7 +679,7 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 	{
 		Serial.println(packet);
 		dataStartChar = EmotiBitPacket::getHeader(packet, header);
-		if (dataStartChar > 0)
+		if (dataStartChar > 0 || dataStartChar == EmotiBitPacket::NO_PACKET_DATA)
 		{
 			if (header.typeTag.equals(EmotiBitPacket::TypeTag::RECORD_BEGIN)) 
 			{

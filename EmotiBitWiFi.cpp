@@ -451,6 +451,7 @@ int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, uint16_t controlPort, uint
 }
 
 int8_t EmotiBitWiFi::disconnect() {
+	Serial.println("Disconnect()");
 	_isConnected = false;
 	_dataPort = -1;
 	_controlPort = -1;
