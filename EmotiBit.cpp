@@ -749,7 +749,16 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 bool EmotiBit::readButton()
 {
 	// ToDo: Consider reading pin mode https://arduino.stackexchange.com/questions/13165/how-to-read-pinmode-for-digital-pin
-	return digitalRead(buttonPin);
+	static volatile bool isReading;
+	static uint8_t buttonStatus = 0;
+	isReading = true;
+	if (!isReading)
+	{
+		// ToDo: Assess whether isReading lock is necessary
+		buttonStatus = digitalRead(buttonPin);
+	}
+	isReading = false;
+	return buttonStatus;
 }
 
 void EmotiBit::updateButtonPress()
@@ -1930,7 +1939,8 @@ void EmotiBit::readSensors()
 		if (ledCounter == LED_REFRESH_DIV)
 		{
 			ledCounter = 0;
-			// Serial.println("Time to update LED");
+
+			// WiFi connected status LED
 			if (_emotiBitWiFi.isConnected())
 			{
 				led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
@@ -1940,81 +1950,22 @@ void EmotiBit::readSensors()
 				led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 			}
 
-			//static bool battLed = false;
+			// Battery LED
 			if (battIndicationSeq)
 			{
 				led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-			//static uint32_t BattLedstatusChangeTime = millis();
-			//if (millis() - BattLedstatusChangeTime > BattLedDuration)
-			//{
-			//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), !led.getLED(uint8_t(EmotiBit::Led::YELLOW)));
-			//}
-				//static uint32_t BattLedstatusChangeTime = millis();
-				//if (millis() - BattLedstatusChangeTime > BattLedDuration)
-				//{
-				//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), !led.getLED(uint8_t(EmotiBit::Led::YELLOW)));
-				//}
-				//if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
-				//{
-				//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-				//	battLed = false;
-				//	BattLedstatusChangeTime = millis();
-				//}
-				//else if (!battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
-				//{
-				//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-				//	battLed = true;
-				//	BattLedstatusChangeTime = millis();
-				//}
 			}
 			else
 			{
 				led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-				//battLed = false;
-			}
-			//if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
-			//{
-			//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-			//	battLed = false;
-			//	BattLedstatusChangeTime = millis();
-			//}
-			//else if (!battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
-			//{
-			//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-			//	battLed = true;
-			//	BattLedstatusChangeTime = millis();
-			//}
-		}
-		else 
-		{
-			led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-			//battLed = false;
-		}
-
-			if (readButton())
-			{
-				// Turn on the LEDs when the button is pressed
-				led.setLED(uint8_t(EmotiBit::Led::RED), true);
-				led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-				led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 			}
 
-			//static bool recordLedStatus = false;
+			// Recording status LED
 			if (_sdWrite)
 			{
 				static uint32_t recordBlinkDuration = millis();
 				if (millis() - recordBlinkDuration >= 500)
 				{
-					//if (recordLedStatus == true) 
-					//{
-					//	led.setLED(uint8_t(EmotiBit::Led::RED), false);
-					//	recordLedStatus = false;
-					//}
-					//else 
-					//{
-					//	led.setLED(uint8_t(EmotiBit::Led::RED), true);
-					//	recordLedStatus = true;
-					//}
 					led.setLED(uint8_t(EmotiBit::Led::RED), !led.getLED(uint8_t(EmotiBit::Led::RED)));
 					recordBlinkDuration = millis();
 				}
@@ -2022,7 +1973,15 @@ void EmotiBit::readSensors()
 			else if (!_sdWrite && led.getLED(uint8_t(EmotiBit::Led::RED)) == true)
 			{
 				led.setLED(uint8_t(EmotiBit::Led::RED), false);
-				// recordLedStatus = false;
+			}
+
+			// Turn on all the LEDs when button pressed
+			if (readButton())
+			{
+				// Turn on the LEDs when the button is pressed
+				led.setLED(uint8_t(EmotiBit::Led::RED), true);
+				led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+				led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 			}
 		}
 	}
