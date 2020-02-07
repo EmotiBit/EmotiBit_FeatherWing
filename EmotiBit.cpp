@@ -89,8 +89,13 @@ void EmotiBit::bmm150ReadTrimRegisters()
 
 uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 {
+	bool status = true;
+
 	Serial.print("EmotiBit version: ");
 	Serial.println((int)version);
+	Serial.print("Firmware version: ");
+	Serial.println(firmware_version);
+
 	if (!_outDataPackets.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
 		Serial.println("Failed to reserve memory for output");
 		while (true) {
@@ -100,6 +105,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 
 	delay(500);
 
+	// Setup data buffers
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::EDA] = &eda;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::EDL] = &edl;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::EDR] = &edr;
@@ -122,44 +128,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::BATTERY_PERCENT] = &batteryPercent;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = &dataOverflow;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = &dataClipping;
-	//dataDoubleBuffers[(uint8_t)EmotiBit::DataType::PUSH_WHILE_GETTING] = &pushWhileGetting;
-
-	//bufferCapacity = 32;
-	//eda = DoubleBufferFloat(bufferCapacity);
-	//ppgInfrared = DoubleBufferFloat(bufferCapacity);
-	//ppgRed = DoubleBufferFloat(bufferCapacity);
-	//ppgGreen = DoubleBufferFloat(bufferCapacity);
-	//temp0 = DoubleBufferFloat(bufferCapacity);
-	//tempHP0 = DoubleBufferFloat(bufferCapacity);
-	//humidity0 = DoubleBufferFloat(bufferCapacity);
-	//accelX = DoubleBufferFloat(bufferCapacity);
-	//accelY = DoubleBufferFloat(bufferCapacity);
-	//accelZ = DoubleBufferFloat(bufferCapacity);
-	//gyroX = DoubleBufferFloat(bufferCapacity);
-	//gyroY = DoubleBufferFloat(bufferCapacity);
-	//gyroZ = DoubleBufferFloat(bufferCapacity);
-	//magX = DoubleBufferFloat(bufferCapacity);
-	//magY = DoubleBufferFloat(bufferCapacity);
-	//magZ = DoubleBufferFloat(bufferCapacity);
-	//edl.resize(bufferCapacity);
-	//edr.resize(bufferCapacity);
-	//ppgInfrared.resize(bufferCapacity);
-	//ppgRed.resize(bufferCapacity);
-	//ppgGreen.resize(bufferCapacity);
-	//temp0.resize(bufferCapacity); 
-	//tempHP0.resize(bufferCapacity);
-	//humidity0.resize(bufferCapacity);
-	//accelX.resize(bufferCapacity);
-	//accelY.resize(bufferCapacity);
-	//accelZ.resize(bufferCapacity);
-	//gyroX.resize(bufferCapacity);
-	//gyroY.resize(bufferCapacity);
-	//gyroZ.resize(bufferCapacity);
-	//magX.resize(bufferCapacity);
-	//magY.resize(bufferCapacity);
-	//magZ.resize(bufferCapacity);
-	//batteryVoltage.resize(1);
-	//batteryPercent.resize(1);
 
 	_version = version;
 	_vcc = 3.3f;						// Vcc voltage
@@ -171,7 +139,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		while (true);
 	}
 
-	// Set board specific pins and constants
+	// Set board-specific pins and constants
 #if defined(ADAFRUIT_FEATHER_M0)
 	_batteryReadPin = A7;
 	_adcBits = 12;
@@ -240,11 +208,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	pinMode(_batteryReadPin, INPUT);
 	
 	// Enable analog circuitry
-	Serial.println("Enabling analog circuitry...");
+	Serial.println("Enabling EmotiBit power...");
 	pinMode(_hibernatePin, OUTPUT);
 	digitalWrite(_hibernatePin, LOW);
 
-	// Setup GSR
+	// Setup EDA
 	Serial.println("Configuring EDA...");
 	pinMode(_edlPin, INPUT);
 	pinMode(_edrPin, INPUT);
@@ -272,6 +240,10 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	led.setLEDpwm((uint8_t)Led::RED, 8);
 	led.setLEDpwm((uint8_t)Led::BLUE, 8);
 	led.setLEDpwm((uint8_t)Led::YELLOW, 8);
+	led.setLED(uint8_t(EmotiBit::Led::RED), false);
+	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+	chipBegun.NCP5623 = true;
 
 	//// Setup PPG sensor
 	Serial.println("Initializing MAX30101....");
@@ -283,7 +255,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_EmotiBit_i2c->endTransmission();
 		_EmotiBit_i2c->clearWriteError();
 		_EmotiBit_i2c->end();
-		//while (1);
+		static uint32_t hibernateTimer = millis();
+		if (millis() - hibernateTimer > 2000)
+		{
+			hibernate();
+		}
 	}
 	ppgSensor.wakeUp();
 	ppgSensor.softReset();
@@ -297,107 +273,116 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		ppgSettings.adcRange
 	); 
 	ppgSensor.check();
-
+	chipBegun.MAX30101 = true;
 
 	// Setup IMU
 	Serial.println("Initializing IMU device....");
-	BMI160.begin(BMI160GenClass::I2C_MODE, *_EmotiBit_i2c);
-	uint8_t dev_id = BMI160.getDeviceID();
-	Serial.print("DEVICE ID: ");
-	Serial.println(dev_id, HEX);
-
-	// Accelerometer
-	_accelerometerRange = 8;
-	BMI160.setAccelerometerRange(_accelerometerRange);
-	BMI160.setAccelDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
-	//BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_25HZ);
-	BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_100HZ);
-
-	// Gyroscope
-	_gyroRange = 1000;
-	BMI160.setGyroRange(_gyroRange);
-	BMI160.setGyroDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
-	//BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_25HZ);
-	BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_100HZ);
-
-	// Magnetometer
-	BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR, BMM150_BASED_I2C_MASK); // I2C MAG
-	delay(BMI160_AUX_COM_DELAY);
-	//initially load into setup mode to read trim values
-	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_MANUAL_MODE_EN_MSK, BMI160_MANUAL_MODE_EN_MSK);
-	delay(BMI160_AUX_COM_DELAY);
-	EmotiBit::bmm150ReadTrimRegisters();
-	
-	BMI160.setRegister(BMI160_MAG_IF_2, BMM150_DATA_REG); // ADD_BMM_DATA
-	delay(BMI160_AUX_COM_DELAY);
-	//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OPMODE_REG); // ADD_BMM_MEASURE
-	//delay(BMI160_AUX_COM_DELAY);
-
-	// Following example at https://github.com/BoschSensortec/BMI160_driver#auxiliary-fifo-data-parsing 
-
-	// Put the BMM150 in normal mode (may or may not be necessary if putting in force mode later)
-	// BMI160.setRegister(BMM150_OPMODE_REG, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
-	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
-
-	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_NORMAL_MODE);
-	BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_NORMAL_MODE, BMM150_OP_MODE_BIT, BMM150_OP_MODE_LEN);
-	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
-	delay(BMI160_AUX_COM_DELAY);
-	
-	// Already done in setup
-	///* Set BMM150 repetitions for X/Y-Axis */
-	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_LOWPOWER_REPXY);             //Added for BMM150 Support
-	//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_XY_REP_REG);                 //Added for BMM150 Support
-	//delay(BMI160_AUX_COM_DELAY);
-
-	///* Set BMM150 repetitions for Z-Axis */
-	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_LOWPOWER_REPXY);              //Added for BMM150 Support
-	//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_Z_REP_REG);                  //Added for BMM150 Support
-	//delay(BMI160_AUX_COM_DELAY);
-
-	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_25HZ);
-	BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ, BMM150_DATA_RATE_BIT, BMM150_DATA_RATE_LEN);
-	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
-	delay(BMI160_AUX_COM_DELAY);
-
-	//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_FORCED_MODE);
-	BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_FORCED_MODE, BMM150_OP_MODE_BIT, BMM150_OP_MODE_LEN);
-	BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
-	delay(BMI160_AUX_COM_DELAY);
-
-
-	// Setup the BMI160 AUX
-	// Set the auto mode address
-	BMI160.setRegister(BMI160_MAG_IF_2, BMM150_DATA_X_LSB); 
-	delay(BMI160_AUX_COM_DELAY);
-
-	// Set the AUX ODR
-	BMI160.setMagRate(BMI160MagRate::BMI160_MAG_RATE_100HZ);
-
-	// Disable manual mode (i.e. enable auto mode)
-	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_DISABLE, BMI160_MANUAL_MODE_EN_MSK);
-
-	// Set the burst length
-	BMI160.setRegister(BMI160_MAG_IF_1, BMI160_AUX_READ_BURST_MSK, BMI160_AUX_READ_BURST_MSK); // MAG data mode 8 byte burst
-	delay(BMI160_AUX_COM_DELAY);
-
-	// Bosch code sets the I2C register again here for an unknown reason
-	BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR, BMM150_BASED_I2C_MASK); // I2C MAG
-	delay(BMI160_AUX_COM_DELAY);
-
-	// Setup the FIFO
-	BMI160.setAccelFIFOEnabled(true);
-	_imuFifoFrameLen += 6;
-	BMI160.setGyroFIFOEnabled(true);
-	_imuFifoFrameLen += 6;
-	BMI160.setMagFIFOEnabled(true);
-	_imuFifoFrameLen += 8;
-	BMI160.setFIFOHeaderModeEnabled(false);
-	if (_imuFifoFrameLen > _maxImuFifoFrameLen) 
+	status = BMI160.begin(BMI160GenClass::I2C_MODE, *_EmotiBit_i2c);
+	if (status)
 	{
-		// ToDo: handle _imuFifoFrameLen > _maxImuFifoFrameLen
-		Serial.println("UNHANDLED CASE: _imuFifoFrameLen > _maxImuFifoFrameLen");
-		while (true);
+		uint8_t dev_id = BMI160.getDeviceID();
+		Serial.print("DEVICE ID: ");
+		Serial.println(dev_id, HEX);
+
+		// Accelerometer
+		_accelerometerRange = 8;
+		BMI160.setAccelerometerRange(_accelerometerRange);
+		BMI160.setAccelDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
+		//BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_25HZ);
+		BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_100HZ);
+
+		// Gyroscope
+		_gyroRange = 1000;
+		BMI160.setGyroRange(_gyroRange);
+		BMI160.setGyroDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
+		//BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_25HZ);
+		BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_100HZ);
+
+		// Magnetometer
+		BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR, BMM150_BASED_I2C_MASK); // I2C MAG
+		delay(BMI160_AUX_COM_DELAY);
+		//initially load into setup mode to read trim values
+		BMI160.setRegister(BMI160_MAG_IF_1, BMI160_MANUAL_MODE_EN_MSK, BMI160_MANUAL_MODE_EN_MSK);
+		delay(BMI160_AUX_COM_DELAY);
+		EmotiBit::bmm150ReadTrimRegisters();
+
+		BMI160.setRegister(BMI160_MAG_IF_2, BMM150_DATA_REG); // ADD_BMM_DATA
+		delay(BMI160_AUX_COM_DELAY);
+		//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OPMODE_REG); // ADD_BMM_MEASURE
+		//delay(BMI160_AUX_COM_DELAY);
+
+		// Following example at https://github.com/BoschSensortec/BMI160_driver#auxiliary-fifo-data-parsing 
+
+		// Put the BMM150 in normal mode (may or may not be necessary if putting in force mode later)
+		// BMI160.setRegister(BMM150_OPMODE_REG, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
+		//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
+
+		//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_NORMAL_MODE);
+		BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_NORMAL_MODE, BMM150_OP_MODE_BIT, BMM150_OP_MODE_LEN);
+		BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
+		delay(BMI160_AUX_COM_DELAY);
+
+		// Already done in setup
+		///* Set BMM150 repetitions for X/Y-Axis */
+		//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_LOWPOWER_REPXY);             //Added for BMM150 Support
+		//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_XY_REP_REG);                 //Added for BMM150 Support
+		//delay(BMI160_AUX_COM_DELAY);
+
+		///* Set BMM150 repetitions for Z-Axis */
+		//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_LOWPOWER_REPXY);              //Added for BMM150 Support
+		//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_Z_REP_REG);                  //Added for BMM150 Support
+		//delay(BMI160_AUX_COM_DELAY);
+
+		//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_25HZ);
+		BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ, BMM150_DATA_RATE_BIT, BMM150_DATA_RATE_LEN);
+		BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
+		delay(BMI160_AUX_COM_DELAY);
+
+		//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_FORCED_MODE);
+		BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_FORCED_MODE, BMM150_OP_MODE_BIT, BMM150_OP_MODE_LEN);
+		BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
+		delay(BMI160_AUX_COM_DELAY);
+
+
+		// Setup the BMI160 AUX
+		// Set the auto mode address
+		BMI160.setRegister(BMI160_MAG_IF_2, BMM150_DATA_X_LSB);
+		delay(BMI160_AUX_COM_DELAY);
+
+		// Set the AUX ODR
+		BMI160.setMagRate(BMI160MagRate::BMI160_MAG_RATE_100HZ);
+
+		// Disable manual mode (i.e. enable auto mode)
+		BMI160.setRegister(BMI160_MAG_IF_1, BMI160_DISABLE, BMI160_MANUAL_MODE_EN_MSK);
+
+		// Set the burst length
+		BMI160.setRegister(BMI160_MAG_IF_1, BMI160_AUX_READ_BURST_MSK, BMI160_AUX_READ_BURST_MSK); // MAG data mode 8 byte burst
+		delay(BMI160_AUX_COM_DELAY);
+
+		// Bosch code sets the I2C register again here for an unknown reason
+		BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR, BMM150_BASED_I2C_MASK); // I2C MAG
+		delay(BMI160_AUX_COM_DELAY);
+
+		// Setup the FIFO
+		BMI160.setAccelFIFOEnabled(true);
+		_imuFifoFrameLen += 6;
+		BMI160.setGyroFIFOEnabled(true);
+		_imuFifoFrameLen += 6;
+		BMI160.setMagFIFOEnabled(true);
+		_imuFifoFrameLen += 8;
+		BMI160.setFIFOHeaderModeEnabled(false);
+		if (_imuFifoFrameLen > _maxImuFifoFrameLen)
+		{
+			// ToDo: handle _imuFifoFrameLen > _maxImuFifoFrameLen
+			Serial.println("UNHANDLED CASE: _imuFifoFrameLen > _maxImuFifoFrameLen");
+			while (true);
+		}
+		chipBegun.BMI160 = true;
+		chipBegun.BMM150 = true;
+	}
+	else
+	{
+		hibernate();
 	}
 
 	// ToDo: Add interrupts to accurately record timing of data capture
@@ -407,32 +392,46 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 
 	// Setup Temperature / Humidity Sensor
 	Serial.println("Configuring Temperature / Humidity Sensor");
-	tempHumiditySensor.setup(*_EmotiBit_i2c);
-	tempHumiditySensor.changeSetting(Si7013::Settings::RESOLUTION_H11_T11);
-	tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NORMAL);
-	tempHumiditySensor.changeSetting(Si7013::Settings::VIN_UNBUFFERED);
-	tempHumiditySensor.changeSetting(Si7013::Settings::VREFP_VDDA);
-	tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NO_HOLD);
+	status = tempHumiditySensor.setup(*_EmotiBit_i2c);
+	if (status)
+	{
+		tempHumiditySensor.changeSetting(Si7013::Settings::RESOLUTION_H11_T11);
+		tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NORMAL);
+		tempHumiditySensor.changeSetting(Si7013::Settings::VIN_UNBUFFERED);
+		tempHumiditySensor.changeSetting(Si7013::Settings::VREFP_VDDA);
+		tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NO_HOLD);
 
-	tempHumiditySensor.readSerialNumber();
-	Serial.print("Si7013 Electronic Serial Number: ");
-	Serial.print(tempHumiditySensor.sernum_a);
-	Serial.print(", ");
-	Serial.print(tempHumiditySensor.sernum_b);
-	Serial.print("\n");
-	Serial.print("Model: ");
-	Serial.println(tempHumiditySensor._model);
+		tempHumiditySensor.readSerialNumber();
+		Serial.print("Si7013 Electronic Serial Number: ");
+		Serial.print(tempHumiditySensor.sernum_a);
+		Serial.print(", ");
+		Serial.print(tempHumiditySensor.sernum_b);
+		Serial.print("\n");
+		Serial.print("Model: ");
+		Serial.println(tempHumiditySensor._model);
+		chipBegun.SI7013 = true;
 
-	tempHumiditySensor.startHumidityTempMeasurement();
+		tempHumiditySensor.startHumidityTempMeasurement();
+	}
+	else
+	{
+		hibernate();
+	}
 	
 	// Thermopile
 	MLX90632::status returnError; // Required as a parameter for begin() function in the MLX library 
-	thermopile.begin(deviceAddress.MLX, *_EmotiBit_i2c, returnError);
-	thermopile.setMeasurementRate(thermopileFs);
-	//lastThermopileBegin = millis();
-
-	// ------------ BEGIN ino refactoring ------------//
-	// ToDo: move into separate functions
+	status = thermopile.begin(deviceAddress.MLX, *_EmotiBit_i2c, returnError);
+	if (status)
+	{
+		thermopile.setMeasurementRate(thermopileFs);
+		chipBegun.MLX90632 = true;
+	}
+	else
+	{
+		hibernate();
+	}
+	
+	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 
 	// setup sampling rates
 	EmotiBit::SamplingRates samplingRates;
@@ -454,7 +453,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	samplesAveraged.battery = BASE_SAMPLING_FREQ / BATTERY_SAMPLING_DIV / 1;
 	setSamplesAveraged(samplesAveraged);
 
-
 	// EDL Filter Parameters
 	if (version == Version::V02H)
 	{
@@ -465,12 +463,15 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	delay(500);
 
 	setupSdCard();
+	led.setLED(uint8_t(EmotiBit::Led::RED), true);
+
 	//_emotiBitWiFi.setup();
 #if defined(ADAFRUIT_FEATHER_M0)
 	WiFi.setPins(8, 7, 4, 2);
 #endif
 	WiFi.lowPowerMode();
 	_emotiBitWiFi.begin();
+	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 
 	setPowerMode(PowerMode::NORMAL_POWER);
 
@@ -580,6 +581,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		startTimer(BASE_SAMPLING_FREQ);
 	}
 
+	led.setLED(uint8_t(EmotiBit::Led::RED), false);
+	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+
+
 } // Setup
 
 void EmotiBit::setupSdCard()
@@ -673,7 +679,7 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 	{
 		Serial.println(packet);
 		dataStartChar = EmotiBitPacket::getHeader(packet, header);
-		if (dataStartChar > 0)
+		if (dataStartChar > 0 || dataStartChar == EmotiBitPacket::NO_PACKET_DATA)
 		{
 			if (header.typeTag.equals(EmotiBitPacket::TypeTag::RECORD_BEGIN)) 
 			{
@@ -748,7 +754,7 @@ bool EmotiBit::readButton()
 
 void EmotiBit::updateButtonPress()
 {
-	uint16_t minShortButtonPress = 250;
+	uint16_t minShortButtonPress = 150;
 	uint16_t minLongButtonPress = 3000;
 	static uint32_t buttonPressedTimer = millis();
 	static bool buttonPreviouslyPressed = false;
@@ -1493,7 +1499,6 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	int hardware_version = (int)_version;
 	String feather_version = "Adafruit Feather M0 WiFi";
-	String firmware_version = "1.0.12";
 
 	const uint16_t bufferSize = 1024;
 
@@ -1907,33 +1912,61 @@ void EmotiBit::readSensors()
 	Serial.println("readSensors()");
 #endif // DEBUG
 
-	// LED STATUS CHANGE SEGMENT
-	static uint16_t ledCounter = 0;
-	ledCounter++;
-	/*Serial.print("ledCounter:");
-	Serial.println(ledCounter);*/
-	if (ledCounter == LED_REFRESH_DIV) 
-	{
-		ledCounter = 0;
-		// Serial.println("Time to update LED");
-		if (_emotiBitWiFi.isConnected())
-		{
-			led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+	// EDA
+	if (acquireData.eda) {
+		static uint16_t edaCounter = 0;
+		edaCounter++;
+		if (edaCounter == EDA_SAMPLING_DIV) {
+			int8_t tempStatus = updateEDAData();
+			edaCounter = 0;
 		}
-		else
-		{
-			led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
-		}
+	}
 
-		//static bool battLed = false;
-		if (battIndicationSeq) 
+	// LED STATUS CHANGE SEGMENT
+	if (chipBegun.NCP5623)
+	{
+		static uint16_t ledCounter = 0;
+		ledCounter++;
+		if (ledCounter == LED_REFRESH_DIV)
 		{
+			ledCounter = 0;
+			// Serial.println("Time to update LED");
+			if (_emotiBitWiFi.isConnected())
+			{
+				led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+			}
+			else
+			{
+				led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+			}
+
+			//static bool battLed = false;
+			if (battIndicationSeq)
+			{
 			led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 			//static uint32_t BattLedstatusChangeTime = millis();
 			//if (millis() - BattLedstatusChangeTime > BattLedDuration)
 			//{
 			//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), !led.getLED(uint8_t(EmotiBit::Led::YELLOW)));
 			//}
+				//if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
+				//{
+				//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+				//	battLed = false;
+				//	BattLedstatusChangeTime = millis();
+				//}
+				//else if (!battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
+				//{
+				//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+				//	battLed = true;
+				//	BattLedstatusChangeTime = millis();
+				//}
+			}
+			else
+			{
+				led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+				//battLed = false;
+			}
 			//if (battLed && millis() - BattLedstatusChangeTime > BattLedDuration) 
 			//{
 			//	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
@@ -1953,45 +1986,44 @@ void EmotiBit::readSensors()
 			//battLed = false;
 		}
 
-		//static bool recordLedStatus = false;
-		if (_sdWrite) 
-		{
-			static uint32_t recordBlinkDuration = millis();
-			if (millis() - recordBlinkDuration >= 500) 
+			if (readButton())
 			{
-				//if (recordLedStatus == true) 
-				//{
-				//	led.setLED(uint8_t(EmotiBit::Led::RED), false);
-				//	recordLedStatus = false;
-				//}
-				//else 
-				//{
-				//	led.setLED(uint8_t(EmotiBit::Led::RED), true);
-				//	recordLedStatus = true;
-				//}
-				led.setLED(uint8_t(EmotiBit::Led::RED), !led.getLED(uint8_t(EmotiBit::Led::RED)));
-				recordBlinkDuration = millis();
+				// Turn on the LEDs when the button is pressed
+				led.setLED(uint8_t(EmotiBit::Led::RED), true);
+				led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+				led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 			}
-		}
-		else if (!_sdWrite && led.getLED(uint8_t(EmotiBit::Led::RED)) == true)
-		{
-			led.setLED(uint8_t(EmotiBit::Led::RED), false);
-			// recordLedStatus = false;
-		}
-	}
 
-	// EDA
-	if (acquireData.eda) {
-		static uint16_t edaCounter = 0;
-		edaCounter++;
-		if (edaCounter == EDA_SAMPLING_DIV) {
-			int8_t tempStatus = updateEDAData();
-			edaCounter = 0;
+			//static bool recordLedStatus = false;
+			if (_sdWrite)
+			{
+				static uint32_t recordBlinkDuration = millis();
+				if (millis() - recordBlinkDuration >= 500)
+				{
+					//if (recordLedStatus == true) 
+					//{
+					//	led.setLED(uint8_t(EmotiBit::Led::RED), false);
+					//	recordLedStatus = false;
+					//}
+					//else 
+					//{
+					//	led.setLED(uint8_t(EmotiBit::Led::RED), true);
+					//	recordLedStatus = true;
+					//}
+					led.setLED(uint8_t(EmotiBit::Led::RED), !led.getLED(uint8_t(EmotiBit::Led::RED)));
+					recordBlinkDuration = millis();
+				}
+			}
+			else if (!_sdWrite && led.getLED(uint8_t(EmotiBit::Led::RED)) == true)
+			{
+				led.setLED(uint8_t(EmotiBit::Led::RED), false);
+				// recordLedStatus = false;
+			}
 		}
 	}
 
 	// Temperature / Humidity Sensor
-	if (acquireData.tempHumidity) {
+	if (chipBegun.SI7013 && acquireData.tempHumidity) {
 		static uint16_t temperatureCounter = 0;
 		temperatureCounter++;
 		if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
@@ -2008,7 +2040,7 @@ void EmotiBit::readSensors()
 	}
 
 	// Thermopile
-	if (acquireData.tempHumidity) {
+	if (chipBegun.MLX90632 && acquireData.tempHumidity) {
 		static uint16_t thermopileCounter = 0;
 		thermopileCounter++;
 		if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
@@ -2018,7 +2050,7 @@ void EmotiBit::readSensors()
 	}
 
 	// IMU
-	if (acquireData.imu) {
+	if (chipBegun.BMI160 && chipBegun.BMM150 && acquireData.imu) {
 		static uint16_t imuCounter = 0;
 		imuCounter++;
 		if (imuCounter == IMU_SAMPLING_DIV) {
@@ -2028,7 +2060,7 @@ void EmotiBit::readSensors()
 	}
 
 	// PPG
-	if (acquireData.ppg) {
+	if (chipBegun.MAX30101 && acquireData.ppg) {
 		static uint16_t ppgCounter = 0;
 		ppgCounter++;
 		if (ppgCounter == PPG_SAMPLING_DIV) {
@@ -2038,7 +2070,7 @@ void EmotiBit::readSensors()
 	}
 
 	// Battery (all analog reads must be in the ISR)
-	// TODO: use the stored BAtt value instead of calling readBatteryPercent again
+	// TODO: use the stored/averaged Battery value instead of calling readBatteryPercent again
 	static uint16_t batteryCounter = 0;
 	batteryCounter++;
 	if (batteryCounter == BATTERY_SAMPLING_DIV) {
@@ -2076,58 +2108,51 @@ void EmotiBit::hibernate() {
 	Serial.println("Stopping timer...");
 	stopTimer();
 
-	//PPGToggle
-	// For an unknown reason, this need to be before WiFi diconnect/end
-	Serial.println("Shutting down ppg...");
-	ppgSensor.shutDown();
+	// Delay to ensure the timer has finished
+	delay((1000 * 5) / BASE_SAMPLING_FREQ);
 
-	Serial.println("Ending WiFi...");
+	// Turn on all the LEDs to indicate hibernate started
+	led.setLED(uint8_t(EmotiBit::Led::RED), true);
+	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+
+	chipBegun.MAX30101 = false;
+	chipBegun.BMM150 = false;
+	chipBegun.BMI160 = false;
+	chipBegun.SI7013 = false;
+	chipBegun.NCP5623 = false;
+	chipBegun.MLX90632 = false;
+
+	Serial.println("Shutting down WiFi...");
 	_emotiBitWiFi.end();
 
-	//IMU Suspend Mode
-	Serial.println("Suspending IMU...");
-	BMI160.suspendIMU();
-
-	SPI.end(); // shutdown the SPI interface
+	Serial.println("Shutting down serial interfaces...");
+	SPI.end(); 
 	Wire.end();
 	_EmotiBit_i2c->end();
 
-	//pinMode(_sdCardChipSelectPin, OUTPUT);//cs
-	//digitalWrite(_sdCardChipSelectPin, LOW);
-	//pinMode(PIN_SPI_MISO, OUTPUT);
-	//digitalWrite(PIN_SPI_MISO, LOW);
-	//pinMode(PIN_SPI_MOSI, OUTPUT);
-	//digitalWrite(PIN_SPI_MOSI, LOW);
-	//pinMode(PIN_SPI_SCK, OUTPUT);
-	//digitalWrite(PIN_SPI_SCK, LOW);
-
-	//pinMode(PIN_WIRE_SCL, OUTPUT);
-	//digitalWrite(PIN_WIRE_SCL, LOW);
-	//pinMode(PIN_WIRE_SDA, OUTPUT);
-	//digitalWrite(PIN_WIRE_SDA, LOW);
-
-	//pinMode(PIN_UART, OUTPUT);
-	//digitalWrite(PIN_WIRE_SCL, LOW);
-	//pinMode(PIN_WIRE_SDA, OUTPUT);
-	//digitalWrite(PIN_WIRE_SDA, LOW);
-
-	/*while (ledPinBusy)*/
-
-		// Setup all pins (digital and analog) in INPUT mode (default is nothing)  
-		//for (uint32_t ul = 0; ul < NUM_DIGITAL_PINS; ul++)
+	if (_EmotiBit_i2c != nullptr)
+	{
+		delete(_EmotiBit_i2c);
+	}
+	
+	// Setup all pins (digital and analog) in INPUT mode (default is nothing)  
 	for (uint32_t ul = 0; ul < PINS_COUNT; ul++)
 	{
 		if (ul != _hibernatePin) {
 			pinMode(ul, OUTPUT);
 			digitalWrite(ul, LOW);
 			pinMode(ul, INPUT);
+			Serial.print("Turning off pin: ");
+			Serial.println(ul);
 		}
 	}
 
-	//GSRToggle, write 1 to the PMO
-	Serial.println("Disabling MOSFET ");
+	// Turn off EmotiBit power
+	Serial.println("Disabling EmotiBit power");
 	pinMode(_hibernatePin, OUTPUT);
 	digitalWrite(_hibernatePin, HIGH);
+	pinMode(_hibernatePin, INPUT);
 
 	//deepSleep();
 	Serial.println("Entering deep sleep...");
@@ -2346,7 +2371,7 @@ void EmotiBit::updateBatteryIndication()
 	}
 	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
 		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_LOW);
-		BattLedDuration = 100;
+		BattLedDuration = 1;
 	}
 }
 

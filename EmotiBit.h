@@ -26,6 +26,8 @@
 class EmotiBit {
   
 public:
+
+	const String firmware_version = "1.0.15";
 	
 	enum class SensorTimer {
 		MANUAL
@@ -249,6 +251,15 @@ public:
 		bool imu = true;
 		bool ppg = true;
 	} acquireData;
+
+	struct ChipBegun {
+		bool SI7013 = false;
+		bool MAX30101 = false;
+		bool BMI160 = false;
+		bool BMM150 = false;
+		bool NCP5623 = false;
+		bool MLX90632 = false;
+	} chipBegun;
 
 	const char *typeTags[(uint8_t)EmotiBit::DataType::length];
 	bool _newDataAvailable[(uint8_t)EmotiBit::DataType::length];
