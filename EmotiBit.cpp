@@ -754,7 +754,7 @@ bool EmotiBit::readButton()
 
 void EmotiBit::updateButtonPress()
 {
-	uint16_t minShortButtonPress = 250;
+	uint16_t minShortButtonPress = 150;
 	uint16_t minLongButtonPress = 3000;
 	static uint32_t buttonPressedTimer = millis();
 	static bool buttonPreviouslyPressed = false;

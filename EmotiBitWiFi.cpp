@@ -467,6 +467,7 @@ int8_t EmotiBitWiFi::disconnect() {
 		{
 			Serial.println("Disconnecting... ");
 			Serial.println("Stopping Control Cxn... ");
+			_controlCxn.flush();
 			_controlCxn.stop();
 		}
 		Serial.println("Stopping Data Cxn... ");
