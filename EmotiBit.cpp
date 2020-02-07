@@ -1943,7 +1943,7 @@ void EmotiBit::readSensors()
 			//static bool battLed = false;
 			if (battIndicationSeq)
 			{
-				led.setLED(uint8_t(EmotiBit::Led::YELLOW));
+				led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 				//static uint32_t BattLedstatusChangeTime = millis();
 				//if (millis() - BattLedstatusChangeTime > BattLedDuration)
 				//{

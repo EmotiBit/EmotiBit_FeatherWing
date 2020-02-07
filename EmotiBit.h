@@ -179,7 +179,7 @@ public:
   };
 
   enum class BattLevel {
-	  THRESHOLD_HIGH = 30, // Set thrhsolds for changing led indication on board for battery
+	  THRESHOLD_HIGH = 20, // Set thrhsolds for changing led indication on board for battery
 	  THRESHOLD_MED  = 20,
 	  THRESHOLD_LOW  = 10,
 	  INDICATION_SEQ_HIGH = 1,
