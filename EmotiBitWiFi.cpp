@@ -1,4 +1,5 @@
 #include "EmotiBitWiFi.h"
+#include <driver/source/nmasic.h>
 
 uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 {
@@ -9,6 +10,8 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 		Serial.println("No WiFi shield found. Try WiFi.setPins().");
 		return WL_NO_SHIELD;
 	}
+
+	checkWiFi101FirmwareVersion();
 
 	while (status != WL_CONNECTED)
 	{
@@ -92,9 +95,12 @@ void EmotiBitWiFi::end()
 		Serial.println("Disconnecting WiFi...");
 		WiFi.disconnect();
 	}
-	Serial.println("Ending WiFi...");
-	_wifiOff = true;
-	WiFi.end();
+	if (!_wifiOff)
+	{
+		Serial.println("Ending WiFi...");
+		_wifiOff = true;
+		WiFi.end();
+	}
 }
 
 bool EmotiBitWiFi::isOff()
@@ -445,6 +451,7 @@ int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, uint16_t controlPort, uint
 }
 
 int8_t EmotiBitWiFi::disconnect() {
+	Serial.println("Disconnect()");
 	_isConnected = false;
 	_dataPort = -1;
 	_controlPort = -1;
@@ -460,6 +467,7 @@ int8_t EmotiBitWiFi::disconnect() {
 		{
 			Serial.println("Disconnecting... ");
 			Serial.println("Stopping Control Cxn... ");
+			_controlCxn.flush();
 			_controlCxn.stop();
 		}
 		Serial.println("Stopping Data Cxn... ");
@@ -645,4 +653,38 @@ int8_t EmotiBitWiFi::status()
 		return WL_DISCONNECTED;
 	}
 	return (int8_t) WiFi.status();
+}
+
+void EmotiBitWiFi::checkWiFi101FirmwareVersion()
+{
+	// Print a welcome message
+	Serial.println("WiFi101 firmware check.");
+	Serial.println();
+
+	// Check for the presence of the shield
+	Serial.print("WiFi101 shield: ");
+	if (WiFi.status() == WL_NO_SHIELD) {
+		Serial.println("NOT PRESENT");
+		return; // don't continue
+	}
+	Serial.println("DETECTED");
+
+	// Print firmware version on the shield
+	String fv = WiFi.firmwareVersion();
+	String latestFv;
+	Serial.print("Firmware version installed: ");
+	Serial.println(fv);
+
+	if (REV(GET_CHIPID()) >= REV_3A0) {
+		// model B
+		latestFv = WIFI_FIRMWARE_LATEST_MODEL_B;
+	}
+	else {
+		// model A
+		latestFv = WIFI_FIRMWARE_LATEST_MODEL_A;
+	}
+
+	// Print required firmware version
+	Serial.print("Latest firmware version available : ");
+	Serial.println(latestFv);
 }
