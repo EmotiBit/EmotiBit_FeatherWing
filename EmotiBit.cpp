@@ -574,12 +574,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	Serial.print(tempHumiditySensor.sernum_b);
 	Serial.print("\n");
 
-	if (!_sendTestData)
-	{
-		attachToInterruptTC3(&ReadSensors, this);
-		Serial.println("Starting interrupts");
-		startTimer(BASE_SAMPLING_FREQ);
-	}
 
 	uint8_t ledOffdelay = 100;	// Aesthetic delay
 	led.setLED(uint8_t(EmotiBit::Led::RED), false);
@@ -587,6 +581,14 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 	delay(ledOffdelay);
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+
+	if (!_sendTestData)
+	{
+		attachToInterruptTC3(&ReadSensors, this);
+		Serial.println("Starting interrupts");
+		startTimer(BASE_SAMPLING_FREQ);
+	}
+
 
 } // Setup
 
@@ -2336,7 +2338,7 @@ void EmotiBit::updateBatteryIndication()
 	else
 	{
 		// Low Batt Indication is OFF
-		if (battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW))
+		if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW))
 		{
 			battIndicationSeq = 1;
 		}
