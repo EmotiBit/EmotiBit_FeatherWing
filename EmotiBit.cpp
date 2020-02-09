@@ -581,10 +581,12 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		startTimer(BASE_SAMPLING_FREQ);
 	}
 
+	uint8_t ledOffdelay = 100;	// Aesthetic delay
 	led.setLED(uint8_t(EmotiBit::Led::RED), false);
+	delay(ledOffdelay);
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+	delay(ledOffdelay);
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-
 
 } // Setup
 
@@ -2322,21 +2324,40 @@ size_t EmotiBit::readData(EmotiBit::DataType t, float **data, uint32_t &timestam
 
 void EmotiBit::updateBatteryIndication()
 {
-	// To update Battery level variable for LED indication
-	if (battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH))
-		battIndicationSeq = 0;
-	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_MED)) {
-		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_HIGH);
-		BattLedDuration = 1000;
+	if (battIndicationSeq)
+	{
+		// Low Batt Indication is ON
+		if (battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH))
+		{
+			// Wait until we hit he high threshold to avoid flickering
+			battIndicationSeq = 0;
+		}
 	}
-	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_MED) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
-		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_MED);
-		BattLedDuration = 500;
+	else
+	{
+		// Low Batt Indication is OFF
+		if (battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW))
+		{
+			battIndicationSeq = 1;
+		}
 	}
-	else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
-		battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_LOW);
-		BattLedDuration = 1;
-	}
+
+
+	//// To update Battery level variable for LED indication
+	//if (battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH))
+	//	battIndicationSeq = 0;
+	//else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_MED)) {
+	//	battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_HIGH);
+	//	BattLedDuration = 1000;
+	//}
+	//else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_MED) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
+	//	battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_MED);
+	//	BattLedDuration = 500;
+	//}
+	//else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
+	//	battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_LOW);
+	//	BattLedDuration = 1;
+	//}
 }
 
 void EmotiBit::appendTestData(String &dataMessage, uint16_t &packetNumber)
