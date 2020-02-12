@@ -424,6 +424,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	if (status)
 	{
 		thermopile.setMeasurementRate(thermopileFs);
+		thermopile.setMode(MODE_STEP);
 		chipBegun.MLX90632 = true;
 	}
 	else
@@ -589,7 +590,13 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		startTimer(BASE_SAMPLING_FREQ);
 	}
 
-
+	// Debugging scope pins
+	pinMode(14, OUTPUT);
+	digitalWrite(14, LOW);
+	pinMode(16, OUTPUT);
+	digitalWrite(16, LOW);
+	pinMode(10, OUTPUT);
+	digitalWrite(10, LOW);
 } // Setup
 
 void EmotiBit::setupSdCard()
@@ -1042,7 +1049,7 @@ int8_t EmotiBit::updateTempHumidityData() {
 #ifdef DEBUG
 	Serial.println("updateTempHumidityData()");
 #endif // DEBUG
-
+	_EmotiBit_i2c->setClock(100000);
 	int8_t status = 0;
 	if (tempHumiditySensor.getStatus() == Si7013::STATUS_IDLE) {
 		if (tempHumiditySensor.isHumidityNew() == true) {
@@ -1093,6 +1100,7 @@ int8_t EmotiBit::updateTempHumidityData() {
 		//}
 			
 	}
+	_EmotiBit_i2c->setClock(400000);
 	return status;
 }
 
@@ -1108,10 +1116,22 @@ int8_t EmotiBit::updateThermopileData() {
 	else {
 		/*Serial.print("Thermopile:");
 		Serial.println(thermopile.end_getObjectTemp());*/
-		uint32_t time_stamp = millis();
-		status = status | pushData(EmotiBit::DataType::THERMOPILE, thermopile.end_getObjectTemp(), &(time_stamp));
+
+		float objectTemp;
+		uint32_t timestamp;
+
+		MLX90632::status myStatus = MLX90632::status::SENSOR_NO_NEW_DATA;
+
+		while (myStatus != MLX90632::status::SENSOR_SUCCESS)
+		{
+			// ToDo: consider a non-blocking solution for a scenario when updateThermopileData is called too frequently for set measurement rate
+			objectTemp = thermopile.end_getObjectTemp(myStatus); //Get the temperature of the object we're looking at in C
+			timestamp = millis();
+		}
+
+		status = status | pushData(EmotiBit::DataType::THERMOPILE, objectTemp, &(timestamp));
 		thermopile.start_getObjectTemp();
-		//lastThermopileBegin = millis();
+
 	}
 	return status;
 }
