@@ -231,7 +231,7 @@ public:
 	uint16_t modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
 
 	// Timer constants
-#define TIMER_PRESCALER_DIV 256
+#define TIMER_PRESCALER_DIV 1024
 	const uint32_t CPU_HZ = 48000000;
 
 //	// ToDo: Make sampling variables changeable
@@ -265,11 +265,12 @@ public:
 #define BATTERY_SAMPLING_DIV 10
 	// TODO: This should change according to the rate set on the thermopile begin function 
 #define THERMOPILE_SAMPLING_DIV 8
-#define LED_REFRESH_DIV 2
+#define LED_REFRESH_DIV 1
 
 	struct AcquireData {
 		bool eda = true;
 		bool tempHumidity = true;
+		bool thermopile = false;
 		bool imu = true;
 		bool ppg = true;
 	} acquireData;
@@ -307,6 +308,7 @@ public:
 	bool _sendTestData = false;
 	float _edlDigFiltAlpha = 0;
 	float _edlDigFilteredVal = -1;
+	bool _debugMode = false;
 
 	void setupSdCard();
 	void updateButtonPress();
@@ -338,6 +340,7 @@ public:
 	void appendTestData(String &dataMessage, uint16_t &packetNumber);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
+	void processDebugInputs();
 
 	// ----------- END ino refactoring ---------------
 

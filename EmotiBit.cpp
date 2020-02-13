@@ -103,7 +103,17 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		}
 	}
 
-	delay(500);
+	uint32_t now = millis();
+	while (!Serial.available() && millis() - now < 2000)
+	{
+	}
+	while (Serial.available())
+	{
+		Serial.read();
+		_debugMode = true;
+		Serial.println("\nENTERING DEBUG MODE\n");
+	}
+
 
 	// Setup data buffers
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::EDA] = &eda;
@@ -597,6 +607,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	digitalWrite(16, LOW);
 	pinMode(10, OUTPUT);
 	digitalWrite(10, LOW);
+
+	if (_debugMode) 
+	{
+		Serial.println("\nDEBUG MODE");
+	}
 } // Setup
 
 void EmotiBit::setupSdCard()
@@ -813,6 +828,11 @@ void EmotiBit::updateButtonPress()
 
 uint8_t EmotiBit::update()
 {
+	if (_debugMode)
+	{
+		processDebugInputs();
+	}
+
 	// Handle updating WiFi connction + syncing
 	static String inSyncPackets;
 	_emotiBitWiFi.update(inSyncPackets, _outDataPacketCounter);
@@ -1947,7 +1967,6 @@ void EmotiBit::readSensors()
 
 	digitalWrite(16, HIGH);
 
-
 	// EDA
 	if (acquireData.eda) {
 		static uint16_t edaCounter = 0;
@@ -1955,7 +1974,65 @@ void EmotiBit::readSensors()
 		if (edaCounter == EDA_SAMPLING_DIV) {
 			int8_t tempStatus = updateEDAData();
 			edaCounter = 0;
-			
+			//if (_debugMode) delay(1);	// Add a delay to see pin toggles on the oscilloscope
+		}
+	}
+
+	// Battery (all analog reads must be in the ISR)
+	// TODO: use the stored/averaged Battery value instead of calling readBatteryPercent again
+	static uint16_t batteryCounter = 0;
+	batteryCounter++;
+	if (batteryCounter == BATTERY_SAMPLING_DIV) {
+		battLevel = readBatteryPercent();
+		updateBatteryIndication();
+		updateBatteryPercentData();
+		batteryCounter = 0;
+	}
+
+	// Temperature / Humidity Sensor
+	if (chipBegun.SI7013 && acquireData.tempHumidity) {
+		static uint16_t temperatureCounter = 0;
+		temperatureCounter++;
+		if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
+			// Note: Temperature/humidity and the thermistor are alternately sampled 
+			// on every other call of updateTempHumidityData()
+			// I.e. you must call updateTempHumidityData() 2x with a sufficient measurement 
+			// delay between calls to sample both temperature/humidity and the thermistor
+			int8_t tempStatus = updateTempHumidityData();
+			//if (dataStatus.tempHumidity == 0) {
+			//	dataStatus.tempHumidity = tempStatus;
+			//}
+			temperatureCounter = 0;
+		}
+	}
+
+	// Thermopile
+	if (chipBegun.MLX90632 && acquireData.thermopile) {
+		static uint16_t thermopileCounter = 1;	// starting on 1 to minimize reading with other sensors in the same loop
+		thermopileCounter++;
+		if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
+			int8_t tempStatus = updateThermopileData();
+			thermopileCounter = 0;
+		}
+	}
+
+	// PPG
+	if (chipBegun.MAX30101 && acquireData.ppg) {
+		static uint16_t ppgCounter = 0;
+		ppgCounter++;
+		if (ppgCounter == PPG_SAMPLING_DIV) {
+			int8_t tempStatus = updatePPGData();
+			ppgCounter = 0;
+		}
+	}
+
+	// IMU
+	if (chipBegun.BMI160 && chipBegun.BMM150 && acquireData.imu) {
+		static uint16_t imuCounter = 0;
+		imuCounter++;
+		if (imuCounter == IMU_SAMPLING_DIV) {
+			int8_t tempStatus = updateIMUData();
+			imuCounter = 0;
 		}
 	}
 
@@ -2014,63 +2091,7 @@ void EmotiBit::readSensors()
 		}
 	}
 
-	// Temperature / Humidity Sensor
-	if (chipBegun.SI7013 && acquireData.tempHumidity) {
-		static uint16_t temperatureCounter = 0;
-		temperatureCounter++;
-		if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
-			// Note: Temperature/humidity and the thermistor are alternately sampled 
-			// on every other call of updateTempHumidityData()
-			// I.e. you must call updateTempHumidityData() 2x with a sufficient measurement 
-			// delay between calls to sample both temperature/humidity and the thermistor
-			int8_t tempStatus = updateTempHumidityData();
-			//if (dataStatus.tempHumidity == 0) {
-			//	dataStatus.tempHumidity = tempStatus;
-			//}
-			temperatureCounter = 0;
-		}
-	}
 
-	// Thermopile
-	if (chipBegun.MLX90632 && acquireData.tempHumidity) {
-		static uint16_t thermopileCounter = 1;	// starting on 1 to minimize reading with other sensors in the same loop
-		thermopileCounter++;
-		if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
-			int8_t tempStatus = updateThermopileData();
-			thermopileCounter = 0;
-		}
-	}
-
-	// IMU
-	if (chipBegun.BMI160 && chipBegun.BMM150 && acquireData.imu) {
-		static uint16_t imuCounter = 0;
-		imuCounter++;
-		if (imuCounter == IMU_SAMPLING_DIV) {
-			int8_t tempStatus = updateIMUData();
-			imuCounter = 0;
-		}
-	}
-
-	// PPG
-	if (chipBegun.MAX30101 && acquireData.ppg) {
-		static uint16_t ppgCounter = 0;
-		ppgCounter++;
-		if (ppgCounter == PPG_SAMPLING_DIV) {
-			int8_t tempStatus = updatePPGData();
-			ppgCounter = 0;
-		}
-	}
-
-	// Battery (all analog reads must be in the ISR)
-	// TODO: use the stored/averaged Battery value instead of calling readBatteryPercent again
-	static uint16_t batteryCounter = 0;
-	batteryCounter++;
-	if (batteryCounter == BATTERY_SAMPLING_DIV) {
-		battLevel = readBatteryPercent();
-		updateBatteryIndication();
-		updateBatteryPercentData();
-		batteryCounter = 0;
-	}
 
 	digitalWrite(16, LOW);
 }
@@ -2213,6 +2234,9 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 bool EmotiBit::writeSdCardMessage(const String & s) {
 	// Break up the message in to bite-size chunks to avoid over running the UDP or SD card write buffers
 	// UDP buffer seems to be about 1400 char. SD card writes should be 512 char.
+
+	digitalWrite(14, HIGH);
+
 	if (_sdWrite && s.length() > 0) {
 		if (_dataFile) {
 			static int16_t firstIndex;
@@ -2239,6 +2263,8 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 			_sdWrite = false;
 		}
 	}
+
+	digitalWrite(14, LOW);
 }
 
 EmotiBit::PowerMode EmotiBit::getPowerMode()
@@ -2470,6 +2496,74 @@ void EmotiBit::sendModePacket(String &sentModePacket, uint16_t &packetNumber)
 	_outDataPackets += sentModePacket;			// Add packet to slower data logging bucket
 }
 
+void EmotiBit::processDebugInputs()
+{
+	if (Serial.available())
+	{
+		char c = Serial.read();
+		if (c == 't')
+		{
+			acquireData.thermopile = false;
+			Serial.print("acquireData.thermopile = ");
+			Serial.println(acquireData.thermopile);
+		}
+		else if (c == 'T')
+		{
+			acquireData.thermopile = true;
+			Serial.print("acquireData.thermopile = ");
+			Serial.println(acquireData.thermopile);
+		}
+		else if (c == 'e')
+		{
+			acquireData.eda = false;
+			Serial.print("acquireData.eda = ");
+			Serial.println(acquireData.eda);
+		}
+		else if (c == 'E')
+		{
+			acquireData.eda = true;
+			Serial.print("acquireData.eda = ");
+			Serial.println(acquireData.eda);
+		}
+		else if (c == 'h')
+		{
+			acquireData.tempHumidity = false;
+			Serial.print("acquireData.tempHumidity = ");
+			Serial.println(acquireData.tempHumidity);
+		}
+		else if (c == 'H')
+		{
+			acquireData.tempHumidity = true;
+			Serial.print("acquireData.tempHumidity = ");
+			Serial.println(acquireData.tempHumidity);
+		}
+		else if (c == 'i')
+		{
+			acquireData.imu = false;
+			Serial.print("acquireData.imu = ");
+			Serial.println(acquireData.imu);
+		}
+		else if (c == 'I')
+		{
+			acquireData.imu = true;
+			Serial.print("acquireData.imu = ");
+			Serial.println(acquireData.imu);
+		}
+		else if (c == 'p')
+		{
+			acquireData.ppg = false;
+			Serial.print("acquireData.ppg = ");
+			Serial.println(acquireData.ppg);
+		}
+		else if (c == 'P')
+		{
+			acquireData.ppg = true;
+			Serial.print("acquireData.ppg = ");
+			Serial.println(acquireData.ppg);
+		}
+	}
+}
+
 void EmotiBit::setTimerFrequency(int frequencyHz) {
 	int compareValue = (CPU_HZ / (TIMER_PRESCALER_DIV * frequencyHz)) - 1;
 	TcCount16* TC = (TcCount16*)TC3;
@@ -2500,7 +2594,7 @@ void EmotiBit::startTimer(int frequencyHz) {
 	while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
 
 																				// Set prescaler to 1024
-	TC->CTRLA.reg |= TC_CTRLA_PRESCALER_DIV256;
+	TC->CTRLA.reg |= TC_CTRLA_PRESCALER_DIV1024;
 	while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
 
 	setTimerFrequency(frequencyHz);
