@@ -91,7 +91,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 {
 	bool status = true;
 
-	Serial.print("EmotiBit version: ");
+	Serial.print("\n\nEmotiBit version: ");
 	Serial.println((int)version);
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
@@ -195,7 +195,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 #endif
 
 	// Print board-specific settings
-	Serial.println("Board-specific settings:");
+	Serial.println("\nHW version-specific settings:");
 	Serial.print("buttonPin = "); Serial.println(buttonPin);
 	Serial.print("_batteryReadPin = "); Serial.println(_batteryReadPin);
 	Serial.print("_hibernatePin = "); Serial.println(_hibernatePin);
@@ -216,12 +216,20 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 
 	// Setup battery Reading
 	pinMode(_batteryReadPin, INPUT);
+
+	// Enable analog circuitry
+	Serial.print("\nCycling EmotiBit power...");
+	pinMode(_hibernatePin, OUTPUT);
+	digitalWrite(_hibernatePin, HIGH);
+
+	delay(250);
 	
 	// Enable analog circuitry
 	Serial.println("Enabling EmotiBit power...");
 	pinMode(_hibernatePin, OUTPUT);
 	digitalWrite(_hibernatePin, LOW);
 
+	Serial.println("\nSensor setup:");
 	// Setup EDA
 	Serial.println("Configuring EDA...");
 	pinMode(_edlPin, INPUT);
@@ -234,17 +242,24 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	}
 	_EmotiBit_i2c = new TwoWire(&sercom1, 11, 13);
 	// Flush the I2C
-	Serial.println("Flushing I2C....");
+	Serial.print("Setting up I2C....");
 	_EmotiBit_i2c->begin();
-	_EmotiBit_i2c->setClock(100000);
+	uint32_t i2cRate = 100000;
+	Serial.print("setting clock to");
+	Serial.print(i2cRate);
+	_EmotiBit_i2c->setClock(i2cRate);
+	Serial.print("...setting PIO_SERCOM");
 	pinPeripheral(11, PIO_SERCOM);
 	pinPeripheral(13, PIO_SERCOM);
+	Serial.print("...flushing");
 	_EmotiBit_i2c->flush();
+	Serial.print("\n");
 	//_EmotiBit_i2c->endTransmission();
 	//_EmotiBit_i2c->clearWriteError();
 	//_EmotiBit_i2c->end();
 	
 	// setup LED DRIVER
+	Serial.println("Initializing NCP5623....");
 	led.begin(*_EmotiBit_i2c);
 	led.setCurrent(26);
 	led.setLEDpwm((uint8_t)Led::RED, 8);
@@ -429,6 +444,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	}
 	
 	// Thermopile
+	Serial.println("Configuring MLX90632");
 	MLX90632::status returnError; // Required as a parameter for begin() function in the MLX library 
 	status = thermopile.begin(deviceAddress.MLX, *_EmotiBit_i2c, returnError);
 	if (status)
@@ -444,7 +460,9 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 
+
 	// setup sampling rates
+	Serial.println("Setting up sampling rates...");
 	EmotiBit::SamplingRates samplingRates;
 	samplingRates.accelerometer = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
 	samplingRates.gyroscope = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
@@ -473,10 +491,12 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 
 	delay(500);
 
+	// Setup SD Card
 	setupSdCard();
 	led.setLED(uint8_t(EmotiBit::Led::RED), true);
 
-	//_emotiBitWiFi.setup();
+	//WiFi Setup;
+	Serial.println("\nSetting up WiFi");
 #if defined(ADAFRUIT_FEATHER_M0)
 	WiFi.setPins(8, 7, 4, 2);
 #endif
@@ -576,10 +596,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = false;
 
-	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
 	Serial.println("EmotiBit Setup complete");
+	Serial.println("\nFree Ram :" + String(freeMemory(), DEC) + " bytes");
 
-	Serial.print("(Si7013_SNA),");
+	Serial.println("Electronic Serial Number:");
+	Serial.print("Si7013_SNA),");
 	Serial.print(tempHumiditySensor.sernum_a);
 	Serial.print(", (Si7013_SNB), ");
 	Serial.print(tempHumiditySensor.sernum_b);
@@ -616,10 +637,22 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 
 void EmotiBit::setupSdCard()
 {
-	Serial.print("Initializing SD card...");
+	Serial.print("\nInitializing SD card...");
 	// see if the card is present and can be initialized:
-	if (!SD.begin(_sdCardChipSelectPin)) {
-		Serial.print("Card failed, or not present on chip select ");
+	bool success = false;
+	for (int i = 0; i < 3; i++)
+	{
+		Serial.print(i);
+		Serial.print(",");
+		if (SD.begin(_sdCardChipSelectPin))
+		{
+			success = true;
+			break;
+		}
+		delay(100);
+	}
+	if (!success) {
+		Serial.print("...Card failed, or not present on chip select ");
 		Serial.println(_sdCardChipSelectPin);
 		// don't do anything more:
 		// ToDo: Handle case where we still want to send network data
@@ -630,7 +663,7 @@ void EmotiBit::setupSdCard()
 	Serial.println("card initialized.");
 	SD.ls(LS_R);
 
-	Serial.print(F("Loading configuration file: "));
+	Serial.print(F("\nLoading configuration file: "));
 	Serial.println(_configFilename);
 	if (!loadConfigFile(_configFilename)) {
 		Serial.println("SD card configuration file parsing failed.");

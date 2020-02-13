@@ -27,7 +27,7 @@ class EmotiBit {
   
 public:
 
-	const String firmware_version = "1.0.17";
+	const String firmware_version = "1.0.20";
 	
 	enum class SensorTimer {
 		MANUAL
@@ -258,8 +258,8 @@ public:
 
 			// ToDo: Make sampling variables changeable
 #define BASE_SAMPLING_FREQ 60
-#define IMU_SAMPLING_DIV 2
-#define PPG_SAMPLING_DIV 2
+#define IMU_SAMPLING_DIV 4
+#define PPG_SAMPLING_DIV 4
 #define EDA_SAMPLING_DIV 1
 #define TEMPERATURE_SAMPLING_DIV 2
 #define BATTERY_SAMPLING_DIV 10
