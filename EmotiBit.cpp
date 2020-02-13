@@ -450,7 +450,20 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	if (status)
 	{
 		thermopile.setMeasurementRate(thermopileFs);
-		thermopile.setMode(MODE_STEP);
+		thermopile.setMode(thermopileMode);
+		uint8_t thermMode = thermopile.getMode();
+		if (thermMode == MODE_CONTINUOUS)
+		{
+			Serial.println("MODE_CONTINUOUS");
+		}
+		if (thermMode == MODE_STEP)
+		{
+			Serial.println ("MODE_STEP");
+		}
+		if (thermMode == MODE_SLEEP)
+		{
+			Serial.println("MODE_SLEEP");
+		}
 		chipBegun.MLX90632 = true;
 	}
 	else
@@ -478,7 +491,14 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	samplesAveraged.eda = samplingRates.eda / 15;
 	samplesAveraged.humidity = (float)samplingRates.humidity / 7.5f;
 	samplesAveraged.temperature = (float)samplingRates.temperature / 7.5f;
-	samplesAveraged.thermopile = (float)samplingRates.thermopile / 7.5f;
+	if (thermopileMode == MODE_CONTINUOUS)
+	{
+		samplesAveraged.thermopile = 1;
+	}
+	else
+	{
+		samplesAveraged.thermopile = (float)samplingRates.thermopile / 7.5f;
+	}
 	samplesAveraged.battery = BASE_SAMPLING_FREQ / BATTERY_SAMPLING_DIV / 1;
 	setSamplesAveraged(samplesAveraged);
 
@@ -1159,36 +1179,63 @@ int8_t EmotiBit::updateTempHumidityData() {
 
 
 int8_t EmotiBit::updateThermopileData() {
-	int8_t status = 0;
 	// Thermopile
-	if (!thermopileBegun) {// for the first time
-		thermopile.start_getObjectTemp();
-		thermopileBegun = true;
-		//lastThermopileBegin = millis();
-	}
-	else {
-		/*Serial.print("Thermopile:");
-		Serial.println(thermopile.end_getObjectTemp());*/
+	int8_t status = 0;
+	float objectTemp;
+	uint32_t timestamp;
+	MLX90632::status thermStatus;
 
-		float objectTemp;
-		uint32_t timestamp;
-
-		MLX90632::status myStatus = MLX90632::status::SENSOR_NO_NEW_DATA;
-
-		while (myStatus != MLX90632::status::SENSOR_SUCCESS)
+	bool testDummyData = false;
+	if (testDummyData)
+	{
+		// Generate and send dummy data to validate pipes
+		static float testData = 30.f;
+		status = status | pushData(EmotiBit::DataType::THERMOPILE, testData, &(timestamp));
+		testData += 0.1f;
+		if (testData > 40.f)
 		{
-			// ToDo: consider a non-blocking solution for a scenario when updateThermopileData is called too frequently for set measurement rate
-			objectTemp = thermopile.end_getObjectTemp(myStatus); //Get the temperature of the object we're looking at in C
-			timestamp = millis();
+			testData = 30.f;
 		}
+	}
+	else
+	{
+		if (thermopileMode == MODE_STEP) {
+			// Step mode manually triggers sensor reading
+			if (!thermopileBegun) {
+				// First time through step mode just starts a measurement
+				thermopile.start_getObjectTemp();
+				thermopileBegun = true;
+			}
+			else {
+				/*Serial.print("Thermopile:");
+				Serial.println(thermopile.end_getObjectTemp());*/
 
-		status = status | pushData(EmotiBit::DataType::THERMOPILE, objectTemp, &(timestamp));
-		thermopile.start_getObjectTemp();
+				thermStatus = MLX90632::status::SENSOR_NO_NEW_DATA;
 
+				while (thermStatus != MLX90632::status::SENSOR_SUCCESS)
+				{
+					// ToDo: consider a non-blocking solution for a scenario when updateThermopileData is called too frequently for set measurement rate
+					objectTemp = thermopile.end_getObjectTemp(thermStatus); //Get the temperature of the object we're looking at in C
+					timestamp = millis();
+				}
+
+				status = status | pushData(EmotiBit::DataType::THERMOPILE, objectTemp, &(timestamp));
+				thermopile.start_getObjectTemp();
+			}
+		}
+		else if (thermopileMode == MODE_CONTINUOUS) {
+			// Continuouts mode reads at the set rate and returns data if ready
+			objectTemp = thermopile.end_getObjectTemp(thermStatus);
+			timestamp = millis();
+
+			if (thermStatus == MLX90632::status::SENSOR_SUCCESS)
+			{
+				status = status | pushData(EmotiBit::DataType::THERMOPILE, objectTemp, &(timestamp));
+			}
+		}
 	}
 	return status;
 }
-//rslt = bmi160_get_fifo_data(dev);
 
 int8_t EmotiBit::updateIMUData() {
 #ifdef DEBUG
@@ -1888,7 +1935,14 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
 		typeTags[i]->add("TH");
 		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", _samplingRates.thermopile / _samplesAveraged.thermopile);
+		if (thermopileMode == MODE_CONTINUOUS)
+		{
+			infos[i]->set("nominal_srate", thermopileFs);
+		}
+		else
+		{
+			infos[i]->set("nominal_srate", _samplingRates.thermopile / _samplesAveraged.thermopile);
+		}
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "degrees celcius");
 		infos[i]->set("source_id", source_id);
@@ -1898,7 +1952,14 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		setups[i]->set("samples_averaged", _samplesAveraged.thermopile);
-		setups[i]->set("oversampling_rate", _samplingRates.thermopile);
+		if (thermopileMode == MODE_CONTINUOUS)
+		{
+			infos[i]->set("oversampling_rate", thermopileFs);
+		}
+		else
+		{
+			setups[i]->set("oversampling_rate", _samplingRates.thermopile);
+		}
 		if (root.printTo(file) == 0) {
 #ifdef DEBUG
 			Serial.println(F("Failed to write to file"));
@@ -2041,7 +2102,7 @@ void EmotiBit::readSensors()
 
 	// Thermopile
 	if (chipBegun.MLX90632 && acquireData.thermopile) {
-		static uint16_t thermopileCounter = 1;	// starting on 1 to minimize reading with other sensors in the same loop
+		static uint16_t thermopileCounter = 1;	// starting on 1 to minimize reading with other sensors in the same loop iteration
 		thermopileCounter++;
 		if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
 			int8_t tempStatus = updateThermopileData();

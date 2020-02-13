@@ -27,7 +27,7 @@ class EmotiBit {
   
 public:
 
-	const String firmware_version = "1.0.20";
+	const String firmware_version = "1.0.21";
 	
 	enum class SensorTimer {
 		MANUAL
@@ -219,6 +219,7 @@ public:
 	uint8_t _hibernatePin;
 	bool thermopileBegun = false;
 	int thermopileFs = 8; // Changing this may wear out the Melexis flash
+	uint8_t thermopileMode = MODE_CONTINUOUS;
 
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
@@ -256,21 +257,21 @@ public:
 //#define THERMOPILE_SAMPLING_DIV 16
 //#define LED_REFRESH_DIV 4
 
-			// ToDo: Make sampling variables changeable
+// ToDo: Make sampling variables changeable
 #define BASE_SAMPLING_FREQ 60
 #define IMU_SAMPLING_DIV 4
 #define PPG_SAMPLING_DIV 4
 #define EDA_SAMPLING_DIV 1
 #define TEMPERATURE_SAMPLING_DIV 2
 #define BATTERY_SAMPLING_DIV 10
-	// TODO: This should change according to the rate set on the thermopile begin function 
-#define THERMOPILE_SAMPLING_DIV 8
-#define LED_REFRESH_DIV 1
+// TODO: This should change according to the rate set on the thermopile begin function 
+#define THERMOPILE_SAMPLING_DIV 4
+#define LED_REFRESH_DIV 4
 
 	struct AcquireData {
 		bool eda = true;
 		bool tempHumidity = true;
-		bool thermopile = false;
+		bool thermopile = true;
 		bool imu = true;
 		bool ppg = true;
 	} acquireData;
