@@ -1945,6 +1945,9 @@ void EmotiBit::readSensors()
 	Serial.println("readSensors()");
 #endif // DEBUG
 
+	digitalWrite(16, HIGH);
+
+
 	// EDA
 	if (acquireData.eda) {
 		static uint16_t edaCounter = 0;
@@ -1952,6 +1955,7 @@ void EmotiBit::readSensors()
 		if (edaCounter == EDA_SAMPLING_DIV) {
 			int8_t tempStatus = updateEDAData();
 			edaCounter = 0;
+			
 		}
 	}
 
@@ -2029,7 +2033,7 @@ void EmotiBit::readSensors()
 
 	// Thermopile
 	if (chipBegun.MLX90632 && acquireData.tempHumidity) {
-		static uint16_t thermopileCounter = 0;
+		static uint16_t thermopileCounter = 1;	// starting on 1 to minimize reading with other sensors in the same loop
 		thermopileCounter++;
 		if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
 			int8_t tempStatus = updateThermopileData();
@@ -2067,6 +2071,8 @@ void EmotiBit::readSensors()
 		updateBatteryPercentData();
 		batteryCounter = 0;
 	}
+
+	digitalWrite(16, LOW);
 }
 
 
@@ -2494,7 +2500,7 @@ void EmotiBit::startTimer(int frequencyHz) {
 	while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
 
 																				// Set prescaler to 1024
-	TC->CTRLA.reg |= TC_CTRLA_PRESCALER_DIV1024;
+	TC->CTRLA.reg |= TC_CTRLA_PRESCALER_DIV256;
 	while (TC->STATUS.bit.SYNCBUSY == 1); // wait for sync
 
 	setTimerFrequency(frequencyHz);
