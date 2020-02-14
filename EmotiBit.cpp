@@ -2105,8 +2105,10 @@ void EmotiBit::readSensors()
 		static uint16_t thermopileCounter = timerLoopOffset.thermopile;	// starting on 1 to minimize reading with other sensors in the same loop iteration
 		thermopileCounter++;
 		if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
+			digitalWrite(10, HIGH);
 			int8_t tempStatus = updateThermopileData();
 			thermopileCounter = 0;
+			digitalWrite(10, LOW);
 		}
 	}
 

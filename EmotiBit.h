@@ -219,7 +219,7 @@ public:
 	uint8_t _hibernatePin;
 	bool thermopileBegun = false;
 	int thermopileFs = 8; // Changing this may wear out the Melexis flash
-	uint8_t thermopileMode = MODE_CONTINUOUS;
+	uint8_t thermopileMode = MODE_CONTINUOUS;		// If changing to MODE_CONTINUOUS besure to adjust SAMPLING_DIV to match thermopile rate
 
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
