@@ -659,7 +659,6 @@ void EmotiBitWiFi::checkWiFi101FirmwareVersion()
 {
 	// Print a welcome message
 	Serial.println("WiFi101 firmware check.");
-	Serial.println();
 
 	// Check for the presence of the shield
 	Serial.print("WiFi101 shield: ");

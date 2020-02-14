@@ -27,7 +27,7 @@ class EmotiBit {
   
 public:
 
-	const String firmware_version = "1.0.16";
+	const String firmware_version = "1.0.21";
 	
 	enum class SensorTimer {
 		MANUAL
@@ -219,6 +219,7 @@ public:
 	uint8_t _hibernatePin;
 	bool thermopileBegun = false;
 	int thermopileFs = 8; // Changing this may wear out the Melexis flash
+	uint8_t thermopileMode = MODE_CONTINUOUS;		// If changing to MODE_CONTINUOUS besure to adjust SAMPLING_DIV to match thermopile rate
 
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
@@ -234,20 +235,53 @@ public:
 #define TIMER_PRESCALER_DIV 1024
 	const uint32_t CPU_HZ = 48000000;
 
-	// ToDo: Make sampling variables changeable
-#define BASE_SAMPLING_FREQ 300
-#define IMU_SAMPLING_DIV 3
-#define PPG_SAMPLING_DIV 3
+//	// ToDo: Make sampling variables changeable
+//#define BASE_SAMPLING_FREQ 300
+//#define IMU_SAMPLING_DIV 3
+//#define PPG_SAMPLING_DIV 3
+//#define EDA_SAMPLING_DIV 1
+//#define TEMPERATURE_SAMPLING_DIV 10
+//#define BATTERY_SAMPLING_DIV 50
+//	// TODO: This should change according to the rate set on the thermopile begin function 
+//#define THERMOPILE_SAMPLING_DIV 40
+//#define LED_REFRESH_DIV 10
+
+//		// ToDo: Make sampling variables changeable
+//#define BASE_SAMPLING_FREQ 120
+//#define IMU_SAMPLING_DIV 4
+//#define PPG_SAMPLING_DIV 4
+//#define EDA_SAMPLING_DIV 1
+//#define TEMPERATURE_SAMPLING_DIV 4
+//#define BATTERY_SAMPLING_DIV 20
+//	// TODO: This should change according to the rate set on the thermopile begin function 
+//#define THERMOPILE_SAMPLING_DIV 16
+//#define LED_REFRESH_DIV 4
+
+// ToDo: Make sampling variables changeable
+#define BASE_SAMPLING_FREQ 60
 #define EDA_SAMPLING_DIV 1
-#define TEMPERATURE_SAMPLING_DIV 10
-#define BATTERY_SAMPLING_DIV 50
-	// TODO: This should change according to the rate set on the thermopile begin function 
-#define THERMOPILE_SAMPLING_DIV 40
-#define LED_REFRESH_DIV 10
+#define IMU_SAMPLING_DIV 4
+#define PPG_SAMPLING_DIV 4
+#define LED_REFRESH_DIV 4
+#define THERMOPILE_SAMPLING_DIV 4	// TODO: This should change according to the rate set on the thermopile begin function 
+#define TEMPERATURE_SAMPLING_DIV 2
+#define BATTERY_SAMPLING_DIV 10
+
+	struct TimerLoopOffset
+	{
+		uint8_t eda = 0;
+		uint8_t ppg = 0;
+		uint8_t thermopile = 1;
+		uint8_t led = 2;
+		uint8_t imu = 3;
+		uint8_t tempHumidity = 2;
+		uint8_t battery = 0;
+	} timerLoopOffset;
 
 	struct AcquireData {
 		bool eda = true;
 		bool tempHumidity = true;
+		bool thermopile = true;
 		bool imu = true;
 		bool ppg = true;
 	} acquireData;
@@ -285,6 +319,7 @@ public:
 	bool _sendTestData = false;
 	float _edlDigFiltAlpha = 0;
 	float _edlDigFilteredVal = -1;
+	bool _debugMode = false;
 
 	void setupSdCard();
 	void updateButtonPress();
@@ -316,6 +351,7 @@ public:
 	void appendTestData(String &dataMessage, uint16_t &packetNumber);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
+	void processDebugInputs();
 
 	// ----------- END ino refactoring ---------------
 
