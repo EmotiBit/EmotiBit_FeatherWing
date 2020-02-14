@@ -259,14 +259,24 @@ public:
 
 // ToDo: Make sampling variables changeable
 #define BASE_SAMPLING_FREQ 60
+#define EDA_SAMPLING_DIV 1
 #define IMU_SAMPLING_DIV 4
 #define PPG_SAMPLING_DIV 4
-#define EDA_SAMPLING_DIV 1
+#define LED_REFRESH_DIV 4
+#define THERMOPILE_SAMPLING_DIV 4	// TODO: This should change according to the rate set on the thermopile begin function 
 #define TEMPERATURE_SAMPLING_DIV 2
 #define BATTERY_SAMPLING_DIV 10
-// TODO: This should change according to the rate set on the thermopile begin function 
-#define THERMOPILE_SAMPLING_DIV 4
-#define LED_REFRESH_DIV 4
+
+	struct TimerLoopOffset
+	{
+		uint8_t eda = 0;
+		uint8_t ppg = 0;
+		uint8_t thermopile = 1;
+		uint8_t led = 2;
+		uint8_t imu = 3;
+		uint8_t tempHumidity = 2;
+		uint8_t battery = 0;
+	} timerLoopOffset;
 
 	struct AcquireData {
 		bool eda = true;

@@ -2063,7 +2063,7 @@ void EmotiBit::readSensors()
 
 	// EDA
 	if (acquireData.eda) {
-		static uint16_t edaCounter = 0;
+		static uint16_t edaCounter = timerLoopOffset.eda;
 		edaCounter++;
 		if (edaCounter == EDA_SAMPLING_DIV) {
 			int8_t tempStatus = updateEDAData();
@@ -2074,7 +2074,7 @@ void EmotiBit::readSensors()
 
 	// Battery (all analog reads must be in the ISR)
 	// TODO: use the stored/averaged Battery value instead of calling readBatteryPercent again
-	static uint16_t batteryCounter = 0;
+	static uint16_t batteryCounter = timerLoopOffset.battery;
 	batteryCounter++;
 	if (batteryCounter == BATTERY_SAMPLING_DIV) {
 		battLevel = readBatteryPercent();
@@ -2085,7 +2085,7 @@ void EmotiBit::readSensors()
 
 	// Temperature / Humidity Sensor
 	if (chipBegun.SI7013 && acquireData.tempHumidity) {
-		static uint16_t temperatureCounter = 0;
+		static uint16_t temperatureCounter = timerLoopOffset.tempHumidity;
 		temperatureCounter++;
 		if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
 			// Note: Temperature/humidity and the thermistor are alternately sampled 
@@ -2102,7 +2102,7 @@ void EmotiBit::readSensors()
 
 	// Thermopile
 	if (chipBegun.MLX90632 && acquireData.thermopile) {
-		static uint16_t thermopileCounter = 1;	// starting on 1 to minimize reading with other sensors in the same loop iteration
+		static uint16_t thermopileCounter = timerLoopOffset.thermopile;	// starting on 1 to minimize reading with other sensors in the same loop iteration
 		thermopileCounter++;
 		if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
 			int8_t tempStatus = updateThermopileData();
@@ -2112,7 +2112,7 @@ void EmotiBit::readSensors()
 
 	// PPG
 	if (chipBegun.MAX30101 && acquireData.ppg) {
-		static uint16_t ppgCounter = 0;
+		static uint16_t ppgCounter = timerLoopOffset.ppg;
 		ppgCounter++;
 		if (ppgCounter == PPG_SAMPLING_DIV) {
 			int8_t tempStatus = updatePPGData();
@@ -2122,7 +2122,7 @@ void EmotiBit::readSensors()
 
 	// IMU
 	if (chipBegun.BMI160 && chipBegun.BMM150 && acquireData.imu) {
-		static uint16_t imuCounter = 0;
+		static uint16_t imuCounter = timerLoopOffset.imu;
 		imuCounter++;
 		if (imuCounter == IMU_SAMPLING_DIV) {
 			int8_t tempStatus = updateIMUData();
@@ -2133,7 +2133,7 @@ void EmotiBit::readSensors()
 	// LED STATUS CHANGE SEGMENT
 	if (chipBegun.NCP5623)
 	{
-		static uint16_t ledCounter = 0;
+		static uint16_t ledCounter = timerLoopOffset.led;
 		ledCounter++;
 		if (ledCounter == LED_REFRESH_DIV)
 		{
