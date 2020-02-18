@@ -27,7 +27,7 @@ class EmotiBit {
   
 public:
 
-	const String firmware_version = "1.0.21";
+	const String firmware_version = "1.0.22";
 	
 	enum class SensorTimer {
 		MANUAL
@@ -274,7 +274,7 @@ public:
 		uint8_t thermopile = 1;
 		uint8_t led = 2;
 		uint8_t imu = 3;
-		uint8_t tempHumidity = 2;
+		uint8_t tempHumidity = 0;
 		uint8_t battery = 0;
 	} timerLoopOffset;
 
