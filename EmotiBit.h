@@ -218,7 +218,7 @@ public:
 	bool bmm150ZHallClipped = false;
 	uint8_t _hibernatePin;
 	bool thermopileBegun = false;
-	int thermopileFs = 8; // Changing this may wear out the Melexis flash
+	int thermopileFs = 8; // *** NOTE *** changing this may wear out the Melexis flash
 	uint8_t thermopileMode = MODE_CONTINUOUS;		// If changing to MODE_CONTINUOUS besure to adjust SAMPLING_DIV to match thermopile rate
 
 	// ---------- BEGIN ino refactoring --------------

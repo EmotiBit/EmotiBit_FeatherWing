@@ -2427,6 +2427,7 @@ size_t EmotiBit::readData(EmotiBit::DataType t, float *data, size_t dataSize, ui
 	else
 	{
 		bufferSize = readData(t, &dataBuffer, timestamp);
+		// ToDo: optimize with memcpy
 		for (size_t i = 0; i < bufferSize && i < dataSize; i++)
 		{
 			data[i] = dataBuffer[i];
