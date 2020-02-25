@@ -821,21 +821,6 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 	}
 }
 
-bool EmotiBit::readButton()
-{
-	// ToDo: Consider reading pin mode https://arduino.stackexchange.com/questions/13165/how-to-read-pinmode-for-digital-pin
-	static volatile bool isReading;
-	static uint8_t buttonStatus = 0;
-	isReading = true;
-	if (!isReading)
-	{
-		// ToDo: Assess whether isReading lock is necessary
-		buttonStatus = digitalRead(buttonPin);
-	}
-	isReading = false;
-	return buttonStatus;
-}
-
 void EmotiBit::updateButtonPress()
 {
 	uint16_t minShortButtonPress = 150;
@@ -845,7 +830,7 @@ void EmotiBit::updateButtonPress()
 
 	// ToDo: create a mechanism
 
-	bool buttonPressed = readButton();
+	buttonPressed = digitalRead(buttonPin);
 	if (buttonPressed)
 	{
 		buttonPreviouslyPressed = true;
@@ -2173,7 +2158,7 @@ void EmotiBit::readSensors()
 			}
 
 			// Turn on all the LEDs when button pressed
-			if (readButton())
+			if (buttonPressed)
 			{
 				// Turn on the LEDs when the button is pressed
 				led.setLED(uint8_t(EmotiBit::Led::RED), true);

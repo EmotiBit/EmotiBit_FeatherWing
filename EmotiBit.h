@@ -320,10 +320,10 @@ public:
 	float _edlDigFiltAlpha = 0;
 	float _edlDigFilteredVal = -1;
 	bool _debugMode = false;
+	volatile bool buttonPressed = false;
 
 	void setupSdCard();
 	void updateButtonPress();
-	bool readButton();
 	void hibernate();
 	void startTimer(int frequencyHz);
 	void setTimerFrequency(int frequencyHz);
