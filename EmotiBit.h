@@ -26,10 +26,20 @@
 class EmotiBit {
   
 public:
+	enum class TestingMode
+	{
+		NONE,
+		CHRONIC,
+		ACUTE,
+		length
+	};
 
-	const String firmware_version = "1.0.23";
+	String firmware_version = "1.0.23";
+
+	TestingMode testingMode = TestingMode::CHRONIC;
 
 	const bool DIGITAL_WRITE_DEBUG = false;
+
 	
 	enum class SensorTimer {
 		MANUAL
@@ -393,6 +403,7 @@ public:
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
 	void processDebugInputs();
+	String getEmotiBitVersion();
 
 	// ----------- END ino refactoring ---------------
 

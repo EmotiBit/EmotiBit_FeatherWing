@@ -91,6 +91,18 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 {
 	bool status = true;
 
+	String fwVersionModifier = "";
+	if (testingMode == TestingMode::ACUTE)
+	{
+		fwVersionModifier = "-TA";
+	}
+	else if (testingMode == TestingMode::CHRONIC)
+	{
+		fwVersionModifier = "-TC";
+	}
+
+	firmware_version += fwVersionModifier;
+
 	Serial.print("\n\nEmotiBit version: ");
 	Serial.println((int)version);
 	Serial.print("Firmware version: ");
@@ -616,9 +628,13 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = false;
 
-	Serial.println("EmotiBit Setup complete");
-	Serial.println("\nFree Ram :" + String(freeMemory(), DEC) + " bytes");
+	Serial.println("\nEmotiBit Setup complete");
 
+	Serial.print("\nEmotiBit version: ");
+	Serial.println((int)version);
+	Serial.print("Firmware version: ");
+	Serial.println(firmware_version);
+	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
 	Serial.println("Electronic Serial Number:");
 	Serial.print("Si7013_SNA),");
 	Serial.print(tempHumiditySensor.sernum_a);
@@ -650,6 +666,15 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		digitalWrite(16, LOW);
 		pinMode(10, OUTPUT);
 		digitalWrite(10, LOW);
+	}
+
+	if (testingMode == TestingMode::ACUTE)
+	{
+		Serial.println("TestingMode::ACUTE");
+	}
+	else if (testingMode == TestingMode::CHRONIC)
+	{
+		Serial.println("TestingMode::CHRONIC");
 	}
 
 	if (_debugMode) 
@@ -2090,7 +2115,11 @@ void EmotiBit::readSensors()
 		thermopileCounter++;
 		if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
 			if (DIGITAL_WRITE_DEBUG) digitalWrite(10, HIGH);
-			int8_t tempStatus = updateThermopileData();
+			if (testingMode == TestingMode::ACUTE)
+			{
+				// Disable thermopile unless acute testing
+				int8_t tempStatus = updateThermopileData();
+			}
 			thermopileCounter = 0;
 			if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
 		}
