@@ -219,7 +219,7 @@ public:
 	uint8_t _hibernatePin;
 	bool thermopileBegun = false;
 	int thermopileFs = 8; // *** NOTE *** changing this may wear out the Melexis flash
-	uint8_t thermopileMode = MODE_CONTINUOUS;		// If changing to MODE_CONTINUOUS besure to adjust SAMPLING_DIV to match thermopile rate
+	uint8_t thermopileMode = MODE_STEP;		// If changing to MODE_CONTINUOUS besure to adjust SAMPLING_DIV to match thermopile rate
 
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
@@ -263,7 +263,7 @@ public:
 #define IMU_SAMPLING_DIV 4
 #define PPG_SAMPLING_DIV 4
 #define LED_REFRESH_DIV 4
-#define THERMOPILE_SAMPLING_DIV 4	// TODO: This should change according to the rate set on the thermopile begin function 
+#define THERMOPILE_SAMPLING_DIV 8	// TODO: This should change according to the rate set on the thermopile begin function 
 #define TEMPERATURE_SAMPLING_DIV 2
 #define BATTERY_SAMPLING_DIV 10
 
@@ -276,7 +276,7 @@ public:
 		uint8_t imu = 3;
 		uint8_t tempHumidity = 0;
 		uint8_t battery = 0;
-	} timerLoopOffset;
+	} timerLoopOffset;	// Sets initial value of sampling counters
 
 	struct AcquireData {
 		bool eda = true;
