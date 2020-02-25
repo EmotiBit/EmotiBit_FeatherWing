@@ -697,10 +697,6 @@ void EmotiBit::setupSdCard()
 }
 
 bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) {
-#ifdef DEBUG_GET_DATA
-	Serial.print("addPacket: ");
-	Serial.println(typeTag);
-#endif // DEBUGs
 	static EmotiBitPacket::Header header;
 	if (dataLen > 0) {
 		// ToDo: Consider faster ways to populate the _outDataPackets
@@ -709,7 +705,7 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 		//	addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_CONNHISTORY, timestamp);  // addDebugPacket(case, timestamp) 
 		//}
 
-		header = EmotiBitPacket::createHeader(typeTags[(uint8_t)t], millis(), _outDataPacketCounter++, dataLen);
+		header = EmotiBitPacket::createHeader(typeTags[(uint8_t)t], timestamp, _outDataPacketCounter++, dataLen);
 		_outDataPackets += EmotiBitPacket::headerToString(header);
 		for (uint16_t i = 0; i < dataLen; i++) {
 			_outDataPackets += ",";
@@ -2418,6 +2414,7 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	}
 }
 
+
 size_t EmotiBit::readData(EmotiBit::DataType t, float *data, size_t dataSize)
 {
 	uint32_t timestamp;
@@ -2444,7 +2441,7 @@ size_t EmotiBit::readData(EmotiBit::DataType t, float *data, size_t dataSize, ui
 	}
 	else
 	{
-		size_t bufferSize = readData(t, &dataBuffer, timestamp);
+		bufferSize = readData(t, &dataBuffer, timestamp);
 		for (size_t i = 0; i < bufferSize && i < dataSize; i++)
 		{
 			data[i] = dataBuffer[i];
@@ -2454,12 +2451,14 @@ size_t EmotiBit::readData(EmotiBit::DataType t, float *data, size_t dataSize, ui
 	return bufferSize; // Return size of available buffer even if we're only able to copy some of it
 }
 
+
 size_t EmotiBit::readData(EmotiBit::DataType t, float **data)
 {
 	uint32_t timestamp;
 	return readData(t, data, timestamp);
 }
 
+ 
 size_t EmotiBit::readData(EmotiBit::DataType t, float **data, uint32_t &timestamp)
 {
 	if ((uint8_t)t < (uint8_t)EmotiBit::DataType::length) {

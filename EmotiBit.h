@@ -27,7 +27,7 @@ class EmotiBit {
   
 public:
 
-	const String firmware_version = "1.0.22";
+	const String firmware_version = "1.0.23";
 	
 	enum class SensorTimer {
 		MANUAL
@@ -343,10 +343,49 @@ public:
 	bool addPacket(EmotiBit::DataType t);
 	void parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber);
 	void readSensors();
-	size_t readData(EmotiBit::DataType t, float *data, size_t dataSize);		// Copies available data buffer into data
-	size_t readData(EmotiBit::DataType t, float *data, size_t dataSize, uint32_t &timestamp);		// Copies available data buffer into data
-	size_t readData(EmotiBit::DataType t, float **data);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
-	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
+
+	/**
+	 * Copies data buffer of the specified DataType into the passed array
+	 *
+	 * @param t an EmotiBit::DataType to read
+	 * @data a pre-allocated array of size dataSize to copy data into
+	 * @dataSize a size_t specifying the size of the passed data array
+	 * @return the size of the present data buffer
+	 */
+	size_t readData(EmotiBit::DataType t, float *data, size_t dataSize);
+	
+	/**
+	 * Copies data buffer and timestamp of the specified DataType into the passed parameters
+	 *
+	 * @param t an EmotiBit::DataType to read
+	 * @data a pre-allocated array of size dataSize to copy data into
+	 * @dataSize a size_t specifying the size of the passed data array
+	 * @timestamp returns with the most recent data timestamp
+	 * @return the size of the present data buffer
+	 */
+	size_t readData(EmotiBit::DataType t, float *data, size_t dataSize, uint32_t &timestamp);		
+	
+	/**
+	 * Points to the data buffer of the specified type into the passed parameter
+	 *		CAUTION: this pointer becomes stale after calling EmotiBit::update()
+	 *
+	 * @param t an EmotiBit::DataType to read
+	 * @data returns with a pointer to the existing (double buffered) float[]
+	 * @return the size of the present data buffer 
+	 */
+	size_t readData(EmotiBit::DataType t, float **data);
+	
+	/**
+	 * Points to the data buffer and reads the timestamp of the specified type into the passed parameters
+	 *		CAUTION: this pointer becomes stale after calling EmotiBit::update()
+	 *
+	 * @param t an EmotiBit::DataType to read
+	 * @data returns with a pointer to the existing (double buffered) float[]
+	 * @timestamp returns with the most recent timestamp in the present data array
+	 * @return the size of the present data buffer
+	 */
+	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	
+
 	void updateBatteryIndication();
 	void appendTestData(String &dataMessage, uint16_t &packetNumber);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
