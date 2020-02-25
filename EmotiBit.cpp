@@ -642,12 +642,15 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	}
 
 	// Debugging scope pins
-	pinMode(14, OUTPUT);
-	digitalWrite(14, LOW);
-	pinMode(16, OUTPUT);
-	digitalWrite(16, LOW);
-	pinMode(10, OUTPUT);
-	digitalWrite(10, LOW);
+	if (DIGITAL_WRITE_DEBUG)
+	{
+		pinMode(14, OUTPUT);
+		digitalWrite(14, LOW);
+		pinMode(16, OUTPUT);
+		digitalWrite(16, LOW);
+		pinMode(10, OUTPUT);
+		digitalWrite(10, LOW);
+	}
 
 	if (_debugMode) 
 	{
@@ -2040,7 +2043,7 @@ void EmotiBit::readSensors()
 	Serial.println("readSensors()");
 #endif // DEBUG
 
-	digitalWrite(16, HIGH);
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
 
 	// EDA
 	if (acquireData.eda) {
@@ -2086,10 +2089,10 @@ void EmotiBit::readSensors()
 		static uint16_t thermopileCounter = timerLoopOffset.thermopile;	// starting on 1 to minimize reading with other sensors in the same loop iteration
 		thermopileCounter++;
 		if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
-			digitalWrite(10, HIGH);
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(10, HIGH);
 			int8_t tempStatus = updateThermopileData();
 			thermopileCounter = 0;
-			digitalWrite(10, LOW);
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
 		}
 	}
 
@@ -2168,9 +2171,7 @@ void EmotiBit::readSensors()
 		}
 	}
 
-
-
-	digitalWrite(16, LOW);
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
 }
 
 
@@ -2312,7 +2313,7 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 	// Break up the message in to bite-size chunks to avoid over running the UDP or SD card write buffers
 	// UDP buffer seems to be about 1400 char. SD card writes should be 512 char.
 
-	digitalWrite(14, HIGH);
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
 
 	if (_sdWrite && s.length() > 0) {
 		if (_dataFile) {
@@ -2341,7 +2342,7 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 		}
 	}
 
-	digitalWrite(14, LOW);
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
 }
 
 EmotiBit::PowerMode EmotiBit::getPowerMode()

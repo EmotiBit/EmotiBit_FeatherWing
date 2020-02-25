@@ -28,6 +28,8 @@ class EmotiBit {
 public:
 
 	const String firmware_version = "1.0.23";
+
+	const bool DIGITAL_WRITE_DEBUG = false;
 	
 	enum class SensorTimer {
 		MANUAL
