@@ -35,8 +35,7 @@ public:
 	};
 
 	String firmware_version = "1.0.23";
-
-	TestingMode testingMode = TestingMode::CHRONIC;
+	TestingMode testingMode = TestingMode::NONE;
 
 	const bool DIGITAL_WRITE_DEBUG = false;
 
