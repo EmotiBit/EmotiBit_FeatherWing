@@ -106,7 +106,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	firmware_version += fwVersionModifier;
 
 	Serial.print("\n\nEmotiBit version: ");
-	Serial.println(getHardwareVersion();
+	Serial.println(getHardwareVersion());
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
 
@@ -176,7 +176,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_edrPin = A4;
 		_sdCardChipSelectPin = 6;
 	}
-	else if (_version == _Version::V02H)
+	else if (_version == Version::V02H)
 	{
 		_hibernatePin = 6; // gpio pin assigned to the mosfet
 		buttonPin = 12;
@@ -896,8 +896,22 @@ void EmotiBit::updateButtonPress()
 
 uint8_t EmotiBit::update()
 {
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
+
+
+
+		static uint16_t serialPrevAvailable = Serial.available();
+		if (Serial.available() > serialPrevAvailable)
+		{
+			// There's new data available on serial
+			// Print to show we're alive
+			//Serial.print(Serial.available());
+			//Serial.print(':');
+			//Serial.print(serialPrevAvailable);
+			//Serial.print(">");
+			//Serial.println(Serial.peek());
+			Serial.println("hi");
+		}
+		serialPrevAvailable = Serial.available();
 
 	if (_debugMode)
 	{
@@ -921,8 +935,7 @@ uint8_t EmotiBit::update()
 	_outDataPackets += inControlPackets;
 	inControlPackets = "";
 
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
+
 	
 	// Update the button status and handle callbacks
 	updateButtonPress();
@@ -942,8 +955,7 @@ uint8_t EmotiBit::update()
 	{
 		dataSendTimer = millis();
 
-		if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
-		if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
+
 
 		if (_sendTestData)
 		{
@@ -958,6 +970,10 @@ uint8_t EmotiBit::update()
 		else
 		{
 			bool newData = false;
+
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
+
 			for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
 			{
 				addPacket((EmotiBit::DataType) i);
@@ -981,9 +997,9 @@ uint8_t EmotiBit::update()
 				writeSdCardMessage(_outDataPackets);
 				_outDataPackets = "";
 			}
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
 		}
-		if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
-		if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
 	}
 
 	// Hibernate after writing data
@@ -2088,9 +2104,9 @@ void EmotiBit::readSensors()
 #ifdef DEBUG_GET_DATA
 	Serial.println("readSensors()");
 #endif // DEBUG
-	uint32_t readSensorsBegin = millis();
-
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, HIGH);
+
+	uint32_t readSensorsBegin = micros();
 
 	// EDA
 	if (acquireData.eda) {
@@ -2099,7 +2115,6 @@ void EmotiBit::readSensors()
 		if (edaCounter == EDA_SAMPLING_DIV) {
 			int8_t tempStatus = updateEDAData();
 			edaCounter = 0;
-			//if (_debugMode) delay(1);	// Add a delay to see pin toggles on the oscilloscope
 		}
 	}
 
@@ -2155,7 +2170,7 @@ void EmotiBit::readSensors()
 		}
 	}
 
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
+	
 
 	// IMU
 	if (chipBegun.BMI160 && chipBegun.BMM150 && acquireData.imu) {
@@ -2222,15 +2237,16 @@ void EmotiBit::readSensors()
 		}
 	}
 
-	if (acquireData.debug)
-	{
-		debugBuffer.push_back(millis() - readSensorsBegin);	// Add readSensors processing duration to debugBuffer
-	}
+	//if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
+
+	if (acquireData.debug) pushData(EmotiBit::DataType::DEBUG, micros() - readSensorsBegin); // Add readSensors processing duration to debugBuffer
+
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
 }
 
 String EmotiBit::getHardwareVersion()
 {
-	if (_version == Emotibit::Version::V02H) {
+	if (_version == Version::V02H) {
 		return "V02h";
 	}
 }
@@ -2374,6 +2390,9 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 	// Break up the message in to bite-size chunks to avoid over running the UDP or SD card write buffers
 	// UDP buffer seems to be about 1400 char. SD card writes should be 512 char.
 
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
+
 	if (_sdWrite && s.length() > 0) {
 		if (_dataFile) {
 			static int16_t firstIndex;
@@ -2392,6 +2411,10 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 				_dataFile.print(s.substring(firstIndex, lastIndex));
 				firstIndex = lastIndex;
 			}
+
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
+
 			_dataFile.sync();
 		}
 		else {
@@ -2464,7 +2487,11 @@ void EmotiBit::writeSerialData(EmotiBit::DataType t)
 	size_t dataAvailable = dataDoubleBuffers[(uint8_t)t]->getData(&data, &timestamp, false);	// read data without swapping buffers
 	for (size_t i = 0; i < dataAvailable; i++)
 	{
-		Serial.println(data[i]);
+		//Serial.print((uint8_t)t);
+		//Serial.print(", ");
+		//Serial.print(dataAvailable);
+		//Serial.print(", ");
+		Serial.println(String(data[i], printLen[(uint8_t)t]));
 	}
 }
 
@@ -2655,12 +2682,12 @@ void EmotiBit::processDebugInputs()
 		{
 			if (_serialData == DataType::length)
 			{
-				Serial.print("_serialData = DataType::DEBUG");
+				Serial.println("_serialData = DataType::DEBUG");
 				_serialData = DataType::DEBUG;
 			}
 			else
 			{
-				Serial.print("_serialData OFF");
+				Serial.println("_serialData OFF");
 				_serialData = DataType::length;
 			}
 		}
@@ -2675,7 +2702,7 @@ void EmotiBit::processDebugInputs()
 			acquireData.thermopile = true;
 			Serial.print("acquireData.thermopile = ");
 			Serial.println(acquireData.thermopile);
-			if (_serialData != DataType::length) _serialData == DataType::THERMOPILE;
+			if (_serialData != DataType::length) _serialData = DataType::THERMOPILE;
 		}
 		else if (c == 'e')
 		{
@@ -2688,7 +2715,7 @@ void EmotiBit::processDebugInputs()
 			acquireData.eda = true;
 			Serial.print("acquireData.eda = ");
 			Serial.println(acquireData.eda);
-			if (_serialData != DataType::length) _serialData == DataType::EDA;
+			if (_serialData != DataType::length) _serialData = DataType::EDA;
 		}
 		else if (c == 'h')
 		{
@@ -2701,7 +2728,7 @@ void EmotiBit::processDebugInputs()
 			acquireData.tempHumidity = true;
 			Serial.print("acquireData.tempHumidity = ");
 			Serial.println(acquireData.tempHumidity);
-			if (_serialData != DataType::length) _serialData == DataType::HUMIDITY_0;
+			if (_serialData != DataType::length) _serialData = DataType::HUMIDITY_0;
 		}
 		else if (c == 'i')
 		{
@@ -2714,7 +2741,7 @@ void EmotiBit::processDebugInputs()
 			acquireData.imu = true;
 			Serial.print("acquireData.imu = ");
 			Serial.println(acquireData.imu);
-			if (_serialData != DataType::length) _serialData == DataType::ACCELEROMETER_X;
+			if (_serialData != DataType::length) _serialData = DataType::ACCELEROMETER_X;
 		}
 		else if (c == 'p')
 		{
@@ -2727,7 +2754,7 @@ void EmotiBit::processDebugInputs()
 			acquireData.ppg = true;
 			Serial.print("acquireData.ppg = ");
 			Serial.println(acquireData.ppg);
-			if (_serialData != DataType::length) _serialData == DataType::PPG_RED;
+			if (_serialData != DataType::length) _serialData = DataType::PPG_RED;
 		}
 		else if (c == 'd')
 		{
@@ -2740,7 +2767,7 @@ void EmotiBit::processDebugInputs()
 			acquireData.debug = true;
 			Serial.print("acquireData.debug = ");
 			Serial.println(acquireData.debug);
-			if (_serialData != DataType::length) _serialData == DataType::DEBUG;
+			if (_serialData != DataType::length) _serialData = DataType::DEBUG;
 		}
 	}
 }
