@@ -890,6 +890,9 @@ void EmotiBit::updateButtonPress()
 
 uint8_t EmotiBit::update()
 {
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
+
 	if (_debugMode)
 	{
 		processDebugInputs();
@@ -907,6 +910,9 @@ uint8_t EmotiBit::update()
 	Serial.print(inControlPackets);
 	_outDataPackets += inControlPackets;
 	inControlPackets = "";
+
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
 	
 	// Update the button status and handle callbacks
 	updateButtonPress();
@@ -925,6 +931,9 @@ uint8_t EmotiBit::update()
 	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
 	{
 		dataSendTimer = millis();
+
+		if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
+		if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
 
 		if (_sendTestData)
 		{
@@ -963,6 +972,8 @@ uint8_t EmotiBit::update()
 				_outDataPackets = "";
 			}
 		}
+		if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
+		if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
 	}
 
 	// Hibernate after writing data
@@ -2068,7 +2079,7 @@ void EmotiBit::readSensors()
 	Serial.println("readSensors()");
 #endif // DEBUG
 
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, HIGH);
 
 	// EDA
 	if (acquireData.eda) {
@@ -2114,14 +2125,12 @@ void EmotiBit::readSensors()
 		static uint16_t thermopileCounter = timerLoopOffset.thermopile;	// starting on 1 to minimize reading with other sensors in the same loop iteration
 		thermopileCounter++;
 		if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(10, HIGH);
 			if (testingMode == TestingMode::ACUTE)
 			{
 				// Disable thermopile unless acute testing
 				int8_t tempStatus = updateThermopileData();
 			}
 			thermopileCounter = 0;
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
 		}
 	}
 
@@ -2134,6 +2143,8 @@ void EmotiBit::readSensors()
 			ppgCounter = 0;
 		}
 	}
+
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
 
 	// IMU
 	if (chipBegun.BMI160 && chipBegun.BMM150 && acquireData.imu) {
@@ -2199,8 +2210,6 @@ void EmotiBit::readSensors()
 			}
 		}
 	}
-
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
 }
 
 
@@ -2342,8 +2351,6 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 	// Break up the message in to bite-size chunks to avoid over running the UDP or SD card write buffers
 	// UDP buffer seems to be about 1400 char. SD card writes should be 512 char.
 
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
-
 	if (_sdWrite && s.length() > 0) {
 		if (_dataFile) {
 			static int16_t firstIndex;
@@ -2370,8 +2377,6 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 			_sdWrite = false;
 		}
 	}
-
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
 }
 
 EmotiBit::PowerMode EmotiBit::getPowerMode()

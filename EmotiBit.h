@@ -34,12 +34,12 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.23";
-	TestingMode testingMode = TestingMode::NONE;
+	String firmware_version = "1.0.24";
+	TestingMode testingMode = TestingMode::CHRONIC;
 
-	const bool DIGITAL_WRITE_DEBUG = false;
+	const bool DIGITAL_WRITE_DEBUG = true;
 
-	
+
 	enum class SensorTimer {
 		MANUAL
 	};
