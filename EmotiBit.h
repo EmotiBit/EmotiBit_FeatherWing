@@ -34,7 +34,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.24";
+	String firmware_version = "1.0.26";
 	TestingMode testingMode = TestingMode::CHRONIC;
 
 	const bool DIGITAL_WRITE_DEBUG = true;
@@ -160,7 +160,7 @@ public:
 		MAGNETOMETER_Z,
 		BATTERY_VOLTAGE,
 		BATTERY_PERCENT,
-		//PUSH_WHILE_GETTING,
+		DEBUG,
 		length
   };
 
@@ -295,6 +295,7 @@ public:
 		bool thermopile = true;
 		bool imu = true;
 		bool ppg = true;
+		bool debug = false;
 	} acquireData;
 
 	struct ChipBegun {
@@ -331,6 +332,7 @@ public:
 	float _edlDigFiltAlpha = 0;
 	float _edlDigFilteredVal = -1;
 	bool _debugMode = false;
+	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 
 	void setupSdCard();
@@ -354,6 +356,7 @@ public:
 	bool addPacket(EmotiBit::DataType t);
 	void parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber);
 	void readSensors();
+	void writeSerialData(EmotiBit::DataType t);
 
 	/**
 	 * Copies data buffer of the specified DataType into the passed array
@@ -402,7 +405,7 @@ public:
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
 	void processDebugInputs();
-	String getEmotiBitVersion();
+	String getHardwareVersion();
 
 	// ----------- END ino refactoring ---------------
 
@@ -482,7 +485,7 @@ private:
 	DoubleBufferFloat batteryPercent = DoubleBufferFloat(1);
 	DoubleBufferFloat dataOverflow; //= DoubleBufferFloat(16);
 	DoubleBufferFloat dataClipping; //= DoubleBufferFloat(16);
-	//DoubleBufferFloat pushWhileGetting;
+	DoubleBufferFloat debugBuffer;
 
 	DoubleBufferFloat * dataDoubleBuffers[(uint8_t)DataType::length];
 
