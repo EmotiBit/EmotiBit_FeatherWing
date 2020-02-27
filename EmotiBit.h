@@ -34,10 +34,12 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.30";
+	String firmware_version = "1.0.33";
 	TestingMode testingMode = TestingMode::CHRONIC;
 
 	const bool DIGITAL_WRITE_DEBUG = true;
+
+	bool dummyIsrWithDelay = false;
 
 
 	enum class SensorTimer {

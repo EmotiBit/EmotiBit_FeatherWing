@@ -1168,7 +1168,7 @@ int8_t EmotiBit::updateTempHumidityData() {
 #ifdef DEBUG
 	Serial.println("updateTempHumidityData()");
 #endif // DEBUG
-	_EmotiBit_i2c->setClock(100000);
+	//_EmotiBit_i2c->setClock(100000);
 	int8_t status = 0;
 	if (tempHumiditySensor.getStatus() == Si7013::STATUS_IDLE) {
 		if (tempHumiditySensor.isHumidityNew() == true) {
@@ -1219,7 +1219,7 @@ int8_t EmotiBit::updateTempHumidityData() {
 		//}
 			
 	}
-	_EmotiBit_i2c->setClock(400000);
+	//_EmotiBit_i2c->setClock(400000);
 	return status;
 }
 
@@ -1590,7 +1590,7 @@ float EmotiBit::readBatteryVoltage() {
 	//float batRead = 10000.f;
 	batRead *= 2.f;
 	batRead *= _vcc;
-	batRead /= adcRes;
+	batRead /= adcRes; // ToDo: precalculate multiplier
 	return batRead;
 }
 
@@ -2067,8 +2067,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 }
 
 float EmotiBit::average(BufferFloat &b) {
-	static float f;
-	f = 0;
+	float f = 0;
 	for (int i = 0; i < b.size(); i++) {
 		f += b.data[i];
 	}
@@ -2105,18 +2104,8 @@ void EmotiBit::readSensors()
 	Serial.println("readSensors()");
 #endif // DEBUG
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, HIGH);
-
+	
 	uint32_t readSensorsBegin = micros();
-
-	// EDA
-	if (acquireData.eda) {
-		static uint16_t edaCounter = timerLoopOffset.eda;
-		edaCounter++;
-		if (edaCounter == EDA_SAMPLING_DIV) {
-			int8_t tempStatus = updateEDAData();
-			edaCounter = 0;
-		}
-	}
 
 	// Battery (all analog reads must be in the ISR)
 	// TODO: use the stored/averaged Battery value instead of calling readBatteryPercent again
@@ -2128,117 +2117,145 @@ void EmotiBit::readSensors()
 		updateBatteryPercentData();
 		batteryCounter = 0;
 	}
-
-	// Temperature / Humidity Sensor
-	if (chipBegun.SI7013 && acquireData.tempHumidity) {
-		static uint16_t temperatureCounter = timerLoopOffset.tempHumidity;
-		temperatureCounter++;
-		if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
-			// Note: Temperature/humidity and the thermistor are alternately sampled 
-			// on every other call of updateTempHumidityData()
-			// I.e. you must call updateTempHumidityData() 2x with a sufficient measurement 
-			// delay between calls to sample both temperature/humidity and the thermistor
-			int8_t tempStatus = updateTempHumidityData();
-			//if (dataStatus.tempHumidity == 0) {
-			//	dataStatus.tempHumidity = tempStatus;
-			//}
-			temperatureCounter = 0;
-		}
-	}
-
-	// Thermopile
-	if (chipBegun.MLX90632 && acquireData.thermopile) {
-		static uint16_t thermopileCounter = timerLoopOffset.thermopile;	// starting on 1 to minimize reading with other sensors in the same loop iteration
-		thermopileCounter++;
-		if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
-			if (testingMode == TestingMode::ACUTE)
-			{
-				// Disable thermopile unless acute testing
-				int8_t tempStatus = updateThermopileData();
-			}
-			thermopileCounter = 0;
-		}
-	}
-
-	// PPG
-	if (chipBegun.MAX30101 && acquireData.ppg) {
-		static uint16_t ppgCounter = timerLoopOffset.ppg;
-		ppgCounter++;
-		if (ppgCounter == PPG_SAMPLING_DIV) {
-			int8_t tempStatus = updatePPGData();
-			ppgCounter = 0;
-		}
-	}
-
 	
-
-	// IMU
-	if (chipBegun.BMI160 && chipBegun.BMM150 && acquireData.imu) {
-		static uint16_t imuCounter = timerLoopOffset.imu;
-		imuCounter++;
-		if (imuCounter == IMU_SAMPLING_DIV) {
-			int8_t tempStatus = updateIMUData();
-			imuCounter = 0;
-		}
-	}
-
-	// LED STATUS CHANGE SEGMENT
-	if (chipBegun.NCP5623)
+	if (dummyIsrWithDelay)
 	{
-		static uint16_t ledCounter = timerLoopOffset.led;
-		ledCounter++;
-		if (ledCounter == LED_REFRESH_DIV)
+		// Generate dummy data to test ISR without I2C
+		static int dummyData = 0;
+		for (uint8_t t = (uint8_t) DataType::PPG_INFRARED; t < (uint8_t) DataType::BATTERY_VOLTAGE; t++)
 		{
-			ledCounter = 0;
+			pushData((DataType)t, (float) dummyData);
+		}
+		dummyData++;
+		if (dummyData > 100) dummyData = 0;
 
-			// WiFi connected status LED
-			if (_emotiBitWiFi.isConnected())
-			{
-				led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-			}
-			else
-			{
-				led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
-			}
+		delayMicroseconds(7000);
+	}
+	else
+	{
 
-			// Battery LED
-			if (battIndicationSeq)
-			{
-				led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+		// EDA
+		if (acquireData.eda) {
+			static uint16_t edaCounter = timerLoopOffset.eda;
+			edaCounter++;
+			if (edaCounter == EDA_SAMPLING_DIV) {
+				int8_t tempStatus = updateEDAData();
+				edaCounter = 0;
 			}
-			else
-			{
-				led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-			}
+		}
 
-			// Recording status LED
-			if (_sdWrite)
-			{
-				static uint32_t recordBlinkDuration = millis();
-				if (millis() - recordBlinkDuration >= 500)
+		// Temperature / Humidity Sensor
+		if (chipBegun.SI7013 && acquireData.tempHumidity) {
+			static uint16_t temperatureCounter = timerLoopOffset.tempHumidity;
+			temperatureCounter++;
+			if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
+				// Note: Temperature/humidity and the thermistor are alternately sampled 
+				// on every other call of updateTempHumidityData()
+				// I.e. you must call updateTempHumidityData() 2x with a sufficient measurement 
+				// delay between calls to sample both temperature/humidity and the thermistor
+				int8_t tempStatus = updateTempHumidityData();
+				//if (dataStatus.tempHumidity == 0) {
+				//	dataStatus.tempHumidity = tempStatus;
+				//}
+				temperatureCounter = 0;
+			}
+		}
+
+		// Thermopile
+		if (chipBegun.MLX90632 && acquireData.thermopile) {
+			static uint16_t thermopileCounter = timerLoopOffset.thermopile;	// starting on 1 to minimize reading with other sensors in the same loop iteration
+			thermopileCounter++;
+			if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
+				if (testingMode == TestingMode::ACUTE)
 				{
-					led.setLED(uint8_t(EmotiBit::Led::RED), !led.getLED(uint8_t(EmotiBit::Led::RED)));
-					recordBlinkDuration = millis();
+					// Disable thermopile unless acute testing
+					int8_t tempStatus = updateThermopileData();
+				}
+				thermopileCounter = 0;
+			}
+		}
+
+		// PPG
+		if (chipBegun.MAX30101 && acquireData.ppg) {
+			static uint16_t ppgCounter = timerLoopOffset.ppg;
+			ppgCounter++;
+			if (ppgCounter == PPG_SAMPLING_DIV) {
+				int8_t tempStatus = updatePPGData();
+				ppgCounter = 0;
+			}
+		}
+
+
+
+		// IMU
+		if (chipBegun.BMI160 && chipBegun.BMM150 && acquireData.imu) {
+			static uint16_t imuCounter = timerLoopOffset.imu;
+			imuCounter++;
+			if (imuCounter == IMU_SAMPLING_DIV) {
+				int8_t tempStatus = updateIMUData();
+				imuCounter = 0;
+			}
+		}
+
+		// LED STATUS CHANGE SEGMENT
+		if (chipBegun.NCP5623)
+		{
+			static uint16_t ledCounter = timerLoopOffset.led;
+			ledCounter++;
+			if (ledCounter == LED_REFRESH_DIV)
+			{
+				ledCounter = 0;
+
+				// WiFi connected status LED
+				if (_emotiBitWiFi.isConnected())
+				{
+					led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+				}
+				else
+				{
+					led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+				}
+
+				// Battery LED
+				if (battIndicationSeq)
+				{
+					led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+				}
+				else
+				{
+					led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+				}
+
+				// Recording status LED
+				if (_sdWrite)
+				{
+					static uint32_t recordBlinkDuration = millis();
+					if (millis() - recordBlinkDuration >= 500)
+					{
+						led.setLED(uint8_t(EmotiBit::Led::RED), !led.getLED(uint8_t(EmotiBit::Led::RED)));
+						recordBlinkDuration = millis();
+					}
+				}
+				else if (!_sdWrite && led.getLED(uint8_t(EmotiBit::Led::RED)) == true)
+				{
+					led.setLED(uint8_t(EmotiBit::Led::RED), false);
+				}
+
+				// Turn on all the LEDs when button pressed
+				if (buttonPressed)
+				{
+					// Turn on the LEDs when the button is pressed
+					led.setLED(uint8_t(EmotiBit::Led::RED), true);
+					led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+					led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 				}
 			}
-			else if (!_sdWrite && led.getLED(uint8_t(EmotiBit::Led::RED)) == true)
-			{
-				led.setLED(uint8_t(EmotiBit::Led::RED), false);
-			}
-
-			// Turn on all the LEDs when button pressed
-			if (buttonPressed)
-			{
-				// Turn on the LEDs when the button is pressed
-				led.setLED(uint8_t(EmotiBit::Led::RED), true);
-				led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-				led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-			}
 		}
+
+		//if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
+
 	}
-
-	//if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
-
+	
 	if (acquireData.debug) pushData(EmotiBit::DataType::DEBUG, micros() - readSensorsBegin); // Add readSensors processing duration to debugBuffer
 
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
@@ -2690,6 +2707,12 @@ void EmotiBit::processDebugInputs()
 				Serial.println("_serialData OFF");
 				_serialData = DataType::length;
 			}
+		}
+		else if (c == '/')
+		{
+			dummyIsrWithDelay = !dummyIsrWithDelay;
+			Serial.print("dummyIsrWithDelay = ");
+			Serial.println(dummyIsrWithDelay);
 		}
 		else if (c == 't')
 		{
