@@ -2432,7 +2432,12 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 			if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
 			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
 
-			_dataFile.sync();
+			static uint32_t syncTimer = millis();
+			if (millis() - syncTimer > targetFileSyncDelay)
+			{
+				syncTimer = millis();
+				_dataFile.sync();
+			}
 		}
 		else {
 			Serial.print("Data file didn't open properly: ");

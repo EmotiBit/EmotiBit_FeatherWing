@@ -34,12 +34,13 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.33";
+	String firmware_version = "1.0.38";
 	TestingMode testingMode = TestingMode::CHRONIC;
-
 	const bool DIGITAL_WRITE_DEBUG = true;
 
+	bool _debugMode = true;
 	bool dummyIsrWithDelay = false;
+	uint32_t targetFileSyncDelay = 2000;
 
 
 	enum class SensorTimer {
@@ -237,7 +238,7 @@ public:
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
 	static const uint16_t OUT_PACKET_MAX_SIZE = 1024;
-	static const uint16_t DATA_SEND_INTERVAL = 100;
+	static const uint16_t DATA_SEND_INTERVAL = 200;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
 	static const uint16_t MAX_DATA_BUFFER_SIZE = 64;
 	static const uint16_t NORMAL_POWER_MODE_PACKET_INTERVAL = 200;
@@ -333,7 +334,6 @@ public:
 	bool _sendTestData = false;
 	float _edlDigFiltAlpha = 0;
 	float _edlDigFilteredVal = -1;
-	bool _debugMode = false;
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 
@@ -359,6 +359,7 @@ public:
 	void parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber);
 	void readSensors();
 	void writeSerialData(EmotiBit::DataType t);
+	
 
 	/**
 	 * Copies data buffer of the specified DataType into the passed array
