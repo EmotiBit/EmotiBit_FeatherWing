@@ -2719,6 +2719,22 @@ void EmotiBit::processDebugInputs()
 			Serial.print("dummyIsrWithDelay = ");
 			Serial.println(dummyIsrWithDelay);
 		}
+		else if (c == 'R')
+		{
+			Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
+		}
+		else if (c == 'l')
+		{
+			chipBegun.NCP5623 = false;
+			Serial.print("chipBegun.NCP5623 = ");
+			Serial.println(chipBegun.NCP5623);
+		}
+		else if (c == 'L')
+		{
+			chipBegun.NCP5623 = true;
+			Serial.print("chipBegun.NCP5623 = ");
+			Serial.println(chipBegun.NCP5623);
+		}
 		else if (c == 't')
 		{
 			acquireData.thermopile = false;
