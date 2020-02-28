@@ -316,7 +316,7 @@ int8_t EmotiBitWiFi::sendUdp(WiFiUDP& udp, const String& message, const IPAddres
 	while (firstIndex < message.length()) {
 		static int16_t lastIndex;
 		lastIndex = message.length() - 1; // message.length() - 1 to handle \n 
-		while (lastIndex - firstIndex > MAX_SEND_LEN) {
+		while (lastIndex - firstIndex > MAX_SEND_LEN - 1) {
 			lastIndex = message.lastIndexOf(EmotiBitPacket::PACKET_DELIMITER_CSV, lastIndex - 1);
 			//Serial.println(lastIndex);
 		}
