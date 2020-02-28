@@ -34,13 +34,13 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.41";
-	TestingMode testingMode = TestingMode::CHRONIC;
+	String firmware_version = "1.0.42";
+	TestingMode testingMode = TestingMode::ACUTE;
 	const bool DIGITAL_WRITE_DEBUG = true;
 
 	bool _debugMode = true;
 	bool dummyIsrWithDelay = false;
-	uint32_t targetFileSyncDelay = 2000;
+	uint32_t targetFileSyncDelay = 1;
 
 
 	enum class SensorTimer {
@@ -238,7 +238,7 @@ public:
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
 	static const uint16_t OUT_PACKET_MAX_SIZE = 1024;
-	static const uint16_t DATA_SEND_INTERVAL = 200;
+	static const uint16_t DATA_SEND_INTERVAL = 100;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
 	static const uint16_t MAX_DATA_BUFFER_SIZE = 64;
 	static const uint16_t NORMAL_POWER_MODE_PACKET_INTERVAL = 200;
@@ -466,40 +466,43 @@ private:
 	const uint8_t _maxImuFifoFrameLen = 40; // in bytes
 	uint8_t _imuBuffer[40];
 
-	DoubleBufferFloat eda;
-	DoubleBufferFloat edl;
-	DoubleBufferFloat edr;
-	DoubleBufferFloat ppgInfrared;
-	DoubleBufferFloat ppgRed;
-	DoubleBufferFloat ppgGreen;
-	DoubleBufferFloat temp0;
-	DoubleBufferFloat tempHP0;
-	DoubleBufferFloat humidity0;
-	DoubleBufferFloat accelX;
-	DoubleBufferFloat accelY;
-	DoubleBufferFloat accelZ;
-	DoubleBufferFloat gyroX;
-	DoubleBufferFloat gyroY;
-	DoubleBufferFloat gyroZ;
-	DoubleBufferFloat magX;
-	DoubleBufferFloat magY;
-	DoubleBufferFloat magZ;
+	const uint8_t LARGEST_BUFFER = 32;
+
+	DoubleBufferFloat eda = DoubleBufferFloat(LARGEST_BUFFER / 2);
+	DoubleBufferFloat edl = DoubleBufferFloat(LARGEST_BUFFER / 2);
+	DoubleBufferFloat edr = DoubleBufferFloat(LARGEST_BUFFER / 2);
+	DoubleBufferFloat ppgInfrared = DoubleBufferFloat(LARGEST_BUFFER);
+	DoubleBufferFloat ppgRed = DoubleBufferFloat(LARGEST_BUFFER);
+	DoubleBufferFloat ppgGreen = DoubleBufferFloat(LARGEST_BUFFER);
+	DoubleBufferFloat temp0 = DoubleBufferFloat(LARGEST_BUFFER / 4);
+	DoubleBufferFloat tempHP0 = DoubleBufferFloat(LARGEST_BUFFER / 4);
+	DoubleBufferFloat humidity0 = DoubleBufferFloat(LARGEST_BUFFER / 4);
+	DoubleBufferFloat accelX = DoubleBufferFloat(LARGEST_BUFFER / 2);
+	DoubleBufferFloat accelY = DoubleBufferFloat(LARGEST_BUFFER / 2);
+	DoubleBufferFloat accelZ = DoubleBufferFloat(LARGEST_BUFFER / 2);
+	DoubleBufferFloat gyroX = DoubleBufferFloat(LARGEST_BUFFER / 2);
+	DoubleBufferFloat gyroY = DoubleBufferFloat(LARGEST_BUFFER / 2);
+	DoubleBufferFloat gyroZ = DoubleBufferFloat(LARGEST_BUFFER / 2);
+	DoubleBufferFloat magX = DoubleBufferFloat(LARGEST_BUFFER / 2);
+	DoubleBufferFloat magY = DoubleBufferFloat(LARGEST_BUFFER / 2);
+	DoubleBufferFloat magZ = DoubleBufferFloat(LARGEST_BUFFER / 2);
 	DoubleBufferFloat batteryVoltage = DoubleBufferFloat(1);
 	DoubleBufferFloat batteryPercent = DoubleBufferFloat(1);
-	DoubleBufferFloat dataOverflow; //= DoubleBufferFloat(16);
-	DoubleBufferFloat dataClipping; //= DoubleBufferFloat(16);
-	DoubleBufferFloat debugBuffer;
+	DoubleBufferFloat dataOverflow = DoubleBufferFloat(LARGEST_BUFFER);
+	DoubleBufferFloat dataClipping = DoubleBufferFloat(LARGEST_BUFFER);
+	DoubleBufferFloat debugBuffer = DoubleBufferFloat(LARGEST_BUFFER);
 
 	DoubleBufferFloat * dataDoubleBuffers[(uint8_t)DataType::length];
 
 	// Oversampling buffers
 	// Single buffered arrays must only be accessed from ISR functions, not in the main loop
 	// ToDo: add assignment for dynamic allocation;
-	BufferFloat edlBuffer = BufferFloat(20);	
-	BufferFloat edrBuffer = BufferFloat(20);	
-	BufferFloat thermopileBuffer = BufferFloat(8);	
-	BufferFloat temperatureBuffer = BufferFloat(8);	
-	BufferFloat humidityBuffer = BufferFloat(8);
+	// 	**** WARNING **** THIS MUST MATCH THE SAMPLING DIVS ETC
+	BufferFloat edlBuffer = BufferFloat(8);
+	BufferFloat edrBuffer = BufferFloat(8);	
+	BufferFloat thermopileBuffer = BufferFloat(4);	
+	BufferFloat temperatureBuffer = BufferFloat(4);	
+	BufferFloat humidityBuffer = BufferFloat(4);
 	BufferFloat batteryVoltageBuffer = BufferFloat(8);
 	BufferFloat batteryPercentBuffer = BufferFloat(8);
 
