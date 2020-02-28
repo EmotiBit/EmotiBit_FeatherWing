@@ -35,7 +35,7 @@ public:
 	};
 
 	String firmware_version = "1.0.42";
-	TestingMode testingMode = TestingMode::ACUTE;
+	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = true;
 
 	bool _debugMode = true;
