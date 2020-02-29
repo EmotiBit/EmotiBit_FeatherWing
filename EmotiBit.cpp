@@ -2131,15 +2131,20 @@ void EmotiBit::readSensors()
 	if (dummyIsrWithDelay)
 	{
 		// Generate dummy data to test ISR without I2C
-		static int dummyData = 0;
-		for (uint8_t t = (uint8_t) DataType::PPG_INFRARED; t < (uint8_t) DataType::BATTERY_VOLTAGE; t++)
-		{
-			pushData((DataType)t, (float) dummyData);
-		}
-		dummyData++;
-		if (dummyData > 100) dummyData = 0;
 
-		delayMicroseconds(6000);
+		static uint16_t dummyCounter = 0;
+		if (dummyCounter == DUMMY_ISR_DIV) {
+			static int dummyData = 0;
+			for (uint8_t t = (uint8_t)DataType::PPG_INFRARED; t < (uint8_t)DataType::BATTERY_VOLTAGE; t++)
+			{
+				pushData((DataType)t, (float)dummyData);
+			}
+			dummyData++;
+			if (dummyData > 100) dummyData = 0;
+			dummyCounter = 0;
+		}
+		dummyCounter++
+		delayMicroseconds(2000);
 	}
 	else
 	{
