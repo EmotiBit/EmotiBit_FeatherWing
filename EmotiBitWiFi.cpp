@@ -452,14 +452,12 @@ int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, uint16_t controlPort, uint
 
 int8_t EmotiBitWiFi::disconnect() {
 	Serial.println("Disconnect()");
-	_isConnected = false;
-	_dataPort = -1;
-	_controlPort = -1;
+	int8_t retStatus = FAIL;
 
 	int8_t wifiStatus = status();
 	if (wifiStatus != WL_CONNECTED)
 	{
-		return wifiStatus;
+		retStatus = wifiStatus;
 	}
 
 	if (_isConnected) {
@@ -471,12 +469,18 @@ int8_t EmotiBitWiFi::disconnect() {
 			_controlCxn.stop();
 		}
 		Serial.println("Stopping Data Cxn... ");
+		_dataCxn.flush();
 		_dataCxn.stop();
 		Serial.println("Stopped... ");
 
-		return SUCCESS;
+		retStatus = SUCCESS;
 	}
-	return FAIL;
+
+	_isConnected = false;
+	_dataPort = -1;
+	_controlPort = -1;
+
+	return retStatus;
 }
 
 String EmotiBitWiFi::createPongPacket()
