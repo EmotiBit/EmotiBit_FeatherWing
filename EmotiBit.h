@@ -34,7 +34,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.44";
+	String firmware_version = "1.0.47";
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = true;
 
@@ -236,11 +236,11 @@ public:
 	uint8_t thermopileMode = MODE_STEP;		// If changing to MODE_CONTINUOUS besure to adjust SAMPLING_DIV to match thermopile rate
 
 	// ---------- BEGIN ino refactoring --------------
-	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
+	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 2048;
 	static const uint16_t OUT_PACKET_MAX_SIZE = 1024;
 	static const uint16_t DATA_SEND_INTERVAL = 100;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
-	static const uint16_t MAX_DATA_BUFFER_SIZE = 64;
+	static const uint16_t MAX_DATA_BUFFER_SIZE = 32;
 	static const uint16_t NORMAL_POWER_MODE_PACKET_INTERVAL = 200;
 	static const uint16_t LOW_POWER_MODE_PACKET_INTERVAL = 1000;
 	uint16_t modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
@@ -272,23 +272,23 @@ public:
 //#define LED_REFRESH_DIV 4
 
 // ToDo: Make sampling variables changeable
-#define BASE_SAMPLING_FREQ 60
+#define BASE_SAMPLING_FREQ 120
 #define EDA_SAMPLING_DIV 1
-#define IMU_SAMPLING_DIV 4
-#define PPG_SAMPLING_DIV 4
-#define LED_REFRESH_DIV 4
-#define THERMOPILE_SAMPLING_DIV 8	// TODO: This should change according to the rate set on the thermopile begin function 
-#define TEMPERATURE_SAMPLING_DIV 2
-#define BATTERY_SAMPLING_DIV 10
+#define IMU_SAMPLING_DIV 8
+#define PPG_SAMPLING_DIV 8
+#define LED_REFRESH_DIV 8
+#define THERMOPILE_SAMPLING_DIV 16	// TODO: This should change according to the rate set on the thermopile begin function 
+#define TEMPERATURE_SAMPLING_DIV 4
+#define BATTERY_SAMPLING_DIV 20
 
 	struct TimerLoopOffset
 	{
 		uint8_t eda = 0;
-		uint8_t ppg = 0;
-		uint8_t thermopile = 1;
-		uint8_t led = 2;
 		uint8_t imu = 3;
-		uint8_t tempHumidity = 0;
+		uint8_t ppg = 1;
+		uint8_t led = 2;
+		uint8_t thermopile = 6;
+		uint8_t tempHumidity = 4;
 		uint8_t battery = 0;
 	} timerLoopOffset;	// Sets initial value of sampling counters
 
@@ -466,31 +466,30 @@ private:
 	const uint8_t _maxImuFifoFrameLen = 40; // in bytes
 	uint8_t _imuBuffer[40];
 
-	const uint8_t LARGEST_BUFFER = 32;
 
-	DoubleBufferFloat eda = DoubleBufferFloat(LARGEST_BUFFER / 2);
-	DoubleBufferFloat edl = DoubleBufferFloat(LARGEST_BUFFER / 2);
-	DoubleBufferFloat edr = DoubleBufferFloat(LARGEST_BUFFER / 2);
-	DoubleBufferFloat ppgInfrared = DoubleBufferFloat(LARGEST_BUFFER);
-	DoubleBufferFloat ppgRed = DoubleBufferFloat(LARGEST_BUFFER);
-	DoubleBufferFloat ppgGreen = DoubleBufferFloat(LARGEST_BUFFER);
-	DoubleBufferFloat temp0 = DoubleBufferFloat(LARGEST_BUFFER / 4);
-	DoubleBufferFloat tempHP0 = DoubleBufferFloat(LARGEST_BUFFER / 4);
-	DoubleBufferFloat humidity0 = DoubleBufferFloat(LARGEST_BUFFER / 4);
-	DoubleBufferFloat accelX = DoubleBufferFloat(LARGEST_BUFFER / 2);
-	DoubleBufferFloat accelY = DoubleBufferFloat(LARGEST_BUFFER / 2);
-	DoubleBufferFloat accelZ = DoubleBufferFloat(LARGEST_BUFFER / 2);
-	DoubleBufferFloat gyroX = DoubleBufferFloat(LARGEST_BUFFER / 2);
-	DoubleBufferFloat gyroY = DoubleBufferFloat(LARGEST_BUFFER / 2);
-	DoubleBufferFloat gyroZ = DoubleBufferFloat(LARGEST_BUFFER / 2);
-	DoubleBufferFloat magX = DoubleBufferFloat(LARGEST_BUFFER / 2);
-	DoubleBufferFloat magY = DoubleBufferFloat(LARGEST_BUFFER / 2);
-	DoubleBufferFloat magZ = DoubleBufferFloat(LARGEST_BUFFER / 2);
+	DoubleBufferFloat eda = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat edl = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat edr = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat ppgInfrared = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat ppgRed = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat ppgGreen = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat temp0 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
+	DoubleBufferFloat tempHP0 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
+	DoubleBufferFloat humidity0 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
+	DoubleBufferFloat accelX = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat accelY = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat accelZ = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat gyroX = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat gyroY = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat gyroZ = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat magX = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat magY = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat magZ = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
 	DoubleBufferFloat batteryVoltage = DoubleBufferFloat(1);
 	DoubleBufferFloat batteryPercent = DoubleBufferFloat(1);
-	DoubleBufferFloat dataOverflow = DoubleBufferFloat(LARGEST_BUFFER);
-	DoubleBufferFloat dataClipping = DoubleBufferFloat(LARGEST_BUFFER);
-	DoubleBufferFloat debugBuffer = DoubleBufferFloat(LARGEST_BUFFER);
+	DoubleBufferFloat dataOverflow = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat dataClipping = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat debugBuffer = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
 
 	DoubleBufferFloat * dataDoubleBuffers[(uint8_t)DataType::length];
 
@@ -498,9 +497,8 @@ private:
 	// Single buffered arrays must only be accessed from ISR functions, not in the main loop
 	// ToDo: add assignment for dynamic allocation;
 	// 	**** WARNING **** THIS MUST MATCH THE SAMPLING DIVS ETC
-	BufferFloat edlBuffer = BufferFloat(8);
-	BufferFloat edrBuffer = BufferFloat(8);	
-	BufferFloat thermopileBuffer = BufferFloat(4);	
+	BufferFloat edlBuffer = BufferFloat(20);
+	BufferFloat edrBuffer = BufferFloat(20);	
 	BufferFloat temperatureBuffer = BufferFloat(4);	
 	BufferFloat humidityBuffer = BufferFloat(4);
 	BufferFloat batteryVoltageBuffer = BufferFloat(8);

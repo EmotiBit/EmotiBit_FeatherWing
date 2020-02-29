@@ -980,12 +980,16 @@ uint8_t EmotiBit::update()
 				if (_outDataPackets.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE)
 				{
 					// Avoid overrunning our reserve memory
+					if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
+
 					if (getPowerMode() == PowerMode::NORMAL_POWER)
 					{
 						_emotiBitWiFi.sendData(_outDataPackets);
 					}
 					writeSdCardMessage(_outDataPackets);
 					_outDataPackets = "";
+
+					if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
 				}
 			}
 			if (_outDataPackets.length() > 0)
@@ -1168,7 +1172,7 @@ int8_t EmotiBit::updateTempHumidityData() {
 #ifdef DEBUG
 	Serial.println("updateTempHumidityData()");
 #endif // DEBUG
-	//_EmotiBit_i2c->setClock(100000);
+	_EmotiBit_i2c->setClock(100000);
 	int8_t status = 0;
 	if (tempHumiditySensor.getStatus() == Si7013::STATUS_IDLE) {
 		if (tempHumiditySensor.isHumidityNew() == true) {
@@ -1219,7 +1223,7 @@ int8_t EmotiBit::updateTempHumidityData() {
 		//}
 			
 	}
-	//_EmotiBit_i2c->setClock(400000);
+	_EmotiBit_i2c->setClock(400000);
 	return status;
 }
 
@@ -2408,7 +2412,7 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 	// UDP buffer seems to be about 1400 char. SD card writes should be 512 char.
 
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
+	
 
 	if (_sdWrite && s.length() > 0) {
 		if (_dataFile) {
@@ -2430,7 +2434,6 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 			}
 
 			if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
 
 			static uint32_t syncTimer = millis();
 			if (millis() - syncTimer > targetFileSyncDelay)
