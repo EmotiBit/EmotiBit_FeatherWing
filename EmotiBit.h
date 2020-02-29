@@ -34,7 +34,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.48";
+	String firmware_version = "1.0.50";
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = true;
 
@@ -240,7 +240,7 @@ public:
 	static const uint16_t OUT_PACKET_MAX_SIZE = 1024;
 	static const uint16_t DATA_SEND_INTERVAL = 100;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
-	static const uint16_t MAX_DATA_BUFFER_SIZE = 48;
+	static const uint16_t MAX_DATA_BUFFER_SIZE = 32;
 	static const uint16_t NORMAL_POWER_MODE_PACKET_INTERVAL = 200;
 	static const uint16_t LOW_POWER_MODE_PACKET_INTERVAL = 1000;
 	uint16_t modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
@@ -408,7 +408,7 @@ public:
 	void appendTestData(String &dataMessage, uint16_t &packetNumber);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
-	void processDebugInputs();
+	void processDebugInputs(String &debugPackets, uint16_t &packetNumber);
 	String getHardwareVersion();
 
 	// ----------- END ino refactoring ---------------
@@ -498,8 +498,8 @@ private:
 	// Single buffered arrays must only be accessed from ISR functions, not in the main loop
 	// ToDo: add assignment for dynamic allocation;
 	// 	**** WARNING **** THIS MUST MATCH THE SAMPLING DIVS ETC
-	BufferFloat edlBuffer = BufferFloat(20);
-	BufferFloat edrBuffer = BufferFloat(20);	
+	BufferFloat edlBuffer = BufferFloat(24);
+	BufferFloat edrBuffer = BufferFloat(24);	
 	BufferFloat temperatureBuffer = BufferFloat(4);	
 	BufferFloat humidityBuffer = BufferFloat(4);
 	BufferFloat batteryVoltageBuffer = BufferFloat(8);

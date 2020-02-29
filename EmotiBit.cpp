@@ -915,7 +915,10 @@ uint8_t EmotiBit::update()
 
 	if (_debugMode)
 	{
-		processDebugInputs();
+		static String debugPackets;
+		processDebugInputs(debugPackets, _outDataPacketCounter);
+		_outDataPackets += debugPackets;
+		debugPackets = "";
 		if (_serialData != DataType::length)
 		{
 			writeSerialData(_serialData);
@@ -2696,146 +2699,197 @@ void EmotiBit::sendModePacket(String &sentModePacket, uint16_t &packetNumber)
 	_outDataPackets += sentModePacket;			// Add packet to slower data logging bucket
 }
 
-void EmotiBit::processDebugInputs()
+void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 {
 	if (Serial.available())
 	{
+		uint8_t dataCount = 1;
+		String payload;
+
 		char c = Serial.read();
 		if (c == ':')
 		{
 			if (_serialData == DataType::length)
 			{
-				Serial.println("_serialData = DataType::DEBUG");
+				payload = "_serialData = DataType::DEBUG";
+				Serial.println(payload);
 				_serialData = DataType::DEBUG;
+				debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 			}
 			else
 			{
-				Serial.println("_serialData OFF");
+				payload = "_serialData OFF";
+				Serial.println(payload);
 				_serialData = DataType::length;
+				debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 			}
 		}
 		else if (c == '/')
 		{
 			dummyIsrWithDelay = !dummyIsrWithDelay;
-			Serial.print("dummyIsrWithDelay = ");
-			Serial.println(dummyIsrWithDelay);
+			payload = "dummyIsrWithDelay = ";
+			payload += dummyIsrWithDelay;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'R')
 		{
-			Serial.println("Free RAM: " + String(freeMemory(), DEC) + " bytes");
+			payload = "Free RAM: ";
+			payload += String(freeMemory(), DEC);
+			payload += " bytes";
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'r')
 		{
 			const int nFloats = 25;
 			static int n = 0;
 			n++;
-			Serial.print("Wasted RAM: ");
-			Serial.print(nFloats * 4 * n);
-			Serial.println(" bytes");
+			payload = "Wasted RAM: ";
+			payload += nFloats * 4 * n;
+			payload += " bytes";
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 			float * data = new float[nFloats];
-			Serial.println("Free RAM: " + String(freeMemory(), DEC) + " bytes");
+			payload = "Free RAM: ";
+			payload += String(freeMemory(), DEC);
+			payload += " bytes";
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'l')
 		{
 			chipBegun.NCP5623 = false;
-			Serial.print("chipBegun.NCP5623 = ");
-			Serial.println(chipBegun.NCP5623);
+			payload = "chipBegun.NCP5623 = ";
+			payload += chipBegun.NCP5623;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'L')
 		{
 			chipBegun.NCP5623 = true;
-			Serial.print("chipBegun.NCP5623 = ");
-			Serial.println(chipBegun.NCP5623);
+			payload = "chipBegun.NCP5623 = ";
+			payload += chipBegun.NCP5623;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 't')
 		{
 			acquireData.thermopile = false;
-			Serial.print("acquireData.thermopile = ");
-			Serial.println(acquireData.thermopile);			
+			payload = "acquireData.thermopile = ";
+			payload += acquireData.thermopile;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'T')
 		{
 			acquireData.thermopile = true;
-			Serial.print("acquireData.thermopile = ");
-			Serial.println(acquireData.thermopile);
+			payload = "acquireData.thermopile = ";
+			payload += acquireData.thermopile;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::THERMOPILE;
 		}
 		else if (c == 'e')
 		{
 			acquireData.eda = false;
-			Serial.print("acquireData.eda = ");
-			Serial.println(acquireData.eda);
+			payload = "acquireData.eda = ";
+			payload += acquireData.eda;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'E')
 		{
 			acquireData.eda = true;
-			Serial.print("acquireData.eda = ");
-			Serial.println(acquireData.eda);
+			payload = "acquireData.eda = ";
+			payload += acquireData.eda;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::EDA;
 		}
 		else if (c == 'h')
 		{
 			acquireData.tempHumidity = false;
-			Serial.print("acquireData.tempHumidity = ");
-			Serial.println(acquireData.tempHumidity);
+			payload = "acquireData.tempHumidity = ";
+			payload += acquireData.tempHumidity;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'H')
 		{
 			acquireData.tempHumidity = true;
-			Serial.print("acquireData.tempHumidity = ");
-			Serial.println(acquireData.tempHumidity);
+			payload = "acquireData.tempHumidity = ";
+			payload += acquireData.tempHumidity;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::HUMIDITY_0;
 		}
 		else if (c == 'i')
 		{
 			acquireData.imu = false;
-			Serial.print("acquireData.imu = ");
-			Serial.println(acquireData.imu);
+			payload = "acquireData.imu = ";
+			payload += acquireData.imu;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'I')
 		{
 			acquireData.imu = true;
-			Serial.print("acquireData.imu = ");
-			Serial.println(acquireData.imu);
+			payload = "acquireData.imu = ";
+			payload += acquireData.imu;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::ACCELEROMETER_X;
 		}
 		else if (c == 'p')
 		{
 			acquireData.ppg = false;
-			Serial.print("acquireData.ppg = ");
-			Serial.println(acquireData.ppg);
+			payload = "acquireData.ppg = ";
+			payload += acquireData.ppg;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'P')
 		{
 			acquireData.ppg = true;
-			Serial.print("acquireData.ppg = ");
-			Serial.println(acquireData.ppg);
+			payload = "acquireData.ppg = ";
+			payload += acquireData.ppg;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::PPG_RED;
 		}
 		else if (c == 'd')
 		{
 			acquireData.debug = false;
-			Serial.print("acquireData.debug = ");
-			Serial.println(acquireData.debug);
+			payload = "acquireData.debug = ";
+			payload += acquireData.debug;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'D')
 		{
 			acquireData.debug = true;
-			Serial.print("acquireData.debug = ");
-			Serial.println(acquireData.debug);
+			payload = "acquireData.debug = ";
+			payload += acquireData.debug;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::DEBUG;
 		}
 		else if (c == 'b')
 		{
 			acquireData.battery = false;
-			Serial.print("acquireData.battery = ");
-			Serial.println(acquireData.battery);
+			payload = "acquireData.battery = ";
+			payload += acquireData.battery;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'B')
 		{
 			acquireData.battery = true;
-			Serial.print("acquireData.battery = ");
-			Serial.println(acquireData.battery);
+			payload = "acquireData.battery = ";
+			payload += acquireData.battery;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::BATTERY_PERCENT;
 		}
 	}
