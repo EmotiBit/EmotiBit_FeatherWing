@@ -2721,7 +2721,18 @@ void EmotiBit::processDebugInputs()
 		}
 		else if (c == 'R')
 		{
-			Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
+			Serial.println("Free RAM: " + String(freeMemory(), DEC) + " bytes");
+		}
+		else if (c == 'r')
+		{
+			const int nFloats = 25;
+			static int n = 0;
+			n++;
+			Serial.print("Wasted RAM: ");
+			Serial.print(nFloats * 4 * n);
+			Serial.println(" bytes");
+			float * data = new float[nFloats];
+			Serial.println("Free RAM: " + String(freeMemory(), DEC) + " bytes");
 		}
 		else if (c == 'l')
 		{
