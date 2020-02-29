@@ -2143,7 +2143,7 @@ void EmotiBit::readSensors()
 			if (dummyData > 100) dummyData = 0;
 			dummyCounter = 0;
 		}
-		dummyCounter++
+		dummyCounter++;
 		delayMicroseconds(2000);
 	}
 	else
