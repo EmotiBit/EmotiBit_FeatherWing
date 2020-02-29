@@ -34,7 +34,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.47";
+	String firmware_version = "1.0.48";
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = true;
 
@@ -240,7 +240,7 @@ public:
 	static const uint16_t OUT_PACKET_MAX_SIZE = 1024;
 	static const uint16_t DATA_SEND_INTERVAL = 100;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
-	static const uint16_t MAX_DATA_BUFFER_SIZE = 32;
+	static const uint16_t MAX_DATA_BUFFER_SIZE = 48;
 	static const uint16_t NORMAL_POWER_MODE_PACKET_INTERVAL = 200;
 	static const uint16_t LOW_POWER_MODE_PACKET_INTERVAL = 1000;
 	uint16_t modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
@@ -249,48 +249,48 @@ public:
 #define TIMER_PRESCALER_DIV 1024
 	const uint32_t CPU_HZ = 48000000;
 
-//	// ToDo: Make sampling variables changeable
-//#define BASE_SAMPLING_FREQ 300
-//#define IMU_SAMPLING_DIV 3
-//#define PPG_SAMPLING_DIV 3
-//#define EDA_SAMPLING_DIV 1
-//#define TEMPERATURE_SAMPLING_DIV 10
-//#define BATTERY_SAMPLING_DIV 50
-//	// TODO: This should change according to the rate set on the thermopile begin function 
-//#define THERMOPILE_SAMPLING_DIV 40
-//#define LED_REFRESH_DIV 10
-
-//		// ToDo: Make sampling variables changeable
-//#define BASE_SAMPLING_FREQ 120
-//#define IMU_SAMPLING_DIV 4
-//#define PPG_SAMPLING_DIV 4
-//#define EDA_SAMPLING_DIV 1
-//#define TEMPERATURE_SAMPLING_DIV 4
-//#define BATTERY_SAMPLING_DIV 20
-//	// TODO: This should change according to the rate set on the thermopile begin function 
-//#define THERMOPILE_SAMPLING_DIV 16
-//#define LED_REFRESH_DIV 4
-
-// ToDo: Make sampling variables changeable
-#define BASE_SAMPLING_FREQ 120
+	// ToDo: Make sampling variables changeable
+#define BASE_SAMPLING_FREQ 300
 #define EDA_SAMPLING_DIV 1
-#define IMU_SAMPLING_DIV 8
-#define PPG_SAMPLING_DIV 8
-#define LED_REFRESH_DIV 8
-#define THERMOPILE_SAMPLING_DIV 16	// TODO: This should change according to the rate set on the thermopile begin function 
-#define TEMPERATURE_SAMPLING_DIV 4
-#define BATTERY_SAMPLING_DIV 20
+#define IMU_SAMPLING_DIV 5
+#define PPG_SAMPLING_DIV 5
+#define LED_REFRESH_DIV 20
+#define THERMOPILE_SAMPLING_DIV 40 	// TODO: This should change according to the rate set on the thermopile begin function 
+#define TEMPERATURE_SAMPLING_DIV 10
+#define BATTERY_SAMPLING_DIV 50
 
 	struct TimerLoopOffset
 	{
 		uint8_t eda = 0;
-		uint8_t imu = 3;
+		uint8_t imu = 0;
 		uint8_t ppg = 1;
-		uint8_t led = 2;
+		uint8_t led = 4;
 		uint8_t thermopile = 6;
-		uint8_t tempHumidity = 4;
+		uint8_t tempHumidity = 2;
 		uint8_t battery = 0;
 	} timerLoopOffset;	// Sets initial value of sampling counters
+
+
+//// ToDo: Make sampling variables changeable
+//#define BASE_SAMPLING_FREQ 120
+//#define EDA_SAMPLING_DIV 1
+//#define IMU_SAMPLING_DIV 4
+//#define PPG_SAMPLING_DIV 4
+//#define LED_REFRESH_DIV 8
+//#define THERMOPILE_SAMPLING_DIV 16	// TODO: This should change according to the rate set on the thermopile begin function 
+//#define TEMPERATURE_SAMPLING_DIV 4
+//#define BATTERY_SAMPLING_DIV 20
+
+	//struct TimerLoopOffset
+	//{
+	//	uint8_t eda = 0;
+	//	uint8_t imu = 3;
+	//	uint8_t ppg = 1;
+	//	uint8_t led = 2;
+	//	uint8_t thermopile = 6;
+	//	uint8_t tempHumidity = 0;
+	//	uint8_t battery = 0;
+	//} timerLoopOffset;	// Sets initial value of sampling counters
 
 	struct AcquireData {
 		bool eda = true;
@@ -299,6 +299,7 @@ public:
 		bool imu = true;
 		bool ppg = true;
 		bool debug = false;
+		bool battery = true;
 	} acquireData;
 
 	struct ChipBegun {

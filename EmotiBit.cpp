@@ -971,8 +971,7 @@ uint8_t EmotiBit::update()
 		{
 			bool newData = false;
 
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
 
 			for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
 			{
@@ -1001,8 +1000,9 @@ uint8_t EmotiBit::update()
 				writeSdCardMessage(_outDataPackets);
 				_outDataPackets = "";
 			}
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
+
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
+
 		}
 	}
 
@@ -2113,13 +2113,16 @@ void EmotiBit::readSensors()
 
 	// Battery (all analog reads must be in the ISR)
 	// TODO: use the stored/averaged Battery value instead of calling readBatteryPercent again
-	static uint16_t batteryCounter = timerLoopOffset.battery;
-	batteryCounter++;
-	if (batteryCounter == BATTERY_SAMPLING_DIV) {
-		battLevel = readBatteryPercent();
-		updateBatteryIndication();
-		updateBatteryPercentData();
-		batteryCounter = 0;
+	if (acquireData.battery)
+	{
+		static uint16_t batteryCounter = timerLoopOffset.battery;
+		if (batteryCounter == BATTERY_SAMPLING_DIV) {
+			battLevel = readBatteryPercent();
+			updateBatteryIndication();
+			updateBatteryPercentData();
+			batteryCounter = 0;
+		}
+		batteryCounter++;
 	}
 	
 	if (dummyIsrWithDelay)
@@ -2133,7 +2136,7 @@ void EmotiBit::readSensors()
 		dummyData++;
 		if (dummyData > 100) dummyData = 0;
 
-		delayMicroseconds(7000);
+		delayMicroseconds(6000);
 	}
 	else
 	{
@@ -2141,17 +2144,16 @@ void EmotiBit::readSensors()
 		// EDA
 		if (acquireData.eda) {
 			static uint16_t edaCounter = timerLoopOffset.eda;
-			edaCounter++;
 			if (edaCounter == EDA_SAMPLING_DIV) {
 				int8_t tempStatus = updateEDAData();
 				edaCounter = 0;
 			}
+			edaCounter++;
 		}
 
 		// Temperature / Humidity Sensor
 		if (chipBegun.SI7013 && acquireData.tempHumidity) {
 			static uint16_t temperatureCounter = timerLoopOffset.tempHumidity;
-			temperatureCounter++;
 			if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
 				// Note: Temperature/humidity and the thermistor are alternately sampled 
 				// on every other call of updateTempHumidityData()
@@ -2163,12 +2165,12 @@ void EmotiBit::readSensors()
 				//}
 				temperatureCounter = 0;
 			}
+			temperatureCounter++;
 		}
 
 		// Thermopile
 		if (chipBegun.MLX90632 && acquireData.thermopile) {
 			static uint16_t thermopileCounter = timerLoopOffset.thermopile;	// starting on 1 to minimize reading with other sensors in the same loop iteration
-			thermopileCounter++;
 			if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
 				if (testingMode == TestingMode::ACUTE)
 				{
@@ -2177,16 +2179,17 @@ void EmotiBit::readSensors()
 				}
 				thermopileCounter = 0;
 			}
+			thermopileCounter++;
 		}
 
 		// PPG
 		if (chipBegun.MAX30101 && acquireData.ppg) {
 			static uint16_t ppgCounter = timerLoopOffset.ppg;
-			ppgCounter++;
 			if (ppgCounter == PPG_SAMPLING_DIV) {
 				int8_t tempStatus = updatePPGData();
 				ppgCounter = 0;
 			}
+			ppgCounter++;
 		}
 
 
@@ -2194,18 +2197,17 @@ void EmotiBit::readSensors()
 		// IMU
 		if (chipBegun.BMI160 && chipBegun.BMM150 && acquireData.imu) {
 			static uint16_t imuCounter = timerLoopOffset.imu;
-			imuCounter++;
 			if (imuCounter == IMU_SAMPLING_DIV) {
 				int8_t tempStatus = updateIMUData();
 				imuCounter = 0;
 			}
+			imuCounter++;
 		}
 
 		// LED STATUS CHANGE SEGMENT
 		if (chipBegun.NCP5623)
 		{
 			static uint16_t ledCounter = timerLoopOffset.led;
-			ledCounter++;
 			if (ledCounter == LED_REFRESH_DIV)
 			{
 				ledCounter = 0;
@@ -2254,6 +2256,7 @@ void EmotiBit::readSensors()
 					led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 				}
 			}
+			ledCounter++;
 		}
 
 		//if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
@@ -2411,9 +2414,6 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 	// Break up the message in to bite-size chunks to avoid over running the UDP or SD card write buffers
 	// UDP buffer seems to be about 1400 char. SD card writes should be 512 char.
 
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
-	
-
 	if (_sdWrite && s.length() > 0) {
 		if (_dataFile) {
 			static int16_t firstIndex;
@@ -2432,8 +2432,6 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 				_dataFile.print(s.substring(firstIndex, lastIndex));
 				firstIndex = lastIndex;
 			}
-
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
 
 			static uint32_t syncTimer = millis();
 			if (millis() - syncTimer > targetFileSyncDelay)
@@ -2826,6 +2824,19 @@ void EmotiBit::processDebugInputs()
 			Serial.print("acquireData.debug = ");
 			Serial.println(acquireData.debug);
 			if (_serialData != DataType::length) _serialData = DataType::DEBUG;
+		}
+		else if (c == 'b')
+		{
+			acquireData.battery = false;
+			Serial.print("acquireData.battery = ");
+			Serial.println(acquireData.battery);
+		}
+		else if (c == 'B')
+		{
+			acquireData.battery = true;
+			Serial.print("acquireData.battery = ");
+			Serial.println(acquireData.battery);
+			if (_serialData != DataType::length) _serialData = DataType::BATTERY_PERCENT;
 		}
 	}
 }
