@@ -2181,7 +2181,7 @@ void EmotiBit::readSensors()
 
 		// Thermopile
 		if (chipBegun.MLX90632 && acquireData.thermopile) {
-			static uint16_t thermopileCounter = timerLoopOffset.thermopile;	// starting on 1 to minimize reading with other sensors in the same loop iteration
+			static uint16_t thermopileCounter = timerLoopOffset.thermopile;
 			if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
 				if (testingMode == TestingMode::ACUTE)
 				{
@@ -2203,8 +2203,6 @@ void EmotiBit::readSensors()
 			ppgCounter++;
 		}
 
-
-
 		// IMU
 		if (chipBegun.BMI160 && chipBegun.BMM150 && acquireData.imu) {
 			static uint16_t imuCounter = timerLoopOffset.imu;
@@ -2223,42 +2221,6 @@ void EmotiBit::readSensors()
 			{
 				ledCounter = 0;
 
-				// WiFi connected status LED
-				if (_emotiBitWiFi.isConnected())
-				{
-					led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-				}
-				else
-				{
-					led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
-				}
-
-				// Battery LED
-				if (battIndicationSeq)
-				{
-					led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-				}
-				else
-				{
-					led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-				}
-
-				// Recording status LED
-				if (_sdWrite)
-				{
-					static uint32_t recordBlinkDuration = millis();
-					if (millis() - recordBlinkDuration >= 500)
-					{
-						led.setLED(uint8_t(EmotiBit::Led::RED), !led.getLED(uint8_t(EmotiBit::Led::RED)));
-						recordBlinkDuration = millis();
-					}
-				}
-				else if (!_sdWrite && led.getLED(uint8_t(EmotiBit::Led::RED)) == true)
-				{
-					led.setLED(uint8_t(EmotiBit::Led::RED), false);
-				}
-
-				// Turn on all the LEDs when button pressed
 				if (buttonPressed)
 				{
 					// Turn on the LEDs when the button is pressed
@@ -2266,12 +2228,47 @@ void EmotiBit::readSensors()
 					led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 					led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 				}
+				else
+				{
+
+					// WiFi connected status LED
+					if (_emotiBitWiFi.isConnected())
+					{
+						led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+					}
+					else
+					{
+						led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+					}
+
+					// Battery LED
+					if (battIndicationSeq)
+					{
+						led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+					}
+					else
+					{
+						led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+					}
+
+					// Recording status LED
+					if (_sdWrite)
+					{
+						static uint32_t recordBlinkDuration = millis();
+						if (millis() - recordBlinkDuration >= 500)
+						{
+							led.setLED(uint8_t(EmotiBit::Led::RED), !led.getLED(uint8_t(EmotiBit::Led::RED)));
+							recordBlinkDuration = millis();
+						}
+					}
+					else if (!_sdWrite && led.getLED(uint8_t(EmotiBit::Led::RED)) == true)
+					{
+						led.setLED(uint8_t(EmotiBit::Led::RED), false);
+					}
+				}
 			}
 			ledCounter++;
 		}
-
-		//if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
-
 	}
 	
 	if (acquireData.debug) pushData(EmotiBit::DataType::DEBUG, micros() - readSensorsBegin); // Add readSensors processing duration to debugBuffer
