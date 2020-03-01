@@ -1054,16 +1054,16 @@ int8_t EmotiBit::updateEDAData()
 	static const int adcClippingUpperLim = adcRes - 20;
 
 	// Check for data clipping
-	if (edlTemp < adcClippingLowerLim
-		|| edlTemp > adcClippingUpperLim
-		) {
+	if (edlTemp < adcClippingLowerLim	|| edlTemp > adcClippingUpperLim
+		) 
+	{
 		edlClipped = true;
 		status = status | (int8_t) Error::DATA_CLIPPING;
 	}
 	// Check for data clipping
-	if (edrTemp < adcClippingLowerLim
-		|| edrTemp > adcClippingUpperLim
-		) {
+	if (edrTemp < adcClippingLowerLim	|| edrTemp > adcClippingUpperLim
+		) 
+	{
 		edrClipped = true;
 		status = status | (int8_t)Error::DATA_CLIPPING;
 	}
@@ -2144,7 +2144,10 @@ void EmotiBit::readSensors()
 			dummyCounter = 0;
 		}
 		dummyCounter++;
-		delayMicroseconds(2000);
+		// Delay a bit more than half the sampling period (2 msec for 300Hz)
+		float delay = 1000.f / BASE_SAMPLING_FREQ / 2.f;
+		delay = ceil(delay) * 1000;
+		delayMicroseconds(delay);
 	}
 	else
 	{

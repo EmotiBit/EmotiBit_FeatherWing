@@ -34,7 +34,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.51";
+	String firmware_version = "1.0.52";
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = true;
 
@@ -258,7 +258,7 @@ public:
 #define THERMOPILE_SAMPLING_DIV 40 	// TODO: This should change according to the rate set on the thermopile begin function 
 #define TEMPERATURE_SAMPLING_DIV 10
 #define BATTERY_SAMPLING_DIV 50
-#define DUMMY_ISR_DIV 40
+#define DUMMY_ISR_DIV 20
 
 	struct TimerLoopOffset
 	{
