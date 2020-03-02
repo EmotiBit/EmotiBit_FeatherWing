@@ -34,11 +34,11 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.53";
-	TestingMode testingMode = TestingMode::CHRONIC;
-	const bool DIGITAL_WRITE_DEBUG = true;
+	String firmware_version = "1.0.55";
+	TestingMode testingMode = TestingMode::NONE;
+	const bool DIGITAL_WRITE_DEBUG = false;
 
-	bool _debugMode = true;
+	bool _debugMode = false;
 	bool dummyIsrWithDelay = false;
 	uint32_t targetFileSyncDelay = 1;
 

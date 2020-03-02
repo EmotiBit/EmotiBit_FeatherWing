@@ -2140,7 +2140,7 @@ void EmotiBit::readSensors()
 				pushData((DataType)t, (float)dummyData);
 			}
 			dummyData++;
-			if (dummyData > 100) dummyData = 0;
+			if (dummyData >= 25) dummyData = 0;
 			dummyCounter = 0;
 		}
 		dummyCounter++;
