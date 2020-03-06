@@ -54,7 +54,7 @@ size_t DoubleBufferFloat::getData(float ** data, uint32_t * timestamp, bool swap
 			_outputBuffer->clear();
 			if (_inputBuffer == _buffer1) {
 #ifdef DEBUG
-				Serial.println("_inputBuffer == &_buffer1");
+				Serial.println("_inputBuffer == &_buffer2");
 #endif // DEBUG
 				_inputBuffer = _buffer2;
 				_outputBuffer = _buffer1;

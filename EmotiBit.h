@@ -26,9 +26,23 @@
 class EmotiBit {
   
 public:
+	enum class TestingMode
+	{
+		NONE,
+		CHRONIC,
+		ACUTE,
+		length
+	};
 
-	const String firmware_version = "1.0.22";
-	
+	String firmware_version = "1.0.55";
+	TestingMode testingMode = TestingMode::NONE;
+	const bool DIGITAL_WRITE_DEBUG = false;
+
+	bool _debugMode = false;
+	bool dummyIsrWithDelay = false;
+	uint32_t targetFileSyncDelay = 1;
+
+
 	enum class SensorTimer {
 		MANUAL
 	};
@@ -149,7 +163,7 @@ public:
 		MAGNETOMETER_Z,
 		BATTERY_VOLTAGE,
 		BATTERY_PERCENT,
-		//PUSH_WHILE_GETTING,
+		DEBUG,
 		length
   };
 
@@ -218,15 +232,15 @@ public:
 	bool bmm150ZHallClipped = false;
 	uint8_t _hibernatePin;
 	bool thermopileBegun = false;
-	int thermopileFs = 8; // Changing this may wear out the Melexis flash
-	uint8_t thermopileMode = MODE_CONTINUOUS;		// If changing to MODE_CONTINUOUS besure to adjust SAMPLING_DIV to match thermopile rate
+	int thermopileFs = 8; // *** NOTE *** changing this may wear out the Melexis flash
+	uint8_t thermopileMode = MODE_STEP;		// If changing to MODE_CONTINUOUS besure to adjust SAMPLING_DIV to match thermopile rate
 
 	// ---------- BEGIN ino refactoring --------------
-	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 4096;
+	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 2048;
 	static const uint16_t OUT_PACKET_MAX_SIZE = 1024;
 	static const uint16_t DATA_SEND_INTERVAL = 100;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
-	static const uint16_t MAX_DATA_BUFFER_SIZE = 64;
+	static const uint16_t MAX_DATA_BUFFER_SIZE = 32;
 	static const uint16_t NORMAL_POWER_MODE_PACKET_INTERVAL = 200;
 	static const uint16_t LOW_POWER_MODE_PACKET_INTERVAL = 1000;
 	uint16_t modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
@@ -235,48 +249,49 @@ public:
 #define TIMER_PRESCALER_DIV 1024
 	const uint32_t CPU_HZ = 48000000;
 
-//	// ToDo: Make sampling variables changeable
-//#define BASE_SAMPLING_FREQ 300
-//#define IMU_SAMPLING_DIV 3
-//#define PPG_SAMPLING_DIV 3
-//#define EDA_SAMPLING_DIV 1
-//#define TEMPERATURE_SAMPLING_DIV 10
-//#define BATTERY_SAMPLING_DIV 50
-//	// TODO: This should change according to the rate set on the thermopile begin function 
-//#define THERMOPILE_SAMPLING_DIV 40
-//#define LED_REFRESH_DIV 10
-
-//		// ToDo: Make sampling variables changeable
-//#define BASE_SAMPLING_FREQ 120
-//#define IMU_SAMPLING_DIV 4
-//#define PPG_SAMPLING_DIV 4
-//#define EDA_SAMPLING_DIV 1
-//#define TEMPERATURE_SAMPLING_DIV 4
-//#define BATTERY_SAMPLING_DIV 20
-//	// TODO: This should change according to the rate set on the thermopile begin function 
-//#define THERMOPILE_SAMPLING_DIV 16
-//#define LED_REFRESH_DIV 4
-
-// ToDo: Make sampling variables changeable
-#define BASE_SAMPLING_FREQ 60
+	// ToDo: Make sampling variables changeable
+#define BASE_SAMPLING_FREQ 300
 #define EDA_SAMPLING_DIV 1
-#define IMU_SAMPLING_DIV 4
-#define PPG_SAMPLING_DIV 4
-#define LED_REFRESH_DIV 4
-#define THERMOPILE_SAMPLING_DIV 4	// TODO: This should change according to the rate set on the thermopile begin function 
-#define TEMPERATURE_SAMPLING_DIV 2
-#define BATTERY_SAMPLING_DIV 10
+#define IMU_SAMPLING_DIV 5
+#define PPG_SAMPLING_DIV 5
+#define LED_REFRESH_DIV 20
+#define THERMOPILE_SAMPLING_DIV 40 	// TODO: This should change according to the rate set on the thermopile begin function 
+#define TEMPERATURE_SAMPLING_DIV 10
+#define BATTERY_SAMPLING_DIV 50
+#define DUMMY_ISR_DIV 20
 
 	struct TimerLoopOffset
 	{
 		uint8_t eda = 0;
-		uint8_t ppg = 0;
-		uint8_t thermopile = 1;
-		uint8_t led = 2;
-		uint8_t imu = 3;
-		uint8_t tempHumidity = 0;
+		uint8_t imu = 0;
+		uint8_t ppg = 1;
+		uint8_t led = 4;
+		uint8_t thermopile = 6;
+		uint8_t tempHumidity = 2;
 		uint8_t battery = 0;
-	} timerLoopOffset;
+	} timerLoopOffset;	// Sets initial value of sampling counters
+
+
+//// ToDo: Make sampling variables changeable
+//#define BASE_SAMPLING_FREQ 120
+//#define EDA_SAMPLING_DIV 1
+//#define IMU_SAMPLING_DIV 4
+//#define PPG_SAMPLING_DIV 4
+//#define LED_REFRESH_DIV 8
+//#define THERMOPILE_SAMPLING_DIV 16	// TODO: This should change according to the rate set on the thermopile begin function 
+//#define TEMPERATURE_SAMPLING_DIV 4
+//#define BATTERY_SAMPLING_DIV 20
+
+	//struct TimerLoopOffset
+	//{
+	//	uint8_t eda = 0;
+	//	uint8_t imu = 3;
+	//	uint8_t ppg = 1;
+	//	uint8_t led = 2;
+	//	uint8_t thermopile = 6;
+	//	uint8_t tempHumidity = 0;
+	//	uint8_t battery = 0;
+	//} timerLoopOffset;	// Sets initial value of sampling counters
 
 	struct AcquireData {
 		bool eda = true;
@@ -284,6 +299,8 @@ public:
 		bool thermopile = true;
 		bool imu = true;
 		bool ppg = true;
+		bool debug = false;
+		bool battery = true;
 	} acquireData;
 
 	struct ChipBegun {
@@ -319,11 +336,11 @@ public:
 	bool _sendTestData = false;
 	float _edlDigFiltAlpha = 0;
 	float _edlDigFilteredVal = -1;
-	bool _debugMode = false;
+	DataType _serialData = DataType::length;
+	volatile bool buttonPressed = false;
 
 	void setupSdCard();
 	void updateButtonPress();
-	bool readButton();
 	void hibernate();
 	void startTimer(int frequencyHz);
 	void setTimerFrequency(int frequencyHz);
@@ -343,15 +360,57 @@ public:
 	bool addPacket(EmotiBit::DataType t);
 	void parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber);
 	void readSensors();
-	size_t readData(EmotiBit::DataType t, float *data, size_t dataSize);		// Copies available data buffer into data
-	size_t readData(EmotiBit::DataType t, float *data, size_t dataSize, uint32_t &timestamp);		// Copies available data buffer into data
-	size_t readData(EmotiBit::DataType t, float **data);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
-	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	// Points at available data buffer without copying (careful, this becomes stale after calling EmotiBit::update())
+	void writeSerialData(EmotiBit::DataType t);
+	
+
+	/**
+	 * Copies data buffer of the specified DataType into the passed array
+	 *
+	 * @param t an EmotiBit::DataType to read
+	 * @data a pre-allocated array of size dataSize to copy data into
+	 * @dataSize a size_t specifying the size of the passed data array
+	 * @return the size of the present data buffer
+	 */
+	size_t readData(EmotiBit::DataType t, float *data, size_t dataSize);
+	
+	/**
+	 * Copies data buffer and timestamp of the specified DataType into the passed parameters
+	 *
+	 * @param t an EmotiBit::DataType to read
+	 * @data a pre-allocated array of size dataSize to copy data into
+	 * @dataSize a size_t specifying the size of the passed data array
+	 * @timestamp returns with the most recent data timestamp
+	 * @return the size of the present data buffer
+	 */
+	size_t readData(EmotiBit::DataType t, float *data, size_t dataSize, uint32_t &timestamp);		
+	
+	/**
+	 * Points to the data buffer of the specified type into the passed parameter
+	 *		CAUTION: this pointer becomes stale after calling EmotiBit::update()
+	 *
+	 * @param t an EmotiBit::DataType to read
+	 * @data returns with a pointer to the existing (double buffered) float[]
+	 * @return the size of the present data buffer 
+	 */
+	size_t readData(EmotiBit::DataType t, float **data);
+	
+	/**
+	 * Points to the data buffer and reads the timestamp of the specified type into the passed parameters
+	 *		CAUTION: this pointer becomes stale after calling EmotiBit::update()
+	 *
+	 * @param t an EmotiBit::DataType to read
+	 * @data returns with a pointer to the existing (double buffered) float[]
+	 * @timestamp returns with the most recent timestamp in the present data array
+	 * @return the size of the present data buffer
+	 */
+	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	
+
 	void updateBatteryIndication();
 	void appendTestData(String &dataMessage, uint16_t &packetNumber);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
-	void processDebugInputs();
+	void processDebugInputs(String &debugPackets, uint16_t &packetNumber);
+	String getHardwareVersion();
 
 	// ----------- END ino refactoring ---------------
 
@@ -409,40 +468,41 @@ private:
 	const uint8_t _maxImuFifoFrameLen = 40; // in bytes
 	uint8_t _imuBuffer[40];
 
-	DoubleBufferFloat eda;
-	DoubleBufferFloat edl;
-	DoubleBufferFloat edr;
-	DoubleBufferFloat ppgInfrared;
-	DoubleBufferFloat ppgRed;
-	DoubleBufferFloat ppgGreen;
-	DoubleBufferFloat temp0;
-	DoubleBufferFloat tempHP0;
-	DoubleBufferFloat humidity0;
-	DoubleBufferFloat accelX;
-	DoubleBufferFloat accelY;
-	DoubleBufferFloat accelZ;
-	DoubleBufferFloat gyroX;
-	DoubleBufferFloat gyroY;
-	DoubleBufferFloat gyroZ;
-	DoubleBufferFloat magX;
-	DoubleBufferFloat magY;
-	DoubleBufferFloat magZ;
+
+	DoubleBufferFloat eda = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat edl = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat edr = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat ppgInfrared = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat ppgRed = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat ppgGreen = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat temp0 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
+	DoubleBufferFloat tempHP0 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
+	DoubleBufferFloat humidity0 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
+	DoubleBufferFloat accelX = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat accelY = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat accelZ = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat gyroX = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat gyroY = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat gyroZ = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat magX = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat magY = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat magZ = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
 	DoubleBufferFloat batteryVoltage = DoubleBufferFloat(1);
 	DoubleBufferFloat batteryPercent = DoubleBufferFloat(1);
-	DoubleBufferFloat dataOverflow; //= DoubleBufferFloat(16);
-	DoubleBufferFloat dataClipping; //= DoubleBufferFloat(16);
-	//DoubleBufferFloat pushWhileGetting;
+	DoubleBufferFloat dataOverflow = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat dataClipping = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat debugBuffer = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
 
 	DoubleBufferFloat * dataDoubleBuffers[(uint8_t)DataType::length];
 
 	// Oversampling buffers
 	// Single buffered arrays must only be accessed from ISR functions, not in the main loop
 	// ToDo: add assignment for dynamic allocation;
-	BufferFloat edlBuffer = BufferFloat(20);	
-	BufferFloat edrBuffer = BufferFloat(20);	
-	BufferFloat thermopileBuffer = BufferFloat(8);	
-	BufferFloat temperatureBuffer = BufferFloat(8);	
-	BufferFloat humidityBuffer = BufferFloat(8);
+	// 	**** WARNING **** THIS MUST MATCH THE SAMPLING DIVS ETC
+	BufferFloat edlBuffer = BufferFloat(24);
+	BufferFloat edrBuffer = BufferFloat(24);	
+	BufferFloat temperatureBuffer = BufferFloat(4);	
+	BufferFloat humidityBuffer = BufferFloat(4);
 	BufferFloat batteryVoltageBuffer = BufferFloat(8);
 	BufferFloat batteryPercentBuffer = BufferFloat(8);
 
