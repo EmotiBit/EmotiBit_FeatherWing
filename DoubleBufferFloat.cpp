@@ -38,7 +38,8 @@ uint8_t DoubleBufferFloat::push_back(float f, uint32_t * timestamp) {
 	_isPushing = false;
 }
 
-size_t DoubleBufferFloat::getData(float ** data, uint32_t * timestamp) {
+size_t DoubleBufferFloat::getData(float ** data, uint32_t * timestamp, bool swapBuffers) 
+{
 #ifdef DEBUG
 	Serial.println("getData()");
 #endif // DEBUG
@@ -46,21 +47,25 @@ size_t DoubleBufferFloat::getData(float ** data, uint32_t * timestamp) {
 
 	// ToDo: Verify this is interrupt safe
 
-	if (_inputBuffer != nullptr && _outputBuffer != nullptr) {
-		_outputBuffer->clear();
-		if (_inputBuffer == _buffer1) {
+	if (_outputBuffer != nullptr) 
+	{
+		if (swapBuffers && _inputBuffer != nullptr)
+		{
+			_outputBuffer->clear();
+			if (_inputBuffer == _buffer1) {
 #ifdef DEBUG
-			Serial.println("_inputBuffer == &_buffer1");
+				Serial.println("_inputBuffer == &_buffer2");
 #endif // DEBUG
-			_inputBuffer = _buffer2;
-			_outputBuffer = _buffer1;
-		}
-		else {
+				_inputBuffer = _buffer2;
+				_outputBuffer = _buffer1;
+			}
+			else {
 #ifdef DEBUG
-			Serial.println("_inputBuffer != &_buffer1");
+				Serial.println("_inputBuffer != &_buffer1");
 #endif // DEBUG
-			_inputBuffer = _buffer1;
-			_outputBuffer = _buffer2;
+				_inputBuffer = _buffer1;
+				_outputBuffer = _buffer2;
+			}
 		}
 		(*data) = _outputBuffer->data;
 		if (timestamp != nullptr) {

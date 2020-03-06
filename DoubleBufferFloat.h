@@ -14,12 +14,12 @@ public:
 
 
 
-	DoubleBufferFloat(size_t capacity = 64);
+	DoubleBufferFloat(size_t capacity = 32);
 	//DoubleBufferFloat(const DoubleBufferFloat &doubleBuffer);
 	//DoubleBufferFloat operator=(const DoubleBufferFloat &doubleBuffer);
 	~DoubleBufferFloat();
 	uint8_t push_back(float f, uint32_t * timestamp = nullptr);
-	size_t getData(float ** data, uint32_t * timestamp = nullptr);
+	size_t getData(float ** data, uint32_t * timestamp = nullptr, bool swapBuffers = true);				// Swaps the input and output buffers
 	//void setAutoResize(bool b);
 	size_t inSize();
 	size_t outSize();
