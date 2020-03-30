@@ -45,13 +45,13 @@ void loop()
 	//Serial.println("emotibit.update()");
 	emotibit.update();
 
-	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::PPG_GREEN, &data[0], dataSize);
+	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::THERMOPILE, &data[0], dataSize);
 	if (dataAvailable > 0)
 	{
 		// Hey cool, I got some data! Maybe I can light up my shoes whenever I get excited!
 
 		// print the data to view in the serial plotter
-		bool printData = false;
+		bool printData = true;
 		if (printData)
 		{
 			for (size_t i = 0; i < dataAvailable && i < dataSize; i++)

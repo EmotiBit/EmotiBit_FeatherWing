@@ -137,7 +137,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::PPG_RED] = &ppgRed;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::PPG_GREEN] = &ppgGreen;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = &temp0;
-	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE] = &tempHP0;
+	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE] = &therm0;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = &humidity0;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = &accelX;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Y] = &accelY;
@@ -1234,8 +1234,9 @@ int8_t EmotiBit::updateTempHumidityData() {
 int8_t EmotiBit::updateThermopileData() {
 	// Thermopile
 	int8_t status = 0;
-	float objectTemp;
 	uint32_t timestamp;
+	float AMB;// = 22991.97;  // raw data from thermopile needed for post processing
+	float Sto;// = -88.44;  // raw data from thermopile needed for post processing
 	MLX90632::status thermStatus;
 
 	bool testDummyData = false;
@@ -1256,34 +1257,32 @@ int8_t EmotiBit::updateThermopileData() {
 			// Step mode manually triggers sensor reading
 			if (!thermopileBegun) {
 				// First time through step mode just starts a measurement
-				thermopile.start_getObjectTemp();
+				thermopile.startConversionObjectTemp();
 				thermopileBegun = true;
 			}
 			else {
-				/*Serial.print("Thermopile:");
-				Serial.println(thermopile.end_getObjectTemp());*/
 
 				thermStatus = MLX90632::status::SENSOR_NO_NEW_DATA;
-
 				while (thermStatus != MLX90632::status::SENSOR_SUCCESS)
 				{
 					// ToDo: consider a non-blocking solution for a scenario when updateThermopileData is called too frequently for set measurement rate
-					objectTemp = thermopile.end_getObjectTemp(thermStatus); //Get the temperature of the object we're looking at in C
+					thermopile.getRawObjectTemp(thermStatus, AMB, Sto); //Get the temperature of the object we're looking at in C
 					timestamp = millis();
 				}
-
-				status = status | pushData(EmotiBit::DataType::THERMOPILE, objectTemp, &(timestamp));
-				thermopile.start_getObjectTemp();
+				status = status | therm0AMB.push_back(AMB, &(timestamp));
+				status = status | therm0Sto.push_back(Sto, &(timestamp));
+				thermopile.startConversionObjectTemp();
 			}
 		}
 		else if (thermopileMode == MODE_CONTINUOUS) {
 			// Continuouts mode reads at the set rate and returns data if ready
-			objectTemp = thermopile.end_getObjectTemp(thermStatus);
+			thermopile.getRawObjectTemp(thermStatus, AMB, Sto);
 			timestamp = millis();
 
 			if (thermStatus == MLX90632::status::SENSOR_SUCCESS)
 			{
-				status = status | pushData(EmotiBit::DataType::THERMOPILE, objectTemp, &(timestamp));
+				status = status | therm0AMB.push_back(AMB, &(timestamp));
+				status = status | therm0Sto.push_back(Sto, &(timestamp));
 			}
 		}
 	}
@@ -1568,7 +1567,54 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 	Serial.println((uint8_t) t);
 #endif // DEBUG
 	if ((uint8_t)type < (uint8_t)EmotiBit::DataType::length) {
-		return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
+		if ((uint8_t)type == (uint8_t)EmotiBit::DataType::THERMOPILE)
+		{
+			// Todo: Add provision for DummyData
+			size_t sizeAMB;
+			size_t sizeSto;
+			float** dataAMB;
+			float** dataSto;
+			sizeAMB = therm0AMB.getData(dataAMB, timestamp);
+			sizeSto = therm0Sto.getData(dataSto, timestamp);
+			// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->getData(dataTherm, timestamp);
+			if (sizeAMB == sizeSto)
+			{
+				for (uint8_t i = 0; i < sizeAMB; i++)
+				{
+					float objectTemp = thermopile.getProcessedObjectTemp((*dataAMB)[i], (*dataSto)[i]);
+					/*Serial.print("AMB:");
+					Serial.println((*dataAMB)[i]);
+					Serial.print("*dataAMB:");
+					Serial.println((int)*dataAMB,HEX);
+					Serial.print("Sto:");
+					Serial.println((*dataSto)[i]);
+					Serial.print("ObjectTemp");
+					Serial.print(i);
+					Serial.print("/");
+					Serial.print((uint8_t)sizeAMB);
+					Serial.print(":  ");
+					Serial.print(objectTemp);
+					Serial.print("\t");*/
+					pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestamp); 
+				}
+
+				return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
+			}
+			else
+			{
+				// ToDo:
+				// is this the best solution?
+				for (uint8_t i = 0; i < sizeAMB; i++)
+				{
+					pushData(EmotiBit::DataType::THERMOPILE, thermopile.getProcessedObjectTemp(-1,-1), timestamp);// push the last known correct temp to all the values of this reading
+				}
+				return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);;
+			}
+		}
+		else
+		{
+			return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
+		}
 	}
 	else {
 		return (int8_t)EmotiBit::Error::NONE;
