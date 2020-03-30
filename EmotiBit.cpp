@@ -1245,6 +1245,8 @@ int8_t EmotiBit::updateThermopileData() {
 		// Generate and send dummy data to validate pipes
 		static float testData = 30.f;
 		status = status | pushData(EmotiBit::DataType::THERMOPILE, testData, &(timestamp));
+		status = status | therm0AMB.push_back(-2, &(timestamp));
+		status = status | therm0Sto.push_back(-2, &(timestamp));
 		testData += 0.1f;
 		if (testData > 40.f)
 		{
@@ -1572,29 +1574,31 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 			// Todo: Add provision for DummyData
 			size_t sizeAMB;
 			size_t sizeSto;
-			float** dataAMB;
-			float** dataSto;
-			sizeAMB = therm0AMB.getData(dataAMB, timestamp);
-			sizeSto = therm0Sto.getData(dataSto, timestamp);
-			// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->getData(dataTherm, timestamp);
+			float* dataAMB;
+			float* dataSto;
+			sizeAMB = therm0AMB.getData(&dataAMB, timestamp);
+			sizeSto = therm0Sto.getData(&dataSto, timestamp);
 			if (sizeAMB == sizeSto)
 			{
 				for (uint8_t i = 0; i < sizeAMB; i++)
 				{
-					float objectTemp = thermopile.getProcessedObjectTemp((*dataAMB)[i], (*dataSto)[i]);
-					/*Serial.print("AMB:");
-					Serial.println((*dataAMB)[i]);
-					Serial.print("*dataAMB:");
-					Serial.println((int)*dataAMB,HEX);
-					Serial.print("Sto:");
-					Serial.println((*dataSto)[i]);
-					Serial.print("ObjectTemp");
-					Serial.print(i);
+					// if dummy data was stored, then just directly read the Thermopile DoubleBuffer
+					if (dataAMB[i] == -2 && dataSto[i] == -2)
+					{
+						return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
+					}
+					
+					float objectTemp = thermopile.getProcessedObjectTemp(dataAMB[i], dataSto[i]);
+					/*Serial.print(i+1);
 					Serial.print("/");
 					Serial.print((uint8_t)sizeAMB);
-					Serial.print(":  ");
-					Serial.print(objectTemp);
-					Serial.print("\t");*/
+					Serial.print("::\tAMB:");
+					Serial.print(dataAMB[i]);
+					Serial.print("\tSto:");
+					Serial.print(dataSto[i]);
+					Serial.print("\tObjectTemp");
+					Serial.print(":");
+					Serial.println(objectTemp);*/
 					pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestamp); 
 				}
 
@@ -1608,7 +1612,7 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 				{
 					pushData(EmotiBit::DataType::THERMOPILE, thermopile.getProcessedObjectTemp(-1,-1), timestamp);// push the last known correct temp to all the values of this reading
 				}
-				return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);;
+				return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
 			}
 		}
 		else
@@ -2229,11 +2233,7 @@ void EmotiBit::readSensors()
 		if (chipBegun.MLX90632 && acquireData.thermopile) {
 			static uint16_t thermopileCounter = timerLoopOffset.thermopile;
 			if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
-				if (testingMode == TestingMode::ACUTE)
-				{
-					// Disable thermopile unless acute testing
-					int8_t tempStatus = updateThermopileData();
-				}
+				int8_t tempStatus = updateThermopileData();
 				thermopileCounter = 0;
 			}
 			thermopileCounter++;
