@@ -1268,7 +1268,7 @@ int8_t EmotiBit::updateThermopileData() {
 				while (thermStatus != MLX90632::status::SENSOR_SUCCESS)
 				{
 					// ToDo: consider a non-blocking solution for a scenario when updateThermopileData is called too frequently for set measurement rate
-					thermopile.getRawObjectTemp(thermStatus, AMB, Sto); //Get the temperature of the object we're looking at in C
+					thermopile.getRawSensorValues(thermStatus, AMB, Sto); //Get the temperature of the object we're looking at in C
 					timestamp = millis();
 				}
 				status = status | therm0AMB.push_back(AMB, &(timestamp));
@@ -1278,7 +1278,7 @@ int8_t EmotiBit::updateThermopileData() {
 		}
 		else if (thermopileMode == MODE_CONTINUOUS) {
 			// Continuouts mode reads at the set rate and returns data if ready
-			thermopile.getRawObjectTemp(thermStatus, AMB, Sto);
+			thermopile.getRawSensorValues(thermStatus, AMB, Sto);
 			timestamp = millis();
 
 			if (thermStatus == MLX90632::status::SENSOR_SUCCESS)
@@ -1588,7 +1588,7 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 						return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
 					}
 					
-					float objectTemp = thermopile.getProcessedObjectTemp(dataAMB[i], dataSto[i]);
+					float objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
 					/*Serial.print(i+1);
 					Serial.print("/");
 					Serial.print((uint8_t)sizeAMB);
@@ -1610,7 +1610,7 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 				// is this the best solution?
 				for (uint8_t i = 0; i < sizeAMB; i++)
 				{
-					pushData(EmotiBit::DataType::THERMOPILE, thermopile.getProcessedObjectTemp(-1,-1), timestamp);// push the last known correct temp to all the values of this reading
+					pushData(EmotiBit::DataType::THERMOPILE, thermopile.getObjectTemp(-1,-1), timestamp);// push the last known correct temp to all the values of this reading
 				}
 				return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
 			}

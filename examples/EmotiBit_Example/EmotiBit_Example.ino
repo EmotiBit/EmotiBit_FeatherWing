@@ -51,7 +51,7 @@ void loop()
 		// Hey cool, I got some data! Maybe I can light up my shoes whenever I get excited!
 
 		// print the data to view in the serial plotter
-		bool printData = true;
+		bool printData = false;
 		if (printData)
 		{
 			for (size_t i = 0; i < dataAvailable && i < dataSize; i++)
