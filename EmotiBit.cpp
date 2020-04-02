@@ -1569,17 +1569,17 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 				// SizeSto = k+s ; where s= #sampepls added per interrupt
 				for (uint8_t i = sizeAMB; i < sizeSto; i++)
 				{
-					therm0Sto.push_back(dataSto[sizeAMB - 1], timestampSto);
+					therm0Sto.push_back(dataSto[i], timestampSto);
 				}
 				sizeSto = sizeAMB;
 			}
+			// if dummy data was stored, then just directly read the Thermopile DoubleBuffer
+			if (dataAMB[i] == -2 && dataSto[i] == -2)
+			{
+				return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
+			}
 			for (uint8_t i = 0; i < sizeAMB; i++)
 			{
-				// if dummy data was stored, then just directly read the Thermopile DoubleBuffer
-				if (dataAMB[i] == -2 && dataSto[i] == -2)
-				{
-					return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
-				}
 					
 				float objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
 				pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestamp); 
