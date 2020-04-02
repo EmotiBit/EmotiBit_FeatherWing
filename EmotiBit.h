@@ -268,7 +268,7 @@ public:
 		uint8_t imu = 0;
 		uint8_t ppg = 1;
 		uint8_t led = 4;
-		uint8_t thermopile = 6;
+		uint8_t thermopile = 3;
 		uint8_t tempHumidity = 2;
 		uint8_t battery = 0;
 	} timerLoopOffset;	// Sets initial value of sampling counters
