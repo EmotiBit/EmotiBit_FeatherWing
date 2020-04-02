@@ -1238,56 +1238,40 @@ int8_t EmotiBit::updateThermopileData() {
 	float AMB;// = 22991.97;  // raw data from thermopile needed for post processing
 	float Sto;// = -88.44;  // raw data from thermopile needed for post processing
 	MLX90632::status thermStatus;
-
-	bool testDummyData = false;
-	if (testDummyData)
-	{
-		// Generate and send dummy data to validate pipes
-		static float testData = 30.f;
-		status = status | pushData(EmotiBit::DataType::THERMOPILE, testData, &(timestamp));
-		status = status | therm0AMB.push_back(-2, &(timestamp));
-		status = status | therm0Sto.push_back(-2, &(timestamp));
-		testData += 0.1f;
-		if (testData > 40.f)
-		{
-			testData = 30.f;
+	if (thermopileMode == MODE_STEP) {
+		// Step mode manually triggers sensor reading
+		if (!thermopileBegun) {
+			// First time through step mode just starts a measurement
+			MLX90632::status returnError;
+			thermopile.startRawSensorValues(returnError);
+			thermopileBegun = true;
 		}
-	}
-	else
-	{
-		if (thermopileMode == MODE_STEP) {
-			// Step mode manually triggers sensor reading
-			if (!thermopileBegun) {
-				// First time through step mode just starts a measurement
-				thermopile.startConversionObjectTemp();
-				thermopileBegun = true;
-			}
-			else {
+		else {
 
-				thermStatus = MLX90632::status::SENSOR_NO_NEW_DATA;
-				while (thermStatus != MLX90632::status::SENSOR_SUCCESS)
-				{
-					// ToDo: consider a non-blocking solution for a scenario when updateThermopileData is called too frequently for set measurement rate
-					thermopile.getRawSensorValues(thermStatus, AMB, Sto); //Get the temperature of the object we're looking at in C
-					timestamp = millis();
-				}
-				status = status | therm0AMB.push_back(AMB, &(timestamp));
-				status = status | therm0Sto.push_back(Sto, &(timestamp));
-				thermopile.startConversionObjectTemp();
-			}
-		}
-		else if (thermopileMode == MODE_CONTINUOUS) {
-			// Continuouts mode reads at the set rate and returns data if ready
-			thermopile.getRawSensorValues(thermStatus, AMB, Sto);
-			timestamp = millis();
-
-			if (thermStatus == MLX90632::status::SENSOR_SUCCESS)
+			thermStatus = MLX90632::status::SENSOR_NO_NEW_DATA;
+			while (thermStatus != MLX90632::status::SENSOR_SUCCESS)
 			{
-				status = status | therm0AMB.push_back(AMB, &(timestamp));
-				status = status | therm0Sto.push_back(Sto, &(timestamp));
+				// ToDo: consider a non-blocking solution for a scenario when updateThermopileData is called too frequently for set measurement rate
+				thermopile.getRawSensorValues(thermStatus, AMB, Sto); //Get the temperature of the object we're looking at in C
+				timestamp = millis();
 			}
+			status = status | therm0AMB.push_back(AMB, &(timestamp));
+			status = status | therm0Sto.push_back(Sto, &(timestamp));
+			thermopile.startRawSensorValues(thermStatus);
 		}
 	}
+	else if (thermopileMode == MODE_CONTINUOUS) {
+		// Continuouts mode reads at the set rate and returns data if ready
+		thermopile.getRawSensorValues(thermStatus, AMB, Sto);
+		timestamp = millis();
+
+		if (thermStatus == MLX90632::status::SENSOR_SUCCESS)
+		{
+			status = status | therm0AMB.push_back(AMB, &(timestamp));
+			status = status | therm0Sto.push_back(Sto, &(timestamp));
+		}
+	}
+	
 	return status;
 }
 
@@ -1576,44 +1560,32 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 			size_t sizeSto;
 			float* dataAMB;
 			float* dataSto;
+			uint32_t* timestampSto;
 			sizeAMB = therm0AMB.getData(&dataAMB, timestamp);
-			sizeSto = therm0Sto.getData(&dataSto, timestamp);
-			if (sizeAMB == sizeSto)
+			sizeSto = therm0Sto.getData(&dataSto, timestampSto);
+			if (sizeAMB != sizeSto) // interrupt hit between therm0AMB.getdata and therm0Sto.getdata
 			{
-				for (uint8_t i = 0; i < sizeAMB; i++)
+				// sizeAMB = k
+				// SizeSto = k+s ; where s= #sampepls added per interrupt
+				for (uint8_t i = sizeAMB; i < sizeSto; i++)
 				{
-					// if dummy data was stored, then just directly read the Thermopile DoubleBuffer
-					if (dataAMB[i] == -2 && dataSto[i] == -2)
-					{
-						return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
-					}
+					therm0Sto.push_back(dataSto[sizeAMB - 1], timestampSto);
+				}
+				sizeSto = sizeAMB;
+			}
+			for (uint8_t i = 0; i < sizeAMB; i++)
+			{
+				// if dummy data was stored, then just directly read the Thermopile DoubleBuffer
+				if (dataAMB[i] == -2 && dataSto[i] == -2)
+				{
+					return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
+				}
 					
-					float objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
-					/*Serial.print(i+1);
-					Serial.print("/");
-					Serial.print((uint8_t)sizeAMB);
-					Serial.print("::\tAMB:");
-					Serial.print(dataAMB[i]);
-					Serial.print("\tSto:");
-					Serial.print(dataSto[i]);
-					Serial.print("\tObjectTemp");
-					Serial.print(":");
-					Serial.println(objectTemp);*/
-					pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestamp); 
-				}
+				float objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
+				pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestamp); 
+			}
 
-				return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
-			}
-			else
-			{
-				// ToDo:
-				// is this the best solution?
-				for (uint8_t i = 0; i < sizeAMB; i++)
-				{
-					pushData(EmotiBit::DataType::THERMOPILE, thermopile.getObjectTemp(-1,-1), timestamp);// push the last known correct temp to all the values of this reading
-				}
-				return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
-			}
+			return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
 		}
 		else
 		{
@@ -2187,7 +2159,16 @@ void EmotiBit::readSensors()
 			static int dummyData = 0;
 			for (uint8_t t = (uint8_t)DataType::PPG_INFRARED; t < (uint8_t)DataType::BATTERY_VOLTAGE; t++)
 			{
-				pushData((DataType)t, (float)dummyData);
+				if (t == (uint8_t)DataType::THERMOPILE)
+				{
+					pushData((DataType)t, (float)dummyData);
+					therm0AMB.push_back(-2);
+					therm0Sto.push_back(-2);
+				}
+				else
+				{
+					pushData((DataType)t, (float)dummyData);
+				}
 			}
 			dummyData++;
 			if (dummyData >= 25) dummyData = 0;
