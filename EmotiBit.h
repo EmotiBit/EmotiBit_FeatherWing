@@ -34,8 +34,8 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.61";
-	TestingMode testingMode = TestingMode::CHRONIC;
+	String firmware_version = "1.0.62";
+	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
 	bool _debugMode = false;
