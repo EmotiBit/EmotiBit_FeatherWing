@@ -925,6 +925,8 @@ uint8_t EmotiBit::update()
 		}
 	}
 
+
+
 	// Handle updating WiFi connction + syncing
 	static String inSyncPackets;
 	_emotiBitWiFi.update(inSyncPackets, _outDataPacketCounter);
@@ -1583,10 +1585,37 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 					{
 						return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
 					}
-					float objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
-					if (_debugMode)
+					// float objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
+					float objectTemp = thermopile.getObjectTemp(-2,-2);
+					/*float objectTemp;
+					static int count = 0;
+					if (count < 20)
 					{
-						if (isnan(objectTemp))
+						objectTemp = thermopile.getObjectTemp(-2, -2);
+						count++;
+					}
+					else
+					{
+						objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
+					}*/
+
+					if (isnan(objectTemp))
+					{
+						if (testingMode == TestingMode::CHRONIC)
+						{
+							static String debugPacket;
+							static String payloadAMB;
+							payloadAMB = "AMB val for nan:";
+							static String payloadSto;
+							payloadSto = "Sto val fro nan:";
+							payloadAMB += String(dataAMB[i], 4);
+							payloadSto += String(dataSto[i], 4);
+							debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadAMB, 1);
+							debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadSto, 1);
+							_outDataPackets += debugPacket;
+							debugPacket = "";
+						}
+						if (_debugMode)
 						{
 							Serial.print("AMB for nan:");    Serial.print(dataAMB[i]);
 							Serial.print("\t Sto for nan:"); Serial.println(dataSto[i]);
