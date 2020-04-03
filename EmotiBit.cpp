@@ -1574,16 +1574,24 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 				sizeSto = sizeAMB;
 			}
 			// if dummy data was stored, then just directly read the Thermopile DoubleBuffer
-			if (dataAMB[0] == -2 && dataSto[0] == -2)
-			{
-				return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
-			}
 			else
 			{
 				for (uint8_t i = 0; i < sizeAMB; i++)
 				{
 
+					if (dataAMB[i] == -2 && dataSto[i] == -2)
+					{
+						return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
+					}
 					float objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
+					if (_debugMode)
+					{
+						if (isnan(objectTemp))
+						{
+							Serial.print("AMB for nan:");    Serial.print(dataAMB[i]);
+							Serial.print("\t Sto for nan:"); Serial.println(dataSto[i]);
+						}
+					}
 					pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestamp);
 				}
 				return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
