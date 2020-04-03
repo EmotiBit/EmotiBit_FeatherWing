@@ -1586,19 +1586,6 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 						return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
 					}
 					float objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
-					//float objectTemp = thermopile.getObjectTemp(-2,-2);
-					/*float objectTemp;
-					static int count = 0;
-					if (count < 20)
-					{
-						objectTemp = thermopile.getObjectTemp(-2, -2);
-						count++;
-					}
-					else
-					{
-						objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
-					}*/
-
 					if (isnan(objectTemp))
 					{
 						if (testingMode == TestingMode::CHRONIC)
