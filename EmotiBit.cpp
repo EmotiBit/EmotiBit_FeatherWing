@@ -1599,20 +1599,18 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 					float objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
 					if (isnan(objectTemp))
 					{
-						if (testingMode == TestingMode::CHRONIC)
-						{
-							static String debugPacket;
-							static String payloadAMB;
-							payloadAMB = "AMB val for nan:";
-							static String payloadSto;
-							payloadSto = "Sto val fro nan:";
-							payloadAMB += String(dataAMB[i], 4);
-							payloadSto += String(dataSto[i], 4);
-							debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadAMB, 1);
-							debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadSto, 1);
-							_outDataPackets += debugPacket;
-							debugPacket = "";
-						}
+						static String debugPacket;
+						static String payloadAMB;
+						payloadAMB = "AMB val for nan:";
+						static String payloadSto;
+						payloadSto = "Sto val fro nan:";
+						payloadAMB += String(dataAMB[i], 4);
+						payloadSto += String(dataSto[i], 4);
+						debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadAMB, 1);
+						debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadSto, 1);
+						_outDataPackets += debugPacket;
+						debugPacket = "";
+						// to print debug serial output, incase a nan is generated
 						if (catchDataException.catchNan)
 						{
 							Serial.print("AMB for nan:");    Serial.print(dataAMB[i]);
@@ -2964,7 +2962,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		else if (c == '0')
 		{
 			catchDataException.catchNan = true;
-			payload = "catchDataException.catchNan";
+			payload = "catchDataException.catchNan = ";
 			payload += catchDataException.catchNan;
 			Serial.println(payload);
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
