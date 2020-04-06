@@ -443,6 +443,7 @@ public:
 
   
   size_t getData(DataType t, float** data, uint32_t * timestamp = nullptr); /**< Swap buffers and read out the data */
+  size_t getDataThermopile(DataType t, float** data, uint32_t * timestamp = nullptr);
 	//size_t dataAvailable(DataType t);
 	float readBatteryVoltage();
 	int8_t readBatteryPercent();
