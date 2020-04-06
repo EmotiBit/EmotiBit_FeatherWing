@@ -1251,15 +1251,21 @@ int8_t EmotiBit::updateThermopileData() {
 		else {
 
 			thermStatus = MLX90632::status::SENSOR_NO_NEW_DATA;
-			while (thermStatus != MLX90632::status::SENSOR_SUCCESS)
-			{
-				// ToDo: consider a non-blocking solution for a scenario when updateThermopileData is called too frequently for set measurement rate
-				thermopile.getRawSensorValues(thermStatus, AMB, Sto); //Get the temperature of the object we're looking at in C
-				timestamp = millis();
-			}
+			//while (thermStatus != MLX90632::status::SENSOR_SUCCESS)
+			//{
+			thermopile.getRawSensorValues(thermStatus, AMB, Sto); //Get the temperature of the object we're looking at in C
+			timestamp = millis();
+			//}
 			status = status | therm0AMB.push_back(AMB, &(timestamp));
+			// if DataOverflow
+			if (status & BufferFloat::ERROR_BUFFER_OVERFLOW == BufferFloat::ERROR_BUFFER_OVERFLOW) 
+			{
+				// store the buffer overflow type and time
+				dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]->push_back((uint8_t)DataType::THERMOPILE, &timestamp);
+			}
 			status = status | therm0Sto.push_back(Sto, &(timestamp));
 			thermopile.startRawSensorValues(thermStatus);
+			return (int8_t)EmotiBit::Error::BUFFER_OVERFLOW;
 		}
 	}
 	else if (thermopileMode == MODE_CONTINUOUS) {
@@ -1270,6 +1276,11 @@ int8_t EmotiBit::updateThermopileData() {
 		if (thermStatus == MLX90632::status::SENSOR_SUCCESS)
 		{
 			status = status | therm0AMB.push_back(AMB, &(timestamp));
+			if (status & BufferFloat::ERROR_BUFFER_OVERFLOW == BufferFloat::ERROR_BUFFER_OVERFLOW)
+			{
+				// store the buffer overflow type and time
+				dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]->push_back((uint8_t)DataType::THERMOPILE, &timestamp);
+			}
 			status = status | therm0Sto.push_back(Sto, &(timestamp));
 		}
 	}
