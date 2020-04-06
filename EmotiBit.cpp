@@ -686,6 +686,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	if (_debugMode) 
 	{
 		Serial.println("\nDEBUG MODE");
+		Serial.println("Press ? to know more about available options in DEBUG MODE");
 	}
 } // Setup
 
@@ -2810,7 +2811,33 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		String payload;
 
 		char c = Serial.read();
-		if (c == ':')
+		if (c == '?')
+		{
+			Serial.println("Debug tool options:");
+			Serial.println("Press : for printing sensor data on Serial");
+			Serial.println("Press / for initiating dummy isr with dummy values");
+			Serial.println("Press R to print freeRam available");
+			Serial.println("Press r to allocate free memory to simulate RAM needs");
+			Serial.println("Press l to toggle OFF the NCP5623 LED driver");
+			Serial.println("Press L to toggle ON the NCP5623 LED driver");
+			Serial.println("Press t to togle OFF the Thermopile");
+			Serial.println("Press T to togle ON the Thermopile");
+			Serial.println("Press e to togle OFF the GSR");
+			Serial.println("Press E to togle ON the GSR");
+			Serial.println("Press h to togle OFF the Temp/Humidity Sensor");
+			Serial.println("Press H to togle ON the Temp/Humidity Sensor");
+			Serial.println("Press i to toggle OFF the IMU");
+			Serial.println("Press I to toggle ON the IMU");
+			Serial.println("Press p to toggle OFF the PPG sensor");
+			Serial.println("Press P to toggle ON the PPG sensor");
+			Serial.println("Press d to toggle OFF recording ISR loop time");
+			Serial.println("Press D to toggle ON recording ISR loop time");
+			Serial.println("Press b to toggle OFF Battry update");
+			Serial.println("Press B to toggle ON Battery update");
+			Serial.println("Press 0 to simulate nan events in the thermopile");
+
+		}
+		else if (c == ':')
 		{
 			if (_serialData == DataType::length)
 			{
