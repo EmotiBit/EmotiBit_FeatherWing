@@ -34,7 +34,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.63";
+	String firmware_version = "1.0.64";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -311,6 +311,10 @@ public:
 		bool NCP5623 = false;
 		bool MLX90632 = false;
 	} chipBegun;
+	
+	struct CatchDataException {
+		bool catchNan = false;
+	}catchDataException;
 
 	const char *typeTags[(uint8_t)EmotiBit::DataType::length];
 	bool _newDataAvailable[(uint8_t)EmotiBit::DataType::length];

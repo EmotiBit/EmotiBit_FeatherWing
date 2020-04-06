@@ -1613,7 +1613,7 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 							_outDataPackets += debugPacket;
 							debugPacket = "";
 						}
-						if (_debugMode)
+						if (catchDataException.catchNan)
 						{
 							Serial.print("AMB for nan:");    Serial.print(dataAMB[i]);
 							Serial.print("\t Sto for nan:"); Serial.println(dataSto[i]);
@@ -2960,6 +2960,14 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println(payload);
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::BATTERY_PERCENT;
+		}
+		else if (c == '0')
+		{
+			catchDataException.catchNan = true;
+			payload = "catchDataException.catchNan";
+			payload += catchDataException.catchNan;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 		}
 	}
 }
