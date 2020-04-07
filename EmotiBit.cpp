@@ -2832,7 +2832,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("Press D to toggle ON recording ISR loop time");
 			Serial.println("Press b to toggle OFF Battry update");
 			Serial.println("Press B to toggle ON Battery update");
-			Serial.println("Press 0 to simulate nan events in the thermopile");
+			//Serial.println("Press 0 to simulate nan events in the thermopile");
 
 		}
 		else if (c == ':')
