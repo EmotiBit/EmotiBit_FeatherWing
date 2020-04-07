@@ -34,7 +34,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.55";
+	String firmware_version = "1.1.0";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -266,7 +266,7 @@ public:
 		uint8_t imu = 0;
 		uint8_t ppg = 1;
 		uint8_t led = 4;
-		uint8_t thermopile = 6;
+		uint8_t thermopile = 3;
 		uint8_t tempHumidity = 2;
 		uint8_t battery = 0;
 	} timerLoopOffset;	// Sets initial value of sampling counters
@@ -311,6 +311,7 @@ public:
 		bool NCP5623 = false;
 		bool MLX90632 = false;
 	} chipBegun;
+	
 
 	const char *typeTags[(uint8_t)EmotiBit::DataType::length];
 	bool _newDataAvailable[(uint8_t)EmotiBit::DataType::length];
@@ -439,6 +440,7 @@ public:
 
   
   size_t getData(DataType t, float** data, uint32_t * timestamp = nullptr); /**< Swap buffers and read out the data */
+  size_t getDataThermopile(float** data, uint32_t * timestamp = nullptr);
 	//size_t dataAvailable(DataType t);
 	float readBatteryVoltage();
 	int8_t readBatteryPercent();
@@ -469,29 +471,32 @@ private:
 	uint8_t _imuBuffer[40];
 
 
-	DoubleBufferFloat eda = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
-	DoubleBufferFloat edl = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
-	DoubleBufferFloat edr = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
-	DoubleBufferFloat ppgInfrared = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
-	DoubleBufferFloat ppgRed = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
-	DoubleBufferFloat ppgGreen = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
-	DoubleBufferFloat temp0 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
-	DoubleBufferFloat tempHP0 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
-	DoubleBufferFloat humidity0 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
-	DoubleBufferFloat accelX = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
-	DoubleBufferFloat accelY = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
-	DoubleBufferFloat accelZ = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
-	DoubleBufferFloat gyroX = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
-	DoubleBufferFloat gyroY = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
-	DoubleBufferFloat gyroZ = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
-	DoubleBufferFloat magX = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
-	DoubleBufferFloat magY = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
-	DoubleBufferFloat magZ = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat eda			 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat edl			 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat edr			 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat ppgInfrared	 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat ppgRed		 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat ppgGreen		 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat temp0			 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
+	// DoubleBufferFloat tempHP0 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
+	DoubleBufferFloat therm0		 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4); // To store the thermistor Object Temp
+	DoubleBufferFloat therm0AMB		 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4); // To store the raw value AMB from the thermistor
+	DoubleBufferFloat therm0Sto		 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4); // To store the raw Value Sto from the thermistor
+	DoubleBufferFloat humidity0		 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
+	DoubleBufferFloat accelX		 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat accelY		 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat accelZ		 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat gyroX			 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat gyroY			 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat gyroZ			 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat magX			 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat magY			 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
+	DoubleBufferFloat magZ			 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
 	DoubleBufferFloat batteryVoltage = DoubleBufferFloat(1);
 	DoubleBufferFloat batteryPercent = DoubleBufferFloat(1);
-	DoubleBufferFloat dataOverflow = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
-	DoubleBufferFloat dataClipping = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
-	DoubleBufferFloat debugBuffer = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat dataOverflow	 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat dataClipping   = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat debugBuffer    = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
 
 	DoubleBufferFloat * dataDoubleBuffers[(uint8_t)DataType::length];
 

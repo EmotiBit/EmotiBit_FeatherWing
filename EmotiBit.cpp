@@ -137,7 +137,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::PPG_RED] = &ppgRed;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::PPG_GREEN] = &ppgGreen;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = &temp0;
-	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE] = &tempHP0;
+	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE] = &therm0;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = &humidity0;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = &accelX;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Y] = &accelY;
@@ -686,6 +686,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	if (_debugMode) 
 	{
 		Serial.println("\nDEBUG MODE");
+		Serial.println("Press ? to know more about available options in DEBUG MODE");
 	}
 } // Setup
 
@@ -769,6 +770,7 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 	size_t dataLen;
 
 	dataLen = getData(t, &data, &timestamp);
+
 	if (dataLen > 0)
 	{
 		_newDataAvailable[(uint8_t)t] = true;	// set new data is available in the outputBuffer
@@ -924,6 +926,8 @@ uint8_t EmotiBit::update()
 			writeSerialData(_serialData);
 		}
 	}
+
+
 
 	// Handle updating WiFi connction + syncing
 	static String inSyncPackets;
@@ -1234,59 +1238,55 @@ int8_t EmotiBit::updateTempHumidityData() {
 int8_t EmotiBit::updateThermopileData() {
 	// Thermopile
 	int8_t status = 0;
-	float objectTemp;
 	uint32_t timestamp;
+	float AMB;// = 22991.97;  // raw data from thermopile needed for post processing
+	float Sto;// = -88.44;  // raw data from thermopile needed for post processing
 	MLX90632::status thermStatus;
-
-	bool testDummyData = false;
-	if (testDummyData)
-	{
-		// Generate and send dummy data to validate pipes
-		static float testData = 30.f;
-		status = status | pushData(EmotiBit::DataType::THERMOPILE, testData, &(timestamp));
-		testData += 0.1f;
-		if (testData > 40.f)
-		{
-			testData = 30.f;
+	if (thermopileMode == MODE_STEP) {
+		// Step mode manually triggers sensor reading
+		if (!thermopileBegun) {
+			// First time through step mode just starts a measurement
+			MLX90632::status returnError;
+			thermopile.startRawSensorValues(returnError);
+			thermopileBegun = true;
 		}
-	}
-	else
-	{
-		if (thermopileMode == MODE_STEP) {
-			// Step mode manually triggers sensor reading
-			if (!thermopileBegun) {
-				// First time through step mode just starts a measurement
-				thermopile.start_getObjectTemp();
-				thermopileBegun = true;
-			}
-			else {
-				/*Serial.print("Thermopile:");
-				Serial.println(thermopile.end_getObjectTemp());*/
+		else {
 
-				thermStatus = MLX90632::status::SENSOR_NO_NEW_DATA;
-
-				while (thermStatus != MLX90632::status::SENSOR_SUCCESS)
-				{
-					// ToDo: consider a non-blocking solution for a scenario when updateThermopileData is called too frequently for set measurement rate
-					objectTemp = thermopile.end_getObjectTemp(thermStatus); //Get the temperature of the object we're looking at in C
-					timestamp = millis();
-				}
-
-				status = status | pushData(EmotiBit::DataType::THERMOPILE, objectTemp, &(timestamp));
-				thermopile.start_getObjectTemp();
-			}
-		}
-		else if (thermopileMode == MODE_CONTINUOUS) {
-			// Continuouts mode reads at the set rate and returns data if ready
-			objectTemp = thermopile.end_getObjectTemp(thermStatus);
+			thermStatus = MLX90632::status::SENSOR_NO_NEW_DATA;
+			//while (thermStatus != MLX90632::status::SENSOR_SUCCESS)
+			//{
+			thermopile.getRawSensorValues(thermStatus, AMB, Sto); //Get the temperature of the object we're looking at in C
 			timestamp = millis();
-
-			if (thermStatus == MLX90632::status::SENSOR_SUCCESS)
+			//}
+			status = status | therm0AMB.push_back(AMB, &(timestamp));
+			// if DataOverflow
+			if (status & BufferFloat::ERROR_BUFFER_OVERFLOW == BufferFloat::ERROR_BUFFER_OVERFLOW) 
 			{
-				status = status | pushData(EmotiBit::DataType::THERMOPILE, objectTemp, &(timestamp));
+				// store the buffer overflow type and time
+				dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]->push_back((uint8_t)DataType::THERMOPILE, &timestamp);
 			}
+			status = status | therm0Sto.push_back(Sto, &(timestamp));
+			thermopile.startRawSensorValues(thermStatus);
+			return (int8_t)EmotiBit::Error::BUFFER_OVERFLOW;
 		}
 	}
+	else if (thermopileMode == MODE_CONTINUOUS) {
+		// Continuouts mode reads at the set rate and returns data if ready
+		thermopile.getRawSensorValues(thermStatus, AMB, Sto);
+		timestamp = millis();
+
+		if (thermStatus == MLX90632::status::SENSOR_SUCCESS)
+		{
+			status = status | therm0AMB.push_back(AMB, &(timestamp));
+			if (status & BufferFloat::ERROR_BUFFER_OVERFLOW == BufferFloat::ERROR_BUFFER_OVERFLOW)
+			{
+				// store the buffer overflow type and time
+				dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]->push_back((uint8_t)DataType::THERMOPILE, &timestamp);
+			}
+			status = status | therm0Sto.push_back(Sto, &(timestamp));
+		}
+	}
+	
 	return status;
 }
 
@@ -1562,13 +1562,105 @@ int8_t EmotiBit::pushData(EmotiBit::DataType type, float data, uint32_t * timest
 	}
 }
 
+size_t EmotiBit::getDataThermopile(float **data, uint32_t *timestamp)
+{
+	size_t sizeAMB;
+	size_t sizeSto;
+	float* dataAMB;
+	float* dataSto;
+	uint32_t* timestampSto;
+	sizeAMB = therm0AMB.getData(&dataAMB, timestamp);
+	sizeSto = therm0Sto.getData(&dataSto, timestampSto);
+	if (sizeAMB != sizeSto) // interrupt hit between therm0AMB.getdata and therm0Sto.getdata
+	{
+		// sizeAMB = k
+		// SizeSto = k+s ; where s= #sampepls added per interrupt
+		for (uint8_t i = sizeAMB; i < sizeSto; i++)
+		{
+			therm0Sto.push_back(dataSto[i], timestampSto);
+		}
+		sizeSto = sizeAMB;
+	}
+	else
+	{
+		for (uint8_t i = 0; i < sizeAMB; i++)
+		{
+			// if dummy data was stored
+			if (dataAMB[i] == -2 && dataSto[i] == -2)
+			{
+				return dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->getData(data, timestamp);
+			}
+			float objectTemp;
+			// toggle to true to create forced nan values on the thermopile data
+			bool createNan = false;
+			if (createNan)
+			{
+				// if createNan is true generate nan values with a 0.1 probablity. This is to test the MLX90632 library functionatlity that prevents one nan to recursively create only nan values.
+				int randNum = rand() % 10 + 1;
+				if (randNum <= 1)
+				{
+					// getObjectTemp(-3, -3) generates nan Temp value.
+					objectTemp = thermopile.getObjectTemp(-3, -3);
+					Serial.print("AMB for nan: -2");
+					Serial.println("\t Sto for nan: -2");
+				}
+				else
+				{
+					objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
+				}
+			}
+			else
+			{
+				objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
+			}
+
+			if (isnan(objectTemp))
+			{
+				static String debugPacket;
+				static String payloadAMB;
+				static String payloadSto;
+				payloadAMB = "AMB val for nan:";
+				payloadSto = "Sto val fro nan:";
+				if (createNan)
+				{
+					payloadAMB += "-2";
+					payloadSto += "-2";
+				}
+				else
+				{
+					payloadAMB += String(dataAMB[i], 4);
+					payloadSto += String(dataSto[i], 4);
+				}
+				debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadAMB, 1);
+				debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadSto, 1);
+				_outDataPackets += debugPacket;
+				debugPacket = "";
+				payloadAMB = "";
+				payloadSto = "";
+			}
+			pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestamp);
+		}
+		return dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->getData(data, timestamp);
+	}
+	
+}
+
+
 size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 #ifdef DEBUG
 	Serial.print("getData: type=");
 	Serial.println((uint8_t) t);
 #endif // DEBUG
 	if ((uint8_t)type < (uint8_t)EmotiBit::DataType::length) {
-		return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
+		
+		if ((uint8_t)type == (uint8_t)EmotiBit::DataType::THERMOPILE)
+		{
+			return getDataThermopile(data, timestamp);
+		}
+		else
+		{
+			return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
+		}
 	}
 	else {
 		return (int8_t)EmotiBit::Error::NONE;
@@ -2137,7 +2229,16 @@ void EmotiBit::readSensors()
 			static int dummyData = 0;
 			for (uint8_t t = (uint8_t)DataType::PPG_INFRARED; t < (uint8_t)DataType::BATTERY_VOLTAGE; t++)
 			{
-				pushData((DataType)t, (float)dummyData);
+				if (t == (uint8_t)DataType::THERMOPILE)
+				{
+					pushData((DataType)t, (float)dummyData);
+					therm0AMB.push_back(-2);
+					therm0Sto.push_back(-2);
+				}
+				else
+				{
+					pushData((DataType)t, (float)dummyData);
+				}
 			}
 			dummyData++;
 			if (dummyData >= 25) dummyData = 0;
@@ -2183,11 +2284,7 @@ void EmotiBit::readSensors()
 		if (chipBegun.MLX90632 && acquireData.thermopile) {
 			static uint16_t thermopileCounter = timerLoopOffset.thermopile;
 			if (thermopileCounter == THERMOPILE_SAMPLING_DIV) {
-				if (testingMode == TestingMode::ACUTE)
-				{
-					// Disable thermopile unless acute testing
-					int8_t tempStatus = updateThermopileData();
-				}
+				int8_t tempStatus = updateThermopileData();
 				thermopileCounter = 0;
 			}
 			thermopileCounter++;
@@ -2712,7 +2809,33 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		String payload;
 
 		char c = Serial.read();
-		if (c == ':')
+		if (c == '?')
+		{
+			Serial.println("Debug tool options:");
+			Serial.println("Press : for printing sensor data on Serial");
+			Serial.println("Press / for initiating dummy isr with dummy values");
+			Serial.println("Press R to print freeRam available");
+			Serial.println("Press r to allocate free memory to simulate RAM needs");
+			Serial.println("Press l to toggle OFF the NCP5623 LED driver");
+			Serial.println("Press L to toggle ON the NCP5623 LED driver");
+			Serial.println("Press t to togle OFF the Thermopile");
+			Serial.println("Press T to togle ON the Thermopile");
+			Serial.println("Press e to togle OFF the GSR");
+			Serial.println("Press E to togle ON the GSR");
+			Serial.println("Press h to togle OFF the Temp/Humidity Sensor");
+			Serial.println("Press H to togle ON the Temp/Humidity Sensor");
+			Serial.println("Press i to toggle OFF the IMU");
+			Serial.println("Press I to toggle ON the IMU");
+			Serial.println("Press p to toggle OFF the PPG sensor");
+			Serial.println("Press P to toggle ON the PPG sensor");
+			Serial.println("Press d to toggle OFF recording ISR loop time");
+			Serial.println("Press D to toggle ON recording ISR loop time");
+			Serial.println("Press b to toggle OFF Battry update");
+			Serial.println("Press B to toggle ON Battery update");
+			//Serial.println("Press 0 to simulate nan events in the thermopile");
+
+		}
+		else if (c == ':')
 		{
 			if (_serialData == DataType::length)
 			{
@@ -2897,6 +3020,14 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::BATTERY_PERCENT;
 		}
+		/*else if (c == '0')
+		{
+			catchDataException.catchNan = !catchDataException.catchNan;
+			payload = "catchDataException.catchNan = ";
+			payload += catchDataException.catchNan;
+			Serial.println(payload);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+		}*/
 	}
 }
 
