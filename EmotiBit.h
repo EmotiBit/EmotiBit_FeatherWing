@@ -34,7 +34,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.0.66";
+	String firmware_version = "1.1.0";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -312,9 +312,6 @@ public:
 		bool MLX90632 = false;
 	} chipBegun;
 	
-	struct CatchDataException {
-		bool catchNan = false;
-	}catchDataException;
 
 	const char *typeTags[(uint8_t)EmotiBit::DataType::length];
 	bool _newDataAvailable[(uint8_t)EmotiBit::DataType::length];
@@ -443,7 +440,7 @@ public:
 
   
   size_t getData(DataType t, float** data, uint32_t * timestamp = nullptr); /**< Swap buffers and read out the data */
-  size_t getDataThermopile(DataType t, float** data, uint32_t * timestamp = nullptr);
+  size_t getDataThermopile(float** data, uint32_t * timestamp = nullptr);
 	//size_t dataAvailable(DataType t);
 	float readBatteryVoltage();
 	int8_t readBatteryPercent();

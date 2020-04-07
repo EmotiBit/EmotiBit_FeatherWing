@@ -769,14 +769,7 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 	uint32_t timestamp;
 	size_t dataLen;
 
-	if ((uint8_t)t == (uint8_t)DataType::THERMOPILE)
-	{
-		dataLen = getDataThermopile(t, &data, &timestamp);
-	}
-	else
-	{
-		dataLen = getData(t, &data, &timestamp);
-	}
+	dataLen = getData(t, &data, &timestamp);
 
 	if (dataLen > 0)
 	{
@@ -1569,89 +1562,87 @@ int8_t EmotiBit::pushData(EmotiBit::DataType type, float data, uint32_t * timest
 	}
 }
 
-size_t EmotiBit::getDataThermopile(DataType type, float **data, uint32_t *timestamp)
+size_t EmotiBit::getDataThermopile(float **data, uint32_t *timestamp)
 {
-	if ((uint8_t)type < (uint8_t)EmotiBit::DataType::length)
+	size_t sizeAMB;
+	size_t sizeSto;
+	float* dataAMB;
+	float* dataSto;
+	uint32_t* timestampSto;
+	sizeAMB = therm0AMB.getData(&dataAMB, timestamp);
+	sizeSto = therm0Sto.getData(&dataSto, timestampSto);
+	if (sizeAMB != sizeSto) // interrupt hit between therm0AMB.getdata and therm0Sto.getdata
 	{
-		size_t sizeAMB;
-		size_t sizeSto;
-		float* dataAMB;
-		float* dataSto;
-		uint32_t* timestampSto;
-		sizeAMB = therm0AMB.getData(&dataAMB, timestamp);
-		sizeSto = therm0Sto.getData(&dataSto, timestampSto);
-		if (sizeAMB != sizeSto) // interrupt hit between therm0AMB.getdata and therm0Sto.getdata
+		// sizeAMB = k
+		// SizeSto = k+s ; where s= #sampepls added per interrupt
+		for (uint8_t i = sizeAMB; i < sizeSto; i++)
 		{
-			// sizeAMB = k
-			// SizeSto = k+s ; where s= #sampepls added per interrupt
-			for (uint8_t i = sizeAMB; i < sizeSto; i++)
-			{
-				therm0Sto.push_back(dataSto[i], timestampSto);
-			}
-			sizeSto = sizeAMB;
+			therm0Sto.push_back(dataSto[i], timestampSto);
 		}
-		else
+		sizeSto = sizeAMB;
+	}
+	else
+	{
+		for (uint8_t i = 0; i < sizeAMB; i++)
 		{
-			for (uint8_t i = 0; i < sizeAMB; i++)
+			// if dummy data was stored
+			if (dataAMB[i] == -2 && dataSto[i] == -2)
 			{
-				// if dummy data was stored
-				if (dataAMB[i] == -2 && dataSto[i] == -2)
+				return dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->getData(data, timestamp);
+			}
+			float objectTemp;
+			// toggle to true to create forced nan values on the thermopile data
+			bool createNan = false;
+			if (createNan)
+			{
+				// if createNan is true generate nan values with a 0.1 probablity. This is to test the MLX90632 library functionatlity that prevents one nan to recursively create only nan values.
+				int randNum = rand() % 10 + 1;
+				if (randNum <= 1)
 				{
-					return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
-				}
-				float objectTemp;
-				if (catchDataException.catchNan)
-				{
-					int randNum = rand() % 10 + 1;
-					if (randNum <= 1)
-					{
-						objectTemp = thermopile.getObjectTemp(-2, -2);
-						Serial.print("AMB for nan: -2");
-						Serial.println("\t Sto for nan: -2");
-					}
-					else
-					{
-						objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
-					}
+					// getObjectTemp(-3, -3) generates nan Temp value.
+					objectTemp = thermopile.getObjectTemp(-3, -3);
+					Serial.print("AMB for nan: -2");
+					Serial.println("\t Sto for nan: -2");
 				}
 				else
 				{
 					objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
 				}
-
-				if (isnan(objectTemp))
-				{
-					static String debugPacket;
-					static String payloadAMB;
-					static String payloadSto;
-					payloadAMB = "AMB val for nan:";
-					payloadSto = "Sto val fro nan:";
-					if (catchDataException.catchNan)
-					{
-						payloadAMB += "-2";
-						payloadSto += "-2";
-					}
-					else
-					{
-						payloadAMB += String(dataAMB[i], 4);
-						payloadSto += String(dataSto[i], 4);
-					}
-					debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadAMB, 1);
-					debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadSto, 1);
-					_outDataPackets += debugPacket;
-					debugPacket = "";
-					payloadAMB = "";
-					payloadSto = "";
-				}
-				pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestamp);
 			}
-			return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
+			else
+			{
+				objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
+			}
+
+			if (isnan(objectTemp))
+			{
+				static String debugPacket;
+				static String payloadAMB;
+				static String payloadSto;
+				payloadAMB = "AMB val for nan:";
+				payloadSto = "Sto val fro nan:";
+				if (createNan)
+				{
+					payloadAMB += "-2";
+					payloadSto += "-2";
+				}
+				else
+				{
+					payloadAMB += String(dataAMB[i], 4);
+					payloadSto += String(dataSto[i], 4);
+				}
+				debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadAMB, 1);
+				debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadSto, 1);
+				_outDataPackets += debugPacket;
+				debugPacket = "";
+				payloadAMB = "";
+				payloadSto = "";
+			}
+			pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestamp);
 		}
+		return dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->getData(data, timestamp);
 	}
-	else
-	{
-		return (int8_t)EmotiBit::Error::NONE;
-	}
+	
 }
 
 
@@ -1662,7 +1653,14 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 #endif // DEBUG
 	if ((uint8_t)type < (uint8_t)EmotiBit::DataType::length) {
 		
-		return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
+		if ((uint8_t)type == (uint8_t)EmotiBit::DataType::THERMOPILE)
+		{
+			return getDataThermopile(data, timestamp);
+		}
+		else
+		{
+			return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
+		}
 	}
 	else {
 		return (int8_t)EmotiBit::Error::NONE;
@@ -3022,14 +3020,14 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::BATTERY_PERCENT;
 		}
-		else if (c == '0')
+		/*else if (c == '0')
 		{
 			catchDataException.catchNan = !catchDataException.catchNan;
 			payload = "catchDataException.catchNan = ";
 			payload += catchDataException.catchNan;
 			Serial.println(payload);
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
-		}
+		}*/
 	}
 }
 
