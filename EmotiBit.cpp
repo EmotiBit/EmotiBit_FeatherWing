@@ -562,7 +562,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	typeTags[(uint8_t)EmotiBit::DataType::BATTERY_PERCENT] = EmotiBitPacket::TypeTag::BATTERY_PERCENT;
 	typeTags[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = EmotiBitPacket::TypeTag::DATA_CLIPPING;
 	typeTags[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = EmotiBitPacket::TypeTag::DATA_OVERFLOW;
-	typeTags[(uint8_t)EmotiBit::DataType::DEBUG] = EmotiBitPacket::TypeTag::DEBUG;
+	typeTags[(uint8_t)EmotiBit::DataType::DEBUG] = EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG;
 
 	printLen[(uint8_t)EmotiBit::DataType::EDA] = 6;
 	printLen[(uint8_t)EmotiBit::DataType::EDL] = 6;
@@ -1631,8 +1631,8 @@ size_t EmotiBit::getDataThermopile(float **data, uint32_t *timestamp)
 					payloadAMB += String(dataAMB[i], 4);
 					payloadSto += String(dataSto[i], 4);
 				}
-				debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadAMB, 1);
-				debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, _outDataPacketCounter++, payloadSto, 1);
+				debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, _outDataPacketCounter++, payloadAMB, 1);
+				debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, _outDataPacketCounter++, payloadSto, 1);
 				_outDataPackets += debugPacket;
 				debugPacket = "";
 				payloadAMB = "";
@@ -2842,14 +2842,14 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 				payload = "_serialData = DataType::DEBUG";
 				Serial.println(payload);
 				_serialData = DataType::DEBUG;
-				debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+				debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 			}
 			else
 			{
 				payload = "_serialData OFF";
 				Serial.println(payload);
 				_serialData = DataType::length;
-				debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+				debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 			}
 		}
 		else if (c == '/')
@@ -2858,7 +2858,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "dummyIsrWithDelay = ";
 			payload += dummyIsrWithDelay;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'R')
 		{
@@ -2866,7 +2866,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload += String(freeMemory(), DEC);
 			payload += " bytes";
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'r')
 		{
@@ -2877,13 +2877,13 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload += nFloats * 4 * n;
 			payload += " bytes";
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 			float * data = new float[nFloats];
 			payload = "Free RAM: ";
 			payload += String(freeMemory(), DEC);
 			payload += " bytes";
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'l')
 		{
@@ -2891,7 +2891,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "chipBegun.NCP5623 = ";
 			payload += chipBegun.NCP5623;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'L')
 		{
@@ -2899,7 +2899,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "chipBegun.NCP5623 = ";
 			payload += chipBegun.NCP5623;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 't')
 		{
@@ -2907,7 +2907,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.thermopile = ";
 			payload += acquireData.thermopile;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'T')
 		{
@@ -2915,7 +2915,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.thermopile = ";
 			payload += acquireData.thermopile;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::THERMOPILE;
 		}
 		else if (c == 'e')
@@ -2924,7 +2924,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.eda = ";
 			payload += acquireData.eda;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'E')
 		{
@@ -2932,7 +2932,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.eda = ";
 			payload += acquireData.eda;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::EDA;
 		}
 		else if (c == 'h')
@@ -2941,7 +2941,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.tempHumidity = ";
 			payload += acquireData.tempHumidity;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'H')
 		{
@@ -2949,7 +2949,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.tempHumidity = ";
 			payload += acquireData.tempHumidity;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::HUMIDITY_0;
 		}
 		else if (c == 'i')
@@ -2958,7 +2958,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.imu = ";
 			payload += acquireData.imu;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'I')
 		{
@@ -2966,7 +2966,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.imu = ";
 			payload += acquireData.imu;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::ACCELEROMETER_X;
 		}
 		else if (c == 'p')
@@ -2975,7 +2975,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.ppg = ";
 			payload += acquireData.ppg;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'P')
 		{
@@ -2983,7 +2983,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.ppg = ";
 			payload += acquireData.ppg;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::PPG_RED;
 		}
 		else if (c == 'd')
@@ -2992,7 +2992,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.debug = ";
 			payload += acquireData.debug;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'D')
 		{
@@ -3000,7 +3000,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.debug = ";
 			payload += acquireData.debug;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::DEBUG;
 		}
 		else if (c == 'b')
@@ -3009,7 +3009,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.battery = ";
 			payload += acquireData.battery;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
 		else if (c == 'B')
 		{
@@ -3017,7 +3017,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "acquireData.battery = ";
 			payload += acquireData.battery;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::BATTERY_PERCENT;
 		}
 		/*else if (c == '0')
@@ -3026,7 +3026,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			payload = "catchDataException.catchNan = ";
 			payload += catchDataException.catchNan;
 			Serial.println(payload);
-			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::DEBUG, packetNumber++, payload, dataCount);
+			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}*/
 	}
 }
