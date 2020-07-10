@@ -2,7 +2,7 @@ static const uint8_t PROGMEM
 emoji_bitmaps[][8] =
 {   // Bitmaps taken from Adafruit Adafruit_IS31FL3731_Library gfx Demo example
 	// Smiley face
-	{ B00111100,
+  { B00111100,
 	B01000010,
 	B10100101,
 	B10000001,
