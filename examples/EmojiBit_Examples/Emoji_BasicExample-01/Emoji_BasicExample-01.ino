@@ -73,7 +73,7 @@ void loop()
 				{
 					//matrix.clear();
 					// Check out the ;ist of EMojis in EmojiTemplates.h
-					matrix.drawEmoji(EMOJI::HEART);
+					matrix.drawEmoji(EMOJI::HEART, 1);
 				}
 				else
 				{
