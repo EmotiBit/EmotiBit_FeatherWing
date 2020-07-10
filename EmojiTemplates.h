@@ -1,0 +1,41 @@
+#include <Adafruit_GFX.h>
+#include <Adafruit_IS31FL3731.h>
+
+// Bitmaps taken from Adafruit Adafruit_IS31FL3731_Library gfx Demo example
+
+static const uint8_t PROGMEM
+emoji_bitmaps[][8] =
+{ { B00111100,
+	B01000010,
+	B10100101,
+	B10000001,
+	B10100101,
+	B10011001,
+	B01000010,
+	B00111100 },
+
+  { B00111100,
+	B01000010,
+	B10100101,
+	B10000001,
+	B10111101,
+	B10000001,
+	B01000010,
+	B00111100 },
+
+  { B00111100,
+	B01000010,
+	B10100101,
+	B10000001,
+	B10011001,
+	B10100101,
+	B01000010,
+	B00111100 }
+};
+
+enum EMOJI
+{
+	SMILE,
+	NEUTRAL,
+	FROWN
+};
