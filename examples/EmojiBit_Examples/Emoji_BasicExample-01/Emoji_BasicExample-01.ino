@@ -1,7 +1,5 @@
 #include "EmotiBit.h"
-#include <Adafruit_GFX.h>
-#include <Adafruit_IS31FL3731.h>
-#include "EmojiTemplates.h"
+#include "EmojiBit.h"
 
 #define SerialUSB SERIAL_PORT_USBVIRTUAL // Required to work in Visual Micro / Visual Studio IDE
 const uint32_t SERIAL_BAUD = 2000000; //115200
@@ -11,7 +9,7 @@ const size_t dataSize = EmotiBit::MAX_DATA_BUFFER_SIZE;
 float data[dataSize];
 
 // Initializing Charlieplex wing
-Adafruit_IS31FL3731_Wing matrix = Adafruit_IS31FL3731_Wing();
+EmojiBit matrix = EmojiBit();
 
 void onShortButtonPress()
 {
@@ -74,7 +72,8 @@ void loop()
 				if (data[i] <= -0.9) // an example value to determine which orientation triggers the Emoji
 				{
 					//matrix.clear();
-					matrix.drawBitmap(3, 0, emoji_bitmaps[EMOJI::SMILE], 8, 8, 128);
+					// Check out the ;ist of EMojis in EmojiTemplates.h
+					matrix.drawEmoji(EMOJI::SMILE);
 				}
 				else
 				{

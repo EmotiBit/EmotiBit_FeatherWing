@@ -1,11 +1,8 @@
-#include <Adafruit_GFX.h>
-#include <Adafruit_IS31FL3731.h>
-
-// Bitmaps taken from Adafruit Adafruit_IS31FL3731_Library gfx Demo example
-
 static const uint8_t PROGMEM
 emoji_bitmaps[][8] =
-{ { B00111100,
+{   // Bitmaps taken from Adafruit Adafruit_IS31FL3731_Library gfx Demo example
+	// Smiley face
+	{ B00111100,
 	B01000010,
 	B10100101,
 	B10000001,
@@ -13,7 +10,7 @@ emoji_bitmaps[][8] =
 	B10011001,
 	B01000010,
 	B00111100 },
-
+  // Neutral face
   { B00111100,
 	B01000010,
 	B10100101,
@@ -22,7 +19,7 @@ emoji_bitmaps[][8] =
 	B10000001,
 	B01000010,
 	B00111100 },
-
+  // Frown face
   { B00111100,
 	B01000010,
 	B10100101,
@@ -39,3 +36,4 @@ enum EMOJI
 	NEUTRAL,
 	FROWN
 };
+
