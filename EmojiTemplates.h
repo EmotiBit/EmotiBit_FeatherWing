@@ -45,6 +45,7 @@ enum EMOJI
 	SMILE,
 	NEUTRAL,
 	FROWN,
-	HEART
+	HEART,
+	LENGTH
 };
 
