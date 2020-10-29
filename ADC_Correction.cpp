@@ -52,6 +52,7 @@ AdcCorrection::Status AdcCorrection::updateAtwincMetadataArray()
 	rigMetadata[0] = numAdcPoints;
 	rigMetadata[1] = dataFormatVersion;
 	rigMetadata[2] = (int8_t)getRigVersion();
+	_isupdatedAtwincArray = true;
 	//ToDo: Fix this return
 	return AdcCorrection::Status::SUCCESS;
 }
@@ -59,9 +60,8 @@ AdcCorrection::Status AdcCorrection::updateAtwincMetadataArray()
 AdcCorrection::Status AdcCorrection::initWifiModule()
 {
 	uint8_t ret;
-	if (!_isWifiDownloadMode)
+	if (!_isAtwincDownloadMode)
 	{
-		
 		WiFi.setPins(8, 7, 4, 2); // Need this for working with WiFi module on Adafruit feather
 		nm_bsp_init();
 		ret = m2m_wifi_download_mode();
@@ -71,22 +71,29 @@ AdcCorrection::Status AdcCorrection::initWifiModule()
 		}
 		else
 		{
+			_isAtwincDownloadMode = true;
 			_atwincFlashSize = spi_flash_get_size();
 		}
-		Serial.println("Entered download mode successfully");
-		Serial.print("The flash size is:"); Serial.println(u32FlashTotalSize);
-		if (_atwincFlashSize == 4)// for 4 M flash
-		{
-			u32FlashTotalSize = FLASH_4M_TOTAL_SZ;
-		}
+		Serial.println("\nEntered download mode successfully");
+		Serial.print("The flash size is:"); Serial.println(_atwincFlashSize);
+
 	}
 }
 
 AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 {
+	if (!_isAtwincDownloadMode)
+	{
+		initWifiModule();
+	}
+	if (!_isupdatedAtwincArray)
+	{
+		Serial.println("Data array not ready to write");
+		return AdcCorrection::Status::FAILURE;
+	}
 	uint8_t  ret;
 	// erasing primary sector
-	Serial.println("\nErasing flash for write\n");
+	Serial.println("Erasing flash for write\n");
 	ret = spi_flash_erase(ATWINC_MEM_LOC_PRIMARY_DATA, sizeof(atwincDataArray));
 	if (M2M_SUCCESS != ret)
 	{
@@ -110,6 +117,8 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 	}
 
 	// Writing the primary data
+
+	Serial.println("Writing new data to the flash(primary)");
 	ret = spi_flash_write(atwincDataArray, ATWINC_MEM_LOC_PRIMARY_DATA, sizeof(atwincDataArray));
 	if (M2M_SUCCESS != ret)
 	{
@@ -117,7 +126,7 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 		return AdcCorrection::Status::FAILURE;;
 	}
 	// writing the secondary data
-	Serial.println("\nWriting new data to the flash(primary)\n");
+	Serial.println("Writing new data to the flash(secondary)");
 	ret = spi_flash_write(atwincDataArray, ATWINC_MEM_LOC_DUPLICATE_DATA, sizeof(atwincDataArray));
 	if (M2M_SUCCESS != ret)
 	{
@@ -125,7 +134,7 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 		return AdcCorrection::Status::FAILURE;;
 	}
 	// writing tthe metadata
-	Serial.println("\nWriting new data to the flash(secondary)\n");
+	Serial.println("Writing meta data");
 	ret = spi_flash_write(rigMetadata, ATWINC_MEM_LOC_METADATA_LOC, 3);
 	if (M2M_SUCCESS != ret)
 	{
@@ -135,8 +144,12 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 	// ToDo: add a return success
 }
 
-AdcCorrection::Status AdcCorrection::readAtwincFlash(size_t readMemLoc, uint8_t* data, uint8_t isReadData = 1)
+AdcCorrection::Status AdcCorrection::readAtwincFlash(size_t readMemLoc, uint8_t* data, uint8_t isReadData)
 {
+	if (!_isAtwincDownloadMode)
+	{
+		initWifiModule();
+	}
 	uint8_t ret;
 	size_t memoryReadSize;
 	if (isReadData)
@@ -150,23 +163,26 @@ AdcCorrection::Status AdcCorrection::readAtwincFlash(size_t readMemLoc, uint8_t*
 	ret = spi_flash_read(data, readMemLoc, memoryReadSize);
 	if (M2M_SUCCESS != ret)
 	{
-		printf("Unable to read SPI sector\r\n");
+		Serial.println("Unable to read SPI sector\r\n");
 		return AdcCorrection::Status::FAILURE;;
 	}
 	else
 	{
-		Serial.print("\nthe data stored in the last 2 bytes"); Serial.print("mem loc:"); Serial.println(readMemLoc);
+#ifdef ADC_CORRECTION_VERBOSE
+		Serial.print("\nthe data stored @"); Serial.print("mem loc:"); Serial.println(readMemLoc);
 		for (int i = 0; i < memoryReadSize; i++)
 		{
 			Serial.print(i); Serial.print(":"); Serial.print(data[i]); Serial.print("\t");
 		}
+#endif
 	}
-
 }
 
 bool AdcCorrection::isSamdFlashWritten()
 {
-
+	// SamdStorageAdcValues samdStorageAdcValues;
+	// samdStorageAdcValues = samdFlashStorage.read();
+	// return samdStorageAdcValues.valid;
 }
 
 bool AdcCorrection::writeSamdFlash(uint16_t gainCorr, uint16_t offsetCorr)
@@ -182,8 +198,16 @@ void AdcCorrection::readSamdFlash(uint16_t &gainCorr, uint16_t &offsetCorr)
 
 bool AdcCorrection::calcCorrectionValues()
 {
+	// ToDo: The if should use the data read from the ATWINC flash not values in teh code
 	if ((uint8_t)getRigVersion() == (uint8_t) AdcCorrection::AdcCorrectionRigVersion::VER_0)
 	{
+#ifdef ADC_CORRECTION_VERBOSE
+		/*Serial.print("\nthe data stored @"); Serial.print("mem loc:"); Serial.println(readMemLoc);
+		for (int i = 0; i < memoryReadSize; i++)
+		{
+			Serial.print(i); Serial.print(":"); Serial.print(data[i]); Serial.print("\t");
+		}*/
+#endif
 		float slope;
 		uint16_t offsetCorr = 0, gainCorr = 0;
 		uint16_t adcHighMeasured = int8Toint16(adcCorrectionRig.AdcHigh[2], adcCorrectionRig.AdcLow[2]);
@@ -191,10 +215,10 @@ bool AdcCorrection::calcCorrectionValues()
 		uint16_t adcLowIdeal = (uint16_t)(((float)adcCorrectionRig.N[0]/ (float)adcCorrectionRig.D[0]) * 4096);
 		uint16_t adcHighIdeal = (uint16_t)(((float)adcCorrectionRig.N[2] / (float)adcCorrectionRig.D[2]) * 4096);
 #ifdef ADC_CORRECTION_VERBOSE
-		Serial.print("ADC high Ideal:"); Serial.println(adcHighIdeal);
-		Serial.print("ADC low Ideal:"); Serial.println(adcLowIdeal);
-		Serial.print("ADC high measured:"); Serial.println(adcHighMeasured);
-		Serial.print("ADC low measured:"); Serial.println(adcLowMeasured);
+		Serial.print("ADC high(Ideal):"); Serial.println(adcHighIdeal);
+		Serial.print("ADC high(Measured):"); Serial.println(adcHighMeasured);
+		Serial.print("ADC low(Ideal):"); Serial.println(adcLowIdeal);
+		Serial.print("ADC low(Measured):"); Serial.println(adcLowMeasured);
 #endif
 		slope = ((float)(adcHighMeasured- adcLowMeasured)/ (float)(adcHighIdeal-adcLowIdeal) );
 #ifdef ADC_CORRECTION_VERBOSE
@@ -241,6 +265,9 @@ void AdcCorrection::readAdcPins()
 	uint16_t adcValue = 0;
 	for (int i = 0; i < numAdcPoints; i++)
 	{
+#ifdef ADC_CORRECTION_VERBOSE
+		Serial.print("Reading pin:"); Serial.println(adcInputPins[i]);
+#endif
 		adcValue = getAverageAnalogInput(adcInputPins[i]);
 		adcCorrectionRig.AdcHigh[i] = (adcValue & 0xFF00)>> 8;
 		adcCorrectionRig.AdcLow[i] = adcValue & 0x00FF;
@@ -298,15 +325,19 @@ int AdcCorrection::getAverageAnalogInput(uint8_t inputPin)
 
 }
 // ToDo: change the name of the function to begin?
-void AdcCorrection::correctAdc()
+void AdcCorrection::begin()
 {
 	bool state;
+	AdcCorrection::Status status;
 	// write all the functoin calls here
 	readAdcPins();
 	Serial.println("finding correction values");
 	state = calcCorrectionValues();
-	Serial.println("calling update data array");
-	updateAtwincDataArray();
+	Serial.println("Consolidating all values into one atwinc data array");
+	status = updateAtwincDataArray();
+#ifdef ADC_CORRECTION_VERBOSE
+	Serial.println("Writing the raw correction data to the flash");
+#endif
 	writeAtwincFlash();
 }
 
@@ -327,4 +358,19 @@ uint16_t AdcCorrection::int8Toint16(uint8_t highByte, uint8_t lowByte)
 	result = result << 8;
 	result = (uint16_t)result | lowByte;
 	return result;
+}
+
+AdcCorrection::Status AdcCorrection::atwincFlashIntegrityCheck()
+{
+	uint8_t primaryFromAtwinc[12], duplicateFromAtwinc[12];
+	readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, primaryFromAtwinc);
+	readAtwincFlash(ATWINC_MEM_LOC_DUPLICATE_DATA, duplicateFromAtwinc);
+	for (int i = 0; i < 12; i++)
+	{
+		if (primaryFromAtwinc[i] != duplicateFromAtwinc[i])
+		{
+			return AdcCorrection::Status::FAILURE;
+		}
+	}
+	return AdcCorrection::Status::SUCCESS;
 }

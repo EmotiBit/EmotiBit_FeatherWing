@@ -47,22 +47,38 @@ Changes:
 #include "Arduino.h"
 #include <WiFI101.h>
 #include "spi_flash/include/spi_flash.h"
-//#define ADC_CORRECTION_VERBOSE
+#include <FlashStorage.h>
+#include "SAMD_AnalogCorrection.h"
+
+#define ADC_CORRECTION_VERBOSE
+#define ATWINC_FLASH_4M_SZ (512 * 1024UL)
+
+typedef struct {
+	bool valid;
+	uint16_t _gainCorrection;
+	uint16_t _offsetCorrection;
+}SamdStorageAdcValues;
 
 class AdcCorrection
 {
 private:
 	uint16_t _gainCorr; //drop these. the global variable has the values needed
 	uint16_t _offsetCorr; //drop these. the global variable has the values needed
+	bool _isAtwincDownloadMode = 0;
+	uint8_t  _atwincFlashSize;
+	bool _isupdatedAtwincArray = false;
 public:
 	static const uint8_t numAdcPoints = 3;
 	static const uint8_t dataFormatVersion = 0;
-	const size_t ATWINC_MEM_LOC_RIG_VER = 0; // memory location to write code FW version used to write into the flash
-	const size_t ATWINC_MEM_LOC_STORAGE_SZ = 4 * numAdcPoints; // memory location that stores numAdcPoints
+	const size_t ATWINC_DATA_ARRAY_SIZE = 4 * numAdcPoints; // memory location that stores numAdcPoints
 	const size_t ATWINC_MEM_LOC_PRIMARY_DATA = 448*1024;  // primary start address for storing the adc values
 	const size_t ATWINC_MEM_LOC_DUPLICATE_DATA = 480 * 1024; // secondary start address for storing the adc values
-	const size_t ATWINC_MEM_LOC_METADATA_LOC = 512 * 1024 - 3; // la
+	const size_t ATWINC_MEM_LOC_METADATA_LOC = 512 * 1024 - 3; // stores the metadata 
+	uint8_t rigMetadata[3] = {0}; // ToDo: think whether the metaData length should be hardcoded or declared a const
+	uint8_t adcInputPins[numAdcPoints] = { 0 };
+	uint8_t atwincDataArray[4 * numAdcPoints];
 
+	
 	enum Status {
 		SUCCESS,
 		FAILURE
@@ -74,10 +90,6 @@ public:
 		VER_1
 	}adcCorrectionRigVersion;
 
-	uint8_t rigMetadata[3] = {0}; // ToDo: think whether the metaData length should be hardcoded or declared a const
-	uint8_t adcInputPins[numAdcPoints] = { 0 };
-	uint8_t atwincDataArray[4 * numAdcPoints];
-	
 	struct AdcCorrectionRig {
 		uint8_t N[numAdcPoints];
 		uint8_t D[numAdcPoints];
@@ -130,7 +142,7 @@ public:
 		Used if the samd-flash does not contain correction values on startup.
 		Updates the HighPrecisionRig struct with the ADC values
 	*/
-	AdcCorrection::Status readAtwincFlash(size_t readMemLoc, uint8_t* data, uint8_t isReadData);
+	AdcCorrection::Status readAtwincFlash(size_t readMemLoc, uint8_t* data = nullptr, uint8_t isReadData = 1);
 	
 	
 	/*
@@ -208,7 +220,7 @@ public:
 
 	int getAverageAnalogInput(uint8_t inputPin);
 
-	void correctAdc();
+	void begin();
 
 	AdcCorrectionRigVersion getRigVersion();
 
@@ -217,13 +229,9 @@ public:
 	uint16_t int8Toint16(uint8_t highByte, uint8_t lowByte);
 
 	AdcCorrection::Status updateAtwincMetadataArray();
-};
 
-//typedef struct {
-//	bool valid;
-//	uint16_t _gainCorrection;
-//	uint16_t _offsetCorrection;
-//}AdcCorrectionValues;
-//// Create a global obect to store data in the flash
-//FlashStorage(ADC_samdFlashDatabase, AdcCorrectionValues);
+	AdcCorrection::Status initWifiModule();
+
+	AdcCorrection::Status atwincFlashIntegrityCheck();
+};
 
