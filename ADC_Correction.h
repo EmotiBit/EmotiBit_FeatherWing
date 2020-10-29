@@ -68,33 +68,46 @@ private:
 	uint8_t  _atwincFlashSize;
 	bool _isupdatedAtwincArray = false;
 public:
-	static const uint8_t numAdcPoints = 3;
-	static const uint8_t dataFormatVersion = 0;
-	const size_t ATWINC_DATA_ARRAY_SIZE = 4 * numAdcPoints; // memory location that stores numAdcPoints
 	const size_t ATWINC_MEM_LOC_PRIMARY_DATA = 448*1024;  // primary start address for storing the adc values
 	const size_t ATWINC_MEM_LOC_DUPLICATE_DATA = 480 * 1024; // secondary start address for storing the adc values
 	const size_t ATWINC_MEM_LOC_METADATA_LOC = 512 * 1024 - 3; // stores the metadata 
-	uint8_t rigMetadata[3] = {0}; // ToDo: think whether the metaData length should be hardcoded or declared a const
-	uint8_t adcInputPins[numAdcPoints] = { 0 };
-	uint8_t atwincDataArray[4 * numAdcPoints];
+	
+	enum class DataFormatVersion
+	{
+		DATA_FORMAT_0,
+		DATA_FORMAT_1,
+		UNKNOWN
+	};
+
+	static const uint8_t MAX_ADC_POINTS = 10;
+	static const uint8_t RIG_METADATA_SIZE = 3; // the size in bytes for the rig metedata
+	uint8_t BYTES_PER_ADC_DATA_POINT; // based on the dataformat, the number of bytes required for each adc datapoint
+	uint8_t numAdcPoints;
+	DataFormatVersion dataFormatVersion;
+	uint8_t ATWINC_DATA_ARRAY_SIZE; // number of bytes in the data array stored in at-winc
+	uint8_t rigMetadata[RIG_METADATA_SIZE] = {0}; // ToDo: think whether the metaData length should be hardcoded or declared a const
+	uint8_t adcInputPins[MAX_ADC_POINTS] = { 0 };
+	//ToDo: change the 4 below to use a const 
+	uint8_t atwincDataArray[4 * MAX_ADC_POINTS];
 
 	
 	enum Status {
 		SUCCESS,
 		FAILURE
-	}status;
+	};
 
 	enum class AdcCorrectionRigVersion
 	{
 		VER_0,
-		VER_1
-	}adcCorrectionRigVersion;
+		VER_1,
+		UNKNOWN // used if the feather is starting with no correctoin values on the SAMD flash
+	};
 
 	struct AdcCorrectionRig {
-		uint8_t N[numAdcPoints];
-		uint8_t D[numAdcPoints];
-		uint8_t AdcHigh[numAdcPoints];
-		uint8_t AdcLow[numAdcPoints];
+		uint8_t N[MAX_ADC_POINTS];
+		uint8_t D[MAX_ADC_POINTS];
+		uint8_t AdcHigh[MAX_ADC_POINTS];
+		uint8_t AdcLow[MAX_ADC_POINTS];
 		// uint16_t idealAdc[255];// can calculate using the N and D values
 	}adcCorrectionRig = { {0}, {0}, {0}, {0} };
 
@@ -107,7 +120,7 @@ public:
 	@usage:
 		Initializes the N's and D's in the class
 	*/
-	AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version);
+	AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, AdcCorrection::DataFormatVersion dataFormatVer);
 
 	
 	/*
@@ -142,7 +155,7 @@ public:
 		Used if the samd-flash does not contain correction values on startup.
 		Updates the HighPrecisionRig struct with the ADC values
 	*/
-	AdcCorrection::Status readAtwincFlash(size_t readMemLoc, uint8_t* data = nullptr, uint8_t isReadData = 1);
+	AdcCorrection::Status readAtwincFlash(size_t readMemLoc, uint16_t dataSize, uint8_t* data, uint8_t isReadData = 1);
 	
 	
 	/*
@@ -227,8 +240,9 @@ public:
 	void setRigVersion(AdcCorrection::AdcCorrectionRigVersion version);
 
 	uint16_t int8Toint16(uint8_t highByte, uint8_t lowByte);
-
-	AdcCorrection::Status updateAtwincMetadataArray();
+	
+	// moved this to the constructor
+	// AdcCorrection::Status updateAtwincMetadataArray();
 
 	AdcCorrection::Status initWifiModule();
 
