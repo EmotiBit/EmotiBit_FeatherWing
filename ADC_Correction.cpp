@@ -201,21 +201,22 @@ bool AdcCorrection::calcCorrectionValues()
 	// ToDo: The if should use the data read from the ATWINC flash not values in teh code
 	if ((uint8_t)getRigVersion() == (uint8_t) AdcCorrection::AdcCorrectionRigVersion::VER_0)
 	{
-#ifdef ADC_CORRECTION_VERBOSE
-		/*Serial.print("\nthe data stored @"); Serial.print("mem loc:"); Serial.println(readMemLoc);
-		for (int i = 0; i < memoryReadSize; i++)
-		{
-			Serial.print(i); Serial.print(":"); Serial.print(data[i]); Serial.print("\t");
-		}*/
-#endif
+		uint8_t dataArrayNoffset = 0, dataArrayDoffset = 1, dataArrayAdcMsbOffset = 2, dataArrayAdcLsbOffset = 3;
 		float slope;
+		uint8_t AdcHighMem[2]; // Adc High value - [MSB] [LSB] 
+		uint8_t AdcLowMem[2];  // Adc Low Value - [MSB] [LSB]
+		uint8_t adcLowPos = 0, adcHighPos = 2; // Position of the ADC low and high points in the 
+		AdcLowMem[0] = atwincDataArray[adcLowPos * 4 + dataArrayAdcMsbOffset]; // ADC Low point MSB
+		AdcLowMem[1] = atwincDataArray[adcLowPos * 4 + dataArrayAdcLsbOffset];  // ADC Low point LSB
+		AdcHighMem[0] = atwincDataArray[adcHighPos * 4 + dataArrayAdcMsbOffset];  // ADC High point MSB
+		AdcHighMem[1] = atwincDataArray[adcHighPos * 4 + dataArrayAdcLsbOffset];  // ADC High point LSB
 		uint16_t offsetCorr = 0, gainCorr = 0;
-		uint16_t adcHighMeasured = int8Toint16(adcCorrectionRig.AdcHigh[2], adcCorrectionRig.AdcLow[2]);
-		uint16_t adcLowMeasured = int8Toint16(adcCorrectionRig.AdcHigh[0], adcCorrectionRig.AdcLow[0]);
+		uint16_t adcHighMeasured = int8Toint16(AdcHighMem[0], AdcHighMem[1]); // ( MSB, LSB)
+		uint16_t adcLowMeasured = int8Toint16(AdcLowMem[0], AdcLowMem[1]); // (MSB, LSB)
 		uint16_t adcLowIdeal = (uint16_t)(((float)adcCorrectionRig.N[0]/ (float)adcCorrectionRig.D[0]) * 4096);
 		uint16_t adcHighIdeal = (uint16_t)(((float)adcCorrectionRig.N[2] / (float)adcCorrectionRig.D[2]) * 4096);
 #ifdef ADC_CORRECTION_VERBOSE
-		Serial.print("ADC high(Ideal):"); Serial.println(adcHighIdeal);
+		Serial.print("\nADC high(Ideal):"); Serial.println(adcHighIdeal);
 		Serial.print("ADC high(Measured):"); Serial.println(adcHighMeasured);
 		Serial.print("ADC low(Ideal):"); Serial.println(adcLowIdeal);
 		Serial.print("ADC low(Measured):"); Serial.println(adcLowMeasured);
@@ -331,10 +332,10 @@ void AdcCorrection::begin()
 	AdcCorrection::Status status;
 	// write all the functoin calls here
 	readAdcPins();
-	Serial.println("finding correction values");
-	state = calcCorrectionValues();
 	Serial.println("Consolidating all values into one atwinc data array");
 	status = updateAtwincDataArray();
+	Serial.println("finding correction values");
+	state = calcCorrectionValues();
 #ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("Writing the raw correction data to the flash");
 #endif
