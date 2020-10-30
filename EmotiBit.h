@@ -19,7 +19,7 @@
 #include <SdFat.h>
 #include <ArduinoJson.h>
 #include <ArduinoLowPower.h>
-
+#include "ADC_Correction.h"
 //#include <Adafruit_SleepyDog.h>
 
 
