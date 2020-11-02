@@ -20,41 +20,56 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, Adc
 		rigMetadata[0] = numAdcPoints;
 		rigMetadata[1] = (uint8_t)dataFormatVersion;
 		rigMetadata[2] = (int8_t)getRigVersion();
+		_isupdatedAtwincMetadataArray = true;
 	}
 	else if( version == AdcCorrection::AdcCorrectionRigVersion::UNKNOWN)
 	{
 		readAtwincFlash(ATWINC_MEM_LOC_METADATA_LOC, RIG_METADATA_SIZE, rigMetadata, 0);
-		numAdcPoints = (uint8_t)rigMetadata[0];
-		setRigVersion((AdcCorrection::AdcCorrectionRigVersion)((uint8_t)rigMetadata[1]));
-		dataFormatVersion = (AdcCorrection::DataFormatVersion)((uint8_t)rigMetadata[2]); // typecasting uint8 to AdcCorrectionRigVersion
-		if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
+		// Put a check here to see if the data in the metadata array is not corrupted
+		if (rigMetadata[0] == 3)// the numAdcPoints is 3
 		{
-			BYTES_PER_ADC_DATA_POINT = 4;
-			ATWINC_DATA_ARRAY_SIZE = BYTES_PER_ADC_DATA_POINT * numAdcPoints;
-		}
-		
-		if (atwincFlashIntegrityCheck() == AdcCorrection::Status::SUCCESS)
-		{
-			readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, ATWINC_DATA_ARRAY_SIZE, atwincDataArray);
-			if (rigMetadata[1] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_0)
+			atwincAdcMetaDataCorruptionTest = AdcCorrection::Status::SUCCESS;
+			numAdcPoints = (uint8_t)rigMetadata[0];
+			setRigVersion((AdcCorrection::AdcCorrectionRigVersion)((uint8_t)rigMetadata[1]));
+			dataFormatVersion = (AdcCorrection::DataFormatVersion)((uint8_t)rigMetadata[2]); // typecasting uint8 to AdcCorrectionRigVersion
+			_isupdatedAtwincMetadataArray = true;
+			if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
 			{
-				adcCorrectionRig.N[0] = 1;  adcCorrectionRig.N[1] = 1;  adcCorrectionRig.N[2] = 10;
-				adcCorrectionRig.D[0] = 11; adcCorrectionRig.D[1] = 2;  adcCorrectionRig.D[2] = 11;
-				adcInputPins[0] = A0;
-				adcInputPins[1] = A1;
-				adcInputPins[2] = A2;
+				BYTES_PER_ADC_DATA_POINT = 4;
+				ATWINC_DATA_ARRAY_SIZE = BYTES_PER_ADC_DATA_POINT * numAdcPoints;
 			}
 
+			if (atwincFlashIntegrityCheck() == AdcCorrection::Status::SUCCESS)
+			{
+				readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, ATWINC_DATA_ARRAY_SIZE, atwincDataArray);
+				if (rigMetadata[1] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_0)
+				{
+					adcCorrectionRig.N[0] = 1;  adcCorrectionRig.N[1] = 1;  adcCorrectionRig.N[2] = 10;
+					adcCorrectionRig.D[0] = 11; adcCorrectionRig.D[1] = 2;  adcCorrectionRig.D[2] = 11;
+					adcInputPins[0] = A0;
+					adcInputPins[1] = A1;
+					adcInputPins[2] = A2;
+				}
+				atwincAdcDataCorruptionTest = AdcCorrection::Status::SUCCESS;
+			}
+			else
+			{
+				atwincAdcDataCorruptionTest = AdcCorrection::Status::FAILURE;
+				// failed data integrity. Something is wrong. Contact info@emotiBit
+			}
 		}
 		else
 		{
-			// failed data integrity. Something is wrong. Contact info@emotiBit
+			atwincAdcMetaDataCorruptionTest = AdcCorrection::Status::FAILURE;
 		}
 	}
 	else
 	{
-		//ToDo: Handle other version execption
+		// handle other versions
+		Serial.println("You are using an invalid version");
+
 	}
+
 }
 
 AdcCorrection::Status AdcCorrection::updateAtwincDataArray()
@@ -84,7 +99,8 @@ AdcCorrection::Status AdcCorrection::updateAtwincDataArray()
 			}
 		}
 		// updateAtwincMetadataArray();
-		// toDo: ix this return
+		// toDo: Fix this return
+		_isupdatedAtwincArray = true;
 		return AdcCorrection::Status::SUCCESS;
 	}
 }
@@ -129,7 +145,7 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 	{
 		initWifiModule();
 	}
-	if (!_isupdatedAtwincArray)
+	if (!_isupdatedAtwincArray && !_isupdatedAtwincMetadataArray)
 	{
 		Serial.println("Data array not ready to write");
 		return AdcCorrection::Status::FAILURE;
@@ -384,7 +400,15 @@ void AdcCorrection::begin()
 #ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("Writing the raw correction data to the flash");
 #endif
-	writeAtwincFlash();
+	status = writeAtwincFlash();
+	if (status == AdcCorrection::Status::SUCCESS)
+	{
+		Serial.println("Data written on the ATWINC flash successfully.");
+	}
+	else
+	{
+		Serial.println("Failed to write to the ATWINC flash");
+	}
 }
 
 AdcCorrection::AdcCorrectionRigVersion AdcCorrection::getRigVersion()

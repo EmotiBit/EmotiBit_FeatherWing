@@ -120,7 +120,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 			hibernate();
 		}
 	}
-
+	
 	uint32_t now = millis();
 	while (!Serial.available() && millis() - now < 2000)
 	{
@@ -134,13 +134,16 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		
 		if (input == 'A')
 		{
-			Serial.print("entered ADC Correction Mode");
+			Serial.println("entered ADC Correction Mode");
 			Serial.println("If you are not a tester, please exit this mode by pressing Q, else press B");
 			while (!Serial.available());
 			if (Serial.read() == 'Q')
-				break;
-			else
 			{
+				break;
+			}
+			else
+			{	
+				_debugMode = false;
 				analogReadResolution(12); // Setting ADC resolution to 12 bits
 				AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::VER_0, AdcCorrection::DataFormatVersion::DATA_FORMAT_0);
 				adcCorrection.begin();
@@ -156,7 +159,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 				if (!samdStorageAdcValues.valid)
 				{
 #ifdef ADC_CORRECTION_VERBOSE
-					Serial.println("Storing on the SAMD flash for the first time");
+					Serial.println("\nStoring on the SAMD flash for the first time");
 #endif
 					samdStorageAdcValues._gainCorrection = adcCorrection.getGainCorrection();
 					samdStorageAdcValues._offsetCorrection = adcCorrection.getOffsetCorrection();
@@ -330,18 +333,28 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		Serial.println("No correction found on SAMD. Calculating correction by reading ATWINC");
 #endif
 		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, AdcCorrection::DataFormatVersion::UNKNOWN);
-		adcCorrection.calcCorrectionValues();
-		// ToDo: check if above function actually worked
-		// Store the values on the flash
-		samdStorageAdcValues._gainCorrection = adcCorrection.getGainCorrection();
-		samdStorageAdcValues._offsetCorrection = adcCorrection.getOffsetCorrection();
-		samdStorageAdcValues.valid = true;
-		samdFlashStorage.write(samdStorageAdcValues);// Writing it to the SAMD flash storage
-		// reinitializing the wifi module
-		nm_bsp_init();
-		Serial.print("Gain Correction:"); Serial.print(samdStorageAdcValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
-		Serial.println("Enabling the ADC with the correction values");
-		analogReadCorrection(samdStorageAdcValues._offsetCorrection, samdStorageAdcValues._gainCorrection);
+		if (adcCorrection.atwincAdcDataCorruptionTest == AdcCorrection::Status::FAILURE || adcCorrection.atwincAdcMetaDataCorruptionTest == AdcCorrection::Status::FAILURE)
+		{
+			Serial.println("data on atwinc corrupted or not present");
+			Serial.println("Using the ADC withut any correction");
+		}
+		else 
+		{
+			Serial.println("Read data from the AT-WINC"); Serial.println("Calculating correction values");
+			adcCorrection.calcCorrectionValues();
+			// ToDo: check if above function actually worked
+			// Store the values on the flash
+			samdStorageAdcValues._gainCorrection = adcCorrection.getGainCorrection();
+			samdStorageAdcValues._offsetCorrection = adcCorrection.getOffsetCorrection();
+			samdStorageAdcValues.valid = true;
+			samdFlashStorage.write(samdStorageAdcValues);// Writing it to the SAMD flash storage
+			// reinitializing the wifi module
+			/*WiFi.setPins(8, 7, 4, 2);
+			nm_bsp_init();*/
+			Serial.print("Gain Correction:"); Serial.print(samdStorageAdcValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
+			Serial.println("Enabling the ADC with the correction values");
+			analogReadCorrection(samdStorageAdcValues._offsetCorrection, samdStorageAdcValues._gainCorrection);
+		}
 	}
 	else
 	{

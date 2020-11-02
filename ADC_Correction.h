@@ -67,7 +67,9 @@ private:
 	bool _isAtwincDownloadMode = 0;
 	uint8_t  _atwincFlashSize;
 	bool _isupdatedAtwincArray = false;
+	bool _isupdatedAtwincMetadataArray = false;
 public:
+	
 	const size_t ATWINC_MEM_LOC_PRIMARY_DATA = 448*1024;  // primary start address for storing the adc values
 	const size_t ATWINC_MEM_LOC_DUPLICATE_DATA = 480 * 1024; // secondary start address for storing the adc values
 	const size_t ATWINC_MEM_LOC_METADATA_LOC = 512 * 1024 - 3; // stores the metadata 
@@ -95,7 +97,7 @@ public:
 		SUCCESS,
 		FAILURE
 	};
-
+	Status atwincAdcMetaDataCorruptionTest, atwincAdcDataCorruptionTest;
 	enum class AdcCorrectionRigVersion
 	{
 		VER_0,
