@@ -340,10 +340,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		}
 		else 
 		{
-			Serial.println("Read data from the AT-WINC"); Serial.println("Calculating correction values");
+			Serial.println("\nRead data from the AT-WINC"); Serial.println("Calculating correction values");
 			adcCorrection.calcCorrectionValues();
 			// ToDo: check if above function actually worked
 			// Store the values on the flash
+			Serial.println("Storing correction values on the SAMD flash");
 			samdStorageAdcValues._gainCorrection = adcCorrection.getGainCorrection();
 			samdStorageAdcValues._offsetCorrection = adcCorrection.getOffsetCorrection();
 			samdStorageAdcValues.valid = true;
