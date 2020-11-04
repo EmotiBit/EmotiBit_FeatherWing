@@ -50,7 +50,7 @@ Changes:
 #include <FlashStorage.h>
 #include "SAMD_AnalogCorrection.h"
 
-#define ADC_CORRECTION_VERBOSE
+//#define ADC_CORRECTION_VERBOSE
 #define ATWINC_FLASH_4M_SZ (512 * 1024UL)
 
 typedef struct {

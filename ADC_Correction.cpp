@@ -134,9 +134,11 @@ AdcCorrection::Status AdcCorrection::initWifiModule()
 		{
 			_isAtwincDownloadMode = true;
 			_atwincFlashSize = spi_flash_get_size();
+#ifdef ADC_CORRECTION_VERBOSE
 			Serial.println("\nEntered download mode successfully");
 			Serial.print("The flash size is:"); Serial.println(_atwincFlashSize);
 			return AdcCorrection::Status::SUCCESS;
+#endif
 		}
 
 	}
@@ -155,7 +157,9 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 	}
 	uint8_t  ret;
 	// erasing primary sector
+#ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("Erasing flash for write\n");
+#endif
 	ret = spi_flash_erase(ATWINC_MEM_LOC_PRIMARY_DATA, BYTES_PER_ADC_DATA_POINT * numAdcPoints);
 	if (M2M_SUCCESS != ret)
 	{
@@ -163,8 +167,9 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 		return AdcCorrection::Status::FAILURE;
 	}
 	// Writing the primary data
-
+#ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("Writing new data to the flash(primary)");
+#endif
 	ret = spi_flash_write(atwincDataArray, ATWINC_MEM_LOC_PRIMARY_DATA, BYTES_PER_ADC_DATA_POINT * numAdcPoints);
 	if (M2M_SUCCESS != ret)
 	{
@@ -181,7 +186,9 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 		return AdcCorrection::Status::FAILURE;;
 	}
 	// writing the secondary data
+#ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("Writing new data to the flash(secondary)");
+#endif
 	ret = spi_flash_write(atwincDataArray, ATWINC_MEM_LOC_DUPLICATE_DATA, BYTES_PER_ADC_DATA_POINT * numAdcPoints);
 	if (M2M_SUCCESS != ret)
 	{
@@ -198,7 +205,9 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 		return AdcCorrection::Status::FAILURE;;
 	}
 	// writing the metadata
+#ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("Writing meta data");
+#endif
 	ret = spi_flash_write(rigMetadata, ATWINC_MEM_LOC_METADATA_LOC, RIG_METADATA_SIZE);
 	if (M2M_SUCCESS != ret)
 	{
@@ -398,9 +407,13 @@ void AdcCorrection::begin()
 	AdcCorrection::Status status;
 	// write all the functoin calls here
 	readAdcPins();
+#ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("Consolidating all values into one atwinc data array");
+#endif
 	status = updateAtwincDataArray();
+#ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("finding correction values");
+#endif
 	state = calcCorrectionValues();
 #ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("Writing the raw correction data to the flash");
@@ -408,7 +421,9 @@ void AdcCorrection::begin()
 	status = writeAtwincFlash();
 	if (status == AdcCorrection::Status::SUCCESS)
 	{
+#ifdef ADC_CORRECTION_VERBOSE
 		Serial.println("Data written on the ATWINC flash successfully.");
+#endif
 	}
 	else
 	{

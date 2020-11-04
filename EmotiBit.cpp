@@ -135,7 +135,9 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		if (input == 'A')
 		{
 			Serial.println("entered ADC Correction Mode");
-			Serial.println("If you are not a tester, please exit this mode by pressing Q, else press B");
+			digitalWrite(LED_BUILTIN, LOW);
+			Serial.println("If you are not a tester, please exit this mode by pressing Q");
+			Serial.println("If you are a tester, make sure the correction rig is in place and press A");
 			while (!Serial.available());
 			if (Serial.read() == 'Q')
 			{
@@ -145,19 +147,27 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 			{	
 				_debugMode = false;
 				analogReadResolution(12); // Setting ADC resolution to 12 bits
-				AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::VER_0, AdcCorrection::DataFormatVersion::DATA_FORMAT_0);
-				adcCorrection.begin();
-#ifdef ADC_CORRECTION_VERBOSE
-				Serial.println("atwincDataArray");
-				for (int i = 0; i < 12; i++)
-				{
-					Serial.print("  "); Serial.print(adcCorrection.atwincDataArray[i]);
-				}
-				// Serial.println("Saving data to the Atwinc flash");
-#endif
 				samdStorageAdcValues = samdFlashStorage.read();
 				if (!samdStorageAdcValues.valid)
 				{
+#ifdef ADC_CORRECTION_VERBOSE
+					Serial.println("Using the rig to generate correction values");
+#endif
+					Serial.println("Enter any character. Then remove the USB cable and plug after when the EmotiBit LED blinks");
+					while (!Serial.available()); Serial.read();
+					uint32_t timeCurrent = millis();
+					while (millis() - timeCurrent < 2000);
+					digitalWrite(LED_BUILTIN, HIGH);
+					AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::VER_0, AdcCorrection::DataFormatVersion::DATA_FORMAT_0);
+					adcCorrection.begin();
+#ifdef ADC_CORRECTION_VERBOSE
+					Serial.println("atwincDataArray");
+					for (int i = 0; i < adcCorrection.ATWINC_DATA_ARRAY_SIZE; i++)
+					{
+						Serial.print("  "); Serial.print(adcCorrection.atwincDataArray[i]);
+					}
+#endif
+				
 #ifdef ADC_CORRECTION_VERBOSE
 					Serial.println("\nStoring on the SAMD flash for the first time");
 #endif
@@ -165,43 +175,77 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 					samdStorageAdcValues._offsetCorrection = adcCorrection.getOffsetCorrection();
 					samdStorageAdcValues.valid = true;
 					samdFlashStorage.write(samdStorageAdcValues);
+#ifdef ADC_CORRECTION_VERBOSE
+					Serial.println("Enabling the ADC to use the correction values");
+#endif
+					uint16_t adcBeforeCorrection[3], adcAfterCorrection[3];
+					adcBeforeCorrection[0] = analogRead(A0);
+					adcBeforeCorrection[1] = analogRead(A1);
+					adcBeforeCorrection[2] = analogRead(A2);
+					analogReadCorrection(samdStorageAdcValues._offsetCorrection, samdStorageAdcValues._gainCorrection);
+#ifdef ADC_CORRECTION_VERBOSE
+					Serial.println("Comparing results before and after correction");
+#endif
+					adcAfterCorrection[0] = analogRead(A0);
+					adcAfterCorrection[1] = analogRead(A1);
+					adcAfterCorrection[2] = analogRead(A2);
+					
+					digitalWrite(LED_BUILTIN, LOW);
+					while (!Serial.available())
+					{
+						if (millis() - timeCurrent > 2000)
+						{
+							Serial.println("Enter a character to continue to record results");
+							timeCurrent = millis();
+						}
+						digitalWrite(LED_BUILTIN, HIGH);
+						delay(200);
+						digitalWrite(LED_BUILTIN, LOW);
+						delay(200);
+						digitalWrite(LED_BUILTIN, HIGH);
+						delay(200);
+						digitalWrite(LED_BUILTIN, LOW);
+						delay(1000);
+					}
+					Serial.read();// pop from the buffer
+					Serial.println("COPY ANS PASTE the folowing into the feather records");
+					Serial.println("==============================================");
+					//Serial.print("Gain correction:"); Serial.println(samdStorageAdcValues._gainCorrection);
+					//Serial.print("offset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
+					//Serial.print("True Value"); Serial.print("\tBefore Correction"); Serial.println("\tAfter Correction");
+					//Serial.print(round((float)(1.f / 11.f) * 4096.f)); Serial.print("\t\t"); Serial.print(adcBeforeCorrection[0]); Serial.print("\t\t"); Serial.println(adcAfterCorrection[0]);
+					//Serial.print(round((float)(1.f / 2.f) * 4096.f)); Serial.print("\t\t"); Serial.print(adcBeforeCorrection[1]); Serial.print("\t\t"); Serial.println(adcAfterCorrection[1]);
+					//Serial.print(round((float)(10.f / 11.f) * 4096.f)); Serial.print("\t\t"); Serial.print(adcBeforeCorrection[2]); Serial.print("\t\t"); Serial.println(adcAfterCorrection[2]);
+					Serial.print(samdStorageAdcValues._gainCorrection); Serial.print(",");
+					Serial.print(samdStorageAdcValues._offsetCorrection); Serial.print(",");
+					Serial.print(adcBeforeCorrection[0]); Serial.print(",");
+					Serial.print(adcBeforeCorrection[1]); Serial.print(",");
+					Serial.print(adcBeforeCorrection[2]); Serial.print(",");
+					Serial.print(adcAfterCorrection[0]); Serial.print(",");
+					Serial.print(adcAfterCorrection[1]); Serial.print(",");
+					Serial.print(adcAfterCorrection[2]); 
+					uint8_t tempData[12], tempdata2[3];
+					adcCorrection.readAtwincFlash(adcCorrection.ATWINC_MEM_LOC_PRIMARY_DATA, 12, tempData);
+					for (int i = 0; i < adcCorrection.ATWINC_DATA_ARRAY_SIZE; i++)
+					{
+						Serial.print(","); Serial.print(tempData[i]);
+					}
+					Serial.println("\n==============================================");
+#ifdef ADC_CORRECTION_VERBOSE
+					Serial.println("\ntesting AT-WINC flash read");
+					adcCorrection.readAtwincFlash(adcCorrection.ATWINC_MEM_LOC_PRIMARY_DATA, 12, tempData);
+					adcCorrection.readAtwincFlash(adcCorrection.ATWINC_MEM_LOC_DUPLICATE_DATA, 12, tempData);
+					adcCorrection.readAtwincFlash(adcCorrection.ATWINC_MEM_LOC_METADATA_LOC, 3, tempData, 0);
+#endif
 				}
 				else
 				{
 					Serial.println("data exists on the samd flash");
+					Serial.println("No R/W actions performed on the AT-WINC flash");
 					Serial.println("reading from the samd flash");
 					Serial.print("Gain correction:"); Serial.println(samdStorageAdcValues._gainCorrection);
 					Serial.print("offset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
 				}
-#ifdef ADC_CORRECTION_VERBOSE
-				Serial.println("Enabling the ADC to use the correction values");
-#endif
-				uint16_t adcBeforeCorrection[3], adcAfterCorrection[3];
-				adcBeforeCorrection[0] = analogRead(A0);
-				adcBeforeCorrection[1] = analogRead(A1);
-				adcBeforeCorrection[2] = analogRead(A2);
-
-#ifdef ADC_CORRECTION_VERBOSE
-				Serial.println("Comparing results before and after correction");
-#endif
-				analogReadCorrection(samdStorageAdcValues._offsetCorrection, samdStorageAdcValues._gainCorrection);
-				adcAfterCorrection[0] = analogRead(A0);
-				adcAfterCorrection[1] = analogRead(A1);
-				adcAfterCorrection[2] = analogRead(A2);
-				Serial.print("True Value"); Serial.print("\tBefore Correction"); Serial.println("\tAfter Correction");
-				Serial.print(round((float)(1.f / 11.f) * 4096.f)); Serial.print("\t\t"); Serial.print(adcBeforeCorrection[0]); Serial.print("\t\t"); Serial.println(adcAfterCorrection[0]);
-				Serial.print(round((float)(1.f / 2.f) * 4096.f)); Serial.print("\t\t"); Serial.print(adcBeforeCorrection[1]); Serial.print("\t\t"); Serial.println(adcAfterCorrection[1]);
-				Serial.print(round((float)(10.f / 11.f) * 4096.f)); Serial.print("\t\t"); Serial.print(adcBeforeCorrection[2]); Serial.print("\t\t"); Serial.println(adcAfterCorrection[2]);
-#ifdef ADC_CORRECTION_VERBOSE
-				Serial.println("ToDo: Writing all the information to the Sd-Card");
-#endif  ADC_CORRECTION_VERBOSE
-				// ToDo:Add code to save the data on the Sd-Card
-
-				uint8_t tempData[12], tempdata2[3];
-				Serial.println("\ntesting AT-WINC flash read");
-				adcCorrection.readAtwincFlash(adcCorrection.ATWINC_MEM_LOC_PRIMARY_DATA, 12, tempData);
-				adcCorrection.readAtwincFlash(adcCorrection.ATWINC_MEM_LOC_DUPLICATE_DATA, 12, tempData);
-				adcCorrection.readAtwincFlash(adcCorrection.ATWINC_MEM_LOC_METADATA_LOC, 3, tempData, 0);
 			}
 		}
 	}
