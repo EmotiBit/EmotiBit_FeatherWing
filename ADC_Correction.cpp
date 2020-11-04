@@ -44,6 +44,7 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, Adc
 				readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, ATWINC_DATA_ARRAY_SIZE, atwincDataArray);
 				if (rigMetadata[1] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_0)
 				{
+					// ToDo: Change this to read from the AT-WINC flash data
 					adcCorrectionRig.N[0] = 1;  adcCorrectionRig.N[1] = 1;  adcCorrectionRig.N[2] = 10;
 					adcCorrectionRig.D[0] = 11; adcCorrectionRig.D[1] = 2;  adcCorrectionRig.D[2] = 11;
 					adcInputPins[0] = A0;
@@ -127,14 +128,16 @@ AdcCorrection::Status AdcCorrection::initWifiModule()
 		if (M2M_SUCCESS != ret)
 		{
 			Serial.print("Unable to enter download mode\r\n");
+			return AdcCorrection::Status::FAILURE;
 		}
 		else
 		{
 			_isAtwincDownloadMode = true;
 			_atwincFlashSize = spi_flash_get_size();
+			Serial.println("\nEntered download mode successfully");
+			Serial.print("The flash size is:"); Serial.println(_atwincFlashSize);
+			return AdcCorrection::Status::SUCCESS;
 		}
-		Serial.println("\nEntered download mode successfully");
-		Serial.print("The flash size is:"); Serial.println(_atwincFlashSize);
 
 	}
 }
@@ -159,22 +162,6 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 		Serial.print("Unable to erase SPI sector\r\n");
 		return AdcCorrection::Status::FAILURE;
 	}
-
-	// erasing the secondary sector
-	ret = spi_flash_erase(ATWINC_MEM_LOC_DUPLICATE_DATA, BYTES_PER_ADC_DATA_POINT * numAdcPoints);
-	if (M2M_SUCCESS != ret)
-	{
-		Serial.print("Unable to erase SPI sector\r\n");
-		return AdcCorrection::Status::FAILURE;;
-	}
-	// erase the metadata sector
-	ret = spi_flash_erase(ATWINC_MEM_LOC_METADATA_LOC, RIG_METADATA_SIZE); // ToDo: store this number "3" somewhere
-	if (M2M_SUCCESS != ret)
-	{
-		Serial.print("Unable to erase SPI sector\r\n");
-		return AdcCorrection::Status::FAILURE;;
-	}
-
 	// Writing the primary data
 
 	Serial.println("Writing new data to the flash(primary)");
@@ -182,6 +169,15 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 	if (M2M_SUCCESS != ret)
 	{
 		Serial.print("Unable to write primary SPI sector\r\n");
+		return AdcCorrection::Status::FAILURE;;
+	}
+
+
+	// erasing the secondary sector
+	ret = spi_flash_erase(ATWINC_MEM_LOC_DUPLICATE_DATA, BYTES_PER_ADC_DATA_POINT * numAdcPoints);
+	if (M2M_SUCCESS != ret)
+	{
+		Serial.print("Unable to erase SPI sector\r\n");
 		return AdcCorrection::Status::FAILURE;;
 	}
 	// writing the secondary data
@@ -192,7 +188,16 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 		Serial.print("Unable to write secondary SPI sector\r\n");
 		return AdcCorrection::Status::FAILURE;;
 	}
-	// writing tthe metadata
+
+
+	// erase the metadata sector
+	ret = spi_flash_erase(ATWINC_MEM_LOC_LAST_SECTOR_FIRST_BYTE, RIG_METADATA_SIZE); 
+	if (M2M_SUCCESS != ret)
+	{
+		Serial.print("Unable to erase SPI sector\r\n");
+		return AdcCorrection::Status::FAILURE;;
+	}
+	// writing the metadata
 	Serial.println("Writing meta data");
 	ret = spi_flash_write(rigMetadata, ATWINC_MEM_LOC_METADATA_LOC, RIG_METADATA_SIZE);
 	if (M2M_SUCCESS != ret)
