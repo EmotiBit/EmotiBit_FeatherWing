@@ -384,7 +384,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		}
 		else 
 		{
-			Serial.println("\nRead data from the AT-WINC"); Serial.println("Calculating correction values");
+			Serial.println("Reading correction data from the flash");
+			Serial.println("Calculating correction values");
 			adcCorrection.calcCorrectionValues();
 			// ToDo: check if above function actually worked
 			// Store the values on the flash
