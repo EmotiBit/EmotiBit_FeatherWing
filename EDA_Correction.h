@@ -1,6 +1,12 @@
 /*
 This class has been designed to work asynchronously as writing to the SI-7013 chip can be performed only using I2c and
 emotibit only allows I2C communication during ISR.
+The class will work in 2 modes
+1. UPDATE mode, where the class will update the OTP
+2. NORMAL mode, which is the general case mose, where the constants already exist in the OTP
+	and will be read during startup
+UPDATE MODE
+*******************
 The class is a state machine with the following states:
 1. WAITING_FOR_SERIAL_DATA
 2. WAITING_FOR_USER_APPROVAL
@@ -27,7 +33,13 @@ Code flow:
 7. The values stored in the OTP can then be read at any time to calculate the correciton values.
 8. class will have a data member which sets on every emotibit setup, which tracks if the emotibit has data
 	written on the OTP
+***************
+NORMAL
 
+1. The EDA Correction calss will be initialized in setup nad begin running in NORMAL mode. 
+2. After the I2C is initialized, read the OTP data snd calculate the correction values.
+3. update the emotibit class variables accordingly.
+5. proceed with normal execution.
 
 */
 class EdaCorrection
@@ -38,8 +50,11 @@ private:
 	bool _isDataOnOtp; // bool to keep track if data is written to the OTP
 
 public:
+	float edaReadings[5];
+	union Data {
+	float edaReading; // 0, 10K, 100K, 1M, 10M
 	char buff[4];// buffer to store the float in BYTE form
-	float edaReadings[5]; // 0, 10K, 100K, 1M, 10M
+	};
 	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_0; // 0x82  
 	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_1; // 0x86
 	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_2; // 0x8A
@@ -56,12 +71,13 @@ public:
 
 	enum class Mode
 	{
-		UPDATE,
-		NORMAL_EXEC
+		NORMAL,
+		UPDATE
 	};
+private:
+	Mode _mode = EdaCorrection::Mode::NORMAL;
 
-	Mode mode = EdaCorrection::Mode::NORMAL_EXEC;
-	 
+public:
 	// enum to asynchronously track the progress.
 	// the progress variable will be tracked in emotibit.update and the ISR to perform various functions sequentially in a non-blocking manner.
 	enum class Progress
@@ -103,7 +119,7 @@ public:
 	usage: called from readSerialinput
 	sets the float array of the class data member after parsing the serial
 	*/
-	EdaCorrection::Status setFloatValues(float* floatArray);// take input as size of float array
+	EdaCorrection::Status setFloatValues();
 
 	/*
 	usage: once the float data has been received, use this function to echo it on the serial monitor to ask for user confirmation to write to the OTP
