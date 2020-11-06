@@ -248,6 +248,25 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 				}
 			}
 		}
+		else if (input == 'E')
+		{
+			Serial.println("EDA Correction Mode");
+			Serial.println("If you are not a tester, please exit this mode by pressing Q");
+			Serial.println("If you are a tester, press A to proceed");
+			while (!Serial.available());
+			if (Serial.read() == 'Q')
+			{
+				break;
+			}
+			else
+			{
+				_debugMode = false;
+				EdaCorrection::Status status;
+				status = edaCorrection.enterUpdateMode();
+			}
+
+		}
+
 	}
 
 
@@ -1117,6 +1136,22 @@ uint8_t EmotiBit::update()
 		sendModePacket(sentModePacket, _outDataPacketCounter);
 	}
 
+	if (edaCorrection.getMode() == EdaCorrection::Mode::UPDATE)
+	{
+		if (edaCorrection.progress == EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA || edaCorrection.progress == EdaCorrection::Progress::WAITING_USER_APPROVAL)
+		{
+			edaCorrection.readFloatFromSerial();
+
+		}
+	}
+	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL)
+	{
+		// reading the OTP is done in the ISR
+		// the correction values should be generated in the update function outside the ISR,
+		// to reduce the load on the ISR
+		// call calcCorrection
+	}
+	
 	// Handle data buffer reading and sending
 	static uint32_t dataSendTimer = millis();
 	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)

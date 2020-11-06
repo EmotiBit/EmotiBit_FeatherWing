@@ -42,24 +42,24 @@ NORMAL
 5. proceed with normal execution.
 
 */
+
+#include "Arduino.h"
 class EdaCorrection
 {
 private:
 	bool _updateMode = false; // set when entered testing mode during production 
 	bool _approvedToWriteOtp = false; // indicated user's approval to write to the OTP
 	bool _isDataOnOtp; // bool to keep track if data is written to the OTP
-
+	bool _EdaReadingsPrinted = false;
+	bool _responseRecorded = false;
 public:
-	float edaReadings[5];
-	union Data {
-	float edaReading; // 0, 10K, 100K, 1M, 10M
-	char buff[4];// buffer to store the float in BYTE form
-	};
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_0; // 0x82  
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_1; // 0x86
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_2; // 0x8A
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_3; // 0x8E
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_4; // 0x92
+	static const uint8_t NUM_EDA_READINGS = 5;
+	float edaReadings[NUM_EDA_READINGS] = { 0 };
+	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_0 = 0x82; // 0x82  
+	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_1 = 0x86; // 0x86
+	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_2 = 0x8A; // 0x8A
+	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_3 = 0x8E; // 0x8E
+	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_4 = 0x92; // 0x92
 	uint16_t vref1Corrected;  // Corrected vrefValue
 	uint32_t RskinFeedback;  // Corrected Rfeedback value
 
@@ -102,7 +102,7 @@ public:
 	
 	note:in update mode: EmotiBit periodically checks for Serial buffers and if data is found, it updates SI-7013 OTP
 	*/
-	EdaCorrection::Mode getClassMode();
+	EdaCorrection::Mode getMode();
 
 	
 	/*
@@ -126,7 +126,7 @@ public:
 	changes progress to WAITING_USER_APPROVAL
 	note: will be non-blocking
 	*/
-	void echoFloatOnScreen();
+	void echoEdaReadingsOnScreen();
 
 
 	/*
@@ -139,7 +139,7 @@ public:
 	/*
 	usage: set the approvalStatus
 	*/
-	void setApprovalStatus(); // see if this can be absorbed by the getUserApproval or make it private
+	void setApprovalStatus(bool response); // see if this can be absorbed by the getUserApproval or make it private
 	
 	
 	/*
@@ -163,7 +163,7 @@ public:
 	/*
 	usage: solve for EmotiBit variables based on the data stored in OTP
 	*/
-	EdaCorrection::Status calcCorrectionFromOtp();
+	EdaCorrection::Status calcEdaCorrection();
 	
 
 };

@@ -20,6 +20,8 @@
 #include <ArduinoJson.h>
 #include <ArduinoLowPower.h>
 #include "ADC_Correction.h"
+#include "EDA_Correction.h"
+
 //#include <Adafruit_SleepyDog.h>
 
 
@@ -218,6 +220,7 @@ public:
 	MAX30105 ppgSensor;
 	NCP5623 led;
 	MLX90632 thermopile;
+	EdaCorrection edaCorrection;
 	float edrAmplification;
 	float vRef1; // Reference voltage of first voltage divider(15/100)
 	float vRef2; // Reference voltage from second voltage divider(100/100)
