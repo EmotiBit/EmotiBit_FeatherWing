@@ -89,6 +89,24 @@ void EmotiBit::bmm150ReadTrimRegisters()
 	bmm150TrimData.dig_xyz1 = (uint16_t)(temp_msb | trim_xy1xy2[4]);
 }
 
+void printChipId() {
+	volatile uint32_t val1, val2, val3, val4;
+	volatile uint32_t *ptr1 = (volatile uint32_t *)0x0080A00C;
+	val1 = *ptr1;
+	volatile uint32_t *ptr = (volatile uint32_t *)0x0080A040;
+	val2 = *ptr;
+	ptr++;
+	val3 = *ptr;
+	ptr++;
+	val4 = *ptr;
+
+	Serial.print("0x");
+	char buf[33];
+	sprintf(buf, "%8x%8x%8x%8x", val1, val2, val3, val4);
+	Serial.println(buf);
+}
+
+
 uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 {
 	_version = version;
@@ -220,6 +238,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 					//Serial.print(round((float)(1.f / 11.f) * 4096.f)); Serial.print("\t\t"); Serial.print(adcBeforeCorrection[0]); Serial.print("\t\t"); Serial.println(adcAfterCorrection[0]);
 					//Serial.print(round((float)(1.f / 2.f) * 4096.f)); Serial.print("\t\t"); Serial.print(adcBeforeCorrection[1]); Serial.print("\t\t"); Serial.println(adcAfterCorrection[1]);
 					//Serial.print(round((float)(10.f / 11.f) * 4096.f)); Serial.print("\t\t"); Serial.print(adcBeforeCorrection[2]); Serial.print("\t\t"); Serial.println(adcAfterCorrection[2]);
+
 					Serial.print(samdStorageAdcValues._gainCorrection); Serial.print(",");
 					Serial.print(samdStorageAdcValues._offsetCorrection); Serial.print(",");
 					Serial.print(adcBeforeCorrection[0]); Serial.print(",");
@@ -234,6 +253,25 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 					{
 						Serial.print(","); Serial.print(tempData[i]);
 					}
+					Serial.print(",");
+					WiFi.setPins(8, 7, 4, 2);
+					WiFi.init();
+					uint8_t atwincMacAddr[6], atwincMacValid;
+					m2m_wifi_get_otp_mac_address(atwincMacAddr, &atwincMacValid);
+					if (atwincMacValid)
+					{
+						for (int i = 0; i < 6; i++)
+						{
+							Serial.print(atwincMacAddr[i], HEX);
+						}
+					}
+					else
+					{
+						Serial.println("INVALID_MAC");
+					}
+					Serial.print(",");
+					printChipId();
+					WiFi.end();
 					Serial.println("\n==============================================");
 #ifdef ADC_CORRECTION_VERBOSE
 					Serial.println("\ntesting AT-WINC flash read");
@@ -2088,7 +2126,8 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 
 	{
 		// EDA
-
+		SamdStorageAdcValues samdStorageAdcValues;
+		samdStorageAdcValues = samdFlashStorage.read();
 		// Parse the root object
 		StaticJsonBuffer<bufferSize> jsonBuffer;
 		JsonObject &root = jsonBuffer.createObject();
@@ -2115,6 +2154,18 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		setups[i]->set("adc_bits", _adcBits);
+		// ToDo: store feather mac address
+		//setups[i]->set("feather MAC address", );
+		if (samdStorageAdcValues.valid)
+		{
+			setups[i]->set("adc offset correction", samdStorageAdcValues._offsetCorrection);
+			setups[i]->set("adc gain correction", samdStorageAdcValues._gainCorrection);
+		}
+		else
+		{
+			setups[i]->set("adc offset correction", "NO_CORRECTION");
+			setups[i]->set("adc gain correction", "NO_CORRECTION");
+		}
 		setups[i]->set("voltage_reference_1", vRef1);
 		setups[i]->set("voltage_reference_2", vRef2);
 		setups[i]->set("EDA_feedback_amp_resistance", edaFeedbackAmpR);
