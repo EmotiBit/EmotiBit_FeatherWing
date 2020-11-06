@@ -135,12 +135,15 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		if (input == 'A')
 		{
 			Serial.println("entered ADC Correction Mode");
-			digitalWrite(LED_BUILTIN, LOW);
+			//digitalWrite(LED_BUILTIN, LOW);
 			Serial.println("If you are not a tester, please exit this mode by pressing Q");
 			Serial.println("If you are a tester, make sure the correction rig is in place and press A");
 			while (!Serial.available());
 			if (Serial.read() == 'Q')
 			{
+				Serial.println("Exiting special provision ADC Correction mode");
+				// ToDo:Fix below line. Using this pin shuts off the emotibti when it proceeds with setup
+				//digitalWrite(LED_BUILTIN, HIGH); 
 				break;
 			}
 			else
@@ -153,7 +156,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 #ifdef ADC_CORRECTION_VERBOSE
 					Serial.println("Using the rig to generate correction values");
 #endif
-					Serial.println("Enter any character. Then remove the USB cable and plug after when the EmotiBit LED blinks");
+					Serial.println("Make sure the battery is connected to the feather.");
+					Serial.println("Enter any character. Then remove the USB cable and plug after when the Feather LED blinks");
 					while (!Serial.available()); Serial.read();
 					uint32_t timeCurrent = millis();
 					while (millis() - timeCurrent < 2000);
@@ -370,33 +374,29 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	Serial.println("Configuring EDA...");
 	pinMode(_edlPin, INPUT);
 	pinMode(_edrPin, INPUT);
+	Serial.println("Configuring ADC...");
 	samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
 	if (!samdStorageAdcValues.valid)
 	{
-#ifdef ADC_CORRECTION_VERBOSE
 		Serial.println("No correction found on SAMD. Calculating correction by reading ATWINC");
-#endif
 		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, AdcCorrection::DataFormatVersion::UNKNOWN);
 		if (adcCorrection.atwincAdcDataCorruptionTest == AdcCorrection::Status::FAILURE || adcCorrection.atwincAdcMetaDataCorruptionTest == AdcCorrection::Status::FAILURE)
 		{
-			Serial.println("data on atwinc corrupted or not present");
-			Serial.println("Using the ADC withut any correction");
+			Serial.println("\n\n****data on atwinc corrupted or not present****");
+			Serial.println("****Using the ADC withut any correction****");
+			Serial.println("Contact info@emotibit.com requesting ADC correction values.\n\n");
+			// ToDo: Send it to the Oscilloscope so that it is indicated in the SW
 		}
 		else 
 		{
 			Serial.println("Reading correction data from the flash");
 			Serial.println("Calculating correction values");
 			adcCorrection.calcCorrectionValues();
-			// ToDo: check if above function actually worked
-			// Store the values on the flash
 			Serial.println("Storing correction values on the SAMD flash");
 			samdStorageAdcValues._gainCorrection = adcCorrection.getGainCorrection();
 			samdStorageAdcValues._offsetCorrection = adcCorrection.getOffsetCorrection();
 			samdStorageAdcValues.valid = true;
 			samdFlashStorage.write(samdStorageAdcValues);// Writing it to the SAMD flash storage
-			// reinitializing the wifi module
-			/*WiFi.setPins(8, 7, 4, 2);
-			nm_bsp_init();*/
 			Serial.print("Gain Correction:"); Serial.print(samdStorageAdcValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
 			Serial.println("Enabling the ADC with the correction values");
 			analogReadCorrection(samdStorageAdcValues._offsetCorrection, samdStorageAdcValues._gainCorrection);
