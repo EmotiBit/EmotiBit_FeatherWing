@@ -129,8 +129,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	{
 		char input;
 		input = Serial.read();
-		_debugMode = true;
-		Serial.println("\nENTERING DEBUG MODE\n");
 		
 		if (input == 'A')
 		{
@@ -254,17 +252,23 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 			Serial.println("If you are not a tester, please exit this mode by pressing Q");
 			Serial.println("If you are a tester, press A to proceed");
 			while (!Serial.available());
-			if (Serial.read() == 'Q')
+			char choice = Serial.read();
+			if (choice == 'Q')
 			{
 				break;
 			}
-			else
+			else if (choice == 'A')
 			{
 				_debugMode = false;
 				EdaCorrection::Status status;
 				status = edaCorrection.enterUpdateMode();
 			}
 
+		}
+		else
+		{
+			_debugMode = true;
+			Serial.println("\nENTERING DEBUG MODE\n");
 		}
 
 	}
@@ -1135,13 +1139,11 @@ uint8_t EmotiBit::update()
 		String sentModePacket;
 		sendModePacket(sentModePacket, _outDataPacketCounter);
 	}
-
 	if (edaCorrection.getMode() == EdaCorrection::Mode::UPDATE)
 	{
 		if (edaCorrection.progress == EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA || edaCorrection.progress == EdaCorrection::Progress::WAITING_USER_APPROVAL)
 		{
 			edaCorrection.readFloatFromSerial();
-
 		}
 	}
 	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL)
@@ -1150,6 +1152,10 @@ uint8_t EmotiBit::update()
 		// the correction values should be generated in the update function outside the ISR,
 		// to reduce the load on the ISR
 		// call calcCorrection
+		if (edaCorrection.readOtpValues && !edaCorrection.calculationPerformed)
+		{
+			edaCorrection.calcEdaCorrection();
+		}
 	}
 	
 	// Handle data buffer reading and sending
@@ -2401,6 +2407,17 @@ void EmotiBit::readSensors()
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, HIGH);
 	
 	uint32_t readSensorsBegin = micros();
+	if (edaCorrection.getMode() == EdaCorrection::Mode::UPDATE)
+	{
+		if (edaCorrection.progress == EdaCorrection::Progress::WRITING_TO_OTP)
+		{
+			edaCorrection.writeToOtp();
+		}
+	}
+	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL && !edaCorrection.readOtpValues)
+	{
+		edaCorrection.readFromOtp();
+	}
 
 	// Battery (all analog reads must be in the ISR)
 	// TODO: use the stored/averaged Battery value instead of calling readBatteryPercent again

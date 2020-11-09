@@ -50,11 +50,16 @@ private:
 	bool _updateMode = false; // set when entered testing mode during production 
 	bool _approvedToWriteOtp = false; // indicated user's approval to write to the OTP
 	bool _isDataOnOtp; // bool to keep track if data is written to the OTP
-	bool _EdaReadingsPrinted = false;
 	bool _responseRecorded = false;
+	//bool _approvalRequested = false;
 public:
+	bool readOtpValues = false;
+	bool calculationPerformed = false;
+	bool dummyWrite = false;
 	static const uint8_t NUM_EDA_READINGS = 5;
 	float edaReadings[NUM_EDA_READINGS] = { 0 };
+	float dummyEdaReadings[NUM_EDA_READINGS] = { 0 };
+	char dummyOtp[20] = { 0 };
 	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_0 = 0x82; // 0x82  
 	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_1 = 0x86; // 0x86
 	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_2 = 0x8A; // 0x8A
@@ -84,9 +89,14 @@ public:
 	{
 		WAITING_FOR_SERIAL_DATA,
 		WAITING_USER_APPROVAL,
-		WRITING_TO_OTP,
-		FINISH
+		WRITING_TO_OTP
 	}progress;
+
+	//union DummyData {
+	//	float edaVal;
+	//	char edaByteVal[4];
+	//};
+	//DummyData dummyData[5];
 
 
 public:
