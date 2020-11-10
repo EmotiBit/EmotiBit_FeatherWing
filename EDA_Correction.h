@@ -54,8 +54,8 @@ NORMAL
 #define EDA_TESTING
 #define SI_7013_I2C_ADDR_MAIN 0x40
 #define SI_7013_I2C_ADDR_ALT 0x41
-#define CMD_OTP_READ 0x84
-#define CMD_OTP_WRITE 0xC5
+#define SI_7013_CMD_OTP_READ 0x84
+#define SI_7013_CMD_OTP_WRITE 0xC5
 
 class EdaCorrection
 {
@@ -67,9 +67,11 @@ private:
 	//bool _approvalRequested = false;
 public:
 	bool isOtpValid = true;
+	bool displayedValidityStatus = false;
 	bool readOtpValues = false;
 	bool calculationPerformed = false;
 	bool dummyWrite = false;
+	bool triedRegOverwrite = false;
 	static const uint8_t NUM_EDA_READINGS = 5;
 	float edaReadings[NUM_EDA_READINGS] = { 0 };
 	float dummyEdaReadings[NUM_EDA_READINGS] = { 0 };
@@ -171,6 +173,8 @@ public:
 	*/
 	bool getApprovalStatus();
 
+
+	EdaCorrection::Status writeToOtp(TwoWire* emotibit_i2c, uint8_t addr, char val);
 	/*
 	usage:
 	called in the ISR. writes data to the OTP
@@ -178,6 +182,8 @@ public:
 	*/
 	EdaCorrection::Status writeToOtp(TwoWire* emotiBit_i2c);
 
+
+	uint8_t readFromOtp(TwoWire* emotibit_i2c, uint8_t addr);
 	/*
 	usage: read from OTP
 	*/
@@ -187,7 +193,7 @@ public:
 	/*
 	usage: solve for EmotiBit variables based on the data stored in OTP
 	*/
-	EdaCorrection::Status calcEdaCorrection();
+	EdaCorrection::Status calcEdaCorrection(TwoWire* emotiBit_i2c);
 	
-	EdaCorrection::Status checkOtpValidity(TwoWire* emotiBit_i2c);
+	bool isOtpRegWritten(TwoWire* emotiBit_i2c, uint8_t addr);
 };

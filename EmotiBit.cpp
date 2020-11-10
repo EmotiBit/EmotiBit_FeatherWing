@@ -1145,6 +1145,7 @@ uint8_t EmotiBit::update()
 		{
 			edaCorrection.readFloatFromSerial();
 		}
+		
 	}
 	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL)
 	{
@@ -1154,8 +1155,16 @@ uint8_t EmotiBit::update()
 		// call calcCorrection
 		if (edaCorrection.readOtpValues && !edaCorrection.calculationPerformed)
 		{
-			edaCorrection.calcEdaCorrection();
+			edaCorrection.calcEdaCorrection(_EmotiBit_i2c);
 		}
+
+		if (edaCorrection.triedRegOverwrite)
+		{
+			Serial.println("You are trying to overwrite a register, which is not allowed.");
+			Serial.println("Please verify write operations");
+			edaCorrection.triedRegOverwrite = false;// out of UPDATE mode, so this will not affect write Operations
+		}
+		
 	}
 	
 	// Handle data buffer reading and sending
@@ -2411,26 +2420,16 @@ void EmotiBit::readSensors()
 	{
 		if (edaCorrection.progress == EdaCorrection::Progress::WRITING_TO_OTP)
 		{
-			if (edaCorrection.checkOtpValidity(_EmotiBit_i2c) == EdaCorrection::Status::SUCCESS)
-			{
-				edaCorrection.writeToOtp(_EmotiBit_i2c);
-			}
-			else
-			{
-				edaCorrection.isOtpValid = false;
-			}
+			
+			edaCorrection.writeToOtp(_EmotiBit_i2c);
+			
 		}
 	}
 	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL && !edaCorrection.readOtpValues)
 	{
-		if (edaCorrection.checkOtpValidity(_EmotiBit_i2c) == EdaCorrection::Status::SUCCESS)
-		{
-			edaCorrection.readFromOtp(_EmotiBit_i2c);
-		}
-		else
-		{
-			edaCorrection.isOtpValid = false;
-		}
+		
+		edaCorrection.readFromOtp(_EmotiBit_i2c);
+		
 	}
 
 	// Battery (all analog reads must be in the ISR)
