@@ -2411,12 +2411,26 @@ void EmotiBit::readSensors()
 	{
 		if (edaCorrection.progress == EdaCorrection::Progress::WRITING_TO_OTP)
 		{
-			edaCorrection.writeToOtp();
+			if (edaCorrection.checkOtpValidity(_EmotiBit_i2c) == EdaCorrection::Status::SUCCESS)
+			{
+				edaCorrection.writeToOtp(_EmotiBit_i2c);
+			}
+			else
+			{
+				edaCorrection.isOtpValid = false;
+			}
 		}
 	}
 	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL && !edaCorrection.readOtpValues)
 	{
-		edaCorrection.readFromOtp();
+		if (edaCorrection.checkOtpValidity(_EmotiBit_i2c) == EdaCorrection::Status::SUCCESS)
+		{
+			edaCorrection.readFromOtp(_EmotiBit_i2c);
+		}
+		else
+		{
+			edaCorrection.isOtpValid = false;
+		}
 	}
 
 	// Battery (all analog reads must be in the ISR)

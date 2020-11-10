@@ -43,16 +43,30 @@ NORMAL
 
 */
 
+// PLEASE SEE
+// comment/uncomment the EDA_TESTING #define to run it in test mode/real mode
+// Note: Test mode also WRITES TO THE OTP
+// To not use the OTP, choose dummyMode from Serial while execution
+
 #include "Arduino.h"
+#include "Wire.h"
+
+#define EDA_TESTING
+#define SI_7013_I2C_ADDR_MAIN 0x40
+#define SI_7013_I2C_ADDR_ALT 0x41
+#define CMD_OTP_READ 0x84
+#define CMD_OTP_WRITE 0xC5
+
 class EdaCorrection
 {
 private:
 	bool _updateMode = false; // set when entered testing mode during production 
 	bool _approvedToWriteOtp = false; // indicated user's approval to write to the OTP
-	bool _isDataOnOtp; // bool to keep track if data is written to the OTP
+	//bool _isDataOnOtp; // bool to keep track if data is written to the OTP
 	bool _responseRecorded = false;
 	//bool _approvalRequested = false;
 public:
+	bool isOtpValid = true;
 	bool readOtpValues = false;
 	bool calculationPerformed = false;
 	bool dummyWrite = false;
@@ -60,11 +74,16 @@ public:
 	float edaReadings[NUM_EDA_READINGS] = { 0 };
 	float dummyEdaReadings[NUM_EDA_READINGS] = { 0 };
 	char dummyOtp[20] = { 0 };
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_0 = 0x82; // 0x82  
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_1 = 0x86; // 0x86
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_2 = 0x8A; // 0x8A
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_3 = 0x8E; // 0x8E
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_4 = 0x92; // 0x92
+	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_0 = (uint8_t)0x82; // 0x82  
+	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_1 = (uint8_t)0x86; // 0x86
+	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_2 = (uint8_t)0x8A; // 0x8A
+	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_3 = (uint8_t)0x8E; // 0x8E
+	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_4 = (uint8_t)0x92; // 0x92
+	const uint8_t SI_7013_OTP_ADDRESS_METADATA = (uint8_t)0xB6;
+#ifdef EDA_TESTING
+	const uint8_t SI_7013_OTP_ADDRESS_TEST_1 = (uint8_t)0xA2;
+	const uint8_t SI_7013_OTP_ADDRESS_TEST_2 = (uint8_t)0xA6;
+#endif
 	uint16_t vref1Corrected;  // Corrected vrefValue
 	uint32_t RskinFeedback;  // Corrected Rfeedback value
 
@@ -92,11 +111,6 @@ public:
 		WRITING_TO_OTP
 	}progress;
 
-	//union DummyData {
-	//	float edaVal;
-	//	char edaByteVal[4];
-	//};
-	//DummyData dummyData[5];
 
 
 public:
@@ -162,12 +176,12 @@ public:
 	called in the ISR. writes data to the OTP
 	sets progress to FINISH
 	*/
-	EdaCorrection::Status writeToOtp();
+	EdaCorrection::Status writeToOtp(TwoWire* emotiBit_i2c);
 
 	/*
 	usage: read from OTP
 	*/
-	EdaCorrection::Status readFromOtp();
+	EdaCorrection::Status readFromOtp(TwoWire* emotiBit_i2c);
 
 
 	/*
@@ -175,5 +189,5 @@ public:
 	*/
 	EdaCorrection::Status calcEdaCorrection();
 	
-
+	EdaCorrection::Status checkOtpValidity(TwoWire* emotiBit_i2c);
 };

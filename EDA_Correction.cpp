@@ -1,5 +1,6 @@
 #include "EDA_Correction.h"
 
+
 EdaCorrection::Status EdaCorrection::enterUpdateMode()
 {
 	
@@ -85,12 +86,6 @@ EdaCorrection::Status EdaCorrection::readFloatFromSerial()
 
 }
 
-/*
-EdaCorrection::Status EdaCorrection::setFloatValues()
-{
-
-}
-*/
 
 void EdaCorrection::echoEdaReadingsOnScreen()
 {
@@ -151,11 +146,11 @@ bool EdaCorrection::getApprovalStatus()
 }
 
 
-EdaCorrection::Status EdaCorrection::writeToOtp()
+EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 { 
 	if (dummyWrite)
 	{
-		Serial.println("DUMMY DUMMY DUMMY");
+		// Serial.println("DUMMY DUMMY DUMMY");
 		union Data {
 			float edaReading; // 0, 10K, 100K, 1M, 10M
 			char buff[4];// buffer to store the float in BYTE form
@@ -168,30 +163,52 @@ EdaCorrection::Status EdaCorrection::writeToOtp()
 				dummyOtp[i * 4 + j] = dummyData.buff[j];
 			}
 		}
-		Serial.println("Changing mode to NORMAL");
+		// Serial.println("Changing mode to NORMAL");
 		_mode = EdaCorrection::Mode::NORMAL;
 	}
 	else
 	{
 		if (progress == EdaCorrection::Progress::WRITING_TO_OTP)
 		{
-			Serial.println("WRITING TO OTP!!!!!!");
+			// Serial.println("#######WRITING TO OTP######");
 
 			union Data {
 				float edaReading; // 0, 10K, 100K, 1M, 10M
 				char buff[4];// buffer to store the float in BYTE form
 			}data;
-
-			for (int i = 0; i < NUM_EDA_READINGS; i++)
+#ifdef EDA_TESTING
+			// below, testing by writing one float value
+			for (uint8_t i = 0; i < 2; i++)
 			{
 				data.edaReading = edaReadings[i];
-				for (int j = 0; j < 4; j++)
+				for (uint8_t j = 0; j < 4; j++)
 				{
-					Serial.print(data.buff[j]);
+					// Serial.print("Writing to: 0x"); Serial.print(SI_7013_OTP_ADDRESS_FLOAT_0+j, HEX); Serial.print(" :: val: "); Serial.print(val);
+					emotiBit_i2c->beginTransmission(SI_7013_I2C_ADDR_ALT);
+					emotiBit_i2c->write(CMD_OTP_WRITE);
+					emotiBit_i2c->write(SI_7013_OTP_ADDRESS_TEST_1 + j + 4*i);
+					emotiBit_i2c->write(data.buff[j]);
+					emotiBit_i2c->endTransmission();
+					// Serial.println("---> OK");
 				}
 			}
-
-			Serial.println("\nWritten to OTP. Exiting");
+#else
+			for (uint8_t i = 0; i < NUM_EDA_READINGS; i++)
+			{
+				data.edaReading = edaReadings[i];
+				for (uint8_t j = 0; j < 4; j++)
+				{
+					// Serial.print("Writing to: 0x"); Serial.print(SI_7013_OTP_ADDRESS_FLOAT_0+j, HEX); Serial.print(" :: val: "); Serial.print(val);
+					emotiBit_i2c->beginTransmission(SI_7013_I2C_ADDR_MAIN);
+					emotiBit_i2c->write(CMD_OTP_WRITE);
+					emotiBit_i2c->write(SI_7013_OTP_ADDRESS_FLOAT_0 + 4*i + j);
+					emotiBit_i2c->write(data.buff[j]);
+					emotiBit_i2c->endTransmission();
+					// Serial.println("---> OK");
+				}
+			}
+#endif
+			// Serial.println("\n########OTP UPDATED. Exiting########");
 		}
 
 		// after writing to the OTP, the mode become normal
@@ -199,7 +216,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp()
 	}
 }
 
-EdaCorrection::Status EdaCorrection::readFromOtp()
+EdaCorrection::Status EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c)
 {
 	if (dummyWrite)
 	{
@@ -207,36 +224,129 @@ EdaCorrection::Status EdaCorrection::readFromOtp()
 			float edaReading; // 0, 10K, 100K, 1M, 10M
 			char buff[4];// buffer to store the float in BYTE form
 		}dummyData;
-		Serial.println("Reading from dummy OTP");
+		//Serial.println("Reading from dummy OTP");
 		for (int i = 0; i < NUM_EDA_READINGS; i++)
 		{
 			for (int j = 0; j < 4; j++)
 			{
 				dummyData.buff[j] = dummyOtp[i * 4 + j];
 			}
-			Serial.print(dummyData.edaReading,6); Serial.print("\t");
+			edaReadings[i] = dummyData.edaReading;
+			//Serial.print(dummyData.edaReading,6); Serial.print("\t");
 		}
-		Serial.println();
+		//Serial.println();
 	}
 	else
 	{
-		Serial.println("Reading from OTP");
+		//Serial.println("Reading from OTP");
 		union Data {
 			float edaReading; // 0, 10K, 100K, 1M, 10M
 			char buff[4];// buffer to store the float in BYTE form
-		};
+		}data;
 		// read from OTP into the buff
+		// Serial.print("0x"); Serial.print(addr, HEX);
+#ifdef EDA_TESTING
+		for (uint8_t i = 0; i < 2; i++)
+		{
+			for (uint8_t j = 0; j < 4; j++)
+			{
+				emotiBit_i2c->beginTransmission(SI_7013_I2C_ADDR_ALT);
+				emotiBit_i2c->write(CMD_OTP_READ);
+				emotiBit_i2c->write(SI_7013_OTP_ADDRESS_TEST_1 + 4*i + j);
+				emotiBit_i2c->endTransmission();
+				emotiBit_i2c->requestFrom(SI_7013_I2C_ADDR_ALT, 1);
+				if (emotiBit_i2c->available())
+				{
+					data.buff[j] = emotiBit_i2c->read();
+				}
+			}
+			edaReadings[i] = data.edaReading;
+		}
+#else
+		for (uint8_t i = 0; i < NUM_EDA_READINGS; i++)
+		{
+			for (uint8_t j = 0; j < 4; j++)
+			{
+				emotiBit_i2c->beginTransmission(SI_7013_I2C_ADDR_MAIN);
+				emotiBit_i2c->write(CMD_OTP_READ);
+				emotiBit_i2c->write(SI_7013_OTP_ADDRESS_FLOAT_0 + 4 * i + j);
+				emotiBit_i2c->endTransmission();
+				emotiBit_i2c->requestFrom(SI_7013_I2C_ADDR_MAIN, 1);
+				if (emotiBit_i2c->available())
+				{
+					data.buff[j] = emotiBit_i2c->read();
+				}
+			}
+			edaReadings[i] = data.edaReading;
+		}
+#endif
+
+		//Serial.print(" : "); Serial.println(otpByte);
 	}
-	Serial.println("DONE reading the OTP. flipping read switch");
+	//Serial.println("DONE reading the OTP.");
 	readOtpValues = true;
 }
 
 EdaCorrection::Status EdaCorrection::calcEdaCorrection()
 {
-	// perform correction
-
-	Serial.println("Done with the calculation. THe values are");
-	Serial.println("val 1, val 2, val 3");
-	calculationPerformed = true;
+	if (isOtpValid)
+	{
+		// perform correction
+#ifdef EDA_TESTING
+		Serial.println("Done with the calculation. The values are");
+		Serial.print("edaReadings[0]: "); Serial.println(edaReadings[0], 6);
+		Serial.print("edaReadings[1]: "); Serial.println(edaReadings[1], 6);
+		calculationPerformed = true;
+#else
+		for (int i = 0; i < NUM_EDA_READINGS; i++)
+		{
+			Serial.print("edaReadings["); Serial.print(i); Serial.print("]: "); Serial.println(edaReadings[i], 6);
+		}
+#endif
+	}
+	else
+	{
+		Serial.print("Data not on OTP. not using Eda correction");
+	}
 }
 
+EdaCorrection::Status EdaCorrection::checkOtpValidity(TwoWire* emotiBit_i2c)
+{
+	uint8_t valueRead = 0;
+#ifdef EDA_TESTING
+	for (uint8_t i = 0; i < 8; i++)
+	{
+		emotiBit_i2c->beginTransmission(SI_7013_I2C_ADDR_ALT);
+		emotiBit_i2c->write(CMD_OTP_READ);
+		emotiBit_i2c->write(SI_7013_OTP_ADDRESS_TEST_1 + i);
+		emotiBit_i2c->endTransmission();
+		emotiBit_i2c->requestFrom(SI_7013_I2C_ADDR_MAIN, 1);
+		if (emotiBit_i2c->available())
+		{
+			valueRead = emotiBit_i2c->read();
+		}
+		if (valueRead != 255)
+		{
+			return EdaCorrection::Status::FAILURE;
+		}
+	}
+#else
+	for (uint8_t i = 0; i < (NUM_EDA_READINGS * 4); i++)
+	{
+		emotiBit_i2c->beginTransmission(SI_7013_I2C_ADDR_MAIN);
+		emotiBit_i2c->write(CMD_OTP_READ);
+		emotiBit_i2c->write(SI_7013_OTP_ADDRESS_FLOAT_0 + i);
+		emotiBit_i2c->endTransmission();
+		emotiBit_i2c->requestFrom(SI_7013_I2C_ADDR_MAIN, 1);
+		if (emotiBit_i2c->available())
+		{
+			valueRead = emotiBit_i2c->read();
+		}
+		if (valueRead != 255)
+		{
+			return EdaCorrection::Status::FAILURE;
+		}
+	}
+	return EdaCorrection::Status::SUCCESS;
+#endif
+}
