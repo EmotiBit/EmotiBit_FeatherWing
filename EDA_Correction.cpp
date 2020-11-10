@@ -77,7 +77,7 @@ EdaCorrection::Status EdaCorrection::readFloatFromSerial()
 		{
 			if (getApprovalStatus() == true)
 			{
-				Serial.println("Proceeding to write into OTP!!");
+				Serial.println("####Got Approval####");
 				progress = EdaCorrection::Progress::WRITING_TO_OTP;
 			}
 			else
@@ -221,7 +221,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 					if (!isOtpRegWritten(emotiBit_i2c, SI_7013_OTP_ADDRESS_FLOAT_0 + 4 * i + j))
 					{
 						writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_FLOAT_0 + 4 * i + j, data.buff[j]);
-			}
+					}
 					else
 					{
 						triedRegOverwrite = true;
@@ -230,6 +230,10 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 					}
 				}
 			}
+
+			// writing the metadata
+			writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA, DATA_FORMAT_VERSION);
+			writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA + 1, EMOTIBIT_VERSION);
 #endif
 			// Serial.println("\n########OTP UPDATED. Exiting########");
 		}
@@ -327,27 +331,39 @@ bool EdaCorrection::isOtpRegWritten(TwoWire* emotiBit_i2c, uint8_t addr)
 EdaCorrection::Status EdaCorrection::calcEdaCorrection(TwoWire* emotiBit_i2c)
 {
 	// perform a check to see if the last byte is written to
-	if ((uint8_t)readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA) == 255)
+	if (dummyWrite)
 	{
-		Serial.println("OTP has not been updated. Not performing correction calculation.");
-		Serial.println("Perform EDA correction first.");
-		Serial.println("Using EDA with correction");
+		for (int i = 0; i < NUM_EDA_READINGS; i++)
+		{
+			Serial.print("edaReadings["); Serial.print(i); Serial.print("]: "); Serial.println(edaReadings[i], 6);
+		}
 	}
 	else
 	{
-
-	// perform correction
 #ifdef EDA_TESTING
-	Serial.println("Done with the calculation. The values are");
-	Serial.print("edaReadings[0]: "); Serial.println(edaReadings[0], 6);
-	Serial.print("edaReadings[1]: "); Serial.println(edaReadings[1], 6);
+		for (int i = 0; i < 2; i++)
+		{
+			Serial.print("edaReadings["); Serial.print(i); Serial.print("]: "); Serial.println(edaReadings[i], 6);
+		}
 #else
-	for (int i = 0; i < NUM_EDA_READINGS; i++)
-	{
-		Serial.print("edaReadings["); Serial.print(i); Serial.print("]: "); Serial.println(edaReadings[i], 6);
+		if ((uint8_t)readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA) == 255)
+		{
+			Serial.println("OTP has not been updated. Not performing correction calculation.");
+			Serial.println("Perform EDA correction first.");
+			Serial.println("Using EDA with correction");
+		}
+		else
+		{
+
+			for (int i = 0; i < NUM_EDA_READINGS; i++)
+			{
+				Serial.print("edaReadings["); Serial.print(i); Serial.print("]: "); Serial.println(edaReadings[i], 6);
+			}
+
+		}
 	}
 #endif
-	}
+
 	calculationPerformed = true;
 }
 

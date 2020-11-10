@@ -76,6 +76,8 @@ public:
 	float edaReadings[NUM_EDA_READINGS] = { 0 };
 	float dummyEdaReadings[NUM_EDA_READINGS] = { 0 };
 	char dummyOtp[20] = { 0 };
+	const uint8_t EMOTIBIT_VERSION = 2;
+	const uint8_t DATA_FORMAT_VERSION = 0;
 	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_0 = (uint8_t)0x82; // 0x82  
 	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_1 = (uint8_t)0x86; // 0x86
 	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_2 = (uint8_t)0x8A; // 0x8A
