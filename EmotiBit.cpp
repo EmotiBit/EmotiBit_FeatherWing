@@ -1144,11 +1144,11 @@ uint8_t EmotiBit::update()
 	{
 		if (edaCorrection.progress == EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA || edaCorrection.progress == EdaCorrection::Progress::WAITING_USER_APPROVAL)
 		{
-			edaCorrection.readFromSerial();
+			edaCorrection.monitorSerial();
 		}
 		
 	}
-	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL)
+	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL && edaCorrection.progress != EdaCorrection::Progress::FINISH)
 	{
 		// reading the OTP is done in the ISR
 		// the correction values should be generated in the update function outside the ISR,
@@ -1156,9 +1156,21 @@ uint8_t EmotiBit::update()
 		// call calcCorrection
 		if (edaCorrection.readOtpValues && !edaCorrection.calculationPerformed)
 		{
-			edaCorrection.calcEdaCorrection(_EmotiBit_i2c);
+			if (edaCorrection.isOtpValid)
+			{
+				edaCorrection.calcEdaCorrection(_EmotiBit_i2c);
+			}
+			else
+			{
+				Serial.println("OTP has not been updated. Not performing correction calculation.");
+				Serial.println("Perform EDA correction first.");
+				Serial.println("Using EDA with correction");
+				edaCorrection.calculationPerformed = true;
+				edaCorrection.progress = EdaCorrection::Progress::FINISH;
+			}
 		}
-
+		
+		// register overwrite occurs in UPDATE mode, but once it occurs, the mode is shifted to NORMAL and is detected here 
 		if (edaCorrection.triedRegOverwrite)
 		{
 			Serial.println("You are trying to overwrite a register, which is not allowed.");
@@ -1166,7 +1178,7 @@ uint8_t EmotiBit::update()
 			edaCorrection.triedRegOverwrite = false;// out of UPDATE mode, so this will not affect write Operations
 		}
 
-		if (edaCorrection.dummyDataReady)
+		if (edaCorrection.correctionDataReady)
 		{
 			vRef1 = edaCorrection.vRef1;
 			vRef2 = edaCorrection.vRef2;
@@ -1176,10 +1188,9 @@ uint8_t EmotiBit::update()
 			{
 				Serial.println("You can now use this EmotiBit without restarting to measure the EDA test rig values");
 			}
-			edaCorrection.dummyDataReady = false; // once the values are updated, we can set it to false to not enter this case again
+			edaCorrection.correctionDataReady = false; // once the values are updated, we can set it to false to not enter this case again
+			edaCorrection.progress = EdaCorrection::Progress::FINISH;
 		}
-
-		
 	}
 	
 	// Handle data buffer reading and sending
@@ -2435,16 +2446,12 @@ void EmotiBit::readSensors()
 	{
 		if (edaCorrection.progress == EdaCorrection::Progress::WRITING_TO_OTP)
 		{
-			
 			edaCorrection.writeToOtp(_EmotiBit_i2c);
-			
 		}
 	}
 	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL && !edaCorrection.readOtpValues)
 	{
-		
 		edaCorrection.readFromOtp(_EmotiBit_i2c);
-		
 	}
 
 	// Battery (all analog reads must be in the ISR)

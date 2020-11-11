@@ -44,14 +44,14 @@ NORMAL
 */
 
 // PLEASE SEE
-// comment/uncomment the EDA_TESTING #define to run it in test mode/real mode
+// comment/uncomment the USE_ALT_SI7013 #define to run it in test mode/real mode
 // Note: Test mode also WRITES TO THE OTP
 // To not use the OTP, choose dummyMode from Serial while execution
 
 #include "Arduino.h"
 #include "Wire.h"
 
-#define EDA_TESTING
+#define USE_ALT_SI7013
 #define SI_7013_I2C_ADDR_MAIN 0x40
 #define SI_7013_I2C_ADDR_ALT 0x41
 #define SI_7013_CMD_OTP_READ 0x84
@@ -62,34 +62,37 @@ class EdaCorrection
 private:
 	bool _updateMode = false; // set when entered testing mode during production 
 	bool _approvedToWriteOtp = false; // indicated user's approval to write to the OTP
-	//bool _isDataOnOtp; // bool to keep track if data is written to the OTP
 	bool _responseRecorded = false;
-	//bool _approvalRequested = false;
 public:
-	bool isOtpValid = true;
-	bool displayedValidityStatus = false;
-	bool readOtpValues = false;
-	bool calculationPerformed = false;
-	bool dummyWrite = false;
-	bool triedRegOverwrite = false;
 	static const uint8_t NUM_EDA_READINGS = 5;
 	float edaReadings[NUM_EDA_READINGS] = { 0 };
-	
-	float dummyEdaReadings[NUM_EDA_READINGS] = { 0 };
-	char dummyOtp[20] = { 0 };
-	bool dummyDataReady = false;
-	float vRef1, vRef2, Rfb;
 	float vref2Readings[NUM_EDA_READINGS];
+	//float dummyEdaReadings[NUM_EDA_READINGS] = { 0 };
+	char  dummyOtp[20] = { 0 };
 
+public:
+	float vRef1, vRef2, Rfb;
+
+public:// flags
+	bool isOtpValid = true;
+	bool displayedValidityStatus = false;
+	bool readOtpValues = false; // flag to monitor if the class has read the OTP 
+	bool calculationPerformed = false; // flag to monitor is calculation was performed from values read from OTP
+	bool dummyWrite = false; // flag to check if in dummy mode or real OTP mode
+	bool triedRegOverwrite = false; // flag to monitor if we are writing to previously written OTP location
+	bool correctionDataReady = false;
+
+public: // OTP addresses
 	const uint8_t EMOTIBIT_VERSION = 2;
 	const uint8_t DATA_FORMAT_VERSION = 0;
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_0 = (uint8_t)0x82; // 0x82  
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_1 = (uint8_t)0x86; // 0x86
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_2 = (uint8_t)0x8A; // 0x8A
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_3 = (uint8_t)0x8E; // 0x8E
-	const uint8_t SI_7013_OTP_ADDRESS_FLOAT_4 = (uint8_t)0x92; // 0x92
+	const uint8_t SI_7013_OTP_ADDRESS_EDL_TABLE = (uint8_t)0x82; // 0x82  
+	//const uint8_t SI_7013_OTP_ADDRESS_FLOAT_1 = (uint8_t)0x86; // 0x86
+	//const uint8_t SI_7013_OTP_ADDRESS_FLOAT_2 = (uint8_t)0x8A; // 0x8A
+	//const uint8_t SI_7013_OTP_ADDRESS_FLOAT_3 = (uint8_t)0x8E; // 0x8E
+	//const uint8_t SI_7013_OTP_ADDRESS_FLOAT_4 = (uint8_t)0x92; // 0x92
 	const uint8_t SI_7013_OTP_ADDRESS_METADATA = (uint8_t)0xB6;
-#ifdef EDA_TESTING
+	const uint8_t SI_7013_OTP_ADDRESS_VREF2 = (uint8_t)0xB0;
+#ifdef USE_ALT_SI7013
 	const uint8_t SI_7013_OTP_ADDRESS_TEST_1 = (uint8_t)0xA2;
 	const uint8_t SI_7013_OTP_ADDRESS_TEST_2 = (uint8_t)0xA6;
 #endif
@@ -113,12 +116,14 @@ public:
 	// the progress variable will be tracked in emotibit.update and the ISR to perform various functions sequentially in a non-blocking manner.
 	enum class Progress
 	{
+		BEGIN,
 		WAITING_FOR_SERIAL_DATA,
 		WAITING_USER_APPROVAL,
-		WRITING_TO_OTP
-	}progress;
+		WRITING_TO_OTP,
+		FINISH
+	};
 
-
+	Progress progress = EdaCorrection::Progress::BEGIN;
 
 public:
 	/*
@@ -141,7 +146,7 @@ public:
 	usage: called in emotibit.update
 	on every call, checks if the Serial input buffers have any data
 	*/
-	EdaCorrection::Status readFromSerial(); // change the name to make it more "special purpose"
+	EdaCorrection::Status monitorSerial(); // change the name to make it more "special purpose"
 	
 	
 	/*
