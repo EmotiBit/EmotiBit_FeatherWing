@@ -49,7 +49,7 @@ EdaCorrection::Status EdaCorrection::readFloatFromSerial()
 
 			if (dummyWrite)
 			{
-				Serial.println("Writing into dummy float array");
+				//Serial.println("Writing into dummy float array");
 				for (int i = 0; i < NUM_EDA_READINGS; i++)
 				{
 					dummyEdaReadings[i] = Serial.parseFloat();
@@ -57,7 +57,7 @@ EdaCorrection::Status EdaCorrection::readFloatFromSerial()
 			}
 			else
 			{
-				Serial.println("Updating class with Eda readings");
+				//Serial.println("Updating class with Eda readings");
 				for (int i = 0; i < NUM_EDA_READINGS; i++)
 				{
 					edaReadings[i] = Serial.parseFloat();
@@ -337,6 +337,13 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection(TwoWire* emotiBit_i2c)
 		{
 			Serial.print("edaReadings["); Serial.print(i); Serial.print("]: "); Serial.println(edaReadings[i], 6);
 		}
+		testVref1 = edaReadings[0];
+		testVref2 = edaReadings[1];
+		testRskin = (100000 / ((edaReadings[2] / testVref1) - 1));
+		Serial.print("Vref1: "); Serial.println(testVref1, 6);
+		Serial.print("Vref2: "); Serial.println(testVref2, 6);
+		Serial.print("Rfb: "); Serial.println(testRskin, 6);
+		dummyDataReady = true;
 	}
 	else
 	{
@@ -361,8 +368,8 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection(TwoWire* emotiBit_i2c)
 			}
 
 		}
-	}
 #endif
+	}
 
 	calculationPerformed = true;
 }

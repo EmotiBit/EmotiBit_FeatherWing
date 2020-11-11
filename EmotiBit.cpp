@@ -1164,6 +1164,15 @@ uint8_t EmotiBit::update()
 			Serial.println("Please verify write operations");
 			edaCorrection.triedRegOverwrite = false;// out of UPDATE mode, so this will not affect write Operations
 		}
+
+		if (dummyDataReady)
+		{
+			vRef1 = edaCorrection.testVref1;
+			vref2 = edaCorrection.testVref2;
+			edaFeedbackAmpR = edaCorrection.testRskin;
+			Serial.print("updated emotibit class with these values");
+		}
+
 		
 	}
 	
