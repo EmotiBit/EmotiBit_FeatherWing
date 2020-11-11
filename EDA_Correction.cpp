@@ -4,14 +4,16 @@
 EdaCorrection::Status EdaCorrection::enterUpdateMode()
 {
 	
-	Serial.println("Setting edaCorrection class mode to Mode::UPDATE");
+	Serial.println("Enabling Mode::UPDATE");
 	_mode = EdaCorrection::Mode::UPDATE;
-	Serial.print("Do you want to activate dummy write?"); Serial.println("Press Y for Yes and N for no");
+	Serial.print("**Enter Dummy mode?**"); Serial.println("\tPress Y to work in dummy mode, N to actually write to OTP");
 	while (!Serial.available());
 	if (Serial.read() == 'Y')
 	{
 		dummyWrite = true;
-		Serial.println("In dummy mode");
+		Serial.println("###################");
+		Serial.println("## IN DUMMY MODE ##");
+		Serial.println("###################");
 	}
 	else
 	{
@@ -20,7 +22,7 @@ EdaCorrection::Status EdaCorrection::enterUpdateMode()
 	Serial.println("Initializing state machine. State: WAITING_FOR_SERIAL_DATA");
 	progress = EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA;
 	Serial.print("Once you have the appropriate data, please plug in the serial cable and enter the data.");
-	Serial.print("proceed with normal execution of emotibit in\n");
+	Serial.print("Proceeding with normal execution in\n");
 	uint8_t msgTimer = 5;
 	while (msgTimer > 0)
 	{
@@ -37,7 +39,34 @@ EdaCorrection::Mode EdaCorrection::getMode()
 	return _mode;
 }
 
-EdaCorrection::Status EdaCorrection::readFloatFromSerial()
+void EdaCorrection::getFloatFromString()
+{
+	float input[2 * NUM_EDA_READINGS];
+	for (int i = 0; i < 2 * NUM_EDA_READINGS; i++)
+	{
+		String splitString = Serial.readStringUntil(',');
+		input[i] = splitString.toFloat();
+	}
+	if (dummyWrite)
+	{
+		for (int i = 0; i < NUM_EDA_READINGS; i++)
+		{
+			dummyEdaReadings[i] = input[i];
+		}
+
+		for (int i = NUM_EDA_READINGS; i < 2 * NUM_EDA_READINGS; i++)
+		{
+			vref2Readings[i-NUM_EDA_READINGS] = input[i];
+		}
+
+	}
+	else
+	{
+
+	}
+}
+
+EdaCorrection::Status EdaCorrection::readFromSerial()
 {
 
 	if (progress == EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA)
@@ -50,18 +79,20 @@ EdaCorrection::Status EdaCorrection::readFloatFromSerial()
 			if (dummyWrite)
 			{
 				//Serial.println("Writing into dummy float array");
-				for (int i = 0; i < NUM_EDA_READINGS; i++)
+				/*for (int i = 0; i < NUM_EDA_READINGS; i++)
 				{
 					dummyEdaReadings[i] = Serial.parseFloat();
-				}
+				}*/
+				getFloatFromString();
 			}
 			else
 			{
 				//Serial.println("Updating class with Eda readings");
-				for (int i = 0; i < NUM_EDA_READINGS; i++)
+				/*for (int i = 0; i < NUM_EDA_READINGS; i++)
 				{
 					edaReadings[i] = Serial.parseFloat();
-				}
+				}*/
+				getFloatFromString();
 			}
 			echoEdaReadingsOnScreen();
 			progress = EdaCorrection::Progress::WAITING_USER_APPROVAL;
@@ -77,7 +108,7 @@ EdaCorrection::Status EdaCorrection::readFloatFromSerial()
 		{
 			if (getApprovalStatus() == true)
 			{
-				Serial.println("####Got Approval####");
+				Serial.println("#### GOT APPROVAL ####");
 				progress = EdaCorrection::Progress::WRITING_TO_OTP;
 			}
 			else
@@ -99,9 +130,15 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 	Serial.println("The EDA values entered by the user are:");
 	if (dummyWrite)
 	{
+		Serial.println("EDL readings:");
 		for (int i = 0; i < NUM_EDA_READINGS; i++)
 		{
 			Serial.print(dummyEdaReadings[i], 6); Serial.print("\t");
+		}
+		Serial.println("\nVref2 readings:");
+		for (int i = 0; i < NUM_EDA_READINGS; i++)
+		{
+			Serial.print(vref2Readings[i], 6); Serial.print("\t");
 		}
 	}
 	else
@@ -333,16 +370,22 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection(TwoWire* emotiBit_i2c)
 	// perform a check to see if the last byte is written to
 	if (dummyWrite)
 	{
+		Serial.println("The values stored on the mock OTP are:");
 		for (int i = 0; i < NUM_EDA_READINGS; i++)
 		{
 			Serial.print("edaReadings["); Serial.print(i); Serial.print("]: "); Serial.println(edaReadings[i], 6);
 		}
-		testVref1 = edaReadings[0];
-		testVref2 = edaReadings[1];
-		testRskin = (100000 / ((edaReadings[2] / testVref1) - 1));
-		Serial.print("Vref1: "); Serial.println(testVref1, 6);
-		Serial.print("Vref2: "); Serial.println(testVref2, 6);
-		Serial.print("Rfb: "); Serial.println(testRskin, 6);
+		Serial.println("### Calculating values ####\n");
+		vRef1 = edaReadings[0];
+		for (int i = 0; i < NUM_EDA_READINGS; i++)
+		{
+			vRef2 += vref2Readings[i];
+		}
+		vRef2 = vRef2 / NUM_EDA_READINGS;
+		Rfb = (100000 / ((edaReadings[2] / vRef1) - 1));
+		Serial.print("Vref1: "); Serial.println(vRef1, 6);
+		Serial.print("Vref2: "); Serial.println(vRef2, 6);
+		Serial.print("Rfb: "); Serial.println(Rfb, 6);
 		dummyDataReady = true;
 	}
 	else

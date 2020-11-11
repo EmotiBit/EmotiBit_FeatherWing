@@ -78,7 +78,8 @@ public:
 	float dummyEdaReadings[NUM_EDA_READINGS] = { 0 };
 	char dummyOtp[20] = { 0 };
 	bool dummyDataReady = false;
-	float testVref1, testVref2, testRskin;
+	float vRef1, vRef2, Rfb;
+	float vref2Readings[NUM_EDA_READINGS];
 
 	const uint8_t EMOTIBIT_VERSION = 2;
 	const uint8_t DATA_FORMAT_VERSION = 0;
@@ -92,8 +93,6 @@ public:
 	const uint8_t SI_7013_OTP_ADDRESS_TEST_1 = (uint8_t)0xA2;
 	const uint8_t SI_7013_OTP_ADDRESS_TEST_2 = (uint8_t)0xA6;
 #endif
-	uint16_t vref1Corrected;  // Corrected vrefValue
-	uint32_t RskinFeedback;  // Corrected Rfeedback value
 
 	enum class Status
 	{
@@ -136,15 +135,13 @@ public:
 	*/
 	EdaCorrection::Mode getMode();
 
-	
+	void getFloatFromString();
+
 	/*
 	usage: called in emotibit.update
 	on every call, checks if the Serial input buffers have any data
-	Then calls calcCorrection to get the correction values. 
-	calls setFloatValues to update class variables
-	changes progress to UPDATED_CLASS_VARIABLES
 	*/
-	EdaCorrection::Status readFloatFromSerial(); // change the name to make it more "special purpose"
+	EdaCorrection::Status readFromSerial(); // change the name to make it more "special purpose"
 	
 	
 	/*

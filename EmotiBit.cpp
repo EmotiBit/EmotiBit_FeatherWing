@@ -248,9 +248,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		}
 		else if (input == 'E')
 		{
-			Serial.println("EDA Correction Mode");
+			Serial.println("################################");
+			Serial.println("#####  EDA Correction Mode  ####");
+			Serial.println("################################\n");
 			Serial.println("If you are not a tester, please exit this mode by pressing Q");
-			Serial.println("If you are a tester, press A to proceed");
+			Serial.println("Otherwise, press A to continue with EDA correction");
 			while (!Serial.available());
 			char choice = Serial.read();
 			if (choice == 'Q')
@@ -259,7 +261,6 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 			}
 			else if (choice == 'A')
 			{
-				_debugMode = false;
 				EdaCorrection::Status status;
 				status = edaCorrection.enterUpdateMode();
 			}
@@ -1143,7 +1144,7 @@ uint8_t EmotiBit::update()
 	{
 		if (edaCorrection.progress == EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA || edaCorrection.progress == EdaCorrection::Progress::WAITING_USER_APPROVAL)
 		{
-			edaCorrection.readFloatFromSerial();
+			edaCorrection.readFromSerial();
 		}
 		
 	}
@@ -1167,10 +1168,14 @@ uint8_t EmotiBit::update()
 
 		if (edaCorrection.dummyDataReady)
 		{
-			vRef1 = edaCorrection.testVref1;
-			vRef2 = edaCorrection.testVref2;
-			edaFeedbackAmpR = edaCorrection.testRskin;
-			Serial.print("updated emotibit class with these values");
+			vRef1 = edaCorrection.vRef1;
+			vRef2 = edaCorrection.vRef2;
+			edaFeedbackAmpR = edaCorrection.Rfb;
+			Serial.println("updated emotibit class with these values");
+			if (edaCorrection.dummyWrite)
+			{
+				Serial.println("You can now use this EmotiBit without restarting to measure the EDA test rig values");
+			}
 			edaCorrection.dummyDataReady = false; // once the values are updated, we can set it to false to not enter this case again
 		}
 
