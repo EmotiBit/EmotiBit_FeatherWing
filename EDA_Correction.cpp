@@ -1,11 +1,19 @@
 #include "EDA_Correction.h"
 
 
-EdaCorrection::Status EdaCorrection::enterUpdateMode()
+//EdaCorrection::EdaCorrection(EdaCorrection::EmotiBitVersion version, EdaCorrection::OtpDataFormat dataFormat)
+//{
+//	emotiBitVersion = version;
+//	otpDataFormat = dataFormat;
+//}
+
+EdaCorrection::Status EdaCorrection::enterUpdateMode(EdaCorrection::EmotiBitVersion version, EdaCorrection::OtpDataFormat dataFormat)
 {
 	
 	Serial.println("Enabling Mode::UPDATE");
 	_mode = EdaCorrection::Mode::UPDATE;
+	emotiBitVersion = version;
+	otpDataFormat = dataFormat;
 	Serial.print("\n**Enter Dummy mode?**\n"); Serial.println("\tPress Y to work in dummy mode, N to actually write to OTP");
 	while (!Serial.available());
 	if (Serial.read() == 'Y')
@@ -303,8 +311,8 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 			// writing the metadata
 			if (!isOtpRegWritten(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA) && !isOtpRegWritten(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA + 1))
 			{
-				writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA, DATA_FORMAT_VERSION);
-				writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA + 1, EMOTIBIT_VERSION);
+				writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA, (uint8_t)otpDataFormat);
+				writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA + 1, (uint8_t)emotiBitVersion);
 			}
 			else
 			{
@@ -347,7 +355,7 @@ uint8_t EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c, uint8_t addr)
 	emotiBit_i2c->write(SI_7013_CMD_OTP_READ);
 	emotiBit_i2c->write(addr);
 	emotiBit_i2c->endTransmission();
-	emotiBit_i2c->requestFrom(si7013Addr, 1);
+	emotiBit_i2c->requestFrom(_si7013Addr, 1);
 	if (emotiBit_i2c->available())
 	{
 		return(emotiBit_i2c->read());

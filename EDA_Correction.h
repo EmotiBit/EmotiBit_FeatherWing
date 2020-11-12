@@ -90,8 +90,8 @@ public:// flags
 	bool correctionDataReady = false;
 
 public: // OTP addresses
-	const uint8_t EMOTIBIT_VERSION = 2;
-	const uint8_t DATA_FORMAT_VERSION = 0;
+	//uint8_t EMOTIBIT_VERSION;
+	//uint8_t DATA_FORMAT_VERSION;
 	const uint8_t SI_7013_OTP_ADDRESS_EDL_TABLE = (uint8_t)0x82; // 0x82  
 	//const uint8_t SI_7013_OTP_ADDRESS_FLOAT_1 = (uint8_t)0x86; // 0x86
 	//const uint8_t SI_7013_OTP_ADDRESS_FLOAT_2 = (uint8_t)0x8A; // 0x8A
@@ -115,6 +115,17 @@ public: // OTP addresses
 		NORMAL,
 		UPDATE
 	};
+
+	enum class EmotiBitVersion
+	{
+		EMOTIBIT_VERSION_2 = 2
+	}emotiBitVersion;
+
+	enum class OtpDataFormat
+	{
+		DATA_FORMAT_0
+	}otpDataFormat;
+
 private:
 	Mode _mode = EdaCorrection::Mode::NORMAL;
 
@@ -133,11 +144,13 @@ public:
 	Progress progress = EdaCorrection::Progress::BEGIN;
 
 public:
+
+
 	/*
 	usage: called in emotibit.setup(). Once called, it enables the emotibit to keep sensing the Serial on ever "loop" 
 	changes progress from NOT_BEGUN to WAITING_FOR_SERIAL_DATA
 	*/
-	EdaCorrection::Status enterUpdateMode();
+	EdaCorrection::Status enterUpdateMode(EdaCorrection::EmotiBitVersion version, EdaCorrection::OtpDataFormat dataFormat);
 
 	void normalModeOperations(float &vref1, float &vref2, float &Rfeedback);
 

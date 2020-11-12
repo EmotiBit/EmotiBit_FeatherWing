@@ -262,7 +262,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 			else 
 			{
 				EdaCorrection::Status status;
-				status = edaCorrection.enterUpdateMode();
+				status = edaCorrection.enterUpdateMode(EdaCorrection::EmotiBitVersion::EMOTIBIT_VERSION_2, EdaCorrection::OtpDataFormat::DATA_FORMAT_0);
 			}
 
 		}
