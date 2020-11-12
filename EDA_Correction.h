@@ -52,7 +52,7 @@ NORMAL
 #include "Wire.h"
 
 #define USE_ALT_SI7013
-//#define WRITE_MAIN_ADDRESS
+//#define ACCESS_MAIN_ADDRESS
 #define SI_7013_I2C_ADDR_MAIN 0x40
 #define SI_7013_I2C_ADDR_ALT 0x41
 #define SI_7013_CMD_OTP_READ 0x84
@@ -134,6 +134,7 @@ public:
 	*/
 	EdaCorrection::Status enterUpdateMode();
 
+	void normalModeOperations(float &vref1, float &vref2, float &Rfeedback);
 
 	/*
 	usage: returns if the program is in update mode.
@@ -203,7 +204,7 @@ public:
 	/*
 	usage: solve for EmotiBit variables based on the data stored in OTP
 	*/
-	EdaCorrection::Status calcEdaCorrection(TwoWire* emotiBit_i2c);
+	EdaCorrection::Status calcEdaCorrection();
 	
 	bool isOtpRegWritten(TwoWire* emotiBit_i2c, uint8_t addr);
 };

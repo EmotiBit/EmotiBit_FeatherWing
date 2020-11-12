@@ -1150,60 +1150,7 @@ uint8_t EmotiBit::update()
 	}
 	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL && edaCorrection.progress != EdaCorrection::Progress::FINISH)
 	{
-		// reading the OTP is done in the ISR
-		// the correction values should be generated in the update function outside the ISR,
-		// to reduce the load on the ISR
-		// call calcCorrection
-		if (edaCorrection.readOtpValues && !edaCorrection.calculationPerformed)
-		{
-			if (edaCorrection.isOtpValid)
-			{
-				edaCorrection.calcEdaCorrection(_EmotiBit_i2c);
-			}
-			else
-			{
-				Serial.println("OTP has not been updated. Not performing correction calculation.");
-				Serial.println("Perform EDA correction first.");
-				Serial.println("Using EDA with correction");
-				edaCorrection.calculationPerformed = true;
-				edaCorrection.progress = EdaCorrection::Progress::FINISH;
-			}
-		}
-		
-		// register overwrite occurs in UPDATE mode, but once it occurs, the mode is shifted to NORMAL and is detected here 
-		if (edaCorrection.triedRegOverwrite)
-		{
-			Serial.println("You are trying to overwrite a register, which is not allowed.");
-			Serial.println("Please verify write operations");
-			edaCorrection.triedRegOverwrite = false;// out of UPDATE mode, so this will not affect write Operations
-		}
-
-		if (edaCorrection.correctionDataReady)
-		{
-			Serial.print("Estimated Rskin values BEFORE correction:|");
-			float RskinEst = 0;
-			for (int i = 0; i < edaCorrection.NUM_EDA_READINGS; i++)
-			{
-				RskinEst = (((edaCorrection.edaReadings[i] / vRef1) - 1)*edaFeedbackAmpR);
-				Serial.print(RskinEst); Serial.print(" | ");
-			}
-			vRef1 = edaCorrection.vRef1;// updated vref1
-			vRef2 = edaCorrection.vRef2;// updated vref2
-			edaFeedbackAmpR = edaCorrection.Rfb;// updated edaFeedbackAmpR
-			Serial.print("\nEstimated Rskin values AFTER correction: |");
-			for (int i = 0; i < edaCorrection.NUM_EDA_READINGS; i++)
-			{
-				RskinEst = (((edaCorrection.edaReadings[i] / vRef1) - 1)*edaFeedbackAmpR);
-				Serial.print(RskinEst); Serial.print(" | ");
-			}
-			if (edaCorrection.dummyWrite)
-			{
-				Serial.println("\nupdated emotibit class with these values");
-				Serial.println("\nYou can now use this EmotiBit without restarting to measure the EDA test rig values");
-			}
-			edaCorrection.correctionDataReady = false; // once the values are updated, we can set it to false to not enter this case again
-			edaCorrection.progress = EdaCorrection::Progress::FINISH;
-		}
+		edaCorrection.normalModeOperations(vRef1, vRef2, edaFeedbackAmpR);
 	}
 	
 	// Handle data buffer reading and sending
