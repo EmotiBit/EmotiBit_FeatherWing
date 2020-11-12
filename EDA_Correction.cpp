@@ -395,7 +395,12 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection(TwoWire* emotiBit_i2c)
 			vRef2 += vref2Readings[i];
 		}
 		vRef2 = vRef2 / NUM_EDA_READINGS;
-		Rfb = (100000 / ((edaReadings[2] / vRef1) - 1)); // use the EDl @100K
+		Rfb = 0;
+		for (int i = 1; i < 4; i++)
+		{
+			Rfb += (trueRskin[i] / ((edaReadings[i] / vRef1) - 1)); // use the EDl @10K, @100K, @1M
+		}
+		Rfb = Rfb / 3;// taking avg of 3 readings
 		Serial.print("Vref1: "); Serial.println(vRef1, 6);
 		Serial.print("Vref2: "); Serial.println(vRef2, 6);
 		Serial.print("Rfb: "); Serial.println(Rfb, 6);

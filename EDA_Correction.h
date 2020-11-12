@@ -70,6 +70,7 @@ public:
 	float vref2Readings[NUM_EDA_READINGS];
 	//float dummyEdaReadings[NUM_EDA_READINGS] = { 0 };
 	char  dummyOtp[20] = { 0 };
+	float trueRskin[5] = { 0,10000.0,100000.0,1000000.0,10000000.0 };
 
 public:
 	float vRef1, vRef2, Rfb;

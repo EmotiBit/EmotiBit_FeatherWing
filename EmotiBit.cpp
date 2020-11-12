@@ -1187,9 +1187,9 @@ uint8_t EmotiBit::update()
 				RskinEst = (((edaCorrection.edaReadings[i] / vRef1) - 1)*edaFeedbackAmpR);
 				Serial.print(RskinEst); Serial.print(" | ");
 			}
-			vRef1 = edaCorrection.vRef1;
-			vRef2 = edaCorrection.vRef2;
-			edaFeedbackAmpR = edaCorrection.Rfb;
+			vRef1 = edaCorrection.vRef1;// updated vref1
+			vRef2 = edaCorrection.vRef2;// updated vref2
+			edaFeedbackAmpR = edaCorrection.Rfb;// updated edaFeedbackAmpR
 			Serial.print("\nEstimated Rskin values AFTER correction: |");
 			for (int i = 0; i < edaCorrection.NUM_EDA_READINGS; i++)
 			{
