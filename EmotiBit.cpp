@@ -251,15 +251,15 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 			Serial.println("################################");
 			Serial.println("#####  EDA Correction Mode  ####");
 			Serial.println("################################\n");
-			Serial.println("If you are not a tester, please exit this mode by pressing Q");
-			Serial.println("Otherwise, press A to continue with EDA correction");
+			Serial.println("If you are an EmotiBit Tester, enter A to continue.");
+			Serial.println("Otherwise enter any key to exit EDA Correction Mode");
 			while (!Serial.available());
 			char choice = Serial.read();
-			if (choice == 'Q')
+			if (choice != 'A')
 			{
 				break;
 			}
-			else if (choice == 'A')
+			else 
 			{
 				EdaCorrection::Status status;
 				status = edaCorrection.enterUpdateMode();

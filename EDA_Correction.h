@@ -29,14 +29,14 @@ Code flow:
 5. Once the user approves writing to the OTP:
 	1. the class changes the state to WRITING_TO_OTP
 	2. Now, the class member function tries to write the values to the OTP as a part of the ISR
-6. Once the Values have been written to teh OTP, the class moves to the last state FINISHED.
-7. The values stored in the OTP can then be read at any time to calculate the correciton values.
+6. Once the Values have been written to the OTP, the class moves to the last state FINISHED.
+7. The values stored in the OTP can then be read at any time to calculate the correction values.
 8. class will have a data member which sets on every emotibit setup, which tracks if the emotibit has data
 	written on the OTP
 ***************
 NORMAL
 
-1. The EDA Correction calss will be initialized in setup nad begin running in NORMAL mode. 
+1. The EDA Correction calss will be initialized in setup and begin running in NORMAL mode. 
 2. After the I2C is initialized, read the OTP data snd calculate the correction values.
 3. update the emotibit class variables accordingly.
 5. proceed with normal execution.
@@ -53,14 +53,19 @@ NORMAL
 
 #define USE_ALT_SI7013
 //#define ACCESS_MAIN_ADDRESS
-#define SI_7013_I2C_ADDR_MAIN 0x40
-#define SI_7013_I2C_ADDR_ALT 0x41
+//#define SI_7013_I2C_ADDR_MAIN 0x40
+//#define SI_7013_I2C_ADDR_ALT 0x41
 #define SI_7013_CMD_OTP_READ 0x84
 #define SI_7013_CMD_OTP_WRITE 0xC5
 
 class EdaCorrection
 {
 private:
+#ifdef USE_ALT_SI7013
+	uint8_t _si7013Addr = 0x41;// Address of external Si7013
+#else
+	uint8_t _si7013Addr = 0x40;// Address os SI7013 baked into emotibit
+#endif
 	bool _updateMode = false; // set when entered testing mode during production 
 	bool _approvedToWriteOtp = false; // indicated user's approval to write to the OTP
 	bool _responseRecorded = false;
@@ -94,15 +99,15 @@ public: // OTP addresses
 	//const uint8_t SI_7013_OTP_ADDRESS_FLOAT_4 = (uint8_t)0x92; // 0x92
 	const uint8_t SI_7013_OTP_ADDRESS_METADATA = (uint8_t)0xB6;
 	const uint8_t SI_7013_OTP_ADDRESS_VREF2 = (uint8_t)0xB0;
-#ifdef USE_ALT_SI7013
+#ifndef ACCESS_MAIN_ADDRESS
 	const uint8_t SI_7013_OTP_ADDRESS_TEST_1 = (uint8_t)0xA2;
 	const uint8_t SI_7013_OTP_ADDRESS_TEST_2 = (uint8_t)0xA6;
 #endif
 
 	enum class Status
 	{
-		SUCCESS,
-		FAILURE
+		SUCCESS = 0,
+		FAILURE = 1
 	};
 
 	enum class Mode

@@ -222,11 +222,7 @@ bool EdaCorrection::getApprovalStatus()
 
 EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c, uint8_t addr, char val)
 {
-#ifdef USE_ALT_SI7013
-	emotiBit_i2c->beginTransmission(SI_7013_I2C_ADDR_ALT);
-#else
-	emotiBit_i2c->beginTransmission(SI_7013_I2C_ADDR_MAIN);
-#endif
+	emotiBit_i2c->beginTransmission(_si7013Addr);
 	emotiBit_i2c->write(SI_7013_CMD_OTP_WRITE);
 	emotiBit_i2c->write(addr);
 	emotiBit_i2c->write(val);
@@ -339,7 +335,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 #endif
 		}
 
-		// after writing to the OTP, the mode become normal
+		// after writing to the OTP, change the mode to normal
 		_mode = EdaCorrection::Mode::NORMAL;
 	}
 }
@@ -347,19 +343,11 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 
 uint8_t EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c, uint8_t addr)
 {
-#ifdef USE_ALT_SI7013
-	emotiBit_i2c->beginTransmission(SI_7013_I2C_ADDR_ALT);
-#else
-	emotiBit_i2c->beginTransmission(SI_7013_I2C_ADDR_MAIN);
-#endif
+	emotiBit_i2c->beginTransmission(_si7013Addr);
 	emotiBit_i2c->write(SI_7013_CMD_OTP_READ);
 	emotiBit_i2c->write(addr);
 	emotiBit_i2c->endTransmission();
-#ifdef USE_ALT_SI7013
-	emotiBit_i2c->requestFrom(SI_7013_I2C_ADDR_ALT, 1);
-#else
-	emotiBit_i2c->requestFrom(SI_7013_I2C_ADDR_MAIN, 1);
-#endif
+	emotiBit_i2c->requestFrom(si7013Addr, 1);
 	if (emotiBit_i2c->available())
 	{
 		return(emotiBit_i2c->read());
