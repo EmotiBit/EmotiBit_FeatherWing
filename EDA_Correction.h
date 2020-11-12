@@ -69,13 +69,13 @@ private:
 	bool _updateMode = false; // set when entered testing mode during production 
 	bool _approvedToWriteOtp = false; // indicated user's approval to write to the OTP
 	bool _responseRecorded = false;
-public:
-	static const uint8_t NUM_EDA_READINGS = 5;
-	float edaReadings[NUM_EDA_READINGS] = { 0 };
-	float vref2Readings[NUM_EDA_READINGS];
-	//float dummyEdaReadings[NUM_EDA_READINGS] = { 0 };
+public:`
+	static const uint8_t NUM_EDL_READINGS = 5;
+	float edaReadings[NUM_EDL_READINGS] = { 0 };
+	float vref2Readings[NUM_EDL_READINGS];
+	//float dummyEdaReadings[NUM_EDL_READINGS] = { 0 };
 	char  dummyOtp[20] = { 0 };
-	float trueRskin[5] = { 0,10000.0,100000.0,1000000.0,10000000.0 };
+	float trueRskin[NUM_EDL_READINGS] = { 0,10000.0,100000.0,1000000.0,10000000.0 };
 
 public:
 	float vRef1, vRef2, Rfb;

@@ -73,7 +73,7 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 	{
 		Serial.print("Estimated Rskin values BEFORE correction:|");
 		float RskinEst = 0;
-		for (int i = 0; i < NUM_EDA_READINGS; i++)
+		for (int i = 0; i < NUM_EDL_READINGS; i++)
 		{
 			RskinEst = (((edaReadings[i] / vref1) - 1)*Rfeedback);
 			Serial.print(RskinEst); Serial.print(" | ");
@@ -82,7 +82,7 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 		vref2 = vRef2;// updated vref2
 		Rfeedback = Rfb;// updated edaFeedbackAmpR
 		Serial.print("\nEstimated Rskin values AFTER correction: |");
-		for (int i = 0; i < NUM_EDA_READINGS; i++)
+		for (int i = 0; i < NUM_EDL_READINGS; i++)
 		{
 			RskinEst = (((edaReadings[i] / vref1) - 1)*Rfeedback);
 			Serial.print(RskinEst); Serial.print(" | ");
@@ -104,21 +104,21 @@ EdaCorrection::Mode EdaCorrection::getMode()
 
 void EdaCorrection::getFloatFromString()
 {
-	float input[2 * NUM_EDA_READINGS];
-	for (int i = 0; i < 2 * NUM_EDA_READINGS; i++)
+	float input[2 * NUM_EDL_READINGS];
+	for (int i = 0; i < 2 * NUM_EDL_READINGS; i++)
 	{
 		String splitString = Serial.readStringUntil(',');
 		input[i] = splitString.toFloat();
 	}
 
-	for (int i = 0; i < NUM_EDA_READINGS; i++)
+	for (int i = 0; i < NUM_EDL_READINGS; i++)
 	{
 		edaReadings[i] = input[i];
 	}
 
-	for (int i = NUM_EDA_READINGS; i < 2 * NUM_EDA_READINGS; i++)
+	for (int i = NUM_EDL_READINGS; i < 2 * NUM_EDL_READINGS; i++)
 	{
-		vref2Readings[i - NUM_EDA_READINGS] = input[i];
+		vref2Readings[i - NUM_EDL_READINGS] = input[i];
 	}
 
 }
@@ -169,12 +169,12 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 	Serial.println("The EDA values entered by the user are:");
 
 	Serial.println("EDL readings:");
-	for (int i = 0; i < NUM_EDA_READINGS; i++)
+	for (int i = 0; i < NUM_EDL_READINGS; i++)
 	{
 		Serial.print(edaReadings[i], 6); Serial.print("\t");
 	}
 	Serial.println("\nVref2 readings:");
-	for (int i = 0; i < NUM_EDA_READINGS; i++)
+	for (int i = 0; i < NUM_EDL_READINGS; i++)
 	{
 		Serial.print(vref2Readings[i], 6); Serial.print("\t");
 	}
@@ -238,7 +238,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 			float edaReading; 
 			char byte[4];// buffer to store the float in BYTE form
 		}data;
-		for (int i = 0; i < NUM_EDA_READINGS; i++)
+		for (int i = 0; i < NUM_EDL_READINGS; i++)
 		{
 			data.edaReading = edaReadings[i];
 			for (int j = 0; j < 4; j++)
@@ -260,7 +260,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 			}data;
 
 #ifdef ACCESS_MAIN_ADDRESS
-			for (uint8_t i = 0; i < NUM_EDA_READINGS; i++)
+			for (uint8_t i = 0; i < NUM_EDL_READINGS; i++)
 			{
 				data.floatValue = edaReadings[i];
 				for (uint8_t j = 0; j < 4; j++)
@@ -280,11 +280,11 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 
 			// writing the vref 2 value
 			float vRef2_temp = 0;
-			for (int i = 0; i < NUM_EDA_READINGS; i++)
+			for (int i = 0; i < NUM_EDL_READINGS; i++)
 			{
 				vRef2_temp += vref2Readings[i];
 			}
-			vRef2_temp = vRef2_temp / NUM_EDA_READINGS;
+			vRef2_temp = vRef2_temp / NUM_EDL_READINGS;
 			data.floatValue = vRef2_temp;
 			for (uint8_t j = 0; j < 4; j++)
 			{
@@ -362,7 +362,7 @@ EdaCorrection::Status EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c)
 			float edaReading; 
 			char byte[4];// buffer to store the float in BYTE form
 		}data;
-		for (int i = 0; i < NUM_EDA_READINGS; i++)
+		for (int i = 0; i < NUM_EDL_READINGS; i++)
 		{
 			for (int j = 0; j < 4; j++)
 			{
@@ -385,7 +385,7 @@ EdaCorrection::Status EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c)
 			return EdaCorrection::Status::FAILURE;
 		}
 		
-		for (uint8_t i = 0; i < NUM_EDA_READINGS; i++)
+		for (uint8_t i = 0; i < NUM_EDL_READINGS; i++)
 		{
 			for (uint8_t j = 0; j < 4; j++)
 			{
@@ -431,17 +431,17 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection()
 	if (dummyWrite)
 	{
 		Serial.println("The values stored on the mock OTP are:");
-		for (int i = 0; i < NUM_EDA_READINGS; i++)
+		for (int i = 0; i < NUM_EDL_READINGS; i++)
 		{
 			Serial.print("edaReadings["); Serial.print(i); Serial.print("]: "); Serial.println(edaReadings[i], 6);
 		}
 		Serial.println("### Calculating values ####\n");
 		vRef1 = edaReadings[0];
-		for (int i = 0; i < NUM_EDA_READINGS; i++)
+		for (int i = 0; i < NUM_EDL_READINGS; i++)
 		{
 			vRef2 += vref2Readings[i];
 		}
-		vRef2 = vRef2 / NUM_EDA_READINGS;
+		vRef2 = vRef2 / NUM_EDL_READINGS;
 		Rfb = 0;
 		for (int i = 1; i < 4; i++)
 		{
@@ -457,17 +457,13 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection()
 	{
 #ifdef ACCESS_MAIN_ADDRESS
 		Serial.println("The values stored on the Main sensor OTP are:");
-		for (int i = 0; i < NUM_EDA_READINGS; i++)
+		for (int i = 0; i < NUM_EDL_READINGS; i++)
 		{
 			Serial.print("edaReadings["); Serial.print(i); Serial.print("]: "); Serial.println(edaReadings[i], 6);
 		}
 		Serial.println("### Calculating values ####\n");
 		vRef1 = edaReadings[0];
-		for (int i = 0; i < NUM_EDA_READINGS; i++)
-		{
-			vRef2 += vref2Readings[i];
-		}
-		vRef2 = vRef2 / NUM_EDA_READINGS;
+		//vRef2 is updated directly in the readFromOtp() function
 		Rfb = 0;
 		for (int i = 1; i < 4; i++)
 		{
