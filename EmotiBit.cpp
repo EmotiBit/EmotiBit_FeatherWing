@@ -1180,13 +1180,26 @@ uint8_t EmotiBit::update()
 
 		if (edaCorrection.correctionDataReady)
 		{
+			Serial.print("Estimated Rskin values BEFORE correction:|");
+			float RskinEst = 0;
+			for (int i = 0; i < edaCorrection.NUM_EDA_READINGS; i++)
+			{
+				RskinEst = (((edaCorrection.edaReadings[i] / vRef1) - 1)*edaFeedbackAmpR);
+				Serial.print(RskinEst); Serial.print(" | ");
+			}
 			vRef1 = edaCorrection.vRef1;
 			vRef2 = edaCorrection.vRef2;
 			edaFeedbackAmpR = edaCorrection.Rfb;
-			Serial.println("updated emotibit class with these values");
+			Serial.print("\nEstimated Rskin values AFTER correction: |");
+			for (int i = 0; i < edaCorrection.NUM_EDA_READINGS; i++)
+			{
+				RskinEst = (((edaCorrection.edaReadings[i] / vRef1) - 1)*edaFeedbackAmpR);
+				Serial.print(RskinEst); Serial.print(" | ");
+			}
 			if (edaCorrection.dummyWrite)
 			{
-				Serial.println("You can now use this EmotiBit without restarting to measure the EDA test rig values");
+				Serial.println("\nupdated emotibit class with these values");
+				Serial.println("\nYou can now use this EmotiBit without restarting to measure the EDA test rig values");
 			}
 			edaCorrection.correctionDataReady = false; // once the values are updated, we can set it to false to not enter this case again
 			edaCorrection.progress = EdaCorrection::Progress::FINISH;
