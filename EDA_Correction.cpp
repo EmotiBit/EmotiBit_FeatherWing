@@ -23,7 +23,9 @@ EdaCorrection::Status EdaCorrection::enterUpdateMode()
 	}
 	Serial.println("Initializing state machine. State: WAITING_FOR_SERIAL_DATA");
 	progress = EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA;
-	Serial.print("Once you have the appropriate data, please plug in the serial cable and enter the data.");
+	Serial.println("Once you have the appropriate data, please plug in the serial cable and enter the data.");
+	Serial.print("The input should be in the format:");
+	Serial.println("EDL_0R, EDL_10K, EDL_100K, EDL_1M, EDL_10M, vRef2_0R, vRef2_10K, vRef2_100K, vRef2_1M, vRef2_10M")
 	Serial.print("Proceeding with normal execution in\n");
 	uint8_t msgTimer = 5;
 	while (msgTimer > 0)
