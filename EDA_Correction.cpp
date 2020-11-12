@@ -392,7 +392,8 @@ EdaCorrection::Status EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c)
 			readOtpValues = true;
 			return EdaCorrection::Status::FAILURE;
 		}
-		
+		otpDataFormat = (EdaCorrection::OtpDataFormat)readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA);
+		emotiBitVersion = (EdaCorrection::EmotiBitVersion)readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA + 1);
 		for (uint8_t i = 0; i < NUM_EDL_READINGS; i++)
 		{
 			for (uint8_t j = 0; j < 4; j++)
