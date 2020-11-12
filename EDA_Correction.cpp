@@ -203,25 +203,8 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 				float floatValue;
 				char byte[4];// buffer to store the float in BYTE form
 			}data;
-#ifdef USE_ALT_SI7013
-			for (uint8_t i = 0; i < 2; i++)//count first 2 readings from the EDA array
-			{
-				data.floatValue = edaReadings[i];
-				for (uint8_t j = 0; j < 4; j++)// count 4 bytes
-				{
-					if (!isOtpRegWritten(emotiBit_i2c, SI_7013_OTP_ADDRESS_TEST_1 + 4 * i + j))
-					{
-						writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_TEST_1 + 4 * i + j, data.byte[j]);
-					}
-					else
-					{
-						triedRegOverwrite = true;
-						_mode = EdaCorrection::Mode::NORMAL;
-						return EdaCorrection::Status::FAILURE;
-					}
-				}
-			}
-#else
+
+#ifdef WRITE_MAIN_ADDRESS
 			for (uint8_t i = 0; i < NUM_EDA_READINGS; i++)
 			{
 				data.floatValue = edaReadings[i];
@@ -250,14 +233,51 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 			data.floatValue = vRef2_temp;
 			for (uint8_t j = 0; j < 4; j++)
 			{
-				writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_VREF2 + j, data.byte[j]);
+				if (!isOtpRegWritten(emotiBit_i2c, SI_7013_OTP_ADDRESS_VREF2 + j))
+				{
+					writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_VREF2 + j, data.byte[j]);
+				}
+				else
+				{
+					triedRegOverwrite = true;
+					_mode = EdaCorrection::Mode::NORMAL;
+					return EdaCorrection::Status::FAILURE;
+				}
 			}
 
 			// writing the metadata
-			writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA, DATA_FORMAT_VERSION);
-			writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA + 1, EMOTIBIT_VERSION);
+			if (!isOtpRegWritten(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA) && !isOtpRegWritten(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA + 1))
+			{
+				writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA, DATA_FORMAT_VERSION);
+				writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_METADATA + 1, EMOTIBIT_VERSION);
+			}
+			else
+			{
+				triedRegOverwrite = true;
+				_mode = EdaCorrection::Mode::NORMAL;
+				return EdaCorrection::Status::FAILURE;
+			}
+
+#else
+			
+			for (uint8_t i = 0; i < 2; i++)//count first 2 readings from the EDA array
+			{
+				data.floatValue = edaReadings[i];
+				for (uint8_t j = 0; j < 4; j++)// count 4 bytes
+				{
+					if (!isOtpRegWritten(emotiBit_i2c, SI_7013_OTP_ADDRESS_TEST_1 + 4 * i + j))
+					{
+						writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_TEST_1 + 4 * i + j, data.byte[j]);
+					}
+					else
+					{
+						triedRegOverwrite = true;
+						_mode = EdaCorrection::Mode::NORMAL;
+						return EdaCorrection::Status::FAILURE;
+					}
+				}
+			}
 #endif
-			// Serial.println("\n########OTP UPDATED. Exiting########");
 		}
 
 		// after writing to the OTP, the mode become normal

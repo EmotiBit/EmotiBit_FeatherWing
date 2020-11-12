@@ -52,6 +52,7 @@ NORMAL
 #include "Wire.h"
 
 #define USE_ALT_SI7013
+//#define WRITE_MAIN_ADDRESS
 #define SI_7013_I2C_ADDR_MAIN 0x40
 #define SI_7013_I2C_ADDR_ALT 0x41
 #define SI_7013_CMD_OTP_READ 0x84
