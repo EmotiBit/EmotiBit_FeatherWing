@@ -69,7 +69,7 @@ private:
 	bool _updateMode = false; // set when entered testing mode during production 
 	bool _approvedToWriteOtp = false; // indicated user's approval to write to the OTP
 	bool _responseRecorded = false;
-public:`
+public:
 	static const uint8_t NUM_EDL_READINGS = 5;
 	float edaReadings[NUM_EDL_READINGS] = { 0 };
 	float vref2Readings[NUM_EDL_READINGS];
