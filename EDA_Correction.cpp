@@ -293,15 +293,15 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 		{
 
 #ifdef ACCESS_MAIN_ADDRESS
-			for (uint8_t offset = 0; offset < OTP_SIZE_IN_USE; offset++)
+			// writing the metadata
+			if (writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_DATA_FORMAT, (uint8_t)otpDataFormat)   != EdaCorrection::Status::SUCCESS ||
+				writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION, (uint8_t)emotiBitVersion) != EdaCorrection::Status::SUCCESS)
 			{
-				if (writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EDL_TABLE + offset, correctionData.otpBuffer[offset]) != EdaCorrection::Status::SUCCESS)
-				{
-					triedRegOverwrite = true;
-					_mode = EdaCorrection::Mode::NORMAL;
-					return EdaCorrection::Status::FAILURE;
-				}
+				triedRegOverwrite = true;
+				_mode = EdaCorrection::Mode::NORMAL;
+				return EdaCorrection::Status::FAILURE;
 			}
+
 			// writing the vref 2 to OTP
 			otpData.inFloat = correctionData.vRef2;
 			for (uint8_t j = 0; j < 4; j++)
@@ -313,15 +313,17 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 					return EdaCorrection::Status::FAILURE;
 				}
 			}
-
-			// writing the metadata
-			if (writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_DATA_FORMAT, (uint8_t)otpDataFormat)   != EdaCorrection::Status::SUCCESS ||
-				writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION, (uint8_t)emotiBitVersion) != EdaCorrection::Status::SUCCESS)
+			// writing the main EDL values
+			for (uint8_t offset = 0; offset < OTP_SIZE_IN_USE; offset++)
 			{
-				triedRegOverwrite = true;
-				_mode = EdaCorrection::Mode::NORMAL;
-				return EdaCorrection::Status::FAILURE;
+				if (writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EDL_TABLE + offset, correctionData.otpBuffer[offset]) != EdaCorrection::Status::SUCCESS)
+				{
+					triedRegOverwrite = true;
+					_mode = EdaCorrection::Mode::NORMAL;
+					return EdaCorrection::Status::FAILURE;
+				}
 			}
+
 
 #else
 			
