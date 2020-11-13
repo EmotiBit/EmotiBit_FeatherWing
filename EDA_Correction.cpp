@@ -50,6 +50,8 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 	{
 		if (isOtpValid)// metadata presence is checked in the OTP read operation
 		{
+			Serial.print("The EmotiBit Version stored is: "); Serial.println((int)emotiBitVersion);
+			Serial.print("The data format version stored is: "); Serial.println((int)otpDataFormat);
 			calcEdaCorrection();
 		}
 		else
@@ -377,10 +379,10 @@ bool EdaCorrection::isOtpRegWritten(TwoWire* emotiBit_i2c, uint8_t addr)
 
 void EdaCorrection::displayCorrections()
 {
-	Serial.println("The values stored on the mock OTP are:");
+	Serial.println("EDL readings stored:");
 	for (int i = 0; i < NUM_EDL_READINGS; i++)
 	{
-		Serial.print("correctionData.edaReadings["); Serial.print(i); Serial.print("]: "); Serial.println(correctionData.edaReadings[i], 6);
+		Serial.print("edlReadings["); Serial.print(i); Serial.print("]: "); Serial.println(correctionData.edaReadings[i], 6);
 	}
 	Serial.println("### Calculating values ####\n");
 	Serial.print("Vref1: "); Serial.println(correctionData.vRef1, 6);

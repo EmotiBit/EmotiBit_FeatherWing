@@ -52,6 +52,7 @@ NORMAL
 #include "Wire.h"
 
 #define USE_ALT_SI7013
+//#define ACCESS_MAIN_ADDRESS
 #define SI_7013_CMD_OTP_READ 0x84
 #define SI_7013_CMD_OTP_WRITE 0xC5
 
@@ -116,7 +117,8 @@ public: // OTP addresses
 
 	enum class EmotiBitVersion
 	{
-		EMOTIBIT_VERSION_2 = 2
+		EMOTIBIT_V02H = 2,
+		NUM_VERSIONS
 	}emotiBitVersion;
 
 	enum class OtpDataFormat
