@@ -52,9 +52,6 @@ NORMAL
 #include "Wire.h"
 
 #define USE_ALT_SI7013
-//#define ACCESS_MAIN_ADDRESS
-//#define SI_7013_I2C_ADDR_MAIN 0x40
-//#define SI_7013_I2C_ADDR_ALT 0x41
 #define SI_7013_CMD_OTP_READ 0x84
 #define SI_7013_CMD_OTP_WRITE 0xC5
 
@@ -66,19 +63,26 @@ private:
 #else
 	uint8_t _si7013Addr = 0x40;// Address os SI7013 baked into emotibit
 #endif
-	bool _updateMode = false; // set when entered testing mode during production 
+	//bool _updateMode = false; // set when entered testing mode during production 
 	bool _approvedToWriteOtp = false; // indicated user's approval to write to the OTP
 	bool _responseRecorded = false;
 public:
 	static const uint8_t NUM_EDL_READINGS = 5;
-	float edaReadings[NUM_EDL_READINGS] = { 0 };
-	float vref2Readings[NUM_EDL_READINGS];
-	//float dummyEdaReadings[NUM_EDL_READINGS] = { 0 };
-	char  dummyOtp[20] = { 0 };
-	float trueRskin[NUM_EDL_READINGS] = { 0,10000.0,100000.0,1000000.0,10000000.0 };
-
-public:
-	float vRef1, vRef2, Rfb;
+	static const size_t MAX_OTP_SIZE = 54;
+	const uint8_t BYTES_PER_FLOAT = sizeof(float);
+#ifdef ACCESS_MAIN_ADDRESS
+	const size_t OTP_SIZE_IN_USE = 20; // Writing 5 floats into the OTP
+#else
+	const size_t OTP_SIZE_IN_USE = 8; // writin 2 floats into the memory
+#endif
+	struct CorrectionData {
+		float edaReadings[NUM_EDL_READINGS] = { 0 };
+		float vref2Readings[NUM_EDL_READINGS];
+		//float dummyEdaReadings[NUM_EDL_READINGS] = { 0 };
+		char  otpBuffer[MAX_OTP_SIZE] = { 0 };
+		float trueRskin[NUM_EDL_READINGS] = { 0,10000.0,100000.0,1000000.0,10000000.0 };
+		float vRef1, vRef2, Rfb;
+	}correctionData;
 
 public:// flags
 	bool isOtpValid = true;
@@ -90,18 +94,12 @@ public:// flags
 	bool correctionDataReady = false;
 
 public: // OTP addresses
-	//uint8_t EMOTIBIT_VERSION;
-	//uint8_t DATA_FORMAT_VERSION;
 	const uint8_t SI_7013_OTP_ADDRESS_EDL_TABLE = (uint8_t)0x82; // 0x82  
-	//const uint8_t SI_7013_OTP_ADDRESS_FLOAT_1 = (uint8_t)0x86; // 0x86
-	//const uint8_t SI_7013_OTP_ADDRESS_FLOAT_2 = (uint8_t)0x8A; // 0x8A
-	//const uint8_t SI_7013_OTP_ADDRESS_FLOAT_3 = (uint8_t)0x8E; // 0x8E
-	//const uint8_t SI_7013_OTP_ADDRESS_FLOAT_4 = (uint8_t)0x92; // 0x92
-	const uint8_t SI_7013_OTP_ADDRESS_METADATA = (uint8_t)0xB6;
 	const uint8_t SI_7013_OTP_ADDRESS_VREF2 = (uint8_t)0xB0;
+	const uint8_t SI_7013_OTP_ADDRESS_DATA_FORMAT = (uint8_t)0xB6;
+	const uint8_t SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION = (uint8_t)0xB7;
 #ifndef ACCESS_MAIN_ADDRESS
-	const uint8_t SI_7013_OTP_ADDRESS_TEST_1 = (uint8_t)0xA2;
-	const uint8_t SI_7013_OTP_ADDRESS_TEST_2 = (uint8_t)0xA6;
+	const uint8_t SI_7013_OTP_ADDRESS_TEST = (uint8_t)0xA2;
 #endif
 
 	enum class Status
@@ -125,6 +123,11 @@ public: // OTP addresses
 	{
 		DATA_FORMAT_0
 	}otpDataFormat;
+
+	union OtpData {
+		float inFloat;
+		char inByte[4];// buffer to store the float in BYTE form
+	}otpData;
 
 private:
 	Mode _mode = EdaCorrection::Mode::NORMAL;
@@ -225,4 +228,6 @@ public:
 	EdaCorrection::Status calcEdaCorrection();
 	
 	bool isOtpRegWritten(TwoWire* emotiBit_i2c, uint8_t addr);
+
+	void displayCorrections();
 };
