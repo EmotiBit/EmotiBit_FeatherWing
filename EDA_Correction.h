@@ -64,9 +64,9 @@ private:
 #else
 	uint8_t _si7013Addr = 0x40;// Address os SI7013 baked into emotibit
 #endif
-	//bool _updateMode = false; // set when entered testing mode during production 
-	bool _approvedToWriteOtp = false; // indicated user's approval to write to the OTP
+	bool _approvedToWriteOtp = false;
 	bool _responseRecorded = false;
+	uint8_t FLOAT_PRECISION = 7;
 public:
 	static const uint8_t NUM_EDL_READINGS = 5;
 	static const size_t MAX_OTP_SIZE = 54;
@@ -79,7 +79,6 @@ public:
 	struct CorrectionData {
 		float edaReadings[NUM_EDL_READINGS] = { 0 };
 		float vref2Readings[NUM_EDL_READINGS];
-		//float dummyEdaReadings[NUM_EDL_READINGS] = { 0 };
 		char  otpBuffer[MAX_OTP_SIZE] = { 0 };
 		float trueRskin[NUM_EDL_READINGS] = { 0,10000.0,100000.0,1000000.0,10000000.0 };
 		float vRef1, vRef2, Rfb;
@@ -166,7 +165,7 @@ public:
 	*/
 	EdaCorrection::Mode getMode();
 
-	void getFloatFromString();
+	EdaCorrection::Status getFloatFromString();
 
 	/*
 	usage: called in emotibit.update

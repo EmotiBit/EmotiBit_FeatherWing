@@ -106,13 +106,28 @@ EdaCorrection::Mode EdaCorrection::getMode()
 	return _mode;
 }
 
-void EdaCorrection::getFloatFromString()
+EdaCorrection::Status EdaCorrection::getFloatFromString()
 {
 	float input[2 * NUM_EDL_READINGS];
 	for (int i = 0; i < 2 * NUM_EDL_READINGS; i++)
 	{
-		String splitString = Serial.readStringUntil(',');
-		input[i] = splitString.toFloat();
+		if (Serial.available())
+		{
+			String splitString = Serial.readStringUntil(',');
+			input[i] = splitString.toFloat();
+		}
+		else // not enough data entered
+		{
+			Serial.println("Data input is less than expected");
+			return EdaCorrection::Status::FAILURE;
+		}
+	}
+	if (Serial.available()) // more data that should be parsed present.
+	{
+		Serial.println("Data input is more than expected");
+		while (Serial.available())
+			Serial.read();
+		return EdaCorrection::Status::FAILURE;
 	}
 
 	for (int i = 0; i < NUM_EDL_READINGS; i++)
@@ -130,6 +145,7 @@ void EdaCorrection::getFloatFromString()
 		correctionData.vRef2 += correctionData.vref2Readings[i];
 	}
 	correctionData.vRef2 = correctionData.vRef2 / NUM_EDL_READINGS;
+	return EdaCorrection::Status::SUCCESS;
 }
 
 EdaCorrection::Status EdaCorrection::monitorSerial()
@@ -141,9 +157,17 @@ EdaCorrection::Status EdaCorrection::monitorSerial()
 		{
 			//ToDo: implement a check if the input is indeed 5 float values
 			Serial.println("Serial data detected. Reading from Serial");
-			getFloatFromString();
-			echoEdaReadingsOnScreen();
-			progress = EdaCorrection::Progress::WAITING_USER_APPROVAL;
+			if (getFloatFromString() != EdaCorrection::Status::SUCCESS)
+			{
+				Serial.println("Please check and enter again");
+				Serial.println("Expected Format");
+				Serial.println("EDL_0R, EDL_10K, EDL_100K, EDL_1M, EDL_10M, vRef2_0R, vRef2_10K, vRef2_100K, vRef2_1M, vRef2_10M");
+			}
+			else
+			{
+				echoEdaReadingsOnScreen();
+				progress = EdaCorrection::Progress::WAITING_USER_APPROVAL;
+			}
 		}
 	}
 	else if (progress == EdaCorrection::Progress::WAITING_USER_APPROVAL)
@@ -180,14 +204,14 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 	Serial.println("EDL readings:");
 	for (int i = 0; i < NUM_EDL_READINGS; i++)
 	{
-		Serial.print(correctionData.edaReadings[i], 6); Serial.print("\t");
+		Serial.print(correctionData.edaReadings[i], FLOAT_PRECISION); Serial.print("\t");
 	}
 	Serial.println("\nVref2 readings:");
 	for (int i = 0; i < NUM_EDL_READINGS; i++)
 	{
-		Serial.print(correctionData.vref2Readings[i], 6); Serial.print("\t");
+		Serial.print(correctionData.vref2Readings[i], FLOAT_PRECISION); Serial.print("\t");
 	}
-	Serial.print("\nAvg Vref2 :"); Serial.println(correctionData.vRef2, 6);
+	Serial.print("\nAvg Vref2 :"); Serial.println(correctionData.vRef2, FLOAT_PRECISION);
 	//_EdaReadingsPrinted = true;
 	Serial.println("\nProceed with these values?");
 	Serial.println("Enter Y for yes and N to enter data again");
