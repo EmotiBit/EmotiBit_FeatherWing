@@ -72,9 +72,9 @@ public:
 	static const size_t MAX_OTP_SIZE = 54;
 	const uint8_t BYTES_PER_FLOAT = sizeof(float);
 #ifdef ACCESS_MAIN_ADDRESS
-	const size_t OTP_SIZE_IN_USE = 20; // Writing 5 floats into the OTP
+	const size_t OTP_SIZE_IN_USE = NUM_EDL_READINGS * BYTES_PER_FLOAT; // Writing 5 floats into the OTP
 #else
-	const size_t OTP_SIZE_IN_USE = 4; // writin 2 floats into the memory
+	const size_t OTP_SIZE_IN_USE = 8; // writing 2 floats into the memory
 #endif
 	struct CorrectionData {
 		float edlReadings[NUM_EDL_READINGS] = { 0 };
@@ -99,7 +99,7 @@ public: // OTP addresses
 	const uint8_t SI_7013_OTP_ADDRESS_DATA_FORMAT = (uint8_t)0xB6;
 	const uint8_t SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION = (uint8_t)0xB7;
 #ifndef ACCESS_MAIN_ADDRESS
-	const uint8_t SI_7013_OTP_ADDRESS_TEST = (uint8_t)0xA2;
+	const uint8_t SI_7013_OTP_ADDRESS_TEST = (uint8_t)0xA0;
 #endif
 
 	enum class Status
@@ -116,7 +116,7 @@ public: // OTP addresses
 
 	enum class EmotiBitVersion
 	{
-		EMOTIBIT_V02H = 2,
+		EMOTIBIT_V02H = 0,
 		NUM_VERSIONS
 	}emotiBitVersion;
 

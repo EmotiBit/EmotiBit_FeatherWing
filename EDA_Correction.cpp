@@ -1,6 +1,5 @@
 #include "EDA_Correction.h"
 
-
 EdaCorrection::Status EdaCorrection::enterUpdateMode(EdaCorrection::EmotiBitVersion version, EdaCorrection::OtpDataFormat dataFormat)
 {
 	
@@ -48,7 +47,7 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 	// the correction values should be generated in the update function outside the ISR,
 	// to reduce the load on the ISR
 	// call calcCorrection
-	if (readOtpValues && !calculationPerformed)
+	if (readOtpValues && !correctionDataReady)
 	{
 		if (isOtpValid)// metadata presence is checked in the OTP read operation
 		{
@@ -61,7 +60,6 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 			Serial.println("OTP has not been updated. Not performing correction calculation.");
 			Serial.println("Perform EDA correction first.");
 			Serial.println("Using EDA with correction");
-			//edaCorrection.calculationPerformed = true;
 			progress = EdaCorrection::Progress::FINISH;
 		}
 	}
@@ -72,7 +70,6 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 		Serial.println("You are trying to overwrite a register, which is not allowed.");
 		Serial.println("Aborting OTP R/W operations");
 		Serial.println("Please check the OTP state before trying to write again");
-		//edaCorrection.triedRegOverwrite = false;// out of UPDATE mode, so this will not affect write Operations
 		progress = EdaCorrection::Progress::FINISH;// prevents re-enterin normal mode operations
 	}
 
@@ -186,6 +183,12 @@ EdaCorrection::Status EdaCorrection::monitorSerial()
 			if (getApprovalStatus() == true)
 			{
 				Serial.println("#### GOT APPROVAL ####");
+				if (!dummyWrite)
+				{
+					Serial.println(".....");
+					Serial.println("Writing to the OTP");
+					Serial.println("...");
+				}
 				progress = EdaCorrection::Progress::WRITING_TO_OTP;
 			}
 			else
@@ -326,7 +329,6 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 
 
 #else
-			
 			for (uint8_t i = 0; i < OTP_SIZE_IN_USE; i++)// 8 or 20 depending on the main address space access or aux addr. space access
 			{
 				if (writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_TEST + i, correctionData.otpBuffer[i]) != EdaCorrection::Status::SUCCESS)
@@ -392,6 +394,18 @@ EdaCorrection::Status EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c)
 			correctionData.edlReadings[i] = otpData.inFloat;
 		}
 	}
+	else
+	{
+		for (uint8_t i = 0; i < NUM_EDL_READINGS; i++)
+		{
+			correctionData.edlReadings[i] = 0;
+			for (uint8_t j = 0; j < BYTES_PER_FLOAT; j++)
+			{
+				otpData.inByte[j] = correctionData.otpBuffer[4 * i + j];
+			}
+			correctionData.edlReadings[i] = otpData.inFloat;
+		}
+	}
 	readOtpValues = true;
 }
 
@@ -449,9 +463,10 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection()
 			Serial.print("correctionData.edlReadings["); Serial.print(i); Serial.print("]: "); Serial.println(correctionData.edlReadings[i], 6);
 		}
 		progress = EdaCorrection::Progress::FINISH;// prevets the emotiBit class variables to be updated in normalModeoperations()
+		correctionDataReady = false;
 #endif
 	}
 
-	calculationPerformed = true;
+	//calculationPerformed = true;
 }
 
