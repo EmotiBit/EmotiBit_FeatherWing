@@ -147,26 +147,22 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	{
 		char input;
 		input = Serial.read();
-		_debugMode = true;
-		Serial.println("\nENTERING DEBUG MODE\n");
 		
 		if (input == 'A')
 		{
-			Serial.println("entered ADC Correction Mode");
-			//digitalWrite(LED_BUILTIN, LOW);
-			Serial.println("If you are not a tester, please exit this mode by pressing Q");
-			Serial.println("If you are a tester, make sure the correction rig is in place and press A");
+			Serial.println("################################");
+			Serial.println("#####  ADC Correction Mode  ####");
+			Serial.println("################################\n");
+			Serial.println("IF YOU ARE A TESTER, press A to continue");
+			Serial.println("Press any other key to exit");
 			while (!Serial.available());
-			if (Serial.read() == 'Q')
+			if (Serial.read() != 'A')
 			{
 				Serial.println("Exiting special provision ADC Correction mode");
-				// ToDo:Fix below line. Using this pin shuts off the emotibti when it proceeds with setup
-				//digitalWrite(LED_BUILTIN, HIGH); 
 				break;
 			}
 			else
 			{	
-				_debugMode = false;
 				analogReadResolution(12); // Setting ADC resolution to 12 bits
 				samdStorageAdcValues = samdFlashStorage.read();
 				if (!samdStorageAdcValues.valid)
@@ -176,10 +172,24 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 #endif
 					Serial.println("Make sure the battery is connected to the feather.");
 					Serial.println("Enter any character. Then remove the USB cable and plug after when the Feather LED blinks");
+					Serial.println("ADC Correction Steps:");
+					Serial.println("  * Make sure the battery is connected to the feather");
+					Serial.println("  * Enter any character to initiate correction measurements");
+					Serial.println("  * Then immediately remove the USB cable");
+					Serial.println("  * After the Feather LED blinks re-plug the USB cable to obtain correction results and continue");
+					Serial.println("Enter any key to begin...");
 					while (!Serial.available()); Serial.read();
-					uint32_t timeCurrent = millis();
-					while (millis() - timeCurrent < 2000);
-					digitalWrite(LED_BUILTIN, HIGH);
+					//uint32_t timeCurrent = millis();
+					//while (millis() - timeCurrent < 2000);
+					//digitalWrite(LED_BUILTIN, HIGH);
+					Serial.println("** UNPLUG USB CABLE within 5 seconds to obtain accurate measurements **");
+					for (int i = 5; i > 0; i--)
+						{
+							Serial.print(i); Serial.print(" "); delay(1000);
+						}
+					Serial.println("\nIF YOU SEE THIS MESSAGE, YOUR MEASUREMENTS MAY BE INACCURATE...");
+					Serial.println("You should re-run ADC calibration...");
+
 					AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::VER_0, AdcCorrection::DataFormatVersion::DATA_FORMAT_0);
 					adcCorrection.begin();
 #ifdef ADC_CORRECTION_VERBOSE
@@ -212,6 +222,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 					adcAfterCorrection[1] = analogRead(A1);
 					adcAfterCorrection[2] = analogRead(A2);
 					
+					uint32_t timeCurrent = millis();
 					digitalWrite(LED_BUILTIN, LOW);
 					while (!Serial.available())
 					{
@@ -282,13 +293,20 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 				}
 				else
 				{
-					Serial.println("data exists on the samd flash");
+					Serial.println("Data already exists on the samd flash.");
+					Serial.println("This indicates that the correction was already performed.");
+					Serial.println("THe AT-WINC flash has the correction values.");
 					Serial.println("No R/W actions performed on the AT-WINC flash");
 					Serial.println("reading from the samd flash");
 					Serial.print("Gain correction:"); Serial.println(samdStorageAdcValues._gainCorrection);
 					Serial.print("offset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
 				}
 			}
+		}
+		else
+		{
+			_debugMode = true;
+			Serial.println("\nENTERING DEBUG MODE\n");
 		}
 	}
 
