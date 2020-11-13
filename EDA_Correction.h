@@ -74,10 +74,10 @@ public:
 #ifdef ACCESS_MAIN_ADDRESS
 	const size_t OTP_SIZE_IN_USE = 20; // Writing 5 floats into the OTP
 #else
-	const size_t OTP_SIZE_IN_USE = 8; // writin 2 floats into the memory
+	const size_t OTP_SIZE_IN_USE = 4; // writin 2 floats into the memory
 #endif
 	struct CorrectionData {
-		float edaReadings[NUM_EDL_READINGS] = { 0 };
+		float edlReadings[NUM_EDL_READINGS] = { 0 };
 		float vref2Readings[NUM_EDL_READINGS];
 		char  otpBuffer[MAX_OTP_SIZE] = { 0 };
 		float trueRskin[NUM_EDL_READINGS] = { 0,10000.0,100000.0,1000000.0,10000000.0 };

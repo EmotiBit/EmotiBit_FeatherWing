@@ -8,20 +8,22 @@ EdaCorrection::Status EdaCorrection::enterUpdateMode(EdaCorrection::EmotiBitVers
 	_mode = EdaCorrection::Mode::UPDATE;
 	emotiBitVersion = version;
 	otpDataFormat = dataFormat;
-	Serial.print("\n**Enter Dummy mode?**\n"); Serial.println("\tPress Y to work in dummy mode, N to actually write to OTP");
+	Serial.print("\nPress X to perform Actual OTP R/W\n");
+	Serial.println("Press any other key to default into DUMMY MODE");
 	while (!Serial.available());
-	if (Serial.read() == 'Y')
+	char choice = Serial.read();
+	if(choice == 'X')
+	{
+		Serial.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+		Serial.println("!!!! Actually writing to the OTP  !!!!");
+		Serial.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+	}
+	else
 	{
 		dummyWrite = true;
 		Serial.println("###################");
 		Serial.println("## IN DUMMY MODE ##");
 		Serial.println("###################");
-	}
-	else
-	{
-		Serial.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-		Serial.println("!!!! Actually writing to the OTP  !!!!");
-		Serial.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 	}
 	Serial.println("Initializing state machine. State: WAITING_FOR_SERIAL_DATA");
 	progress = EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA;
@@ -68,7 +70,8 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 	if (triedRegOverwrite)
 	{
 		Serial.println("You are trying to overwrite a register, which is not allowed.");
-		Serial.println("Please verify write operations");
+		Serial.println("Aborting OTP R/W operations");
+		Serial.println("Please check the OTP state before trying to write again");
 		//edaCorrection.triedRegOverwrite = false;// out of UPDATE mode, so this will not affect write Operations
 		progress = EdaCorrection::Progress::FINISH;// prevents re-enterin normal mode operations
 	}
@@ -79,7 +82,7 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 		float RskinEst = 0;
 		for (int i = 0; i < NUM_EDL_READINGS; i++)
 		{
-			RskinEst = (((correctionData.edaReadings[i] / vref1) - 1)*Rfeedback);
+			RskinEst = (((correctionData.edlReadings[i] / vref1) - 1)*Rfeedback);
 			Serial.print(RskinEst); Serial.print(" | ");
 		}
 		vref1 = correctionData.vRef1;// updated vref1
@@ -88,7 +91,7 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 		Serial.print("\nEstimated Rskin values AFTER correction: |");
 		for (int i = 0; i < NUM_EDL_READINGS; i++)
 		{
-			RskinEst = (((correctionData.edaReadings[i] / vref1) - 1)*Rfeedback);
+			RskinEst = (((correctionData.edlReadings[i] / vref1) - 1)*Rfeedback);
 			Serial.print(RskinEst); Serial.print(" | ");
 		}
 		if (dummyWrite)
@@ -132,7 +135,7 @@ EdaCorrection::Status EdaCorrection::getFloatFromString()
 
 	for (int i = 0; i < NUM_EDL_READINGS; i++)
 	{
-		correctionData.edaReadings[i] = input[i];
+		correctionData.edlReadings[i] = input[i];
 	}
 
 	for (int i = NUM_EDL_READINGS; i < 2 * NUM_EDL_READINGS; i++)
@@ -145,6 +148,8 @@ EdaCorrection::Status EdaCorrection::getFloatFromString()
 		correctionData.vRef2 += correctionData.vref2Readings[i];
 	}
 	correctionData.vRef2 = correctionData.vRef2 / NUM_EDL_READINGS;
+	// Serial.print("The vref2 avg at point of input is:");
+	// Serial.println(correctionData.vRef2,6);
 	return EdaCorrection::Status::SUCCESS;
 }
 
@@ -204,7 +209,7 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 	Serial.println("EDL readings:");
 	for (int i = 0; i < NUM_EDL_READINGS; i++)
 	{
-		Serial.print(correctionData.edaReadings[i], FLOAT_PRECISION); Serial.print("\t");
+		Serial.print(correctionData.edlReadings[i], FLOAT_PRECISION); Serial.print("\t");
 	}
 	Serial.println("\nVref2 readings:");
 	for (int i = 0; i < NUM_EDL_READINGS; i++)
@@ -270,14 +275,14 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c, uint8_t a
 EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 { 
 
-		for (int i = 0; i < NUM_EDL_READINGS; i++)
+	for (int i = 0; i < NUM_EDL_READINGS; i++)
+	{
+		otpData.inFloat = correctionData.edlReadings[i];
+		for (int j = 0; j < 4; j++)
 		{
-			otpData.inFloat = correctionData.edaReadings[i];
-			for (int j = 0; j < 4; j++)
-			{
-				correctionData.otpBuffer[i * 4 + j] = otpData.inByte[j];
-			}
+			correctionData.otpBuffer[i * 4 + j] = otpData.inByte[j];
 		}
+	}
 	if (dummyWrite)
 	{
 		_mode = EdaCorrection::Mode::NORMAL;
@@ -320,7 +325,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 
 #else
 			
-			for (uint8_t i = 0; i < OTP_SIZE_IN_USE; i++)//count first 2 readings from the EDA array
+			for (uint8_t i = 0; i < OTP_SIZE_IN_USE; i++)// 8 or 20 depending on the main address space access or aux addr. space access
 			{
 				if (writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_TEST + i, correctionData.otpBuffer[i]) != EdaCorrection::Status::SUCCESS)
 				{
@@ -382,7 +387,7 @@ EdaCorrection::Status EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c)
 				otpData.inByte[j] = readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_TEST + BYTES_PER_FLOAT * i + j);
 #endif
 			}
-			correctionData.edaReadings[i] = otpData.inFloat;
+			correctionData.edlReadings[i] = otpData.inFloat;
 		}
 	}
 	readOtpValues = true;
@@ -406,7 +411,7 @@ void EdaCorrection::displayCorrections()
 	Serial.println("EDL readings stored:");
 	for (int i = 0; i < NUM_EDL_READINGS; i++)
 	{
-		Serial.print("edlReadings["); Serial.print(i); Serial.print("]: "); Serial.println(correctionData.edaReadings[i], 6);
+		Serial.print("edlReadings["); Serial.print(i); Serial.print("]: "); Serial.println(correctionData.edlReadings[i], 6);
 	}
 	Serial.println("### Calculating values ####\n");
 	Serial.print("Vref1: "); Serial.println(correctionData.vRef1, 6);
@@ -417,11 +422,11 @@ void EdaCorrection::displayCorrections()
 
 EdaCorrection::Status EdaCorrection::calcEdaCorrection()
 {
-	correctionData.vRef1 = correctionData.edaReadings[0];
+	correctionData.vRef1 = correctionData.edlReadings[0];
 	correctionData.Rfb = 0;
 	for (int i = 1; i < 4; i++)
 	{
-		correctionData.Rfb += (correctionData.trueRskin[i] / ((correctionData.edaReadings[i] / correctionData.vRef1) - 1)); // use the EDl @10K, @100K, @1M
+		correctionData.Rfb += (correctionData.trueRskin[i] / ((correctionData.edlReadings[i] / correctionData.vRef1) - 1)); // use the EDl @10K, @100K, @1M
 	}
 	correctionData.Rfb = correctionData.Rfb / 3;// taking avg of 3 readings
 	if (dummyWrite)
@@ -437,11 +442,11 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection()
 		correctionDataReady = true;
 #else
 		Serial.println("No claculations performed. Just reading values read from the OTP of the Alternate SI chip.");
-		for (int i = 0; i < 2; i++)
+		for (int i = 0; i < OTP_SIZE_IN_USE/ BYTES_PER_FLOAT; i++)
 		{
-			Serial.print("correctionData.edaReadings["); Serial.print(i); Serial.print("]: "); Serial.println(correctionData.edaReadings[i], 6);
+			Serial.print("correctionData.edlReadings["); Serial.print(i); Serial.print("]: "); Serial.println(correctionData.edlReadings[i], 6);
 		}
-		progress = EdaCorrection::Progress::FINISH;
+		progress = EdaCorrection::Progress::FINISH;// prevets the emotiBit class variables to be updated in normalModeoperations()
 #endif
 	}
 
