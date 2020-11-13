@@ -300,6 +300,7 @@ bool AdcCorrection::calcCorrectionValues()
 			Serial.print("\nslope in floating point is: "); Serial.println(slope, 6);
 			Serial.print("gainCorr in float: "); Serial.println(2048 / slope, 6);
 #endif
+			// link to formula: http://ww1.microchip.com/downloads/en/DeviceDoc/90003185A.pdf
 			offsetCorr = (int16_t)(adcLowMeasured - (slope * adcLowIdeal));
 			if (offsetCorr < 0)
 			{
@@ -356,6 +357,8 @@ void AdcCorrection::readAdcPins()
 
 }
 
+
+// refer smoothing function: https://www.arduino.cc/en/Tutorial/BuiltInExamples/Smoothing
 int AdcCorrection::getAverageAnalogInput(uint8_t inputPin)
 {
 	//ToDo: Add a LED indication to help tester with execution

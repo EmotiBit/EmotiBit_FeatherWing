@@ -10,8 +10,8 @@ Bootup
 		(the highPrecisionRig is plugged in with the emotibit)
 		1. Read the values on the analog pins
 		2. At this point, we have:
-			1. N-array: stored in the code
-			2. D-array: stored in the code
+			1. N-array: stored in the code - N array stores the numerator of the resistor divider
+			2. D-array: stored in the code - D array stores the denomenator of the resistor divider
 			3. ADCvalues: read in the previous step
 		3. The whole HighPrecisionRig struct is populated
 		4. call the updateAtwincDataArray function
@@ -41,9 +41,29 @@ Bootup
 							1. No need to store in the SD-Card
 					2. [FAIL INTEGRITY check] Contant info@emotiBit
 Changes:
-1. drop locRigVer
 */
-
+// Refer WiFi101/src/spi_flash/include/spi_flash.h for more information on the SPI flash.
+// below is the flash map on the AT-WINC taken from spi_flash.h
+/*
+* Detailed Sizes and locations for Flash Memory:
+ *  ____________________ ___________ ____________________________________________________________________________
+ * | Starting Address	|	Size	|	Location's Name			|	Description						   			|
+ * |____________________|___________|___________________________|_______________________________________________|
+ * |	  0 K  			|	  4	K	| 	Boot Firmware			|	Firmware to select which version to run		|
+ * |	  4	K 			|	  8 K	|	Control Section			|	Structured data used by Boot firmware		|
+ * |	 12 K			|     4	K	|	PLL+GAIN :				|	LookUp Table for PLL and Gain calculations	|
+ * |	  				|     		|	PLL  Size = 1K			|		PLL				 						|
+ * |	  				|     		|	GAIN Size = 3K			|		Gain configuration				 		|
+ * |	 16	K			|	  4	K	|	CERTIFICATE				|	X.509 Certificate storage					|
+ * |	 20	K			|	  8	K	|	TLS Server				|	TLS Server Private Key and certificates		|
+ * |	 28	K			|	  8	K	|	HTTP Files				|	Files used with Provisioning Mode			|
+ * |	 36	K			|	  4	K	|	Connection Parameters	|	Parameters for success connection to AP		|
+ * |	 40	K			|	236 K 	|	Main Firmware/program	|	Main Firmware to run WiFi Chip				|
+ * |	276	K			|	236 K	|	OTA Firmware		    |	OTA firmware								|
+ * |    512 K                                                       Total flash size							|
+ * |____________________|___________|___________________________|_______________________________________________|
+ *
+*/
 #include "Arduino.h"
 #include <WiFI101.h>
 #include "spi_flash/include/spi_flash.h"
