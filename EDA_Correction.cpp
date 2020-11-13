@@ -1,5 +1,23 @@
 #include "EDA_Correction.h"
 
+
+void EdaCorrection::begin()
+{
+	Serial.println("################################");
+	Serial.println("#####  EDA Correction Mode  ####");
+	Serial.println("################################\n");
+	Serial.println("If you are an EmotiBit Tester, enter A to continue.");
+	Serial.println("Otherwise enter any key to exit EDA Correction Mode");
+	while (!Serial.available());
+	char choice = Serial.read();
+	if (choice == 'A')
+	{
+		EdaCorrection::Status status;
+		status = enterUpdateMode(EdaCorrection::EmotiBitVersion::EMOTIBIT_V02H, EdaCorrection::OtpDataFormat::DATA_FORMAT_0);
+	}
+	
+}
+
 EdaCorrection::Status EdaCorrection::enterUpdateMode(EdaCorrection::EmotiBitVersion version, EdaCorrection::OtpDataFormat dataFormat)
 {
 	

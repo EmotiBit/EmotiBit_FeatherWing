@@ -149,6 +149,7 @@ public:
 
 public:
 
+	void begin();
 
 	/*
 	usage: called in emotibit.setup(). Once called, it enables the emotibit to keep sensing the Serial on ever "loop" 
