@@ -232,6 +232,30 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 					{
 						Serial.print(","); Serial.print(tempData[i]);
 					}
+					Serial.print(",");
+					WiFi.setPins(8, 7, 4, 2);
+					WiFi.init();
+					uint8_t atwincMacAddr[6], atwincMacValid;
+					m2m_wifi_get_otp_mac_address(atwincMacAddr, &atwincMacValid);
+					if (atwincMacValid)
+					{
+						for (int i = 0; i < 6; i++)
+						{
+							if (atwincMacAddr[i] <= 16)
+							{
+								Serial.print("0");
+							}
+							Serial.print(atwincMacAddr[i], HEX);
+
+						}
+					}
+					else
+					{
+						Serial.println("INVALID_MAC");
+					}
+					Serial.print(",");
+					adcCorrection.printChipId();
+					WiFi.end();
 					Serial.println("\n==============================================");
 #ifdef ADC_CORRECTION_VERBOSE
 					Serial.println("\ntesting AT-WINC flash read");

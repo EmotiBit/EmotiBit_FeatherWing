@@ -466,3 +466,22 @@ AdcCorrection::Status AdcCorrection::atwincFlashIntegrityCheck()
 	}
 	return AdcCorrection::Status::SUCCESS;
 }
+
+// refer SAMD21 datasheeet section 10.3.3 : http://ww1.microchip.com/downloads/en/DeviceDoc/SAM_D21_DA1_Family_DataSheet_DS40001882F.pdf
+// refer https://gist.github.com/mgk/c9ec87436d2d679e5d08
+void AdcCorrection::printChipId()
+{
+	volatile uint32_t val1, val2, val3, val4;
+	volatile uint32_t *ptr1 = (volatile uint32_t *)0x0080A00C;
+	val1 = *ptr1;
+	volatile uint32_t *ptr = (volatile uint32_t *)0x0080A040;
+	val2 = *ptr;
+	ptr++;
+	val3 = *ptr;
+	ptr++;
+	val4 = *ptr;
+	Serial.print("0x");
+	char buf[33];
+	sprintf(buf, "%8x%8x%8x%8x", val1, val2, val3, val4);
+	Serial.println(buf);
+}

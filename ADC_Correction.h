@@ -272,5 +272,7 @@ public:
 	AdcCorrection::Status initWifiModule();
 
 	AdcCorrection::Status atwincFlashIntegrityCheck();
+
+	void printChipId();
 };
 
