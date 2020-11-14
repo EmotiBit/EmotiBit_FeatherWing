@@ -163,8 +163,16 @@ EdaCorrection::Status EdaCorrection::getFloatFromString()
 		correctionData.vRef2 += correctionData.vref2Readings[i];
 	}
 	correctionData.vRef2 = correctionData.vRef2 / NUM_EDL_READINGS;
-	// Serial.print("The vref2 avg at point of input is:");
-	// Serial.println(correctionData.vRef2,6);
+	
+	// updating the inClass otpBuffer.
+	for (int i = 0; i < NUM_EDL_READINGS; i++)
+	{
+		otpData.inFloat = correctionData.edlReadings[i];
+		for (int j = 0; j < 4; j++)
+		{
+			correctionData.otpBuffer[i * 4 + j] = otpData.inByte[j];
+		}
+	}
 	return EdaCorrection::Status::SUCCESS;
 }
 
@@ -239,6 +247,23 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 	}
 	Serial.print("\nAvg Vref2 :"); Serial.println(correctionData.vRef2, FLOAT_PRECISION);
 	//_EdaReadingsPrinted = true;
+
+	Serial.println("This is how the OTP is going to be updated.");
+		
+	for (int i = (int)SI_7013_OTP_ADDRESS_EDL_TABLE,j=0; i < (int)SI_7013_OTP_ADDRESS_EDL_TABLE + OTP_SIZE_IN_USE; i++, j++)
+	{
+		Serial.print("0x"); Serial.print(i, HEX); Serial.print(" : "); 
+		Serial.print(correctionData.otpBuffer[i - (int)SI_7013_OTP_ADDRESS_EDL_TABLE], DEC);
+		if (j % 4 == 0)
+		{
+			Serial.print(" - "); Serial.println(correctionData.edlReadings[j/4], FLOAT_PRECISION);
+		}
+		else
+		{
+			Serial.println();
+		}
+	}
+
 	Serial.println("\nProceed with these values?");
 	Serial.println("Enter Y for yes and N to enter data again");
 
@@ -296,14 +321,14 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c, uint8_t a
 EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 { 
 
-	for (int i = 0; i < NUM_EDL_READINGS; i++)
+	/*for (int i = 0; i < NUM_EDL_READINGS; i++)
 	{
 		otpData.inFloat = correctionData.edlReadings[i];
 		for (int j = 0; j < 4; j++)
 		{
 			correctionData.otpBuffer[i * 4 + j] = otpData.inByte[j];
 		}
-	}
+	}*/
 	if (dummyWrite)
 	{
 		_mode = EdaCorrection::Mode::NORMAL;
