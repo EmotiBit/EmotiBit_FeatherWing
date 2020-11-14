@@ -248,7 +248,10 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 	Serial.print("\nAvg Vref2 :"); Serial.println(correctionData.vRef2, FLOAT_PRECISION);
 	//_EdaReadingsPrinted = true;
 
-	Serial.println("This is how the OTP is going to be updated.");
+	Serial.println("\nIf you are in Dummy mode, NO OTP R/W ACTIONS WILL BE PERFORMED");
+	Serial.println("This is how the OTP is will be updated(If NOT IN DUMMY MODE)");
+	Serial.println("You can change R/W locations in OTP by toggling ACCESS_MAIN_ADDRESS\n");
+
 #ifdef ACCESS_MAIN_ADDRESS
 	uint8_t startAddr = SI_7013_OTP_ADDRESS_EDL_TABLE;
 #else
