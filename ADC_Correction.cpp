@@ -275,7 +275,7 @@ bool AdcCorrection::calcCorrectionValues()
 	//{
 		if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
 		{
-			uint16_t offsetCorr = 0, gainCorr = 0;
+			int16_t offsetCorr = 0, gainCorr = 0;
 			float slope;
 			uint8_t dataArrayNoffset = 0, dataArrayDoffset = 1, dataArrayAdcMsbOffset = 2, dataArrayAdcLsbOffset = 3;
 			uint8_t AdcHighMem[2]; // Adc High value - [MSB] [LSB] 
@@ -304,11 +304,11 @@ bool AdcCorrection::calcCorrectionValues()
 			offsetCorr = (int16_t)(adcLowMeasured - (slope * adcLowIdeal));
 			if (offsetCorr < 0)
 			{
-				offsetCorr = 2048 + offsetCorr + 1;
+				offsetCorr = 4095 + offsetCorr + 1;
 			}
 			gainCorr = round((2048 / slope));
-			setGainCorrection(gainCorr);
-			setOffsetCorrection(offsetCorr);
+			setGainCorrection((uint16_t)gainCorr);
+			setOffsetCorrection((uint16_t)offsetCorr);
 #ifdef ADC_CORRECTION_VERBOSE
 			Serial.print("GainCorr:"); Serial.print(gainCorr);
 			Serial.print("\toffsetCorr:"); Serial.println(offsetCorr);
