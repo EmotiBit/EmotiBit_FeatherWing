@@ -78,10 +78,10 @@ public:
 #endif
 	struct CorrectionData {
 		float edlReadings[NUM_EDL_READINGS] = { 0 };
-		float vref2Readings[NUM_EDL_READINGS];
+		float vref2Readings[NUM_EDL_READINGS] = { 0 };
 		char  otpBuffer[MAX_OTP_SIZE] = { 0 };
 		float trueRskin[NUM_EDL_READINGS] = { 0,10000.0,100000.0,1000000.0,10000000.0 };
-		float vRef1, vRef2, Rfb;
+		float vRef1 = 0, vRef2= 0, Rfb= 0;
 	}correctionData;
 
 public:// flags

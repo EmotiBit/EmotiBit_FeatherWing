@@ -183,7 +183,6 @@ EdaCorrection::Status EdaCorrection::monitorSerial()
 	{
 		if (Serial.available())
 		{
-			//ToDo: implement a check if the input is indeed 5 float values
 			Serial.println("Serial data detected. Reading from Serial");
 			if (getFloatFromString() != EdaCorrection::Status::SUCCESS)
 			{
@@ -219,7 +218,19 @@ EdaCorrection::Status EdaCorrection::monitorSerial()
 			}
 			else
 			{
-				//ToDo: user denied writing to OTP
+				// clearing all class members with old values
+				for (int i = 0; i < MAX_OTP_SIZE; i++)
+				{
+					correctionData.otpBuffer[i] = 0;
+				}
+				correctionData.vRef1 = 0; correctionData.vRef2 = 0; correctionData.Rfb = 0;
+				for (int i = 0; i < NUM_EDL_READINGS; i++)
+				{
+					correctionData.edlReadings[i] = 0;
+					correctionData.vref2Readings[i] = 0;
+				}
+				
+				// ask to enter the second time 
 				Serial.println("back to Progress::WAITING_FOR_SERIAL_DATA");
 				Serial.println("Enter the eda values into the serial monitor");
 				progress = EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA;
