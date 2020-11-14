@@ -254,7 +254,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		}
 		else if (input == 'E')
 		{
-			edaCorrection.begin();
+			Serial.print("\n\nEmotiBit Version for EDA correction:"); Serial.println(getHardwareVersion());
+			edaCorrection.begin((uint8_t)_version);
 		}
 		else
 		{

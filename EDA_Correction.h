@@ -67,6 +67,7 @@ private:
 	bool _approvedToWriteOtp = false;
 	bool _responseRecorded = false;
 	uint8_t FLOAT_PRECISION = 7;
+	uint8_t _emotiBitVersion;
 public:
 	static const uint8_t NUM_EDL_READINGS = 5;
 	static const size_t MAX_OTP_SIZE = 54;
@@ -114,11 +115,11 @@ public: // OTP addresses
 		UPDATE
 	};
 
-	enum class EmotiBitVersion
+	/*enum class EmotiBitVersion
 	{
 		EMOTIBIT_V02H = 0,
 		NUM_VERSIONS
-	}emotiBitVersion;
+	}emotiBitVersion;*/
 
 	enum class OtpDataFormat
 	{
@@ -149,13 +150,13 @@ public:
 
 public:
 
-	void begin();
+	void begin(uint8_t emotiBitVersion);
 
 	/*
 	usage: called in emotibit.setup(). Once called, it enables the emotibit to keep sensing the Serial on ever "loop" 
 	changes progress from NOT_BEGUN to WAITING_FOR_SERIAL_DATA
 	*/
-	EdaCorrection::Status enterUpdateMode(EdaCorrection::EmotiBitVersion version, EdaCorrection::OtpDataFormat dataFormat);
+	EdaCorrection::Status enterUpdateMode(uint8_t emotiBitVersion, EdaCorrection::OtpDataFormat dataFormat);
 
 	void normalModeOperations(float &vref1, float &vref2, float &Rfeedback);
 

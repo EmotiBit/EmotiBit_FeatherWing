@@ -1,7 +1,7 @@
 #include "EDA_Correction.h"
 
 
-void EdaCorrection::begin()
+void EdaCorrection::begin(uint8_t emotiBitVersion)
 {
 	Serial.println("################################");
 	Serial.println("#####  EDA Correction Mode  ####");
@@ -13,17 +13,17 @@ void EdaCorrection::begin()
 	if (choice == 'A')
 	{
 		EdaCorrection::Status status;
-		status = enterUpdateMode(EdaCorrection::EmotiBitVersion::EMOTIBIT_V02H, EdaCorrection::OtpDataFormat::DATA_FORMAT_0);
+		status = enterUpdateMode(emotiBitVersion, EdaCorrection::OtpDataFormat::DATA_FORMAT_0);
 	}
 	
 }
 
-EdaCorrection::Status EdaCorrection::enterUpdateMode(EdaCorrection::EmotiBitVersion version, EdaCorrection::OtpDataFormat dataFormat)
+EdaCorrection::Status EdaCorrection::enterUpdateMode(uint8_t emotiBitVersion, EdaCorrection::OtpDataFormat dataFormat)
 {
 	
 	Serial.println("Enabling Mode::UPDATE");
 	_mode = EdaCorrection::Mode::UPDATE;
-	emotiBitVersion = version;
+	_emotiBitVersion = emotiBitVersion;
 	otpDataFormat = dataFormat;
 	Serial.print("\nPress X to perform Actual OTP R/W\n");
 	Serial.println("Press any other key to default into DUMMY MODE");
@@ -69,7 +69,7 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 	{
 		if (isOtpValid)// metadata presence is checked in the OTP read operation
 		{
-			Serial.print("The EmotiBit Version stored is: "); Serial.println((int)emotiBitVersion);
+			Serial.print("The EmotiBit Version stored is: "); Serial.println((int)_emotiBitVersion);
 			Serial.print("The data format version stored is: "); Serial.println((int)otpDataFormat);
 			calcEdaCorrection();
 		}
@@ -296,7 +296,7 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 	Serial.print("0x"); Serial.print(SI_7013_OTP_ADDRESS_DATA_FORMAT, HEX); Serial.print(" : ");
 	Serial.println((uint8_t)otpDataFormat, DEC);
 	Serial.print("0x"); Serial.print(SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION, HEX); Serial.print(" : ");
-	Serial.println((uint8_t)emotiBitVersion, DEC);
+	Serial.println(_emotiBitVersion, DEC);
 #endif
 
 	Serial.println("\nProceed with these values?");
@@ -376,7 +376,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 #ifdef ACCESS_MAIN_ADDRESS
 			// writing the metadata
 			if (writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_DATA_FORMAT, (uint8_t)otpDataFormat)   != EdaCorrection::Status::SUCCESS ||
-				writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION, (uint8_t)emotiBitVersion) != EdaCorrection::Status::SUCCESS)
+				writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION, _emotiBitVersion) != EdaCorrection::Status::SUCCESS)
 			{
 				triedRegOverwrite = true;
 				_mode = EdaCorrection::Mode::NORMAL;
@@ -450,7 +450,7 @@ EdaCorrection::Status EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c)
 			return EdaCorrection::Status::FAILURE;
 		}
 		otpDataFormat = (EdaCorrection::OtpDataFormat)readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_DATA_FORMAT);
-		emotiBitVersion = (EdaCorrection::EmotiBitVersion)readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION);
+		_emotiBitVersion = (uint8_t)readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION);
 
 		for (uint8_t j = 0; j < BYTES_PER_FLOAT; j++)
 		{
