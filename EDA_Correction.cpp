@@ -518,11 +518,16 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection()
 {
 	correctionData.vRef1 = correctionData.edlReadings[0];
 	correctionData.Rfb = 0;
+	// Avg of 10K,100K and 1M
+	/*
 	for (int i = 1; i < 4; i++)
 	{
 		correctionData.Rfb += (correctionData.trueRskin[i] / ((correctionData.edlReadings[i] / correctionData.vRef1) - 1)); // use the EDl @10K, @100K, @1M
 	}
 	correctionData.Rfb = correctionData.Rfb / 3;// taking avg of 3 readings
+	*/
+	// using 1M to find Rfeedback
+	correctionData.Rfb += (correctionData.trueRskin[3] / ((correctionData.edlReadings[3] / correctionData.vRef1) - 1));
 	if (dummyWrite)
 	{
 		displayCorrections();
