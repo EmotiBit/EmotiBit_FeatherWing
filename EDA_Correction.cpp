@@ -77,7 +77,7 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 		{
 			Serial.println("OTP has not been updated. Not performing correction calculation.");
 			Serial.println("Perform EDA correction first.");
-			Serial.println("Using EDA with correction");
+			Serial.println("Using EDA without correction");
 			progress = EdaCorrection::Progress::FINISH;
 		}
 	}
@@ -249,11 +249,15 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 	//_EdaReadingsPrinted = true;
 
 	Serial.println("This is how the OTP is going to be updated.");
-		
-	for (int i = (int)SI_7013_OTP_ADDRESS_EDL_TABLE,j=0; i < (int)SI_7013_OTP_ADDRESS_EDL_TABLE + OTP_SIZE_IN_USE; i++, j++)
+#ifdef ACCESS_MAIN_ADDRESS
+	uint8_t startAddr = SI_7013_OTP_ADDRESS_EDL_TABLE;
+#else
+	uint8_t startAddr = SI_7013_OTP_ADDRESS_TEST;
+#endif
+	for (int i = startAddr,j=0; i < startAddr + OTP_SIZE_IN_USE; i++, j++)
 	{
 		Serial.print("0x"); Serial.print(i, HEX); Serial.print(" : "); 
-		Serial.print(correctionData.otpBuffer[i - (int)SI_7013_OTP_ADDRESS_EDL_TABLE], DEC);
+		Serial.print(correctionData.otpBuffer[i - startAddr], DEC);
 		if (j % 4 == 0)
 		{
 			Serial.print(" - "); Serial.println(correctionData.edlReadings[j/4], FLOAT_PRECISION);
@@ -263,6 +267,23 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 			Serial.println();
 		}
 	}
+#ifdef ACCESS_MAIN_ADDRESS
+	otpData.inFloat = correctionData.vRef2;
+	Serial.println();
+	Serial.print("vRef2: ");
+	Serial.println(correctionData.vRef2, FLOAT_PRECISION);
+	for (int i = (int)SI_7013_OTP_ADDRESS_VREF2; i < (int)SI_7013_OTP_ADDRESS_VREF2 + BYTES_PER_FLOAT; i++)
+	{
+		Serial.print("0x"); Serial.print(i, HEX); Serial.print(" : ");
+		Serial.println(otpData.inByte[i - (int)SI_7013_OTP_ADDRESS_VREF2], DEC);
+	}
+	// metadata
+	Serial.println("\nmetadata");
+	Serial.print("0x"); Serial.print(SI_7013_OTP_ADDRESS_DATA_FORMAT, HEX); Serial.print(" : ");
+	Serial.println((uint8_t)otpDataFormat, DEC);
+	Serial.print("0x"); Serial.print(SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION, HEX); Serial.print(" : ");
+	Serial.println((uint8_t)emotiBitVersion, DEC);
+#endif
 
 	Serial.println("\nProceed with these values?");
 	Serial.println("Enter Y for yes and N to enter data again");
