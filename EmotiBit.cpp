@@ -135,8 +135,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 			Serial.println("################################");
 			Serial.println("#####  ADC Correction Mode  ####");
 			Serial.println("################################\n");
-			Serial.println("IF YOU ARE A TESTER, press A to continue.");
-			Serial.println("Press any other key to continue to normal bootup");
+			Serial.println("IF YOU ARE A TESTER, enter A to continue.");
+			Serial.println("Enter any other key to continue to normal bootup");
 			while (!Serial.available());
 			if (Serial.read() != 'A')
 			{
@@ -155,7 +155,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 					Serial.println("  * Make sure the battery is connected to the feather");
 					Serial.println("  * Enter any character to initiate correction measurements");
 					Serial.println("  * Then immediately remove the USB cable");
-					Serial.println("  * After the Feather LED blinks re-plug the USB cable to obtain correction results and continue");
+					Serial.println("  * Once the correction has been performed, the Red LED on the feather will start blinking with 2 pulses");
+					Serial.println("  * At this point, reconnect the serial cable. A message will be displayed prompting you to enter any character to continue");
 					Serial.println("Enter any key to begin...");
 					while (!Serial.available()); Serial.read();
 					Serial.println("** UNPLUG USB CABLE within 5 seconds to obtain accurate measurements **");
@@ -216,7 +217,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 						delay(1000);
 					}
 					Serial.read();// pop from the buffer
-					Serial.println("COPY ANS PASTE the folowing into the feather records");
+					Serial.println("COPY AND PASTE the folowing into the feather records");
 					Serial.println("==============================================");
 					Serial.print(samdStorageAdcValues._gainCorrection); Serial.print(",");
 					Serial.print(samdStorageAdcValues._offsetCorrection); Serial.print(",");
@@ -257,6 +258,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 					adcCorrection.printChipId();
 					WiFi.end();
 					Serial.println("\n==============================================");
+					Serial.println("After you have copied the data, enter any character to continue");
+					while (!Serial.available()); Serial.read();
 #ifdef ADC_CORRECTION_VERBOSE
 					Serial.println("\ntesting AT-WINC flash read");
 					adcCorrection.readAtwincFlash(adcCorrection.ATWINC_MEM_LOC_PRIMARY_DATA, 12, tempData);
@@ -278,7 +281,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		}
 		else if (input == 'E')
 		{
-			Serial.print("\n\nEmotiBit Version for EDA correction:"); Serial.println(getHardwareVersion());
+			Serial.print("\n\n##### EmotiBit Version "); Serial.print(getHardwareVersion()); Serial.println(" ####");
 			edaCorrection.begin((uint8_t)_version);
 		}
 		else
@@ -886,7 +889,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	if (_debugMode) 
 	{
 		Serial.println("\nDEBUG MODE");
-		Serial.println("Press ? to know more about available options in DEBUG MODE");
+		Serial.println("Enter ? to know more about available options in DEBUG MODE");
 	}
 } // Setup
 

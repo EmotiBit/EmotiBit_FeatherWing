@@ -25,8 +25,8 @@ EdaCorrection::Status EdaCorrection::enterUpdateMode(uint8_t emotiBitVersion, Ed
 	_mode = EdaCorrection::Mode::UPDATE;
 	_emotiBitVersion = emotiBitVersion;
 	otpDataFormat = dataFormat;
-	Serial.print("\nPress X to perform Actual OTP R/W\n");
-	Serial.println("Press any other key to default into DUMMY MODE");
+	Serial.print("\Enter X to perform Actual OTP R/W\n");
+	Serial.println("Enter any other key to default into DUMMY MODE");
 	while (!Serial.available());
 	char choice = Serial.read();
 	if(choice == 'X')
@@ -44,11 +44,15 @@ EdaCorrection::Status EdaCorrection::enterUpdateMode(uint8_t emotiBitVersion, Ed
 	}
 	Serial.println("Initializing state machine. State: WAITING_FOR_SERIAL_DATA");
 	progress = EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA;
+	Serial.println("The tester should now the use the EmotiBit with the High precision EDA test rig");
+	Serial.println("You should use the EmotiBit Oscilloscope in TESTING MODE, connect to the EmotiBit attached to the EDA test rig. Record EDL and EDR values using the Oscilloscope.");
 	Serial.println("Once you have the appropriate data, please plug in the serial cable and enter the data.");
-	Serial.print("The input should be in the format:");
+	Serial.println("Copy and paste the 5 EDL values and 5 EDR values in the format shown below");
 	Serial.println("EDL_0R, EDL_10K, EDL_100K, EDL_1M, EDL_10M, vRef2_0R, vRef2_10K, vRef2_100K, vRef2_1M, vRef2_10M");
+	Serial.println("Enter any character to proceed with execution");
+	while (!Serial.available()); Serial.read();
 	Serial.print("Proceeding with normal execution in\n");
-	uint8_t msgTimer = 5;
+	uint8_t msgTimer = 3;
 	while (msgTimer > 0)
 	{
 		Serial.print(msgTimer); Serial.print("\t");
@@ -136,13 +140,13 @@ EdaCorrection::Status EdaCorrection::getFloatFromString()
 		}
 		else // not enough data entered
 		{
-			Serial.println("Data input is less than expected");
+			Serial.println("Fewer than expected data points");
 			return EdaCorrection::Status::FAILURE;
 		}
 	}
 	if (Serial.available()) // more data that should be parsed present.
 	{
-		Serial.println("Data input is more than expected");
+		Serial.println("More than expected data points");
 		while (Serial.available())
 			Serial.read();
 		return EdaCorrection::Status::FAILURE;
@@ -183,7 +187,28 @@ EdaCorrection::Status EdaCorrection::monitorSerial()
 	{
 		if (Serial.available())
 		{
-			Serial.println("Serial data detected. Reading from Serial");
+			Serial.println("Serial data detected.");
+			Serial.println("####################");
+			Serial.println("### EDA TESTING  ###");
+			Serial.println("####################");
+			if (dummyWrite)
+			{
+			Serial.println("#### DUMMY MODE ####");
+			}
+			else 
+			{
+				Serial.println("!!! OTP MODE !!!");
+#ifdef USE_ALT_SI7013
+				Serial.println("!!! Writing to Alternate(External) I2C sensor !!!");
+#else
+				Serial.println("!!! Writing to main EmotiBit I2C sensor !!!");
+#endif
+#ifdef ACCESS_MAIN_ADDRESS
+				Serial.println("!!! Writing to Main Address space !!!");
+#else
+				Serial.println("!!! Writing to Test Address Space(0xA0 - 0xA7) !!!\n");
+#endif
+			}
 			if (getFloatFromString() != EdaCorrection::Status::SUCCESS)
 			{
 				Serial.println("Please check and enter again");
@@ -274,7 +299,7 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 		Serial.print(correctionData.otpBuffer[i - startAddr], DEC);
 		if (j % 4 == 0)
 		{
-			Serial.print(" - "); Serial.println(correctionData.edlReadings[j/4], FLOAT_PRECISION);
+			Serial.print(" -- "); Serial.println(correctionData.edlReadings[j/4], FLOAT_PRECISION);
 		}
 		else
 		{
