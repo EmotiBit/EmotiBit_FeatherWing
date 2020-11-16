@@ -1,4 +1,4 @@
-#include "EDA_Correction.h"
+#include "EdaCorrection.h"
 
 
 void EdaCorrection::begin(uint8_t emotiBitVersion)

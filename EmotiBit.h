@@ -19,8 +19,8 @@
 #include <SdFat.h>
 #include <ArduinoJson.h>
 #include <ArduinoLowPower.h>
-#include "ADC_Correction.h"
-#include "EDA_Correction.h"
+#include "AdcCorrection.h"
+#include "EdaCorrection.h"
 
 //#include <Adafruit_SleepyDog.h>
 

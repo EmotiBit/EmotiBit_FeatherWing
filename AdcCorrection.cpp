@@ -1,4 +1,4 @@
-#include "ADC_Correction.h"
+#include "AdcCorrection.h"
 
 
 AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, AdcCorrection::DataFormatVersion dataFormatVer)
