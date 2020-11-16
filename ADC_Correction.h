@@ -147,6 +147,9 @@ public:
 	*/
 	AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, AdcCorrection::DataFormatVersion dataFormatVer);
 
+	bool begin();
+
+	void echoResults(uint16_t gainCorr, uint16_t offsetCorr);
 	
 	/*
 	@f: updateAtwincDataArray
@@ -258,7 +261,7 @@ public:
 
 	int getAverageAnalogInput(uint8_t inputPin);
 
-	void begin();
+	void execute(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid);
 
 	AdcCorrectionRigVersion getRigVersion();
 
