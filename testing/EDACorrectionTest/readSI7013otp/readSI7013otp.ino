@@ -27,26 +27,33 @@ void setup()
   uint8_t addrCount = initAddr;
   uint8_t counter = 1;
   uint8_t testStartAddr = (uint8_t)0xA0;
-  // Start I2C transmission
-  Wire.beginTransmission(Addr);
-  // Stop I2C transmission
-  Wire.endTransmission();
-  delay(300);
+  
   while (!Serial.available())
   {
     Serial.println("enter any key to proceed");
     delay(1000); 
+  }Serial.read();
+  // Start I2C transmission
+  Wire.beginTransmission(Addr);
+  // Stop I2C transmission
+  uint8_t i2cResponse = 0;
+  Wire.write((int)0x00 ); 
+  i2cResponse = Wire.endTransmission();
+  Serial.print("Response i2c: ");Serial.println(i2cResponse);
+  if(i2cResponse)
+  {
+    Serial.println("Chip detected on the i2c line");
+    Serial.println("make sure the sensor is connected and try again.");
+    while(1);
   }
-  Serial.read();
-  Serial.println("make sure to change the i2c pins of the ALT SI7013 to  the native i2c of the feather");
-    Serial.println("Reading from the OTP");
-    while (addrCount <= finalAddr)
-    {
-      Serial.print(counter); Serial.print("--:");
-      readOtp(addrCount);
-      addrCount++;
-      counter++;
-    }
+  Serial.println("Reading from the OTP");
+  while (addrCount <= finalAddr)
+  {
+    Serial.print(counter); Serial.print("--:");
+    readOtp(addrCount);
+    addrCount++;
+    counter++;
+  }
 
   
 }

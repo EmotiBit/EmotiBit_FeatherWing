@@ -2422,10 +2422,12 @@ void EmotiBit::readSensors()
 	uint32_t readSensorsBegin = micros();
 	if (edaCorrection.getMode() == EdaCorrection::Mode::UPDATE)
 	{
+
 		if (edaCorrection.progress == EdaCorrection::Progress::WRITING_TO_OTP)
 		{
 			edaCorrection.writeToOtp(_EmotiBit_i2c);
 		}
+
 	}
 	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL && !edaCorrection.readOtpValues)
 	{

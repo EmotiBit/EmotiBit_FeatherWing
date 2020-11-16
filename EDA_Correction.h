@@ -69,6 +69,8 @@ private:
 	uint8_t FLOAT_PRECISION = 7;
 	uint8_t _emotiBitVersion;
 public:
+	bool isSensorConnected = true;
+	//bool sensorConnectionTested = false;
 	static const uint8_t NUM_EDL_READINGS = 5;
 	static const size_t MAX_OTP_SIZE = 54;
 	const uint8_t BYTES_PER_FLOAT = sizeof(float);
@@ -208,6 +210,7 @@ public:
 	*/
 	bool getApprovalStatus();
 
+	bool checkSensorConnection(TwoWire* emotiBit_i2c);
 
 	EdaCorrection::Status writeToOtp(TwoWire* emotibit_i2c, uint8_t addr, char val);
 	/*
