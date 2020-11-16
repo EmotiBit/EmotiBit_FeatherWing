@@ -153,6 +153,7 @@ void AdcCorrection::echoResults(uint16_t gainCorr, uint16_t offsetCorr)
 		digitalWrite(LED_BUILTIN, LOW);
 		delay(1000);
 	}
+	digitalWrite(LED_BUILTIN, HIGH);
 	Serial.read();// pop from the buffer
 	Serial.println("COPY AND PASTE the folowing into the feather records");
 	Serial.println("==============================================");

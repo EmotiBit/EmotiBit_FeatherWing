@@ -80,8 +80,8 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 	{
 		if (isOtpValid)// metadata presence is checked in the OTP read operation
 		{
-			Serial.print("The EmotiBit Version stored is: "); Serial.println((int)_emotiBitVersion);
-			Serial.print("The data format version stored is: "); Serial.println((int)otpDataFormat);
+			Serial.print("The EmotiBit Version stored for EDA correction is: "); Serial.println((int)_emotiBitVersion);
+			Serial.print("The data format version stored for EDA correction is: "); Serial.println((int)otpDataFormat);
 			calcEdaCorrection();
 		}
 		else
@@ -623,7 +623,7 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection()
 		displayCorrections();
 		correctionDataReady = true;
 #else
-		Serial.print("No claculations performed. Just reading values read from the test Address space ");
+		Serial.print("No calculations performed. Just printing values read from the test Address space ");
 #ifdef USE_ALT_SI7013
 		Serial.println("of the alternate(external) sensor");
 #else

@@ -120,7 +120,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 			hibernate();
 		}
 	}
-	
+
 	uint32_t now = millis();
 	while (!Serial.available() && millis() - now < 2000)
 	{
@@ -129,7 +129,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	{
 		char input;
 		input = Serial.read();
-		
+
 		if (input == 'A')
 		{
 			AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::VER_0, AdcCorrection::DataFormatVersion::DATA_FORMAT_0);
@@ -254,7 +254,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	Serial.print("edrAmplification = "); Serial.println(edrAmplification);
 
 	// Setup switch
-	if (buttonPin != LED_BUILTIN) 
+	if (buttonPin != LED_BUILTIN)
 	{
 		// If the LED_BUILTIN and buttonPin are the same leave it as it was
 		// Otherwise setup the input
@@ -270,10 +270,10 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	digitalWrite(_hibernatePin, HIGH);
 
 	delay(250);
-	
+
 	// Enable analog circuitry
 	Serial.println("Enabling EmotiBit power...");
-	pinMode(_hibernatePin, OUTPUT);
+	//pinMode(_hibernatePin, OUTPUT);
 	digitalWrite(_hibernatePin, LOW);
 
 	Serial.println("\nSensor setup:");
@@ -293,7 +293,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 			Serial.println("data on atwinc corrupted or not present");
 			Serial.println("Using the ADC withut any correction");
 		}
-		else 
+		else
 		{
 			Serial.println("Reading correction data from the flash");
 			Serial.println("Calculating correction values");
@@ -343,7 +343,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	//_EmotiBit_i2c->endTransmission();
 	//_EmotiBit_i2c->clearWriteError();
 	//_EmotiBit_i2c->end();
-	
+
 	// setup LED DRIVER
 	Serial.println("Initializing NCP5623....");
 	led.begin(*_EmotiBit_i2c);
@@ -376,13 +376,13 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	ppgSensor.softReset();
 
 	ppgSensor.setup(
-		ppgSettings.ledPowerLevel, 
-		ppgSettings.sampleAverage, 
-		ppgSettings.ledMode, 
-		ppgSettings.sampleRate, 
-		ppgSettings.pulseWidth, 
+		ppgSettings.ledPowerLevel,
+		ppgSettings.sampleAverage,
+		ppgSettings.ledMode,
+		ppgSettings.sampleRate,
+		ppgSettings.pulseWidth,
 		ppgSettings.adcRange
-	); 
+	);
 	ppgSensor.check();
 	chipBegun.MAX30101 = true;
 
@@ -528,7 +528,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	{
 		hibernate();
 	}
-	
+
 	// Thermopile
 	Serial.println("Configuring MLX90632");
 	MLX90632::status returnError; // Required as a parameter for begin() function in the MLX library 
@@ -544,7 +544,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		}
 		if (thermMode == MODE_STEP)
 		{
-			Serial.println ("MODE_STEP");
+			Serial.println("MODE_STEP");
 		}
 		if (thermMode == MODE_SLEEP)
 		{
@@ -556,7 +556,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	{
 		hibernate();
 	}
-	
+
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 
 
@@ -569,7 +569,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	samplingRates.eda = BASE_SAMPLING_FREQ / EDA_SAMPLING_DIV;
 	samplingRates.humidity = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
 	samplingRates.temperature = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
-	samplingRates.thermopile = (float) BASE_SAMPLING_FREQ / (float) THERMOPILE_SAMPLING_DIV;
+	samplingRates.thermopile = (float)BASE_SAMPLING_FREQ / (float)THERMOPILE_SAMPLING_DIV;
 	setSamplingRates(samplingRates);
 
 	// ToDo: make target down-sampled rates more transparent
@@ -719,8 +719,16 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	Serial.print(", (Si7013_SNB), ");
 	Serial.print(tempHumiditySensor.sernum_b);
 	Serial.print("\n");
-
-
+	Serial.println("### GSR Calibration ##");
+	Serial.println("### ADC correction ###");
+	if (samdStorageAdcValues.valid)
+	{
+		Serial.print("Gain Correction:"); Serial.print(samdStorageAdcValues._gainCorrection); Serial.print("\tOffset Correction: "); Serial.println(samdStorageAdcValues._offsetCorrection);
+	}
+	else
+	{
+		Serial.println("Using ADC without correction");
+	}
 	uint8_t ledOffdelay = 100;	// Aesthetic delay
 	led.setLED(uint8_t(EmotiBit::Led::RED), false);
 	delay(ledOffdelay);
