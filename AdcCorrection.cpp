@@ -421,8 +421,8 @@ bool AdcCorrection::calcCorrectionValues()
 			AdcHighMem[1] = atwincDataArray[adcHighPos * BYTES_PER_ADC_DATA_POINT + dataArrayAdcLsbOffset];  // ADC High point LSB
 			uint16_t adcHighMeasured = int8Toint16(AdcHighMem[0], AdcHighMem[1]); // ( MSB, LSB)
 			uint16_t adcLowMeasured = int8Toint16(AdcLowMem[0], AdcLowMem[1]); // (MSB, LSB)
-			uint16_t adcLowIdeal = (uint16_t)(((float)adcCorrectionRig.N[0] / (float)adcCorrectionRig.D[0]) * 4096);
-			uint16_t adcHighIdeal = (uint16_t)(((float)adcCorrectionRig.N[2] / (float)adcCorrectionRig.D[2]) * 4096);
+			uint16_t adcLowIdeal = (uint16_t)round((((float)adcCorrectionRig.N[0] / (float)adcCorrectionRig.D[0]) * 4096));
+			uint16_t adcHighIdeal = (uint16_t)round((((float)adcCorrectionRig.N[2] / (float)adcCorrectionRig.D[2]) * 4096));
 #ifdef ADC_CORRECTION_VERBOSE
 			Serial.print("\nADC high(Ideal):"); Serial.println(adcHighIdeal);
 			Serial.print("ADC high(Measured):"); Serial.println(adcHighMeasured);
@@ -435,7 +435,7 @@ bool AdcCorrection::calcCorrectionValues()
 			Serial.print("gainCorr in float: "); Serial.println(2048 / slope, 6);
 #endif
 			// refer http://ww1.microchip.com/downloads/en/DeviceDoc/90003185A.pdf
-			offsetCorr = (int16_t)(adcLowMeasured - (slope * adcLowIdeal));
+			offsetCorr = (int16_t)round((adcLowMeasured - (slope * adcLowIdeal)));
 			if (offsetCorr < 0)
 			{
 				offsetCorr = 4095 + offsetCorr + 1;

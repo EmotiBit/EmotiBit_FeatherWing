@@ -2300,15 +2300,19 @@ void EmotiBit::readSensors()
 	if (edaCorrection.getMode() == EdaCorrection::Mode::UPDATE)
 	{
 
-		if (edaCorrection.progress == EdaCorrection::Progress::WRITING_TO_OTP)
+		if (tempHumiditySensor.getStatus() == Si7013::STATUS_IDLE && edaCorrection.progress == EdaCorrection::Progress::WRITING_TO_OTP)
 		{
+			_EmotiBit_i2c->setClock(100000);// change the I2C clock speed to 100000
 			edaCorrection.writeToOtp(_EmotiBit_i2c);
+			_EmotiBit_i2c->setClock(400000);// change the I2C clock speed back to 400000
 		}
 
 	}
-	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL && !edaCorrection.readOtpValues)
+	else if (tempHumiditySensor.getStatus() == Si7013::STATUS_IDLE && edaCorrection.getMode() == EdaCorrection::Mode::NORMAL && !edaCorrection.readOtpValues)
 	{
+		_EmotiBit_i2c->setClock(100000);// change the I2C clock speed to 100000
 		edaCorrection.readFromOtp(_EmotiBit_i2c);
+		_EmotiBit_i2c->setClock(400000);// change the I2C clock speed back to 400000
 	}
 
 	// Battery (all analog reads must be in the ISR)

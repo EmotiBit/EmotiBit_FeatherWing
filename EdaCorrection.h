@@ -51,8 +51,8 @@ NORMAL
 #include "Arduino.h"
 #include "Wire.h"
 
-#define USE_ALT_SI7013
-//#define ACCESS_MAIN_ADDRESS
+//#define USE_ALT_SI7013
+#define ACCESS_MAIN_ADDRESS
 #define SI_7013_CMD_OTP_READ 0x84
 #define SI_7013_CMD_OTP_WRITE 0xC5
 
@@ -68,6 +68,7 @@ private:
 	bool _responseRecorded = false;
 	uint8_t FLOAT_PRECISION = 7;
 	uint8_t _emotiBitVersion;
+	bool powerCycled = true;
 public:
 	bool isSensorConnected = true;
 	//bool sensorConnectionTested = false;
