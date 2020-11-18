@@ -426,13 +426,13 @@ bool EdaCorrection::isOtpRegWritten(Si7013* si7013, uint8_t addr, bool isOtpOper
 	}
 }
 
-EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, char val, uint8_t mask, bool isOtpOperation)
+EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, char val, uint8_t mask)
 {
 	if (isOtpRegWritten(si7013, addr))
 	{
 		return EdaCorrection::Status::FAILURE;
 	}
-	si7013->writeRegister8(addr, val, mask, isOtpOperation);
+	si7013->writeToOtp(addr, val, mask);
 	/*emotiBit_i2c->beginTransmission(_si7013Addr);
 	emotiBit_i2c->write(SI_7013_CMD_OTP_WRITE);
 	emotiBit_i2c->write(addr);

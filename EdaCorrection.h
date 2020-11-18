@@ -106,7 +106,7 @@ public: // OTP addresses
 	const uint8_t SI_7013_OTP_ADDRESS_DATA_FORMAT = (uint8_t)0xB6;
 	const uint8_t SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION = (uint8_t)0xB7;
 #ifndef ACCESS_MAIN_ADDRESS
-	const uint8_t SI_7013_OTP_ADDRESS_TEST = (uint8_t)0xA8;
+	const uint8_t SI_7013_OTP_ADDRESS_TEST = (uint8_t)0xAC;
 #endif
 
 	enum class Status
@@ -216,7 +216,7 @@ public:
 
 	bool checkSensorConnection(Si7013* si7013);
 
-	EdaCorrection::Status writeToOtp(Si7013* si7013, uint8_t addr, char val, uint8_t mask=0xFF, bool isOtpOperation = true);
+	EdaCorrection::Status writeToOtp(Si7013* si7013, uint8_t addr, char val, uint8_t mask=0xFF);
 	/*
 	usage:
 	called in the ISR. writes data to the OTP
