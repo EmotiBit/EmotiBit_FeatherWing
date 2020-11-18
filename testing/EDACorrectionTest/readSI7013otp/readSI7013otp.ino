@@ -4,11 +4,9 @@
  */
 #include <Wire.h>
 #include "wiring_private.h"
-
+#include "EmotiBit_Si7013.h"
 
 #define USE_ALT_SI7013
-#define CMD_OTP_READ 0x84
-#define CMD_OTP_WRITE 0xC5
 
 #ifdef USE_ALT_SI7013
 #define Addr 0x41
@@ -16,8 +14,8 @@
 #define Addr 0x40
 #endif
 
-
-TwoWire EmotiBit_i2c(&sercom1, 11, 13);
+Si7013 sensor;
+TwoWire* _EmotiBit_i2c = nullptr;
 
 int hibernatePin = 6;//gpio pin assigned ot the mosfet
 
@@ -30,33 +28,36 @@ void setup()
   pinMode(hibernatePin, OUTPUT);
   Serial.println("Hibernate LOW");
   digitalWrite(hibernatePin, LOW);// Switch is ON. hence, The EmotiBit is powered
-
+#ifdef USE_ALT_SI7013
+  Serial.println("Reading the External sensor");
+#else
+  Serial.println("Reading the main emotiBit sensor");
+#endif
   while (!Serial.available())
   {
 	  Serial.println("enter any key to proceed");
 	  delay(1000);
   }Serial.read();
   Serial.println("Reading all the memory locations in the OTP");
-  EmotiBit_i2c.begin();
-  EmotiBit_i2c.setClock(100000);
+  _EmotiBit_i2c = new TwoWire(&sercom1, 11, 13);
+  _EmotiBit_i2c->begin(); 
+  _EmotiBit_i2c->setClock(100000);
   pinPeripheral(11, PIO_SERCOM);
   pinPeripheral(13, PIO_SERCOM);
   Serial.println("Flushing I2C....");
-  EmotiBit_i2c.flush();
-  
+  _EmotiBit_i2c->flush();
+
+  sensor.setup(*_EmotiBit_i2c,Addr);
+
   uint8_t initAddr = 130; // 0x82
   uint8_t finalAddr = 183; // 0xB7
   uint8_t addrCount = initAddr;
   uint8_t counter = 1;
   uint8_t testStartAddr = (uint8_t)0xA0;
-  
-  EmotiBit_i2c.beginTransmission(Addr);
-  // Stop I2C transmission
   uint8_t i2cResponse = 0;
-  EmotiBit_i2c.write((int)0x00);
-  i2cResponse = EmotiBit_i2c.endTransmission();
+  i2cResponse = sensor.sendCommand(0x00); // return false(0) if no sensor detected else return true(1) if sensor detected
   Serial.print("Response i2c: ");Serial.println(i2cResponse);
-  if(i2cResponse)
+  if(!i2cResponse)
   {
     Serial.println("Chip not detected on the i2c line");
     Serial.println("make sure the sensor is connected and try again.");
@@ -85,13 +86,7 @@ char readOtp(uint8_t addr)
 
 	uint8_t otpByte=0;
 	Serial.print("0x"); Serial.print(addr, HEX);
-	EmotiBit_i2c.beginTransmission(Addr);
-	EmotiBit_i2c.write(CMD_OTP_READ);
-	EmotiBit_i2c.write(addr);
-	EmotiBit_i2c.endTransmission();
-	EmotiBit_i2c.requestFrom(Addr, 1);
-	while(!EmotiBit_i2c.available());
-	otpByte = EmotiBit_i2c.read();
+	otpByte = sensor.readRegister8(addr, true);
 	Serial.print(" : "); Serial.println(otpByte);
 	return (char)otpByte;
 

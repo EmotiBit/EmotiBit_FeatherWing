@@ -503,7 +503,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 
 	// Setup Temperature / Humidity Sensor
 	Serial.println("Configuring Temperature / Humidity Sensor");
+#ifdef USE_ALT_SI7013 
+	status = tempHumiditySensor.setup(*_EmotiBit_i2c, 0x41);
+#else
 	status = tempHumiditySensor.setup(*_EmotiBit_i2c);
+#endif
 	if (status)
 	{
 		tempHumiditySensor.changeSetting(Si7013::Settings::RESOLUTION_H11_T11);
@@ -2303,7 +2307,7 @@ void EmotiBit::readSensors()
 		if (tempHumiditySensor.getStatus() == Si7013::STATUS_IDLE && edaCorrection.progress == EdaCorrection::Progress::WRITING_TO_OTP)
 		{
 			_EmotiBit_i2c->setClock(100000);// change the I2C clock speed to 100000
-			edaCorrection.writeToOtp(_EmotiBit_i2c);
+			edaCorrection.writeToOtp(&tempHumiditySensor);
 			_EmotiBit_i2c->setClock(400000);// change the I2C clock speed back to 400000
 		}
 
@@ -2311,7 +2315,7 @@ void EmotiBit::readSensors()
 	else if (tempHumiditySensor.getStatus() == Si7013::STATUS_IDLE && edaCorrection.getMode() == EdaCorrection::Mode::NORMAL && !edaCorrection.readOtpValues)
 	{
 		_EmotiBit_i2c->setClock(100000);// change the I2C clock speed to 100000
-		edaCorrection.readFromOtp(_EmotiBit_i2c);
+		edaCorrection.readFromOtp(&tempHumiditySensor);
 		_EmotiBit_i2c->setClock(400000);// change the I2C clock speed back to 400000
 	}
 

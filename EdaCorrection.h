@@ -50,20 +50,23 @@ NORMAL
 
 #include "Arduino.h"
 #include "Wire.h"
+#include "EmotiBit_Si7013.h"
 
-//#define USE_ALT_SI7013
-#define ACCESS_MAIN_ADDRESS
-#define SI_7013_CMD_OTP_READ 0x84
-#define SI_7013_CMD_OTP_WRITE 0xC5
+#define USE_ALT_SI7013
+//#define ACCESS_MAIN_ADDRESS
+//#define SI_7013_CMD_OTP_READ 0x84
+//#define SI_7013_CMD_OTP_WRITE 0xC5
 
 class EdaCorrection
 {
 private:
+	/*
 #ifdef USE_ALT_SI7013
 	uint8_t _si7013Addr = 0x41;// Address of external Si7013
 #else
 	uint8_t _si7013Addr = 0x40;// Address os SI7013 baked into emotibit
 #endif
+*/
 	bool _approvedToWriteOtp = false;
 	bool _responseRecorded = false;
 	uint8_t FLOAT_PRECISION = 7;
@@ -78,7 +81,7 @@ public:
 #ifdef ACCESS_MAIN_ADDRESS
 	const size_t OTP_SIZE_IN_USE = NUM_EDL_READINGS * BYTES_PER_FLOAT; // Writing 5 floats into the OTP
 #else
-	const size_t OTP_SIZE_IN_USE = 8; // writing 2 floats into the memory
+	const size_t OTP_SIZE_IN_USE = 4; // writing 2 floats into the memory
 #endif
 	struct CorrectionData {
 		float edlReadings[NUM_EDL_READINGS] = { 0 };
@@ -103,7 +106,7 @@ public: // OTP addresses
 	const uint8_t SI_7013_OTP_ADDRESS_DATA_FORMAT = (uint8_t)0xB6;
 	const uint8_t SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION = (uint8_t)0xB7;
 #ifndef ACCESS_MAIN_ADDRESS
-	const uint8_t SI_7013_OTP_ADDRESS_TEST = (uint8_t)0xA0;
+	const uint8_t SI_7013_OTP_ADDRESS_TEST = (uint8_t)0xA8;
 #endif
 
 	enum class Status
@@ -211,22 +214,22 @@ public:
 	*/
 	bool getApprovalStatus();
 
-	bool checkSensorConnection(TwoWire* emotiBit_i2c);
+	bool checkSensorConnection(Si7013* si7013);
 
-	EdaCorrection::Status writeToOtp(TwoWire* emotibit_i2c, uint8_t addr, char val);
+	EdaCorrection::Status writeToOtp(Si7013* si7013, uint8_t addr, char val, uint8_t mask=0xFF, bool isOtpOperation = true);
 	/*
 	usage:
 	called in the ISR. writes data to the OTP
 	sets progress to FINISH
 	*/
-	EdaCorrection::Status writeToOtp(TwoWire* emotiBit_i2c);
+	EdaCorrection::Status writeToOtp(Si7013* si7013);
 
 
-	uint8_t readFromOtp(TwoWire* emotibit_i2c, uint8_t addr);
+	//uint8_t readFromOtp(TwoWire* emotibit_i2c, uint8_t addr);
 	/*
 	usage: read from OTP
 	*/
-	EdaCorrection::Status readFromOtp(TwoWire* emotiBit_i2c);
+	EdaCorrection::Status readFromOtp(Si7013* si7013, bool isOtpOperation = true);
 
 
 	/*
@@ -234,7 +237,7 @@ public:
 	*/
 	EdaCorrection::Status calcEdaCorrection();
 	
-	bool isOtpRegWritten(TwoWire* emotiBit_i2c, uint8_t addr);
+	bool isOtpRegWritten(Si7013* si7013, uint8_t addr, bool isOtpOperation = true);
 
 	void displayCorrections();
 };

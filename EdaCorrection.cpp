@@ -397,9 +397,11 @@ bool EdaCorrection::getApprovalStatus()
 	return _approvedToWriteOtp;
 }
 
-bool EdaCorrection::checkSensorConnection(TwoWire* emotiBit_i2c)
+bool EdaCorrection::checkSensorConnection(Si7013* si7013)
 {
-	emotiBit_i2c->beginTransmission(_si7013Addr);
+	return (si7013->sendCommand(0x00)); // returns false if failed to send command
+		
+	/*emotiBit_i2c->beginTransmission(_si7013Addr);
 	emotiBit_i2c->write((int)0x00);
 	if (emotiBit_i2c->endTransmission())
 	{
@@ -409,24 +411,37 @@ bool EdaCorrection::checkSensorConnection(TwoWire* emotiBit_i2c)
 	else
 	{
 		return true;
+	}*/
+}
+
+bool EdaCorrection::isOtpRegWritten(Si7013* si7013, uint8_t addr, bool isOtpOperation)
+{
+	if (si7013->readRegister8(addr, isOtpOperation) == 255)
+	{
+		return false;
+	}
+	else
+	{
+		return true;
 	}
 }
 
-EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c, uint8_t addr, char val)
+EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, char val, uint8_t mask, bool isOtpOperation)
 {
-	if (isOtpRegWritten(emotiBit_i2c, addr))
+	if (isOtpRegWritten(si7013, addr))
 	{
 		return EdaCorrection::Status::FAILURE;
 	}
-	emotiBit_i2c->beginTransmission(_si7013Addr);
+	si7013->writeRegister8(addr, val, mask, isOtpOperation);
+	/*emotiBit_i2c->beginTransmission(_si7013Addr);
 	emotiBit_i2c->write(SI_7013_CMD_OTP_WRITE);
 	emotiBit_i2c->write(addr);
 	emotiBit_i2c->write(val);
-	emotiBit_i2c->endTransmission();
+	emotiBit_i2c->endTransmission();*/
 	return EdaCorrection::Status::SUCCESS;
 }
 
-EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
+EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 { 
 
 	/*for (int i = 0; i < NUM_EDL_READINGS; i++)
@@ -444,15 +459,15 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 	else
 	{
 
-		if (checkSensorConnection(emotiBit_i2c))
+		if (checkSensorConnection(si7013) == true)// sensor is present
 		{
 			if (progress == EdaCorrection::Progress::WRITING_TO_OTP && triedRegOverwrite == false)
 			{
 
 #ifdef ACCESS_MAIN_ADDRESS
 				// writing the metadata
-				if (writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_DATA_FORMAT, (uint8_t)otpDataFormat) != EdaCorrection::Status::SUCCESS ||
-					writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION, _emotiBitVersion) != EdaCorrection::Status::SUCCESS)
+				if (writeToOtp(si7013, SI_7013_OTP_ADDRESS_DATA_FORMAT, (uint8_t)otpDataFormat) != EdaCorrection::Status::SUCCESS ||
+					writeToOtp(si7013, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION, _emotiBitVersion) != EdaCorrection::Status::SUCCESS)
 				{
 					triedRegOverwrite = true;
 					_mode = EdaCorrection::Mode::NORMAL;
@@ -463,7 +478,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 				otpData.inFloat = correctionData.vRef2;
 				for (uint8_t j = 0; j < 4; j++)
 				{
-					if (writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_VREF2 + j, otpData.inByte[j]) != EdaCorrection::Status::SUCCESS)
+					if (writeToOtp(si7013, SI_7013_OTP_ADDRESS_VREF2 + j, otpData.inByte[j]) != EdaCorrection::Status::SUCCESS)
 					{
 						triedRegOverwrite = true;
 						_mode = EdaCorrection::Mode::NORMAL;
@@ -473,7 +488,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 				// writing the main EDL values
 				for (uint8_t offset = 0; offset < OTP_SIZE_IN_USE; offset++)
 				{
-					if (writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EDL_TABLE + offset, correctionData.otpBuffer[offset]) != EdaCorrection::Status::SUCCESS)
+					if (writeToOtp(si7013, SI_7013_OTP_ADDRESS_EDL_TABLE + offset, correctionData.otpBuffer[offset]) != EdaCorrection::Status::SUCCESS)
 					{
 						triedRegOverwrite = true;
 						_mode = EdaCorrection::Mode::NORMAL;
@@ -485,7 +500,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 #else
 				for (uint8_t i = 0; i < OTP_SIZE_IN_USE; i++)// 8 or 20 depending on the main address space access or aux addr. space access
 				{
-					if (writeToOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_TEST + i, correctionData.otpBuffer[i]) != EdaCorrection::Status::SUCCESS)
+					if (writeToOtp(si7013, SI_7013_OTP_ADDRESS_TEST + i, correctionData.otpBuffer[i]) != EdaCorrection::Status::SUCCESS)
 					{
 						triedRegOverwrite = true;
 						_mode = EdaCorrection::Mode::NORMAL;
@@ -507,7 +522,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(TwoWire* emotiBit_i2c)
 	}
 }
 
-
+/*
 uint8_t EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c, uint8_t addr)
 {
 	emotiBit_i2c->beginTransmission(_si7013Addr);
@@ -520,13 +535,14 @@ uint8_t EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c, uint8_t addr)
 		return(emotiBit_i2c->read());
 	}
 }
+*/
 
-EdaCorrection::Status EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c)
+EdaCorrection::Status EdaCorrection::readFromOtp(Si7013* si7013, bool isOtpOperation)
 {
 	if (!dummyWrite)
 	{
 
-		if (checkSensorConnection(emotiBit_i2c) == false)
+		if (checkSensorConnection(si7013) == false)
 		{
 			isSensorConnected = false;
 			readOtpValues = true;
@@ -534,19 +550,19 @@ EdaCorrection::Status EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c)
 			return EdaCorrection::Status::FAILURE;
 		}
 #ifdef ACCESS_MAIN_ADDRESS
-		if ((uint8_t)readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION) == 255)
-		//if ((uint8_t)readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION) != 3)
+		if(si7013->readRegister8(SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION, isOtpOperation) == 255)
+		//if ((uint8_t)readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION) == 255)
 		{
 			isOtpValid = false;
 			readOtpValues = true;
 			return EdaCorrection::Status::FAILURE;
 		}
-		otpDataFormat = (EdaCorrection::OtpDataFormat)readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_DATA_FORMAT);
-		_emotiBitVersion = (uint8_t)readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION);
+		otpDataFormat = (EdaCorrection::OtpDataFormat)si7013->readRegister8(SI_7013_OTP_ADDRESS_DATA_FORMAT, isOtpOperation);
+		_emotiBitVersion = (uint8_t)si7013->readRegister8(SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION, isOtpOperation);
 
 		for (uint8_t j = 0; j < BYTES_PER_FLOAT; j++)
 		{
-			otpData.inByte[j] = readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_VREF2 + j);
+			otpData.inByte[j] = si7013->readRegister8(SI_7013_OTP_ADDRESS_VREF2 + j, isOtpOperation);
 		}
 		correctionData.vRef2 = otpData.inFloat;
 #endif
@@ -556,9 +572,9 @@ EdaCorrection::Status EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c)
 			for (uint8_t j = 0; j < BYTES_PER_FLOAT; j++)
 			{
 #ifdef ACCESS_MAIN_ADDRESS
-				otpData.inByte[j] = readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EDL_TABLE + BYTES_PER_FLOAT * i + j);
+				otpData.inByte[j] = si7013->readRegister8(SI_7013_OTP_ADDRESS_EDL_TABLE + BYTES_PER_FLOAT * i + j, isOtpOperation);
 #else
-				otpData.inByte[j] = readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_TEST + BYTES_PER_FLOAT * i + j);
+				otpData.inByte[j] = si7013->readRegister8(SI_7013_OTP_ADDRESS_TEST + BYTES_PER_FLOAT * i + j, isOtpOperation);
 #endif
 			}
 			correctionData.edlReadings[i] = otpData.inFloat;
@@ -577,18 +593,6 @@ EdaCorrection::Status EdaCorrection::readFromOtp(TwoWire* emotiBit_i2c)
 		}
 	}
 	readOtpValues = true;
-}
-
-bool EdaCorrection::isOtpRegWritten(TwoWire* emotiBit_i2c, uint8_t addr)
-{
-	if ((uint8_t)readFromOtp(emotiBit_i2c, addr) == 255)
-	{
-		return false;
-	}
-	else
-	{
-		return true;
-	}
 }
 
 
