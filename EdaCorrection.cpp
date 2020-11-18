@@ -466,8 +466,14 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 
 #ifdef ACCESS_MAIN_ADDRESS
 				// writing the metadata
-				if (writeToOtp(si7013, SI_7013_OTP_ADDRESS_DATA_FORMAT, (uint8_t)otpDataFormat) != EdaCorrection::Status::SUCCESS ||
-					writeToOtp(si7013, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION, _emotiBitVersion) != EdaCorrection::Status::SUCCESS)
+				if ((uint8_t)writeToOtp(si7013, SI_7013_OTP_ADDRESS_DATA_FORMAT, (uint8_t)otpDataFormat) != (uint8_t)EdaCorrection::Status::SUCCESS)
+				{
+					triedRegOverwrite = true;
+					_mode = EdaCorrection::Mode::NORMAL;
+					return EdaCorrection::Status::FAILURE;
+				}
+
+				if((uint8_t)writeToOtp(si7013, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION, _emotiBitVersion) != (uint8_t)EdaCorrection::Status::SUCCESS)
 				{
 					triedRegOverwrite = true;
 					_mode = EdaCorrection::Mode::NORMAL;
@@ -478,7 +484,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 				otpData.inFloat = correctionData.vRef2;
 				for (uint8_t j = 0; j < 4; j++)
 				{
-					if (writeToOtp(si7013, SI_7013_OTP_ADDRESS_VREF2 + j, otpData.inByte[j]) != EdaCorrection::Status::SUCCESS)
+					if ((uint8_t)writeToOtp(si7013, SI_7013_OTP_ADDRESS_VREF2 + j, otpData.inByte[j]) != (uint8_t)EdaCorrection::Status::SUCCESS)
 					{
 						triedRegOverwrite = true;
 						_mode = EdaCorrection::Mode::NORMAL;
@@ -488,7 +494,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 				// writing the main EDL values
 				for (uint8_t offset = 0; offset < OTP_SIZE_IN_USE; offset++)
 				{
-					if (writeToOtp(si7013, SI_7013_OTP_ADDRESS_EDL_TABLE + offset, correctionData.otpBuffer[offset]) != EdaCorrection::Status::SUCCESS)
+					if ((uint8_t)writeToOtp(si7013, SI_7013_OTP_ADDRESS_EDL_TABLE + offset, correctionData.otpBuffer[offset]) != (uint8_t)EdaCorrection::Status::SUCCESS)
 					{
 						triedRegOverwrite = true;
 						_mode = EdaCorrection::Mode::NORMAL;
@@ -500,7 +506,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 #else
 				for (uint8_t i = 0; i < OTP_SIZE_IN_USE; i++)// 8 or 20 depending on the main address space access or aux addr. space access
 				{
-					if (writeToOtp(si7013, SI_7013_OTP_ADDRESS_TEST + i, correctionData.otpBuffer[i]) != EdaCorrection::Status::SUCCESS)
+					if ((uint8_t)writeToOtp(si7013, SI_7013_OTP_ADDRESS_TEST + i, correctionData.otpBuffer[i]) != (uint8_t)EdaCorrection::Status::SUCCESS)
 					{
 						triedRegOverwrite = true;
 						_mode = EdaCorrection::Mode::NORMAL;
@@ -601,12 +607,12 @@ void EdaCorrection::displayCorrections()
 	Serial.println("EDL readings stored:");
 	for (int i = 0; i < NUM_EDL_READINGS; i++)
 	{
-		Serial.print("edlReadings["); Serial.print(i); Serial.print("]: "); Serial.println(correctionData.edlReadings[i], 6);
+		Serial.print("edlReadings["); Serial.print(i); Serial.print("]: "); Serial.println(correctionData.edlReadings[i], FLOAT_PRECISION);
 	}
 	Serial.println("### Calculating values ####\n");
-	Serial.print("Vref1: "); Serial.println(correctionData.vRef1, 6);
-	Serial.print("Vref2: "); Serial.println(correctionData.vRef2, 6);
-	Serial.print("Rfb: "); Serial.println(correctionData.Rfb, 6);
+	Serial.print("Vref1: "); Serial.println(correctionData.vRef1, FLOAT_PRECISION);
+	Serial.print("Vref2: "); Serial.println(correctionData.vRef2, FLOAT_PRECISION);
+	Serial.print("Rfb: "); Serial.println(correctionData.Rfb, FLOAT_PRECISION);
 }
 
 

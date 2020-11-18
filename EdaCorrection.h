@@ -52,8 +52,8 @@ NORMAL
 #include "Wire.h"
 #include "EmotiBit_Si7013.h"
 
-#define USE_ALT_SI7013
-//#define ACCESS_MAIN_ADDRESS
+//#define USE_ALT_SI7013
+#define ACCESS_MAIN_ADDRESS
 //#define SI_7013_CMD_OTP_READ 0x84
 //#define SI_7013_CMD_OTP_WRITE 0xC5
 
@@ -106,7 +106,7 @@ public: // OTP addresses
 	const uint8_t SI_7013_OTP_ADDRESS_DATA_FORMAT = (uint8_t)0xB6;
 	const uint8_t SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION = (uint8_t)0xB7;
 #ifndef ACCESS_MAIN_ADDRESS
-	const uint8_t SI_7013_OTP_ADDRESS_TEST = (uint8_t)0xAC;
+	const uint8_t SI_7013_OTP_ADDRESS_TEST = (uint8_t)0xA0;
 #endif
 
 	enum class Status

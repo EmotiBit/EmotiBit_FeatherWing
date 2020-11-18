@@ -67,7 +67,7 @@ Bootup
  */
 // for mode details refer: http://ww1.microchip.com/downloads/en/devicedoc/atmel-42420-winc1500-software-design-guide_userguide.pdf section13.4
 #include "Arduino.h"
-#include <WiFI101.h>
+#include <WiFi101.h>
 #include "spi_flash/include/spi_flash.h"
 #include <FlashStorage.h>
 #include "SAMD_AnalogCorrection.h"
