@@ -81,7 +81,7 @@ public:
 #ifdef ACCESS_MAIN_ADDRESS
 	const size_t OTP_SIZE_IN_USE = NUM_EDL_READINGS * BYTES_PER_FLOAT; // Writing 5 floats into the OTP
 #else
-	const size_t OTP_SIZE_IN_USE = 4; // writing 2 floats into the memory
+	const size_t OTP_SIZE_IN_USE = 4; // writing 1 floats into the memory
 #endif
 	struct CorrectionData {
 		float edlReadings[NUM_EDL_READINGS] = { 0 };
