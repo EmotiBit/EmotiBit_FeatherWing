@@ -54,57 +54,65 @@ NORMAL
 
 //#define USE_ALT_SI7013
 #define ACCESS_MAIN_ADDRESS
-//#define SI_7013_CMD_OTP_READ 0x84
-//#define SI_7013_CMD_OTP_WRITE 0xC5
 
 class EdaCorrection
 {
 private:
-	/*
-#ifdef USE_ALT_SI7013
-	uint8_t _si7013Addr = 0x41;// Address of external Si7013
-#else
-	uint8_t _si7013Addr = 0x40;// Address os SI7013 baked into emotibit
-#endif
-*/
 	bool _approvedToWriteOtp = false;
 	bool _responseRecorded = false;
 	uint8_t FLOAT_PRECISION = 7;
 	uint8_t _emotiBitVersion;
 	bool powerCycled = true;
+	bool successfulwrite = false;
 public:
+	class OtpMemoryMap_V0 {
+	public:
+		static const uint8_t NUM_EDL_CORRECTION_VALUES = 5;
+		//static const uint8_t NUM_EDR_CORRECTION_VALUES = 1;
+		size_t edlAddresses[NUM_EDL_CORRECTION_VALUES] = { 0x82, 0x86, 0x8A, 0x8E, 0x92 };
+		size_t edrAddresses = 0xB0 ;
+		size_t edlTestAddress = 0xA0;
+		size_t emotiBitVersionAddr = 0xB7;
+		size_t dataVersionAddr = 0xB6;
+		bool emotiBitVersionWritten = false;
+		bool dataVersionWritten = false;
+		bool edrDataWritten[4] = {false};
+		bool edlDataWritten[NUM_EDL_CORRECTION_VALUES][4] = { {false} };
+		bool testDataWritten[4] = {false};
+		struct WriteCount {
+			uint8_t emotiBitVersion = 0;
+			uint8_t dataVersion = 0;
+			uint8_t edrData[4] = {0} ;
+			uint8_t edlData[NUM_EDL_CORRECTION_VALUES][4] = { {0} };
+		}writeCount;
+
+	public:
+		void echoWriteCount();
+	}otpMemoryMap;
 	bool isSensorConnected = true;
 	//bool sensorConnectionTested = false;
-	static const uint8_t NUM_EDL_READINGS = 5;
+	static const uint8_t NUM_EDL_READINGS = OtpMemoryMap_V0::NUM_EDL_CORRECTION_VALUES;
 	static const size_t MAX_OTP_SIZE = 54;
 	const uint8_t BYTES_PER_FLOAT = sizeof(float);
-#ifdef ACCESS_MAIN_ADDRESS
-	const size_t OTP_SIZE_IN_USE = NUM_EDL_READINGS * BYTES_PER_FLOAT; // Writing 5 floats into the OTP
-#else
-	const size_t OTP_SIZE_IN_USE = 4; // writing 1 floats into the memory
-#endif
+
 	struct CorrectionData {
 		float edlReadings[NUM_EDL_READINGS] = { 0 };
-		float vref2Readings[NUM_EDL_READINGS] = { 0 };
-		char  otpBuffer[MAX_OTP_SIZE] = { 0 };
+		float edrReadings[NUM_EDL_READINGS] = { 0 };
+		//char  otpBuffer[MAX_OTP_SIZE] = { 0 };
 		float trueRskin[NUM_EDL_READINGS] = { 0,10000.0,100000.0,1000000.0,10000000.0 };
 		float vRef1 = 0, vRef2= 0, Rfb= 0;
 	}correctionData;
 
 public:// flags
 	bool isOtpValid = true;
-	bool displayedValidityStatus = false;
+	//bool displayedValidityStatus = false;
 	bool readOtpValues = false; // flag to monitor if the class has read the OTP 
 	bool calculationPerformed = false; // flag to monitor is calculation was performed from values read from OTP
 	bool dummyWrite = false; // flag to check if in dummy mode or real OTP mode
 	bool triedRegOverwrite = false; // flag to monitor if we are writing to previously written OTP location
 	bool correctionDataReady = false;
 
-public: // OTP addresses
-	const uint8_t SI_7013_OTP_ADDRESS_EDL_TABLE = (uint8_t)0x82; // 0x82  
-	const uint8_t SI_7013_OTP_ADDRESS_VREF2 = (uint8_t)0xB0;
-	const uint8_t SI_7013_OTP_ADDRESS_DATA_FORMAT = (uint8_t)0xB6;
-	const uint8_t SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION = (uint8_t)0xB7;
+public: 
 #ifndef ACCESS_MAIN_ADDRESS
 	const uint8_t SI_7013_OTP_ADDRESS_TEST = (uint8_t)0xA0;
 #endif
