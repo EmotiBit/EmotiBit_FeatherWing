@@ -405,11 +405,11 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, ch
 {
 	if (isOtpRegWritten(si7013, addr))
 	{
-		Serial.print(addr, HEX); Serial.println(":N");
+		//Serial.print(addr, HEX); Serial.println(":N");
 		return EdaCorrection::Status::FAILURE;
 	}
 	// For testing
-	Serial.print(addr, HEX); Serial.print(":Y:"); Serial.println(val);
+	//Serial.print(addr, HEX); Serial.print(":Y:"); Serial.println(val);
 	// for real write
 	si7013->writeToOtp(addr, val, mask);
 	successfulwrite = true;
