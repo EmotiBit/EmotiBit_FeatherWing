@@ -267,14 +267,28 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	// Enable analog circuitry
 	Serial.print("\nCycling EmotiBit power...");
 	pinMode(_hibernatePin, OUTPUT);
-	digitalWrite(_hibernatePin, HIGH);
+	if (_version == Version::V03B)
+	{
+		digitalWrite(_hibernatePin, LOW);
+	}
+	else
+	{
+		digitalWrite(_hibernatePin, HIGH);
+	}
 
 	delay(250);
 
 	// Enable analog circuitry
 	Serial.println("Enabling EmotiBit power...");
 	//pinMode(_hibernatePin, OUTPUT);
-	digitalWrite(_hibernatePin, LOW);
+	if (_version == Version::V03B)
+	{
+		digitalWrite(_hibernatePin, HIGH);
+	}
+	else
+	{
+		digitalWrite(_hibernatePin, LOW);
+	}
 
 	Serial.println("\nSensor setup:");
 	// Setup EDA
@@ -347,7 +361,14 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	// setup LED DRIVER
 	Serial.println("Initializing NCP5623....");
 	led.begin(*_EmotiBit_i2c);
-	led.setCurrent(26);
+	if (_version == Version::V03B)
+	{
+		led.setCurrent(6); // V03B has a Reference current resistor as 200K. Level 6/30 controls the max brightness of the LEDs
+	}
+	else
+	{
+		led.setCurrent(26);  // Version < V03B has a Reference current resistor as 1M. Level 26/30 controls the max brightness of the LEDs
+	}
 	led.setLEDpwm((uint8_t)Led::RED, 8);
 	led.setLEDpwm((uint8_t)Led::BLUE, 8);
 	led.setLEDpwm((uint8_t)Led::YELLOW, 8);
@@ -1203,13 +1224,21 @@ int8_t EmotiBit::updateEDAData()
 		edaTemp = edaTemp + edlTemp;                     // Add EDR to EDL in Volts
 
 		//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
-		if (edaTemp - vRef1 < 0.000086f) // only track eda down to 1K Ohm
+
+		
+		//if (edaTemp - vRef1 < 0.000086f) // only track eda down to 1K Ohm - for Versions < V03b
+		if(edaTemp < 0.442804) // for V03b --> 0.442804 = 0.4268(1+200K/5.07M)
 		{
 			edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
 		}
 		else
 		{
-			edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in Siemens
+			// Compatible with V02h
+			//edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in Siemens
+			
+			//ToDo: Add a variable in code to store 220K Series resistance for the GSR
+			edaTemp = vRef1 / ( (edaFeedbackAmpR * (edaTemp - vRef1)) - (220000*vRef1) ); // Conductance in Siemens
+
 		}
 		edaTemp = edaTemp * 1000000.f; // Convert to uSiemens
 
@@ -2563,7 +2592,14 @@ void EmotiBit::hibernate() {
 	// Turn off EmotiBit power
 	Serial.println("Disabling EmotiBit power");
 	pinMode(_hibernatePin, OUTPUT);
-	digitalWrite(_hibernatePin, HIGH);
+	if (_version == Version::V03B)
+	{
+		digitalWrite(_hibernatePin, LOW);
+	}
+	else
+	{
+		digitalWrite(_hibernatePin, HIGH);
+	}
 	pinMode(_hibernatePin, INPUT);
 
 	//deepSleep();

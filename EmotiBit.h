@@ -56,7 +56,8 @@ public:
 		V01C = 1,
 		V02B = 2,
 		V02F = 3,
-		V02H = 4
+		V02H = 4,
+		V03B = 5
 	};
 
 	//struct IMUSettings {
