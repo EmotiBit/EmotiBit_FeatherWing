@@ -1233,6 +1233,14 @@ int8_t EmotiBit::updateEDAData()
 		}
 		else
 		{
+			/*
+			Calculation:
+
+			Vo = Vin*(1+Rfb/R1), R1 = 4.99M, Rfb = Rc+Rskin; Rc = 220K
+			Vo = Vin*(1+(Rc+Rskin)/R1)
+			Rskin = R1*(V0/Vin - 1) - Rc
+			*/
+
 			// Compatible with V02h
 			//edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in Siemens
 			
