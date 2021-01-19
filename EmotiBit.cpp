@@ -153,6 +153,12 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 			Serial.print("\n\n##### EmotiBit Version "); Serial.print(getHardwareVersion()); Serial.println(" ####");
 			edaCorrection.begin((uint8_t)_version);
 		}
+		else if (input == 'V')
+		{
+			Serial.print("\nJust Writing EmotiBit Version to the OTP");
+			Serial.print("\n\n##### EmotiBit Version "); Serial.print(getHardwareVersion()); Serial.println(" ####");
+			edaCorrection.writeEmotiBitVersionToOtp(&tempHumiditySensor, (uint8_t)_version);
+		}
 		else
 		{
 			_debugMode = true;

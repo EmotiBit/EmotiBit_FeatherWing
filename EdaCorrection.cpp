@@ -416,6 +416,46 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, ch
 	return EdaCorrection::Status::SUCCESS;
 }
 
+EdaCorrection::Status EdaCorrection::writeEmotiBitVersionToOtp(Si7013 *si7013, int8_t version)
+{
+	if (version == -1) // called from the Eda Correction class
+		version = _emotiBitVersion;
+	else  // Called form Setup to just write the Version
+	{
+		Serial.println("Are you sure you want to proceed with writing the OTP?");
+		Serial.println("Press Y to proceed or any other key to abort");
+		while(!Serial.available());
+		if (Serial.read() != 'Y')
+		{
+			Serial.println("|||| Aborting ||||");
+			delay(2000);
+			return EdaCorrection::Status::FAILURE;
+		}
+		else
+		{
+			Serial.println("Proceeding to write the OTP");
+			Serial.print("EmotiBit version being written: "); Serial.println(version);
+		}
+	}
+	
+	if (otpMemoryMap.emotiBitVersionWritten == false)
+	{
+		otpMemoryMap.writeCount.emotiBitVersion++;
+		if ((uint8_t)writeToOtp(si7013, otpMemoryMap.emotiBitVersionAddr, version) == (uint8_t)EdaCorrection::Status::SUCCESS)
+		{
+			otpMemoryMap.emotiBitVersionWritten = true;
+		}
+		else
+		{
+			triedRegOverwrite = true;
+		}
+	}
+	else
+	{
+		otpMemoryMap.writeCount.emotiBitVersion++;
+	}
+}
+
 EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 {
 	if (dummyWrite)
@@ -449,22 +489,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 					otpMemoryMap.writeCount.dataVersion++;
 				}
 
-				if (otpMemoryMap.emotiBitVersionWritten == false)
-				{
-					otpMemoryMap.writeCount.emotiBitVersion++;
-					if ((uint8_t)writeToOtp(si7013, otpMemoryMap.emotiBitVersionAddr, _emotiBitVersion) == (uint8_t)EdaCorrection::Status::SUCCESS)
-					{
-						otpMemoryMap.emotiBitVersionWritten = true;
-					}
-					else
-					{
-						triedRegOverwrite = true;
-					}
-				}
-				else
-				{
-					otpMemoryMap.writeCount.emotiBitVersion++;
-				}
+				writeEmotiBitVersionToOtp(si7013);
 
 				// writing the vref 2 to OTP
 				otpData.inFloat = correctionData.vRef2;
