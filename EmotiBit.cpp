@@ -1236,12 +1236,21 @@ int8_t EmotiBit::updateEDAData()
 		//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
 
 		
-		//if (edaTemp - vRef1 < 0.000086f) // only track eda down to 1K Ohm - for Versions < V03b
-		if(edaTemp < 0.442804) // for V03b --> 0.442804 = 0.4268(1+200K/5.07M)
+
+
+		if (_version == Version::V02H)
 		{
-			edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
+			// Compatible with V02h
+			if (edaTemp - vRef1 < 0.000086f)
+			{
+				edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
+			}
+			else
+			{
+				edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in Siemens
+			}
 		}
-		else
+		else if(_version == Version::V03B)
 		{
 			/*
 			Calculation:
@@ -1250,14 +1259,17 @@ int8_t EmotiBit::updateEDAData()
 			Vo = Vin*(1+(Rc+Rskin)/R1)
 			Rskin = R1*(V0/Vin - 1) - Rc
 			*/
-
-			// Compatible with V02h
-			//edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in Siemens
-			
-			//ToDo: Add a variable in code to store 220K Series resistance for the GSR
-			edaTemp = vRef1 / ( (edaFeedbackAmpR * (edaTemp - vRef1)) - (220000*vRef1) ); // Conductance in Siemens
-
+			if (edaTemp < 0.442804) // for V03b --> 0.442804 = 0.4268(1+200K/5.07M)
+			{
+				edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
+			}
+			else
+			{
+				//ToDo: Add a variable in code to store 220K Series resistance for the GSR
+				edaTemp = vRef1 / ((edaFeedbackAmpR * (edaTemp - vRef1)) - (220000 * vRef1)); // Conductance in Siemens
+			}
 		}
+
 		edaTemp = edaTemp * 1000000.f; // Convert to uSiemens
 
 
