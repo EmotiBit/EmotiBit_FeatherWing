@@ -2534,6 +2534,10 @@ String EmotiBit::getHardwareVersion()
 	if (_version == Version::V02H) {
 		return "V02h";
 	}
+	else if (_version == Version::V03B)
+	{
+		return "V03b";
+	}
 }
 
 
