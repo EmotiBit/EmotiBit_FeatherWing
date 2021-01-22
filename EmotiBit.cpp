@@ -215,7 +215,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		_edrPin = A4;
 		_sdCardChipSelectPin = 6;
 	}
-	else if (_version == Version::V02H)
+	else if (_version == Version::V02H || _version == Version::V03B)
 	{
 		_hibernatePin = 6; // gpio pin assigned to the mosfet
 		buttonPin = 12;
@@ -276,24 +276,28 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	if (_version == Version::V03B)
 	{
 		digitalWrite(_hibernatePin, LOW);
+		Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" LOW");
 	}
 	else
 	{
 		digitalWrite(_hibernatePin, HIGH);
+		Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" HIGH");
 	}
 
 	delay(250);
 
 	// Enable analog circuitry
-	Serial.println("Enabling EmotiBit power...");
+	Serial.print("Enabling EmotiBit power...");
 	//pinMode(_hibernatePin, OUTPUT);
 	if (_version == Version::V03B)
 	{
 		digitalWrite(_hibernatePin, HIGH);
+		Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" HIGH");
 	}
 	else
 	{
 		digitalWrite(_hibernatePin, LOW);
+		Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" LOW");
 	}
 
 	Serial.println("\nSensor setup:");
