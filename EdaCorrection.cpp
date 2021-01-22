@@ -577,6 +577,27 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 
 	}
 }
+uint8_t EdaCorrection::readEmotiBitVersion(Si7013* si7013)
+{
+	if (checkSensorConnection(si7013) == false)
+	{
+		// Si7013 not found on EmotiBit
+		Serial.println("Si-7013 not found on EmotiBit. Check I2C wiring.");
+		return -1;
+	}
+	else
+	{
+		// Sensor found
+		uint8_t emotibitVersion = 0;
+		emotibitVersion = (uint8_t)si7013->readRegister8(otpMemoryMap.emotiBitVersionAddr, true);
+		Serial.println("######################");
+		Serial.print("The Version read from EmotiBit is: ");
+		Serial.println(emotibitVersion);
+		Serial.println("######################");
+		return emotibitVersion;
+	}
+}
+
 
 EdaCorrection::Status EdaCorrection::readFromOtp(Si7013* si7013, bool isOtpOperation)
 {

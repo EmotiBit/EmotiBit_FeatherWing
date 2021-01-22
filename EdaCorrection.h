@@ -234,6 +234,10 @@ public:
 	*/
 	EdaCorrection::Status writeToOtp(Si7013* si7013);
 
+	/*
+	Returns the emotiBit version read from the OTP
+	*/
+	uint8_t readEmotiBitVersion(Si7013* si7013);
 
 	//uint8_t readFromOtp(TwoWire* emotibit_i2c, uint8_t addr);
 	/*
