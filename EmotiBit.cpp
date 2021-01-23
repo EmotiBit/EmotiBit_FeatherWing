@@ -1257,7 +1257,8 @@ int8_t EmotiBit::updateEDAData()
 
 			Vo = Vin*(1+Rfb/R1), R1 = 4.99M, Rfb = Rc+Rskin; Rc = 220K
 			Vo = Vin*(1+(Rc+Rskin)/R1)
-			Rskin = R1*(V0/Vin - 1) - Rc
+			Rskin = R1*(Vo/Vin - 1) - Rc
+			S = Vin/((R1*(Vo-Vin) - Rc*Vin)
 			*/
 			if (edaTemp < 0.442804) // for V03b --> 0.442804 = 0.4268(1+200K/5.07M)
 			{
