@@ -134,11 +134,11 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		{
 			//AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::VER_0, AdcCorrection::DataFormatVersion::DATA_FORMAT_0);
 			AdcCorrection adcCorrection;
-			if (!adcCorrection.begin())
+			if (!adcCorrection.begin(samdStorageAdcValues._gainCorrection, samdStorageAdcValues._offsetCorrection, samdStorageAdcValues.valid))
 			{
 				break;
 			}
-			adcCorrection.execute(samdStorageAdcValues._gainCorrection, samdStorageAdcValues._offsetCorrection, samdStorageAdcValues.valid);
+			//adcCorrection.execute(samdStorageAdcValues._gainCorrection, samdStorageAdcValues._offsetCorrection, samdStorageAdcValues.valid);
 			samdFlashStorage.write(samdStorageAdcValues);
 			if (samdStorageAdcValues.valid)
 			{

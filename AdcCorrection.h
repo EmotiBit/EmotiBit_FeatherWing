@@ -149,7 +149,7 @@ public:
 	AdcCorrection();
 	AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version);
 
-	bool begin();
+	bool begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid);
 
 	void echoResults(uint16_t gainCorr, uint16_t offsetCorr);
 	
@@ -263,7 +263,7 @@ public:
 
 	int getAverageAnalogInput(uint8_t inputPin);
 
-	void execute(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid);
+	//void execute(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid);
 
 	AdcCorrectionRigVersion getRigVersion();
 
