@@ -1,29 +1,68 @@
 #include "AdcCorrection.h"
 
 
-AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, AdcCorrection::DataFormatVersion dataFormatVer)
+AdcCorrection::AdcCorrection()
 {
-	if (version == AdcCorrection::AdcCorrectionRigVersion::VER_0)
+	Serial.println("Enter the ADC Correction Rig version being used.");
+	Serial.println("Enter 0 for VER_0: R-Ladder Correction");
+	Serial.println("Enter 1 for VER_1: AbsV correction");
+
+	int rigVersionInput = -1, dataFormatVerInput = -1;
+	while (rigVersionInput == -1)
 	{
-		setRigVersion(version);
-		dataFormatVersion = dataFormatVer;
+		rigVersionInput = serialToInt();
+	}
+	if ((int)AdcCorrection::DataFormatVersion::COUNT == 2) // if there exist only 1 format version(0 and Unknown)
+	{
+		dataFormatVerInput = (int)AdcCorrection::DataFormatVersion::DATA_FORMAT_0;
+	}
+	else
+	{
+		while (dataFormatVerInput != -1)
+		{
+			dataFormatVerInput = serialToInt();
+		}
+	}
+	Serial.println("\n\n\n");
+	Serial.print("RigVersion entered: "); Serial.println(rigVersionInput);
+	Serial.print("dataFormatVersion entered: "); Serial.println(dataFormatVerInput);
+	Serial.println("\n\n\n");
+
+	if (rigVersionInput == (int)AdcCorrection::AdcCorrectionRigVersion::VER_0 || rigVersionInput == (int)AdcCorrection::AdcCorrectionRigVersion::VER_1)
+	{
+		setRigVersion((AdcCorrection::AdcCorrectionRigVersion)rigVersionInput);
 		numAdcPoints = 3;
-		if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
+		if (dataFormatVerInput == (int)AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
 		{
 			BYTES_PER_ADC_DATA_POINT = 4;
 			ATWINC_DATA_ARRAY_SIZE = BYTES_PER_ADC_DATA_POINT * numAdcPoints;
 		}
+		else
+		{
+			// enter the format version details for other versions here
+		}
 		adcCorrectionRig.N[0] = 1;  adcCorrectionRig.N[1] = 1;  adcCorrectionRig.N[2] = 10;
 		adcCorrectionRig.D[0] = 11; adcCorrectionRig.D[1] = 2;  adcCorrectionRig.D[2] = 11;
-		adcInputPins[0] = A0; 
-		adcInputPins[1] = A1; 
+		adcInputPins[0] = A0;
+		adcInputPins[1] = A1;
 		adcInputPins[2] = A2;
 		rigMetadata[0] = numAdcPoints;
-		rigMetadata[1] = (uint8_t)dataFormatVersion;
+		rigMetadata[1] = (uint8_t)dataFormatVerInput;
 		rigMetadata[2] = (int8_t)getRigVersion();
 		_isupdatedAtwincMetadataArray = true;
 	}
-	else if( version == AdcCorrection::AdcCorrectionRigVersion::UNKNOWN)
+	else
+	{
+		// handle other versions
+		Serial.println("You are using an invalid version");
+		Serial.println("stopping Execution");
+		while (1);
+	}
+}
+
+AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version)
+{
+	if( version == AdcCorrection::AdcCorrectionRigVersion::UNKNOWN)
 	{
 		readAtwincFlash(ATWINC_MEM_LOC_METADATA_LOC, RIG_METADATA_SIZE, rigMetadata, 0);
 		// Put a check here to see if the data in the metadata array is not corrupted
@@ -69,9 +108,38 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, Adc
 	{
 		// handle other versions
 		Serial.println("You are using an invalid version");
-
 	}
 
+}
+
+int AdcCorrection::serialToInt()
+{
+	// flush the serial buffer
+	while (Serial.available())
+	{
+		Serial.read();
+	}
+	while (!Serial.available());
+	String versionInString = "";
+	int serialInput;
+	while (Serial.available())
+	{
+		serialInput = Serial.read();
+		if (isDigit(serialInput))
+		{
+			versionInString += (char)serialInput;
+		}
+		else
+		{
+			Serial.println("entered character not numeral.");
+			Serial.println("Try again");
+			versionInString = "";
+			while (Serial.available())
+				Serial.read(); // flushing serial
+			return -1;
+		}
+	}
+	return versionInString.toInt();
 }
 
 bool AdcCorrection::begin()

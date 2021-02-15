@@ -132,7 +132,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 
 		if (input == 'A')
 		{
-			AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::VER_0, AdcCorrection::DataFormatVersion::DATA_FORMAT_0);
+			//AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::VER_0, AdcCorrection::DataFormatVersion::DATA_FORMAT_0);
+			AdcCorrection adcCorrection;
 			if (!adcCorrection.begin())
 			{
 				break;
@@ -311,7 +312,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 #ifdef ADC_CORRECTION_VERBOSE
 		Serial.println("No correction found on SAMD. Calculating correction by reading ATWINC");
 #endif
-		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, AdcCorrection::DataFormatVersion::UNKNOWN);
+		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN);
 		if (adcCorrection.atwincAdcDataCorruptionTest == AdcCorrection::Status::FAILURE || adcCorrection.atwincAdcMetaDataCorruptionTest == AdcCorrection::Status::FAILURE)
 		{
 			Serial.println("data on atwinc corrupted or not present");

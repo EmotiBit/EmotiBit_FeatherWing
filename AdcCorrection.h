@@ -99,9 +99,9 @@ public:
 
 	enum class DataFormatVersion
 	{
-		DATA_FORMAT_0,
-		DATA_FORMAT_1,
-		UNKNOWN
+		DATA_FORMAT_0 = 0,
+		UNKNOWN,
+		COUNT
 	};
 
 	static const uint8_t MAX_ADC_POINTS = 10;
@@ -145,7 +145,9 @@ public:
 	@usage:
 		Initializes the N's and D's in the class
 	*/
-	AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, AdcCorrection::DataFormatVersion dataFormatVer);
+	//AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, AdcCorrection::DataFormatVersion dataFormatVer);
+	AdcCorrection();
+	AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version);
 
 	bool begin();
 
@@ -277,5 +279,10 @@ public:
 	AdcCorrection::Status atwincFlashIntegrityCheck();
 
 	void printChipId();
+
+	/*
+	* returns an int after reading characters from Serial input 
+	*/
+	int serialToInt();
 };
 
