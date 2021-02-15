@@ -188,46 +188,6 @@ public:
 	AdcCorrection::Status readAtwincFlash(size_t readMemLoc, uint16_t dataSize, uint8_t* data, uint8_t isReadData = 1);
 	
 	
-	/*
-	@f: isSamdFlashWritten
-	@description:
-		checks if the data structure on the flash has been written to.
-		It is taken from the sample usage of the API to write to SAMD flash
-	@returns: true if data is stored on the flash
-	@usage:
-		used on every boot-up to check if the samd flash has been written
-	*/
-	bool isSamdFlashWritten();
-	
-	
-	/*
-	@f: writeSamdFlash
-	@description:
-		Writes the correction constants in the SAMD flash
-	@inputs:
-		1. gain correction value
-		2. offset correction value
-	@ret:
-		returns true if write successful
-	@usage;
-		used when the samd flash does not contain the correction values
-		used in combination with readAtwincFlash and calcCorrectionValues 
-	*/
-	bool writeSamdFlash(uint16_t gainCorr, uint16_t offsetCorr);
-	
-	
-	/*
-	@f: readSamdFlash
-	@description:
-		reads data from the ADC correction structure written in flash on every bootup
-	@return:
-		1: gain Correction value
-		2: offset correction value
-	@usage:	
-		used on every boot-up to read the correction values from the flash
-	*/
-	void readSamdFlash(uint16_t &gainCorr, uint16_t &offsetCorr);
-	
 	
 	/*
 	@f:calcCorrectionValues

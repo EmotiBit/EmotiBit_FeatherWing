@@ -12,11 +12,11 @@ AdcCorrection::AdcCorrection()
 	{
 		rigVersionInput = serialToInt();
 	}
-	Serial.print("RigVersion entered: "); Serial.println(rigVersionInput);
+	Serial.println("------------------"); Serial.print("RigVersion entered: "); Serial.println(rigVersionInput);
 	if ((int)AdcCorrection::DataFormatVersion::COUNT == 2) // if there exist only 1 format version(0 and Unknown)
 	{
 		dataFormatVerInput = (int)AdcCorrection::DataFormatVersion::DATA_FORMAT_0;
-		Serial.print("dataFormatVersion chosen: "); Serial.println(dataFormatVerInput);
+		Serial.print("dataFormatVersion chosen: "); Serial.println(dataFormatVerInput); Serial.println("------------------");
 	}
 	else
 	{
@@ -25,6 +25,7 @@ AdcCorrection::AdcCorrection()
 		{
 			dataFormatVerInput = serialToInt();
 		}
+		Serial.print("dataFormatVersion chosen: "); Serial.println(dataFormatVerInput); Serial.println("------------------");
 	}
 	dataFormatVersion = (AdcCorrection::DataFormatVersion)dataFormatVerInput;
 
@@ -102,10 +103,10 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version)
 					/*
 					adcCorrectionRig.N[0] = 1;  adcCorrectionRig.N[1] = 1;  adcCorrectionRig.N[2] = 10;
 					adcCorrectionRig.D[0] = 11; adcCorrectionRig.D[1] = 2;  adcCorrectionRig.D[2] = 11;
+					*/
 					adcInputPins[0] = A0;
 					adcInputPins[1] = A1;
 					adcInputPins[2] = A2;
-					*/
 				}
 				atwincAdcDataCorruptionTest = AdcCorrection::Status::SUCCESS;
 			}
@@ -173,19 +174,19 @@ void AdcCorrection::echoResults(uint16_t gainCorr, uint16_t offsetCorr)
 	}
 #endif
 #ifdef ADC_CORRECTION_VERBOSE
-	Serial.println("Enabling the ADC to use the correction values");
+	Serial.println("\nEnabling the ADC to use the correction values");
 #endif
 	uint16_t adcBeforeCorrection[3], adcAfterCorrection[3];
-	adcBeforeCorrection[0] = analogRead(A0);
-	adcBeforeCorrection[1] = analogRead(A1);
-	adcBeforeCorrection[2] = analogRead(A2);
+	adcBeforeCorrection[0] = getAverageAnalogInput(A0);
+	adcBeforeCorrection[1] = getAverageAnalogInput(A1);
+	adcBeforeCorrection[2] = getAverageAnalogInput(A2);
 	analogReadCorrection(offsetCorr, gainCorr);
 #ifdef ADC_CORRECTION_VERBOSE
-	Serial.println("Comparing results before and after correction");
+	Serial.println("\nComparing results before and after correction");
 #endif
-	adcAfterCorrection[0] = analogRead(A0);
-	adcAfterCorrection[1] = analogRead(A1);
-	adcAfterCorrection[2] = analogRead(A2);
+	adcAfterCorrection[0] = getAverageAnalogInput(A0);
+	adcAfterCorrection[1] = getAverageAnalogInput(A1);
+	adcAfterCorrection[2] = getAverageAnalogInput(A2);
 
 	digitalWrite(LED_BUILTIN, LOW);
 	uint32_t timeCurrent = millis();
@@ -193,7 +194,7 @@ void AdcCorrection::echoResults(uint16_t gainCorr, uint16_t offsetCorr)
 	{
 		if (millis() - timeCurrent > 2000)
 		{
-			Serial.println("Enter a character to continue to record results");
+			Serial.println("\nEnter a character to continue to record results");
 			timeCurrent = millis();
 		}
 		digitalWrite(LED_BUILTIN, HIGH);
@@ -438,23 +439,6 @@ AdcCorrection::Status AdcCorrection::readAtwincFlash(size_t readMemLoc, uint16_t
 	}
 }
 
-bool AdcCorrection::isSamdFlashWritten()
-{
-	// SamdStorageAdcValues samdStorageAdcValues;
-	// samdStorageAdcValues = samdFlashStorage.read();
-	// return samdStorageAdcValues.valid;
-}
-
-bool AdcCorrection::writeSamdFlash(uint16_t gainCorr, uint16_t offsetCorr)
-{
-
-}
-
-void AdcCorrection::readSamdFlash(uint16_t &gainCorr, uint16_t &offsetCorr)
-{
-
-}
-// ToDo: define ADC_CORRECTION_VERBOSE in the header file
 
 bool AdcCorrection::calcCorrectionValues()
 {
@@ -463,6 +447,7 @@ bool AdcCorrection::calcCorrectionValues()
 		if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
 		{
 			int16_t offsetCorr = 0, gainCorr = 0;
+			float rawOffsetCorr = 0.0, rawGainCorr = 0.0;
 			float slope;
 			uint8_t dataArrayNoffset = 0, dataArrayDoffset = 1, dataArrayAdcMsbOffset = 2, dataArrayAdcLsbOffset = 3;
 			uint8_t AdcHighMem[2]; // Adc High value - [MSB] [LSB] 
@@ -474,8 +459,8 @@ bool AdcCorrection::calcCorrectionValues()
 			AdcHighMem[1] = atwincDataArray[adcHighPos * BYTES_PER_ADC_DATA_POINT + dataArrayAdcLsbOffset];  // ADC High point LSB
 			uint16_t adcHighMeasured = int8Toint16(AdcHighMem[0], AdcHighMem[1]); // ( MSB, LSB)
 			uint16_t adcLowMeasured = int8Toint16(AdcLowMem[0], AdcLowMem[1]); // (MSB, LSB)
-			uint16_t adcLowIdeal = (uint16_t)round((((float)adcCorrectionRig.N[0] / (float)adcCorrectionRig.D[0]) * 4096));
-			uint16_t adcHighIdeal = (uint16_t)round((((float)adcCorrectionRig.N[2] / (float)adcCorrectionRig.D[2]) * 4096));
+			float adcLowIdeal = (((float)adcCorrectionRig.N[0] / (float)adcCorrectionRig.D[0]) * 4095.f);
+			float adcHighIdeal = (((float)adcCorrectionRig.N[2] / (float)adcCorrectionRig.D[2]) * 4095.f);
 #ifdef ADC_CORRECTION_VERBOSE
 			Serial.print("\nADC high(Ideal):"); Serial.println(adcHighIdeal);
 			Serial.print("ADC high(Measured):"); Serial.println(adcHighMeasured);
@@ -488,12 +473,32 @@ bool AdcCorrection::calcCorrectionValues()
 			Serial.print("gainCorr in float: "); Serial.println(2048 / slope, 6);
 #endif
 			// refer http://ww1.microchip.com/downloads/en/DeviceDoc/90003185A.pdf
-			offsetCorr = (int16_t)round((adcLowMeasured - (slope * adcLowIdeal)));
+			
+
+			rawOffsetCorr = (float)adcLowMeasured - (slope * adcLowIdeal);
+#ifdef ADC_CORRECTION_VERBOSE
+			Serial.print("offset correction before Rounding: ");
+			Serial.println(rawOffsetCorr);
+#endif
+			offsetCorr = round(rawOffsetCorr);
+#ifdef ADC_CORRECTION_VERBOSE
+			Serial.print("offsetCorrection after rounding: ");
+			Serial.println(offsetCorr);
+#endif
 			if (offsetCorr < 0)
 			{
 				offsetCorr = 4095 + offsetCorr + 1;
 			}
-			gainCorr = round((2048 / slope));
+			rawGainCorr = (2048.f / slope);
+#ifdef ADC_CORRECTION_VERBOSE
+			Serial.print("gain correction before Rounding: ");
+			Serial.println(rawGainCorr);
+#endif
+			gainCorr = round(rawGainCorr);
+#ifdef ADC_CORRECTION_VERBOSE
+			Serial.print("gain Correction after rounding: ");
+			Serial.println(gainCorr);
+#endif
 			setGainCorrection((uint16_t)gainCorr);
 			setOffsetCorrection((uint16_t)offsetCorr);
 #ifdef ADC_CORRECTION_VERBOSE
@@ -536,7 +541,8 @@ void AdcCorrection::readAdcPins()
 		adcCorrectionRig.AdcHigh[i] = (adcValue & 0xFF00)>> 8;
 		adcCorrectionRig.AdcLow[i] = adcValue & 0x00FF;
 #ifdef ADC_CORRECTION_VERBOSE
-		Serial.print("the ADC value read is:"); Serial.print(adcValue, HEX);
+		Serial.print("\nthe ADC value read is(DEC):"); Serial.println(adcValue);
+		Serial.print("the ADC value read is(HEX):"); Serial.print(adcValue, HEX);
 		Serial.print("\tADC high:"); Serial.print(adcCorrectionRig.AdcHigh[i], HEX);
 		Serial.print("\tADC low:"); Serial.println(adcCorrectionRig.AdcLow[i], HEX);
 #endif
@@ -553,7 +559,7 @@ int AdcCorrection::getAverageAnalogInput(uint8_t inputPin)
 	int readings[numReadings] = { 0 };      // the readings from the analog input
 	int readIndex = 0;              // the index of the current reading
 	int total = 0;                  // the running total
-	int average = 0;                // the average
+	float average = 0;                // the average
 
 	uint32_t timeStart = millis();
 	//digitalWrite(LED_BUILTIN, HIGH);
@@ -576,7 +582,7 @@ int AdcCorrection::getAverageAnalogInput(uint8_t inputPin)
 		}
 
 		// calculate the average:
-		average = total / numReadings;
+		average = (float)total / (float)numReadings;
 		// send it to the computer as ASCII digits
 		//Serial.print("Time:"); Serial.print(millis()); Serial.print("\t");
 		//Serial.println(average);
@@ -586,7 +592,11 @@ int AdcCorrection::getAverageAnalogInput(uint8_t inputPin)
 		}
 	}
 	//digitalWrite(LED_BUILTIN, LOW);
-	return average;
+#ifdef ADC_CORRECTION_VERBOSE
+	Serial.print("Average value: "); Serial.println(average,6);
+#endif
+
+	return (int)round(average);
 
 }
 // ToDo: change the name of the function to begin?
@@ -598,52 +608,61 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 	Serial.println("################################");
 	Serial.println("#####  ADC Correction Mode  ####");
 	Serial.println("################################\n");
-	Serial.println("IF YOU ARE A TESTER, enter A to continue.");
-	Serial.println("Enter any other key to continue to normal bootup");
+	Serial.println("- TESTING MODE:: Enter T to continue:: Values are calculated but not written to the flash");
+	Serial.println("- PROGRAMMING MODE(use for Shipping)::Enter P to continue:: Values are calculated are written to the AT-Winc flash");
+	Serial.println("- Enter any other key to continue to normal bootup");
 	while (!Serial.available());
-	if (Serial.read() != 'A')
+	char modeChoice = Serial.read();
+	if (modeChoice == 'T' || modeChoice == 'P')
 	{
-		return false;
-	}
-	else
-	{
-		Serial.println("Press E to update with already existing correction values.\n Press any other key to perform correction");
-		while (!Serial.available());
-		char input = Serial.read();
-		if (input == 'E')
+		while (Serial.available())// flushing any extra characters
 		{
-			if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
+			Serial.read();
+		}
+		uint32_t now = millis();
+		while (!Serial.available() && millis() - now < 2000)
+		{
+		}
+		//Serial.println("  - Press E to update with already existing correction values.\n  - Press any other key to perform correction");
+		//while (!Serial.available());
+		if (Serial.available())
+		{
+			char input = Serial.read();
+			if (input == 'E')
 			{
-				while (true)
+				if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
 				{
-					Serial.println("Enter the existing correction data in the format shown below");
-					Serial.println("N, D, ADC_MSB, ADC_LSB");
-					while (!Serial.available());
-					for (int i = 0; i < 12; i++)
+					while (true)
 					{
-						String splitString = Serial.readStringUntil(',');
-						atwincDataArray[i] = (uint8_t)splitString.toInt();
-					}
-					Serial.println("The data entered is ");
-					for (int i = 0; i < 12; i++)
-					{
-						Serial.print(atwincDataArray[i]); Serial.print("  ");
-					}
-					Serial.println("Press Y to aprove, any other key to enter again");
-					while (!Serial.available());
-					if (Serial.read() != 'Y')
-					{
-						Serial.println("Enter the data again");
+						Serial.println("Enter the existing correction data in the format shown below");
+						Serial.println("N, D, ADC_MSB, ADC_LSB");
+						while (!Serial.available());
 						for (int i = 0; i < 12; i++)
 						{
-							atwincDataArray[i] = 0;
+							String splitString = Serial.readStringUntil(',');
+							atwincDataArray[i] = (uint8_t)splitString.toInt();
 						}
-						while (Serial.available())
-							Serial.read();
-					}
-					else
-					{
-						break;
+						Serial.println("The data entered is ");
+						for (int i = 0; i < 12; i++)
+						{
+							Serial.print(atwincDataArray[i]); Serial.print("  ");
+						}
+						Serial.println("Press Y to aprove, any other key to enter again");
+						while (!Serial.available());
+						if (Serial.read() != 'Y')
+						{
+							Serial.println("Enter the data again");
+							for (int i = 0; i < 12; i++)
+							{
+								atwincDataArray[i] = 0;
+							}
+							while (Serial.available())
+								Serial.read();
+						}
+						else
+						{
+							break;
+						}
 					}
 				}
 			}
@@ -686,7 +705,16 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 		gainCorr = getGainCorrection();
 		offsetCorr = getOffsetCorrection();
 		valid = true;
-		status = writeAtwincFlash();
+		if (modeChoice == 'P') // Programmer Mode
+		{
+			status = writeAtwincFlash();
+		}
+		else
+		{
+			Serial.println("-------");
+			Serial.println("TESTING MODE. ATwinc flash not updated.");
+			Serial.println("-------");
+		}
 		if (status == AdcCorrection::Status::SUCCESS)
 		{
 #ifdef ADC_CORRECTION_VERBOSE
@@ -697,6 +725,10 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 		{
 			Serial.println("Failed to write to the ATWINC flash");
 		}
+	}
+	else
+	{
+		return false;
 	}
 	return true;
 }
