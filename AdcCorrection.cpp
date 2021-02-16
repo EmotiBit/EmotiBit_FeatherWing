@@ -129,6 +129,140 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version)
 
 }
 
+
+bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
+{
+	bool state;
+	AdcCorrection::Status status;
+	analogReadResolution(12); // Setting ADC resolution to 12 bits
+	Serial.println("################################");
+	Serial.println("#####  ADC Correction Mode  ####");
+	Serial.println("################################\n");
+	Serial.println("- Enter T to for TESTING MODE::  Values are calculated but not written to the flash");
+	Serial.println("- Enter P to for PROGRAMMING MODE(use for Shipping):: Values are calculated are written to the AT-Winc flash");
+	Serial.println("- Enter any other key to continue to normal bootup");
+	while (!Serial.available());
+	char modeChoice = Serial.read();
+	if (modeChoice == 'T' || modeChoice == 'P')
+	{
+		while (Serial.available())// flushing any extra characters
+		{
+			Serial.read();
+		}
+		uint32_t now = millis();
+		while (!Serial.available() && millis() - now < 2000)
+		{
+		}
+		//Serial.println("  - Press E to update with already existing correction values.\n  - Press any other key to perform correction");
+		//while (!Serial.available());
+		if (Serial.available())
+		{
+			char input = Serial.read();
+			if (input == 'E')
+			{
+				if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
+				{
+					while (true)
+					{
+						Serial.println("Enter the existing correction data in the format shown below");
+						Serial.println("N, D, ADC_MSB, ADC_LSB");
+						while (!Serial.available());
+						for (int i = 0; i < 12; i++)
+						{
+							String splitString = Serial.readStringUntil(',');
+							atwincDataArray[i] = (uint8_t)splitString.toInt();
+						}
+						Serial.println("The data entered is ");
+						for (int i = 0; i < 12; i++)
+						{
+							Serial.print(atwincDataArray[i]); Serial.print("  ");
+						}
+						Serial.println("Press Y to aprove, any other key to enter again");
+						while (!Serial.available());
+						if (Serial.read() != 'Y')
+						{
+							Serial.println("Enter the data again");
+							for (int i = 0; i < 12; i++)
+							{
+								atwincDataArray[i] = 0;
+							}
+							while (Serial.available())
+								Serial.read();
+						}
+						else
+						{
+							break;
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+#ifdef ADC_CORRECTION_VERBOSE
+			Serial.println("Using the rig to generate correction values");
+#endif
+			Serial.println("ADC Correction Steps:");
+			Serial.println("  * Make sure the battery is connected to the feather");
+			Serial.println("  * Enter any character to initiate correction measurements");
+			Serial.println("  * Then immediately remove the USB cable");
+			Serial.println("  * Once the correction has been performed, the Red LED on the feather will start blinking with 2 pulses");
+			Serial.println("  * At this point, reconnect the serial cable. A message will be displayed prompting you to enter any character to continue");
+			Serial.println("Enter any key to begin...");
+			while (!Serial.available()); Serial.read();
+			Serial.println("** UNPLUG USB CABLE within 5 seconds to obtain accurate measurements **");
+			for (int i = 5; i > 0; i--)
+			{
+				Serial.print(i); Serial.print(" "); delay(1000);
+			}
+			Serial.println("\nIF YOU SEE THIS MESSAGE, YOUR MEASUREMENTS MAY BE INACCURATE...");
+			Serial.println("You should re-run ADC calibration...");
+
+			// write all the functoin calls here
+			readAdcPins();
+#ifdef ADC_CORRECTION_VERBOSE
+			Serial.println("Consolidating all values into one atwinc data array");
+#endif
+			status = updateAtwincDataArray();
+		}
+#ifdef ADC_CORRECTION_VERBOSE
+		Serial.println("finding correction values");
+#endif
+		state = calcCorrectionValues();
+#ifdef ADC_CORRECTION_VERBOSE
+		Serial.println("Writing the raw correction data to the flash");
+#endif
+		gainCorr = getGainCorrection();
+		offsetCorr = getOffsetCorrection();
+		valid = true;
+		if (modeChoice == 'P') // Programmer Mode
+		{
+			status = writeAtwincFlash();
+		}
+		else
+		{
+			Serial.println("-------");
+			Serial.println("TESTING MODE. ATwinc flash not updated.");
+			Serial.println("-------");
+		}
+		if (status == AdcCorrection::Status::SUCCESS)
+		{
+#ifdef ADC_CORRECTION_VERBOSE
+			Serial.println("Data written on the ATWINC flash successfully.");
+#endif
+		}
+		else
+		{
+			Serial.println("Failed to write to the ATWINC flash");
+		}
+	}
+	else
+	{
+		return false;
+	}
+	return true;
+}
+
 int AdcCorrection::serialToInt()
 {
 	// flush the serial buffer
@@ -159,107 +293,6 @@ int AdcCorrection::serialToInt()
 	return versionInString.toInt();
 }
 
-//bool AdcCorrection::begin()
-//{
-//
-//}
-
-void AdcCorrection::echoResults(uint16_t gainCorr, uint16_t offsetCorr)
-{
-#ifdef ADC_CORRECTION_VERBOSE
-	Serial.println("atwincDataArray");
-	for (int i = 0; i < ATWINC_DATA_ARRAY_SIZE; i++)
-	{
-		Serial.print("  "); Serial.print(atwincDataArray[i]);
-	}
-#endif
-#ifdef ADC_CORRECTION_VERBOSE
-	Serial.println("\nEnabling the ADC to use the correction values");
-#endif
-	uint16_t adcBeforeCorrection[3], adcAfterCorrection[3];
-	adcBeforeCorrection[0] = getAverageAnalogInput(A0);
-	adcBeforeCorrection[1] = getAverageAnalogInput(A1);
-	adcBeforeCorrection[2] = getAverageAnalogInput(A2);
-	analogReadCorrection(offsetCorr, gainCorr);
-#ifdef ADC_CORRECTION_VERBOSE
-	Serial.println("\nComparing results before and after correction");
-#endif
-	adcAfterCorrection[0] = getAverageAnalogInput(A0);
-	adcAfterCorrection[1] = getAverageAnalogInput(A1);
-	adcAfterCorrection[2] = getAverageAnalogInput(A2);
-
-	digitalWrite(LED_BUILTIN, LOW);
-	uint32_t timeCurrent = millis();
-	while (!Serial.available())
-	{
-		if (millis() - timeCurrent > 2000)
-		{
-			Serial.println("\nEnter a character to continue to record results");
-			timeCurrent = millis();
-		}
-		digitalWrite(LED_BUILTIN, HIGH);
-		delay(200);
-		digitalWrite(LED_BUILTIN, LOW);
-		delay(200);
-		digitalWrite(LED_BUILTIN, HIGH);
-		delay(200);
-		digitalWrite(LED_BUILTIN, LOW);
-		delay(1000);
-	}
-	digitalWrite(LED_BUILTIN, HIGH);
-	Serial.read();// pop from the buffer
-	Serial.println("COPY AND PASTE the folowing into the feather records");
-	Serial.println("==============================================");
-	Serial.print(gainCorr); Serial.print(",");
-	Serial.print(offsetCorr); Serial.print(",");
-	Serial.print(adcBeforeCorrection[0]); Serial.print(",");
-	Serial.print(adcBeforeCorrection[1]); Serial.print(",");
-	Serial.print(adcBeforeCorrection[2]); Serial.print(",");
-	Serial.print(adcAfterCorrection[0]); Serial.print(",");
-	Serial.print(adcAfterCorrection[1]); Serial.print(",");
-	Serial.print(adcAfterCorrection[2]);
-	uint8_t tempData[12], tempdata2[3];
-	readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, 12, tempData);
-	for (int i = 0; i < ATWINC_DATA_ARRAY_SIZE; i++)
-	{
-		Serial.print(","); Serial.print(tempData[i]);
-	}
-	Serial.print(",");
-	WiFi.setPins(8, 7, 4, 2);
-	WiFi.init();
-	uint8_t atwincMacAddr[6], atwincMacValid;
-	m2m_wifi_get_otp_mac_address(atwincMacAddr, &atwincMacValid);
-	if (atwincMacValid)
-	{
-		for (int i = 0; i < 6; i++)
-		{
-			if (atwincMacAddr[i] <= 15)
-			{
-				Serial.print("0");
-			}
-			Serial.print(atwincMacAddr[i], HEX);
-
-		}
-	}
-	else
-	{
-		Serial.println("INVALID_MAC");
-	}
-	Serial.print(",");
-	printChipId();
-	
-	Serial.println("\n==============================================");
-	Serial.println("After you have copied the data, enter any character to continue");
-	while (!Serial.available()); Serial.read();
-#ifdef ADC_CORRECTION_VERBOSE
-	Serial.println("\ntesting AT-WINC flash read");
-	readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, 12, tempData);
-	readAtwincFlash(ATWINC_MEM_LOC_DUPLICATE_DATA, 12, tempData);
-	readAtwincFlash(ATWINC_MEM_LOC_METADATA_LOC, 3, tempData, 0);
-#endif
-	WiFi.end();
-
-}
 
 AdcCorrection::Status AdcCorrection::updateAtwincDataArray()
 {
@@ -294,16 +327,6 @@ AdcCorrection::Status AdcCorrection::updateAtwincDataArray()
 	}
 }
 
-// moved this to the constructor
-//AdcCorrection::Status AdcCorrection::updateAtwincMetadataArray()
-//{
-//	rigMetadata[0] = numAdcPoints;
-//	rigMetadata[1] = dataFormatVersion;
-//	rigMetadata[2] = (int8_t)getRigVersion();
-//	_isupdatedAtwincArray = true;
-//	//ToDo: Fix this return
-//	return AdcCorrection::Status::SUCCESS;
-//}
 
 AdcCorrection::Status AdcCorrection::initWifiModule()
 {
@@ -599,139 +622,7 @@ int AdcCorrection::getAverageAnalogInput(uint8_t inputPin)
 	return (int)round(average);
 
 }
-// ToDo: change the name of the function to begin?
-bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
-{
-	bool state;
-	AdcCorrection::Status status;
-	analogReadResolution(12); // Setting ADC resolution to 12 bits
-	Serial.println("################################");
-	Serial.println("#####  ADC Correction Mode  ####");
-	Serial.println("################################\n");
-	Serial.println("- Enter T to for TESTING MODE::  Values are calculated but not written to the flash");
-	Serial.println("- Enter P to for PROGRAMMING MODE(use for Shipping):: Values are calculated are written to the AT-Winc flash");
-	Serial.println("- Enter any other key to continue to normal bootup");
-	while (!Serial.available());
-	char modeChoice = Serial.read();
-	if (modeChoice == 'T' || modeChoice == 'P')
-	{
-		while (Serial.available())// flushing any extra characters
-		{
-			Serial.read();
-		}
-		uint32_t now = millis();
-		while (!Serial.available() && millis() - now < 2000)
-		{
-		}
-		//Serial.println("  - Press E to update with already existing correction values.\n  - Press any other key to perform correction");
-		//while (!Serial.available());
-		if (Serial.available())
-		{
-			char input = Serial.read();
-			if (input == 'E')
-			{
-				if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
-				{
-					while (true)
-					{
-						Serial.println("Enter the existing correction data in the format shown below");
-						Serial.println("N, D, ADC_MSB, ADC_LSB");
-						while (!Serial.available());
-						for (int i = 0; i < 12; i++)
-						{
-							String splitString = Serial.readStringUntil(',');
-							atwincDataArray[i] = (uint8_t)splitString.toInt();
-						}
-						Serial.println("The data entered is ");
-						for (int i = 0; i < 12; i++)
-						{
-							Serial.print(atwincDataArray[i]); Serial.print("  ");
-						}
-						Serial.println("Press Y to aprove, any other key to enter again");
-						while (!Serial.available());
-						if (Serial.read() != 'Y')
-						{
-							Serial.println("Enter the data again");
-							for (int i = 0; i < 12; i++)
-							{
-								atwincDataArray[i] = 0;
-							}
-							while (Serial.available())
-								Serial.read();
-						}
-						else
-						{
-							break;
-						}
-					}
-				}
-			}
-		}
-		else
-		{
-#ifdef ADC_CORRECTION_VERBOSE
-			Serial.println("Using the rig to generate correction values");
-#endif
-			Serial.println("ADC Correction Steps:");
-			Serial.println("  * Make sure the battery is connected to the feather");
-			Serial.println("  * Enter any character to initiate correction measurements");
-			Serial.println("  * Then immediately remove the USB cable");
-			Serial.println("  * Once the correction has been performed, the Red LED on the feather will start blinking with 2 pulses");
-			Serial.println("  * At this point, reconnect the serial cable. A message will be displayed prompting you to enter any character to continue");
-			Serial.println("Enter any key to begin...");
-			while (!Serial.available()); Serial.read();
-			Serial.println("** UNPLUG USB CABLE within 5 seconds to obtain accurate measurements **");
-			for (int i = 5; i > 0; i--)
-			{
-				Serial.print(i); Serial.print(" "); delay(1000);
-			}
-			Serial.println("\nIF YOU SEE THIS MESSAGE, YOUR MEASUREMENTS MAY BE INACCURATE...");
-			Serial.println("You should re-run ADC calibration...");
 
-			// write all the functoin calls here
-			readAdcPins();
-#ifdef ADC_CORRECTION_VERBOSE
-			Serial.println("Consolidating all values into one atwinc data array");
-#endif
-			status = updateAtwincDataArray();
-		}
-#ifdef ADC_CORRECTION_VERBOSE
-		Serial.println("finding correction values");
-#endif
-		state = calcCorrectionValues();
-#ifdef ADC_CORRECTION_VERBOSE
-		Serial.println("Writing the raw correction data to the flash");
-#endif
-		gainCorr = getGainCorrection();
-		offsetCorr = getOffsetCorrection();
-		valid = true;
-		if (modeChoice == 'P') // Programmer Mode
-		{
-			status = writeAtwincFlash();
-		}
-		else
-		{
-			Serial.println("-------");
-			Serial.println("TESTING MODE. ATwinc flash not updated.");
-			Serial.println("-------");
-		}
-		if (status == AdcCorrection::Status::SUCCESS)
-		{
-#ifdef ADC_CORRECTION_VERBOSE
-			Serial.println("Data written on the ATWINC flash successfully.");
-#endif
-		}
-		else
-		{
-			Serial.println("Failed to write to the ATWINC flash");
-		}
-	}
-	else
-	{
-		return false;
-	}
-	return true;
-}
 
 AdcCorrection::AdcCorrectionRigVersion AdcCorrection::getRigVersion()
 {
@@ -784,4 +675,101 @@ void AdcCorrection::printChipId()
 	char buf[33];
 	sprintf(buf, "%8x%8x%8x%8x", val1, val2, val3, val4);
 	Serial.println(buf);
+}
+
+void AdcCorrection::echoResults(uint16_t gainCorr, uint16_t offsetCorr)
+{
+#ifdef ADC_CORRECTION_VERBOSE
+	Serial.println("atwincDataArray");
+	for (int i = 0; i < ATWINC_DATA_ARRAY_SIZE; i++)
+	{
+		Serial.print("  "); Serial.print(atwincDataArray[i]);
+	}
+#endif
+#ifdef ADC_CORRECTION_VERBOSE
+	Serial.println("\nEnabling the ADC to use the correction values");
+#endif
+	uint16_t adcBeforeCorrection[3], adcAfterCorrection[3];
+	adcBeforeCorrection[0] = getAverageAnalogInput(A0);
+	adcBeforeCorrection[1] = getAverageAnalogInput(A1);
+	adcBeforeCorrection[2] = getAverageAnalogInput(A2);
+	analogReadCorrection(offsetCorr, gainCorr);
+#ifdef ADC_CORRECTION_VERBOSE
+	Serial.println("\nComparing results before and after correction");
+#endif
+	adcAfterCorrection[0] = getAverageAnalogInput(A0);
+	adcAfterCorrection[1] = getAverageAnalogInput(A1);
+	adcAfterCorrection[2] = getAverageAnalogInput(A2);
+
+	digitalWrite(LED_BUILTIN, LOW);
+	uint32_t timeCurrent = millis();
+	while (!Serial.available())
+	{
+		if (millis() - timeCurrent > 2000)
+		{
+			Serial.println("\nEnter a character to continue to record results");
+			timeCurrent = millis();
+		}
+		digitalWrite(LED_BUILTIN, HIGH);
+		delay(200);
+		digitalWrite(LED_BUILTIN, LOW);
+		delay(200);
+		digitalWrite(LED_BUILTIN, HIGH);
+		delay(200);
+		digitalWrite(LED_BUILTIN, LOW);
+		delay(1000);
+	}
+	digitalWrite(LED_BUILTIN, HIGH);
+	Serial.read();// pop from the buffer
+	Serial.println("COPY AND PASTE the folowing into the feather records");
+	Serial.println("==============================================");
+	Serial.print(gainCorr); Serial.print(",");
+	Serial.print(offsetCorr); Serial.print(",");
+	Serial.print(adcBeforeCorrection[0]); Serial.print(",");
+	Serial.print(adcBeforeCorrection[1]); Serial.print(",");
+	Serial.print(adcBeforeCorrection[2]); Serial.print(",");
+	Serial.print(adcAfterCorrection[0]); Serial.print(",");
+	Serial.print(adcAfterCorrection[1]); Serial.print(",");
+	Serial.print(adcAfterCorrection[2]);
+	uint8_t tempData[12], tempdata2[3];
+	readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, 12, tempData);
+	for (int i = 0; i < ATWINC_DATA_ARRAY_SIZE; i++)
+	{
+		Serial.print(","); Serial.print(tempData[i]);
+	}
+	Serial.print(",");
+	WiFi.setPins(8, 7, 4, 2);
+	WiFi.init();
+	uint8_t atwincMacAddr[6], atwincMacValid;
+	m2m_wifi_get_otp_mac_address(atwincMacAddr, &atwincMacValid);
+	if (atwincMacValid)
+	{
+		for (int i = 0; i < 6; i++)
+		{
+			if (atwincMacAddr[i] <= 15)
+			{
+				Serial.print("0");
+			}
+			Serial.print(atwincMacAddr[i], HEX);
+
+		}
+	}
+	else
+	{
+		Serial.println("INVALID_MAC");
+	}
+	Serial.print(",");
+	printChipId();
+
+	Serial.println("\n==============================================");
+	Serial.println("After you have copied the data, enter any character to continue");
+	while (!Serial.available()); Serial.read();
+#ifdef ADC_CORRECTION_VERBOSE
+	Serial.println("\ntesting AT-WINC flash read");
+	readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, 12, tempData);
+	readAtwincFlash(ATWINC_MEM_LOC_DUPLICATE_DATA, 12, tempData);
+	readAtwincFlash(ATWINC_MEM_LOC_METADATA_LOC, 3, tempData, 0);
+#endif
+	WiFi.end();
+
 }

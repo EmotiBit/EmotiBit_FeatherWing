@@ -26,9 +26,7 @@ Bootup
 			3. numAdcPoints[1 BYTE]
 		7. (calcCorrectionValues) Calculate the correction values based on the values stored in the highPrecisionRig struct
 		8. Store the correction values in the SAMD flash
-		9. Write raw ADC values and correction values on the SD-Card
-			1. For personal record. This data will be added to the feather correction data database
-		10. leave special provision mode to continue normal execution
+		9. leave special provision mode to continue normal execution
 
 	[USER] Follow normal execution
 		1. Check SAMD flash for correction values (if vaild( in the flash storage struct))
@@ -41,10 +39,10 @@ Bootup
 						1. Populate the highPrecisionRig struct
 						2. <Calculate store> goto point 7
 							1. No need to store in the SD-Card
-					2. [FAIL INTEGRITY check] Contant info@emotiBit
+					2. [FAIL INTEGRITY check] Use ADC without correction
 
 */
-// below table taken from WiFi101/src/spi_flash/include/spi_flash.h
+// below table taken from WiFi101/src/spi_flash/include/spi_flash.h in WiFi101 Library by Arduino
 /*
  * Detailed Sizes and locations for Flash Memory:
  *  ____________________ ___________ ____________________________________________________________________________
@@ -145,12 +143,26 @@ public:
 	@usage:
 		Initializes the N's and D's in the class
 	*/
-	//AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, AdcCorrection::DataFormatVersion dataFormatVer);
 	AdcCorrection();
+
+	/*
+	@Constructor
+	@usage: Called from setup when the Correction values are not stored in the SAMD flash
+	*/
 	AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version);
 
+	/*
+	@usage: This function calls various other class functions to 
+	1. Acquire ADC data
+	2. Store data on the At-Winc Flash
+	3. Calculate Corretion data and pass it to the setup function in EmotiBit.cpp
+	*/
 	bool begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid);
 
+	/*
+	@usage:
+	Called to display ADC correction results on the Serial monitor after ADC has been corrected
+	*/
 	void echoResults(uint16_t gainCorr, uint16_t offsetCorr);
 	
 	/*
@@ -169,7 +181,7 @@ public:
 	@usage:
 		Used only in lab before shipping to write to the AT-WINC flash.
 		Used in the special "provision-mode" for adc correction
-	
+	@Notes: Based on the function spi_flash_write in WiFi101\src\spi_flash\source\sspi_flash.c in WiFi101 Library by Arduino 
 	*/
 	AdcCorrection::Status writeAtwincFlash();
 	
@@ -184,6 +196,7 @@ public:
 	@usage:
 		Used if the samd-flash does not contain correction values on startup.
 		Updates the HighPrecisionRig struct with the ADC values
+	@Notes: Based on the function spi_flash_read in WiFi101\src\spi_flash\source\sspi_flash.c in WiFi101 Library by Arduino
 	*/
 	AdcCorrection::Status readAtwincFlash(size_t readMemLoc, uint16_t dataSize, uint8_t* data, uint8_t isReadData = 1);
 	
@@ -207,41 +220,65 @@ public:
 	*/
 	uint16_t getGainCorrection();
 	
-	
 	/*
 	@f: getOffsetCorrection
 	@description:
 		returns the ADC offset correcction
 	*/
 	uint16_t getOffsetCorrection();
-
+	/*
+	@f: setGainCorrection
+	@description:
+		sets the ADC gain correcction to the class variable
+	*/
 	void setGainCorrection(uint16_t gainCorr);
 
+	/*
+	@f: seOffsetCorrection
+	@description:
+		sets the ADC offset correcction to the class variable
+	*/
 	void setOffsetCorrection(uint16_t offsetCorr);
 
+	/*
+	@uasge: Read the avrage analog input on the ADC pins and stores the corresting uint16 ADC values in the class variables
+	*/
 	void readAdcPins();
 
+	/*
+	Averages the input on the analog pins to get a smooth voltage value
+	*/
 	int getAverageAnalogInput(uint8_t inputPin);
 
-	//void execute(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid);
-
+	/* 
+	returns the rig version
+	*/
 	AdcCorrectionRigVersion getRigVersion();
 
 	void setRigVersion(AdcCorrection::AdcCorrectionRigVersion version);
 
+	/*
+	combines 2 uint8 integers to corresponding uint16 integer
+	*/
 	uint16_t int8Toint16(uint8_t highByte, uint8_t lowByte);
-	
-	// moved this to the constructor
-	// AdcCorrection::Status updateAtwincMetadataArray();
 
+	/*
+	Sets the WifiModule in download mode. important to set it in download mode to access the SPI flash
+	*/
 	AdcCorrection::Status initWifiModule();
 
+	/*
+	Cheack the data and metadate location in the SPI flash to make sure data is not corrupt
+	*/
 	AdcCorrection::Status atwincFlashIntegrityCheck();
 
+	/*
+	outputs the SAMD chip ID.
+	*/
 	void printChipId();
 
 	/*
-	* returns an int after reading characters from Serial input 
+	* returns an int after reading characters from Serial input. Used to  convert the Rig version input by the user.
 	*/
 	int serialToInt();
 };
