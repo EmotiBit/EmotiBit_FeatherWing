@@ -608,8 +608,8 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 	Serial.println("################################");
 	Serial.println("#####  ADC Correction Mode  ####");
 	Serial.println("################################\n");
-	Serial.println("- TESTING MODE:: Enter T to continue:: Values are calculated but not written to the flash");
-	Serial.println("- PROGRAMMING MODE(use for Shipping)::Enter P to continue:: Values are calculated are written to the AT-Winc flash");
+	Serial.println("- Enter T to for TESTING MODE::  Values are calculated but not written to the flash");
+	Serial.println("- Enter P to for PROGRAMMING MODE(use for Shipping):: Values are calculated are written to the AT-Winc flash");
 	Serial.println("- Enter any other key to continue to normal bootup");
 	while (!Serial.available());
 	char modeChoice = Serial.read();

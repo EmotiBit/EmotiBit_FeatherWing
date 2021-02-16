@@ -33,7 +33,7 @@ void setup()
 	Serial.println("Serial started");
 	delay(2000);	// short delay to allow user to connect to serial, if desired
 
-	emotibit.setup(EmotiBit::Version::V03B);
+	emotibit.setup(EmotiBit::Version::V02H);
 
 	// Attach callback functions
 	emotibit.attachShortButtonPress(&onShortButtonPress);

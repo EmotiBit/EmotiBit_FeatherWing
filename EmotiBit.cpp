@@ -114,6 +114,8 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
 
+	Serial.println("All Serial inputs must be used with **No Line Ending** option from the serial monitor");
+
 	if (!_outDataPackets.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
 		Serial.println("Failed to reserve memory for output");
 		while (true) {
@@ -207,7 +209,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 #if defined(ADAFRUIT_FEATHER_M0)
 	_batteryReadPin = A7;
 	_adcBits = 12;
-	adcRes = pow(2, _adcBits);	// adc bit resolution
+	adcRes = pow(2, _adcBits) -1;	// adc bit resolution
 	if (_version == Version::V01B || _version == Version::V01C)
 	{
 		_hibernatePin = 5; // gpio pin assigned to the mosfet
