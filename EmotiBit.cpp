@@ -322,6 +322,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		}
 		else
 		{
+			analogReadResolution(_adcBits);
 			Serial.println("Reading correction data from the flash");
 			Serial.println("Calculating correction values");
 			adcCorrection.calcCorrectionValues();
@@ -342,12 +343,12 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	}
 	else
 	{
+		analogReadResolution(_adcBits);
 		Serial.println("Correction data exists on the samd flash");
 		Serial.print("Gain Correction:"); Serial.print(samdStorageAdcValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
 		Serial.println("Enabling the ADC with the correction values");
 		analogReadCorrection(samdStorageAdcValues._offsetCorrection, samdStorageAdcValues._gainCorrection);
 	}
-	analogReadResolution(_adcBits);
 
 	if (_EmotiBit_i2c != nullptr)
 	{
@@ -3019,6 +3020,8 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("Press D to toggle ON recording ISR loop time");
 			Serial.println("Press b to toggle OFF Battry update");
 			Serial.println("Press B to toggle ON Battery update");
+			Serial.println("Press a to toggle OFF ADC correction");
+			Serial.println("Press A to toggle ON ADC correction");
 			//Serial.println("Press 0 to simulate nan events in the thermopile");
 
 		}
@@ -3215,6 +3218,16 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println(payload);
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}*/
+		else if (c == 'a')
+		{
+			Serial.println("ADC correction disabled");
+			ADC->CTRLB.bit.CORREN = 0;
+		}
+		else if (c == 'A')
+		{
+			Serial.println("ADC Correction Enabled");
+			ADC->CTRLB.bit.CORREN = 1;
+		}
 	}
 }
 
