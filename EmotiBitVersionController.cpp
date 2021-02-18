@@ -11,6 +11,22 @@ const char* EmotiBitVersionController::getHardwareVersion(EmotiBitVersion versio
 	{
 		return "V03b";
 	}
+	else if (version == EmotiBitVersion::V01B)
+	{
+		return "V01b";
+	}
+	else if (version == EmotiBitVersion::V01C)
+	{
+		return "V01c";
+	}
+	else if (version == EmotiBitVersion::V02B)
+	{
+		return "V02b";
+	}
+	else if (version == EmotiBitVersion::V02F)
+	{
+		return "V02f";
+	}
 }
 
 bool EmotiBitVersionController::EmotiBitPinMapping::initMapping(EmotiBitVersionController::EmotiBitVersion version)

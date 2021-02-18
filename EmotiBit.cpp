@@ -238,13 +238,10 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	emotiBitVersionController.emotiBitPinMapping.echoPinMapping();
 	emotiBitVersionController.emotiBitConstantsMapping.echoConstants();
 #endif
-	//Serial.println("pausing execution. Please check the mappings above");
-	//while (1);
 
 	bool status = true;
 
 	SamdStorageAdcValues samdStorageAdcValues;
-	//EmotiBitPinMapping emotiBitPinMapping;
 	String fwVersionModifier = "";
 	if (testingMode == TestingMode::ACUTE)
 	{
@@ -428,8 +425,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.print("edrAmplification = "); Serial.println(edrAmplification);
 	Serial.print("LED Driver Current Level = "); Serial.println(emotiBitVersionController.emotiBitConstantsMapping.getSystemConstant(EmotiBitVersionController::EmotiBitConstantsMapping::SystemConstants::LED_DRIVER_CURRENT));
 
-	//Serial.println("check pin asignment. Stopping execution");
-	//while (1);
 	// Setup switch
 	if (buttonPin != LED_BUILTIN)
 	{
@@ -440,37 +435,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	// Setup battery Reading
 	pinMode(_batteryReadPin, INPUT);
-
-	//// Enable analog circuitry
-	//Serial.print("\nCycling EmotiBit power...");
-	//pinMode(_hibernatePin, OUTPUT);
-	//if (_version == EmotiBitVersionController::EmotiBitVersion::V03B)
-	//{
-	//	digitalWrite(_hibernatePin, LOW);
-	//	Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" LOW");
-	//}
-	//else
-	//{
-	//	digitalWrite(_hibernatePin, HIGH);
-	//	Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" HIGH");
-	//}
-
-	//delay(250);
-
-	//// Enable analog circuitry
-	//Serial.print("Enabling EmotiBit power...");
-	////pinMode(_hibernatePin, OUTPUT);
-	//if (_version == EmotiBitVersionController::EmotiBitVersion::V03B)
-	//{
-	//	digitalWrite(_hibernatePin, HIGH);
-	//	Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" HIGH");
-	//}
-	//else
-	//{
-	//	digitalWrite(_hibernatePin, LOW);
-	//	Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" LOW");
-	//}
-
 	Serial.println("\nSensor setup:");
 	// Setup EDA
 	Serial.println("Configuring EDA...");
@@ -494,16 +458,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			Serial.println("Reading correction data from the flash");
 			Serial.println("Calculating correction values");
 			adcCorrection.calcCorrectionValues();
-			// ToDo: check if above function actually worked
 			// Store the values on the flash
 			Serial.println("Storing correction values on the SAMD flash");
 			samdStorageAdcValues._gainCorrection = adcCorrection.getGainCorrection();
 			samdStorageAdcValues._offsetCorrection = adcCorrection.getOffsetCorrection();
 			samdStorageAdcValues.valid = true;
 			samdFlashStorage.write(samdStorageAdcValues);// Writing it to the SAMD flash storage
-			// reinitializing the wifi module
-			/*WiFi.setPins(8, 7, 4, 2);
-			nm_bsp_init();*/
 			Serial.print("Gain Correction:"); Serial.print(samdStorageAdcValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
 			Serial.println("Enabling the ADC with the correction values");
 			analogReadCorrection(samdStorageAdcValues._offsetCorrection, samdStorageAdcValues._gainCorrection);
@@ -520,10 +480,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	
 	Serial.print("\n");
-	//_EmotiBit_i2c->endTransmission();
-	//_EmotiBit_i2c->clearWriteError();
-	//_EmotiBit_i2c->end();
-
 	// setup LED DRIVER
 	Serial.println("Initializing NCP5623....");
 	led.begin(*_EmotiBit_i2c);
@@ -532,16 +488,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		led.setCurrent(emotiBitVersionController.emotiBitConstantsMapping.getSystemConstant(EmotiBitVersionController::EmotiBitConstantsMapping::SystemConstants::LED_DRIVER_CURRENT));
 	}
-	/*
-	if (_version == EmotiBitVersionController::EmotiBitVersion::V03B)
-	{
-		led.setCurrent(6); // V03B has a Reference current resistor as 200K. Level 6/30 controls the max brightness of the LEDs
-	}
-	else
-	{
-		led.setCurrent(26);  // Version < V03B has a Reference current resistor as 1M. Level 26/30 controls the max brightness of the LEDs
-	}
-	*/
 	led.setLEDpwm((uint8_t)Led::RED, 8);
 	led.setLEDpwm((uint8_t)Led::BLUE, 8);
 	led.setLEDpwm((uint8_t)Led::YELLOW, 8);
@@ -2779,16 +2725,6 @@ void EmotiBit::hibernate() {
 	Serial.println("Disabling EmotiBit power");
 	pinMode(_hibernatePin, OUTPUT);
 	digitalWrite(_hibernatePin, emotiBitVersionController.emotiBitConstantsMapping.getSystemConstant(EmotiBitVersionController::EmotiBitConstantsMapping::SystemConstants::EMOTIBIT_HIBERNATE_LEVEL));
-	/*
-	if (_version == EmotiBitVersionController::EmotiBitVersion::V03B)
-	{
-		digitalWrite(_hibernatePin, LOW);
-	}
-	else
-	{
-		digitalWrite(_hibernatePin, HIGH);
-	}
-	*/
 	pinMode(_hibernatePin, INPUT);
 
 	//deepSleep();
