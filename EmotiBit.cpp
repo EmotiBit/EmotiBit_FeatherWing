@@ -91,7 +91,8 @@ void EmotiBit::bmm150ReadTrimRegisters()
 
 int EmotiBit::detectEmotiBitVersion()
 {
-	uint8_t versionEst = 0, otpEmotiBitVersion = 0;
+	uint8_t versionEst = 0;
+	int otpEmotiBitVersion = 0;
 	// V02B, V02H and V03B all have pin 6 as hibernate, and this code supports only those versions
 	int hibernatePin = 6;
 	pinMode(hibernatePin, OUTPUT);
@@ -116,12 +117,12 @@ int EmotiBit::detectEmotiBitVersion()
 	// V2 gets activated
 	if (pinValueOnHibernateLow > pinValueOnHibernateHigh )
 	{
-		versionEst = 4;// according to EmotiBit::Version
+		versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V02H;// according to EmotiBit::Version
 	}
 	// V3 gets activate
 	else if (pinValueOnHibernateLow < pinValueOnHibernateHigh )
 	{
-		versionEst = 5;// according to EmotiBit::Version
+		versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V03B;// according to EmotiBit::Version
 	}
 	else
 	{
@@ -131,15 +132,14 @@ int EmotiBit::detectEmotiBitVersion()
 	
 	Serial.print("Estimated version of the emotibit is:"); Serial.println(emotiBitVersionController.getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)versionEst));
 	Serial.println();
-	if (versionEst == 4)
+	Serial.print("Powering emotibit according to the estimate. ");
+	if (versionEst == (uint8_t)EmotiBitVersionController::EmotiBitVersion::V02H)
 	{
-		Serial.print("Powering emotibit according to the estimate. ");
 		digitalWrite(hibernatePin, LOW);
 		Serial.println("made hibernate LOW");
 	}
-	else if (versionEst == 5)
+	else if (versionEst == (uint8_t)EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
-		Serial.print("Powering emotibit according to the estimate. ");
 		digitalWrite(hibernatePin, HIGH);
 		Serial.println("made hibernate HIGH");
 	}
@@ -196,10 +196,16 @@ int EmotiBit::detectEmotiBitVersion()
 
 	while (tempHumiditySensor.getStatus() != Si7013::STATUS_IDLE);
 	otpEmotiBitVersion = edaCorrection.readEmotiBitVersion(&tempHumiditySensor);
+	_EmotiBit_i2c->setClock(400000);// setting the rate back to 400K for normal I2C operation
 	if (otpEmotiBitVersion == 255)
 	{
 		Serial.print("using the Estimated emotibit version detected from power up sequence: "); Serial.println(versionEst);
 		return versionEst;
+	}
+	else if (otpEmotiBitVersion == -1)// Sensor not detected on the I2C
+	{
+		Serial.println("Stopping code execution");
+		while (true);
 	}
 	else
 	{
@@ -211,17 +217,27 @@ int EmotiBit::detectEmotiBitVersion()
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
 	_version = (EmotiBitVersionController::EmotiBitVersion)detectEmotiBitVersion();
-	//Serial.println("Stopping code execution");
-	//while (1);
-	//_version = version;
+	bool initResult = false;
+	// IMPORTANT. Need pin initialization for emotibit to work
 	// initializing the pin and constant mapping
-	emotiBitVersionController.emotiBitPinMapping.initMapping(_version);
-	emotiBitVersionController.emotiBitConstantsMapping.initMapping(_version);
+	initResult = emotiBitVersionController.emotiBitPinMapping.initMapping(_version);
+	if (!initResult)
+	{
+		Serial.println("Pin mapping failed. Stopping execution.\n");
+		while (1);
+	}
+	initResult = emotiBitVersionController.emotiBitConstantsMapping.initMapping(_version);
+	if (!initResult)
+	{
+		Serial.println("Constant Mapping Failed. Check the code. Stopping execution");
+		while (1);
+	}
 
+#ifdef DEBUG
 	// testing is mapping was successful
 	emotiBitVersionController.emotiBitPinMapping.echoPinMapping();
 	emotiBitVersionController.emotiBitConstantsMapping.echoConstants();
-
+#endif
 	//Serial.println("pausing execution. Please check the mappings above");
 	//while (1);
 
@@ -337,7 +353,24 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		while (true);
 	}
 
-	// Set board-specific pins and constants
+	// Set board-specific pins 
+	_batteryReadPin =      emotiBitVersionController.emotiBitPinMapping.getAssignedPin(EmotiBitVersionController::EmotiBitPinMapping::EmotiBitPinName::BATTERY_READ_PIN);
+	_hibernatePin =        emotiBitVersionController.emotiBitPinMapping.getAssignedPin(EmotiBitVersionController::EmotiBitPinMapping::EmotiBitPinName::HIBERNATE);
+	buttonPin =            emotiBitVersionController.emotiBitPinMapping.getAssignedPin(EmotiBitVersionController::EmotiBitPinMapping::EmotiBitPinName::EMOTIBIT_BUTTON);
+	_edlPin =              emotiBitVersionController.emotiBitPinMapping.getAssignedPin(EmotiBitVersionController::EmotiBitPinMapping::EmotiBitPinName::EDL);
+	_edrPin =              emotiBitVersionController.emotiBitPinMapping.getAssignedPin(EmotiBitVersionController::EmotiBitPinMapping::EmotiBitPinName::EDR);
+	_sdCardChipSelectPin = emotiBitVersionController.emotiBitPinMapping.getAssignedPin(EmotiBitVersionController::EmotiBitPinMapping::EmotiBitPinName::SD_CARD_CHIP_SELECT);
+	
+	// Set board specific constants
+	_adcBits =             emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::ADC_BITS);
+	adcRes =               emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::ADC_MAX_VALUE);
+	edrAmplification =     emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::EDR_AMPLIFICATION);
+	edaFeedbackAmpR =      emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::EDA_FEEDBACK_R);
+	vRef1 =                emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::VREF1);
+	vRef2 =                emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::VREF2);
+	_edaSeriesResistance = emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::EDA_SERIES_RESISTOR);
+
+	/*
 #if defined(ADAFRUIT_FEATHER_M0)
 	_batteryReadPin = A7;
 	_adcBits = 12;
@@ -381,7 +414,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		_gsrHighPin = A4;
 	}
 #endif
-
+*/
 	// Print board-specific settings
 	Serial.println("\nHW version-specific settings:");
 	Serial.print("buttonPin = "); Serial.println(buttonPin);
@@ -393,7 +426,10 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.print("adcRes = "); Serial.println(adcRes);
 	Serial.print("edaFeedbackAmpR = "); Serial.println(edaFeedbackAmpR);
 	Serial.print("edrAmplification = "); Serial.println(edrAmplification);
+	Serial.print("LED Driver Current Level = "); Serial.println(emotiBitVersionController.emotiBitConstantsMapping.getSystemConstant(EmotiBitVersionController::EmotiBitConstantsMapping::SystemConstants::LED_DRIVER_CURRENT));
 
+	//Serial.println("check pin asignment. Stopping execution");
+	//while (1);
 	// Setup switch
 	if (buttonPin != LED_BUILTIN)
 	{
@@ -491,6 +527,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	// setup LED DRIVER
 	Serial.println("Initializing NCP5623....");
 	led.begin(*_EmotiBit_i2c);
+	// check if the LED current level is valid.
+	if (emotiBitVersionController.emotiBitConstantsMapping.getSystemConstant(EmotiBitVersionController::EmotiBitConstantsMapping::SystemConstants::LED_DRIVER_CURRENT) > 0)
+	{
+		led.setCurrent(emotiBitVersionController.emotiBitConstantsMapping.getSystemConstant(EmotiBitVersionController::EmotiBitConstantsMapping::SystemConstants::LED_DRIVER_CURRENT));
+	}
+	/*
 	if (_version == EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
 		led.setCurrent(6); // V03B has a Reference current resistor as 200K. Level 6/30 controls the max brightness of the LEDs
@@ -499,6 +541,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		led.setCurrent(26);  // Version < V03B has a Reference current resistor as 1M. Level 26/30 controls the max brightness of the LEDs
 	}
+	*/
 	led.setLEDpwm((uint8_t)Led::RED, 8);
 	led.setLEDpwm((uint8_t)Led::BLUE, 8);
 	led.setLEDpwm((uint8_t)Led::YELLOW, 8);
@@ -714,12 +757,18 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	setSamplesAveraged(samplesAveraged);
 
 	// EDL Filter Parameters
+	edaCrossoverFilterFreq = emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::EDA_CROSSOVER_FILTER_FREQ);
+	if (edaCrossoverFilterFreq > 0)// valid assignment of constant
+	{
+		_edlDigFiltAlpha = pow(M_E, -2.f * PI * edaCrossoverFilterFreq / (_samplingRates.eda / _samplesAveraged.eda));
+	}
+	/*
 	if (_version == EmotiBitVersionController::EmotiBitVersion::V02H)
 	{
 		edaCrossoverFilterFreq = 1.f / (2.f * PI * 200000.f * 0.0000047f);
 		_edlDigFiltAlpha = pow(M_E, -2.f * PI * edaCrossoverFilterFreq / (_samplingRates.eda / _samplesAveraged.eda));
 	}
-
+	*/
 	delay(500);
 
 	// Setup SD Card
@@ -1310,24 +1359,34 @@ int8_t EmotiBit::updateEDAData()
 			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
 		}
 
-		// EDL Digital Filter
-		if (_edlDigFilteredVal < 0)
-		{
-			// initialize filter
-			_edlDigFilteredVal = edlTemp;
-		}
-		_edlDigFilteredVal = edlTemp * (1. - _edlDigFiltAlpha) + _edlDigFilteredVal * _edlDigFiltAlpha;
-		edlTemp = _edlDigFilteredVal;
 
+		// EDL Digital Filter
+		if (edaCrossoverFilterFreq > 0)// use only is a valid crossover freq is assigned
+		{
+			if (_edlDigFilteredVal < 0)
+			{
+				// initialize filter
+				_edlDigFilteredVal = edlTemp;
+			}
+			_edlDigFilteredVal = edlTemp * (1. - _edlDigFiltAlpha) + _edlDigFilteredVal * _edlDigFiltAlpha;
+			edlTemp = _edlDigFilteredVal;
+		}
 		// Link to diff amp biasing: https://ocw.mit.edu/courses/media-arts-and-sciences/mas-836-sensor-technologies-for-interactive-environments-spring-2011/readings/MITMAS_836S11_read02_bias.pdf
 		edaTemp = (edrTemp - vRef2) / edrAmplification;	// Remove VGND bias and amplification from EDR measurement
 		edaTemp = edaTemp + edlTemp;                     // Add EDR to EDL in Volts
 
 		//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
 
-		
+		if (edaTemp - vRef1 < 0.000086f)
+		{
+			edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
+		}
+		else
+		{
+			edaTemp = vRef1 / ((edaFeedbackAmpR * (edaTemp - vRef1)) - (_edaSeriesResistance * vRef1));
+		}
 
-
+		/*
 		if (_version == EmotiBitVersionController::EmotiBitVersion::V02H)
 		{
 			// Compatible with V02h
@@ -1342,14 +1401,14 @@ int8_t EmotiBit::updateEDAData()
 		}
 		else if(_version == EmotiBitVersionController::EmotiBitVersion::V03B)
 		{
-			/*
-			Calculation:
+			
+			//Calculation:
 
-			Vo = Vin*(1+Rfb/R1), R1 = 4.99M, Rfb = Rc+Rskin; Rc = 220K
-			Vo = Vin*(1+(Rc+Rskin)/R1)
-			Rskin = R1*(Vo/Vin - 1) - Rc
-			S = Vin/((R1*(Vo-Vin) - Rc*Vin)
-			*/
+			//Vo = Vin*(1+Rfb/R1), R1 = 4.99M, Rfb = Rc+Rskin; Rc = 220K
+			//Vo = Vin*(1+(Rc+Rskin)/R1)
+			//Rskin = R1*(Vo/Vin - 1) - Rc
+			//S = Vin/((R1*(Vo-Vin) - Rc*Vin)
+			
 			if (edaTemp < 0.442804) // for V03b --> 0.442804 = 0.4268(1+200K/5.07M)
 			{
 				edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
@@ -1360,6 +1419,7 @@ int8_t EmotiBit::updateEDAData()
 				edaTemp = vRef1 / ((edaFeedbackAmpR * (edaTemp - vRef1)) - (220000 * vRef1)); // Conductance in Siemens
 			}
 		}
+		*/
 
 		edaTemp = edaTemp * 1000000.f; // Convert to uSiemens
 
@@ -2718,6 +2778,8 @@ void EmotiBit::hibernate() {
 	// Turn off EmotiBit power
 	Serial.println("Disabling EmotiBit power");
 	pinMode(_hibernatePin, OUTPUT);
+	digitalWrite(_hibernatePin, emotiBitVersionController.emotiBitConstantsMapping.getSystemConstant(EmotiBitVersionController::EmotiBitConstantsMapping::SystemConstants::EMOTIBIT_HIBERNATE_LEVEL));
+	/*
 	if (_version == EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
 		digitalWrite(_hibernatePin, LOW);
@@ -2726,6 +2788,7 @@ void EmotiBit::hibernate() {
 	{
 		digitalWrite(_hibernatePin, HIGH);
 	}
+	*/
 	pinMode(_hibernatePin, INPUT);
 
 	//deepSleep();

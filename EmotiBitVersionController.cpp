@@ -135,23 +135,17 @@ bool EmotiBitVersionController::EmotiBitConstantsMapping::_initMappingMathConsta
 		_assignedMathConstants[(int)MathConstants::VREF2] = 1.634591173; // empirically derived average voltage divider value [theoretical _vcc * (100.f / (100.f + 100.f))]
 		_assignedMathConstants[(int)MathConstants::EDA_FEEDBACK_R] = 5070000.f; // empirically derived average edaFeedbackAmpR in Ohms (theoretical 4990000.f)
 		_assignedMathConstants[(int)MathConstants::EDA_SERIES_RESISTOR] = 0;
-		if (version == EmotiBitVersionController::EmotiBitVersion::V02H)
-		{
-			_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ] = 1.f / (2.f * PI * 200000.f * 0.0000047f);
-		}
-		else
-		{
-			_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ] = _INVALID_MATH_CONSTANT_FOR_VERSION;
-		}
+		_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ] = 1.f / (2.f * PI * 200000.f * 0.0000047f);
+		
 	}
 	else if (version == EmotiBitVersionController::EmotiBitVersion::V02B)
 	{
 		_assignedMathConstants[(int)MathConstants::EDR_AMPLIFICATION] = 100.f / 1.2f;
-		_assignedMathConstants[(int)MathConstants::VREF1] = _INVALID_MATH_CONSTANT_FOR_VERSION;
-		_assignedMathConstants[(int)MathConstants::VREF2] = _INVALID_MATH_CONSTANT_FOR_VERSION;
+		_assignedMathConstants[(int)MathConstants::VREF1] = _INVALID_CONSTANT_FOR_VERSION;
+		_assignedMathConstants[(int)MathConstants::VREF2] = _INVALID_CONSTANT_FOR_VERSION;
 		_assignedMathConstants[(int)MathConstants::EDA_FEEDBACK_R] = 4990000.f;
-		_assignedMathConstants[(int)MathConstants::EDA_SERIES_RESISTOR] = _INVALID_MATH_CONSTANT_FOR_VERSION;
-		_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ] = _INVALID_MATH_CONSTANT_FOR_VERSION;
+		_assignedMathConstants[(int)MathConstants::EDA_SERIES_RESISTOR] = _INVALID_CONSTANT_FOR_VERSION;
+		_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ] = _INVALID_CONSTANT_FOR_VERSION;
 	}
 	_initAssignmentComplete = true;
 	return true;
@@ -175,6 +169,11 @@ bool EmotiBitVersionController::EmotiBitConstantsMapping::_initMappingSystemCons
 	{
 		_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL] = LOW;
 		_assignedSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT] = 6;
+	}
+	else if (version == EmotiBitVersionController::EmotiBitVersion::V02B)
+	{
+		_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL] = HIGH;
+		_assignedSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT] = _INVALID_CONSTANT_FOR_VERSION;
 	}
 	return true;
 #endif
@@ -235,6 +234,8 @@ void EmotiBitVersionController::EmotiBitConstantsMapping::echoConstants()
 		Serial.print("MathConstants: EDA_FEEDBACK_R - "); Serial.println(_assignedMathConstants[(int)MathConstants::EDA_FEEDBACK_R]);
 		Serial.print("MathConstants: EDA_CROSSOVER_FILTER_FREQ - "); Serial.println(_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ]);
 		Serial.print("MathConstants: EDA_SERIES_RESISTOR - "); Serial.println(_assignedMathConstants[(int)MathConstants::EDA_SERIES_RESISTOR]);
+		Serial.print("SystemConstant: EMOTIBIT_HIBERNATE_LEVEL - "); Serial.println(_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL]);
+		Serial.print("SystemConstant: LED_DRIVER_CURRENT - "); Serial.println(_assignedSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT]);
 	}
 	else
 	{

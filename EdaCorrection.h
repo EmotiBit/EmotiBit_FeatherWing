@@ -51,7 +51,7 @@ NORMAL
 #include "Arduino.h"
 #include "Wire.h"
 #include "EmotiBit_Si7013.h"
-
+#include "EmotiBitVersionController.h"
 //#define USE_ALT_SI7013
 #define ACCESS_MAIN_ADDRESS
 
@@ -237,7 +237,7 @@ public:
 	/*
 	Returns the emotiBit version read from the OTP
 	*/
-	uint8_t readEmotiBitVersion(Si7013* si7013);
+	int readEmotiBitVersion(Si7013* si7013);
 
 	//uint8_t readFromOtp(TwoWire* emotibit_i2c, uint8_t addr);
 	/*

@@ -90,7 +90,7 @@ public:
 	private:
 		float _assignedMathConstants[_MAX_MATH_CONSTANT_COUNT] = { 0 };
 		int _assignedSystemConstants[_MAX_SYSTEM_CONSTANT_COUNT] = { 0 };
-		const int _INVALID_MATH_CONSTANT_FOR_VERSION = -1;
+		const int _INVALID_CONSTANT_FOR_VERSION = -1;
 		const int _INVALID_REQUEST = -2; // addresses out of bounds(for array indexing) request
 		bool _initAssignmentComplete = false;
 	private:
@@ -106,7 +106,7 @@ public:
 	}emotiBitConstantsMapping;
 
 public:
-	const char* getHardwareVersion(EmotiBitVersion version);
+	static const char* getHardwareVersion(EmotiBitVersion version);
 
 };
 #endif

@@ -37,7 +37,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.20";
+	String firmware_version = "1.2.21";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -347,6 +347,7 @@ public:
 	bool _sendTestData = false;
 	float _edlDigFiltAlpha = 0;
 	float _edlDigFilteredVal = -1;
+	float _edaSeriesResistance = 0;
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 

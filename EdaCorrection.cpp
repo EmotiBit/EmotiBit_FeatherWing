@@ -585,7 +585,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 	}
 }
 
-uint8_t EdaCorrection::readEmotiBitVersion(Si7013* si7013)
+int EdaCorrection::readEmotiBitVersion(Si7013* si7013)
 {
 	if (checkSensorConnection(si7013) == false)
 	{
@@ -605,8 +605,9 @@ uint8_t EdaCorrection::readEmotiBitVersion(Si7013* si7013)
 		else
 		{
 			Serial.println("######################");
-			Serial.print("The Version read from OTP is: ");
-			Serial.println(emotibitVersion);
+			Serial.print("The EmotiBit Version read from OTP is: ");
+			Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)emotibitVersion));
+			//Serial.println(EmotiBitemotibitVersion);
 			Serial.println("######################");
 		}
 		return emotibitVersion;
