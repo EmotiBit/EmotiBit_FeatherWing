@@ -129,22 +129,20 @@ int EmotiBit::detectEmotiBitVersion()
 		while (1);
 	}
 	
-
+	Serial.print("Estimated version of the emotibit is:"); Serial.println(emotiBitVersionController.getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)versionEst));
+	Serial.println();
 	if (versionEst == 4)
 	{
-		Serial.print("Estimated version of the emotibit is: V02.");
 		Serial.print("Powering emotibit according to the estimate. ");
 		digitalWrite(hibernatePin, LOW);
 		Serial.println("made hibernate LOW");
 	}
 	else if (versionEst == 5)
 	{
-		Serial.print("Estimated version of the emotibit is: V03.");
 		Serial.print("Powering emotibit according to the estimate. ");
 		digitalWrite(hibernatePin, HIGH);
 		Serial.println("made hibernate HIGH");
 	}
-
 	if (_EmotiBit_i2c != nullptr)
 	{
 		delete(_EmotiBit_i2c);
@@ -212,10 +210,20 @@ int EmotiBit::detectEmotiBitVersion()
 
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
-	_version = (EmotiBit::Version)detectEmotiBitVersion();
+	_version = (EmotiBitVersionController::EmotiBitVersion)detectEmotiBitVersion();
 	//Serial.println("Stopping code execution");
 	//while (1);
 	//_version = version;
+	// initializing the pin and constant mapping
+	emotiBitVersionController.emotiBitPinMapping.initMapping(_version);
+	emotiBitVersionController.emotiBitConstantsMapping.initMapping(_version);
+
+	// testing is mapping was successful
+	emotiBitVersionController.emotiBitPinMapping.echoPinMapping();
+	emotiBitVersionController.emotiBitConstantsMapping.echoConstants();
+
+	//Serial.println("pausing execution. Please check the mappings above");
+	//while (1);
 
 	bool status = true;
 
@@ -234,7 +242,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	firmware_version += fwVersionModifier;
 
 	Serial.print("\n\nEmotiBit version: ");
-	Serial.println(getHardwareVersion());
+	Serial.println(emotiBitVersionController.getHardwareVersion(_version));
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
 
@@ -277,13 +285,13 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		}
 		else if (input == 'E')
 		{
-			Serial.print("\n\n##### EmotiBit Version "); Serial.print(getHardwareVersion()); Serial.println(" ####");
+			Serial.print("\n\n##### EmotiBit Version "); Serial.print(emotiBitVersionController.getHardwareVersion(_version)); Serial.println(" ####");
 			edaCorrection.begin((uint8_t)_version);
 		}
 		else if (input == 'V')
 		{
 			Serial.print("\nJust Writing EmotiBit Version to the OTP");
-			Serial.print("\n\n##### EmotiBit Version "); Serial.print(getHardwareVersion()); Serial.println(" ####");
+			Serial.print("\n\n##### EmotiBit Version "); Serial.print(emotiBitVersionController.getHardwareVersion(_version)); Serial.println(" ####");
 			edaCorrection.writeEmotiBitVersionToOtp(&tempHumiditySensor, (uint8_t)_version);
 		}
 		else
@@ -322,7 +330,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	_vcc = 3.3f;						// Vcc voltage
 
-	if (_version == Version::V01B || _version == Version::V01C)
+	if (_version == EmotiBitVersionController::EmotiBitVersion::V01B || _version == EmotiBitVersionController::EmotiBitVersion::V01C)
 	{
 		Serial.println("This code is not compatible with V01 (Alpha) boards");
 		Serial.println("Download v0.6.0 for Alpha boards");
@@ -334,7 +342,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_batteryReadPin = A7;
 	_adcBits = 12;
 	adcRes = pow(2, _adcBits) -1;	// adc bit resolution
-	if (_version == Version::V01B || _version == Version::V01C)
+	if (_version == EmotiBitVersionController::EmotiBitVersion::V01B || _version == EmotiBitVersionController::EmotiBitVersion::V01C)
 	{
 		_hibernatePin = 5; // gpio pin assigned to the mosfet
 		buttonPin = 13;
@@ -342,7 +350,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		_edrPin = A4;
 		_sdCardChipSelectPin = 6;
 	}
-	else if (_version == Version::V02H || _version == Version::V03B)
+	else if (_version == EmotiBitVersionController::EmotiBitVersion::V02H || _version == EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
 		_hibernatePin = 6; // gpio pin assigned to the mosfet
 		buttonPin = 12;
@@ -354,7 +362,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		vRef1 = 0.426f; // empirically derived minimum voltage divider value [theoretical 15/(15 + 100)]
 		vRef2 = 1.634591173; // empirically derived average voltage divider value [theoretical _vcc * (100.f / (100.f + 100.f))]
 	}
-	else if (_version == Version::V02B)
+	else if (_version == EmotiBitVersionController::EmotiBitVersion::V02B)
 	{
 		_hibernatePin = 6; // gpio pin assigned to the mosfet
 		buttonPin = 12;
@@ -365,7 +373,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		edaFeedbackAmpR = 4990000.f;; // edaFeedbackAmpR in Ohms
 	}
 #elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
-	if (_version == Version::V01B || _version == Version::V01C)
+	if (_version == EmotiBitVersionController::EmotiBitVersion::V01B || _version == EmotiBitVersionController::EmotiBitVersion::V01C)
 	{
 		_hibernatePin = 27;//gpio pin assigned ot the mosfet
 		buttonPin = 16;
@@ -400,7 +408,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	//// Enable analog circuitry
 	//Serial.print("\nCycling EmotiBit power...");
 	//pinMode(_hibernatePin, OUTPUT);
-	//if (_version == Version::V03B)
+	//if (_version == EmotiBitVersionController::EmotiBitVersion::V03B)
 	//{
 	//	digitalWrite(_hibernatePin, LOW);
 	//	Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" LOW");
@@ -416,7 +424,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	//// Enable analog circuitry
 	//Serial.print("Enabling EmotiBit power...");
 	////pinMode(_hibernatePin, OUTPUT);
-	//if (_version == Version::V03B)
+	//if (_version == EmotiBitVersionController::EmotiBitVersion::V03B)
 	//{
 	//	digitalWrite(_hibernatePin, HIGH);
 	//	Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" HIGH");
@@ -483,7 +491,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	// setup LED DRIVER
 	Serial.println("Initializing NCP5623....");
 	led.begin(*_EmotiBit_i2c);
-	if (_version == Version::V03B)
+	if (_version == EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
 		led.setCurrent(6); // V03B has a Reference current resistor as 200K. Level 6/30 controls the max brightness of the LEDs
 	}
@@ -706,7 +714,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	setSamplesAveraged(samplesAveraged);
 
 	// EDL Filter Parameters
-	if (_version == Version::V02H)
+	if (_version == EmotiBitVersionController::EmotiBitVersion::V02H)
 	{
 		edaCrossoverFilterFreq = 1.f / (2.f * PI * 200000.f * 0.0000047f);
 		_edlDigFiltAlpha = pow(M_E, -2.f * PI * edaCrossoverFilterFreq / (_samplingRates.eda / _samplesAveraged.eda));
@@ -826,7 +834,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.println("\nEmotiBit Setup complete");
 
 	Serial.print("\nEmotiBit version: ");
-	Serial.println(getHardwareVersion());
+	Serial.println(emotiBitVersionController.getHardwareVersion(_version));
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
 	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
@@ -1320,7 +1328,7 @@ int8_t EmotiBit::updateEDAData()
 		
 
 
-		if (_version == Version::V02H)
+		if (_version == EmotiBitVersionController::EmotiBitVersion::V02H)
 		{
 			// Compatible with V02h
 			if (edaTemp - vRef1 < 0.000086f)
@@ -1332,7 +1340,7 @@ int8_t EmotiBit::updateEDAData()
 				edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in Siemens
 			}
 		}
-		else if(_version == Version::V03B)
+		else if(_version == EmotiBitVersionController::EmotiBitVersion::V03B)
 		{
 			/*
 			Calculation:
@@ -2013,7 +2021,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 #endif
 	//bool EmotiBit::printConfigInfo(File file, String datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
-	String hardware_version = getHardwareVersion();
+	String hardware_version = emotiBitVersionController.getHardwareVersion(_version);
 	String feather_version = "Adafruit Feather M0 WiFi";
 
 	const uint16_t bufferSize = 1024;
@@ -2628,17 +2636,18 @@ void EmotiBit::readSensors()
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
 }
 
+/*
 String EmotiBit::getHardwareVersion()
 {
-	if (_version == Version::V02H) {
+	if (_version == EmotiBitVersionController::EmotiBitVersion::V02H) {
 		return "V02h";
 	}
-	else if (_version == Version::V03B)
+	else if (_version == EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
 		return "V03b";
 	}
 }
-
+*/
 
 
 #ifdef __arm__
@@ -2709,7 +2718,7 @@ void EmotiBit::hibernate() {
 	// Turn off EmotiBit power
 	Serial.println("Disabling EmotiBit power");
 	pinMode(_hibernatePin, OUTPUT);
-	if (_version == Version::V03B)
+	if (_version == EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
 		digitalWrite(_hibernatePin, LOW);
 	}

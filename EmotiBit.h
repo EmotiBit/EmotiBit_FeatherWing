@@ -21,7 +21,7 @@
 #include <ArduinoLowPower.h>
 #include "AdcCorrection.h"
 #include "EdaCorrection.h"
-//#include "EmotiBitPinMapping.h"
+#include "EmotiBitVersionController.h"
 
 //#include <Adafruit_SleepyDog.h>
 
@@ -37,7 +37,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.19";
+	String firmware_version = "1.2.20";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -52,6 +52,7 @@ public:
 
 	// !!! The following ORDER of the enum class holding the Version numbers SHOULD NOT BE ALTERED.
 	// New versions shold be ADDED to the end of this list 
+	/*
 	enum class Version {
 		V01B = 0,
 		V01C = 1,
@@ -60,7 +61,7 @@ public:
 		V02H = 4,
 		V03B = 5
 	};
-
+	*/
 	//struct IMUSettings {
 	//int gyroResolution = 250;
 	//int accResolution = 2;
@@ -225,6 +226,7 @@ public:
 	NCP5623 led;
 	MLX90632 thermopile;
 	EdaCorrection edaCorrection;
+	EmotiBitVersionController emotiBitVersionController;
 
 	float edrAmplification;
 	float vRef1; // Reference voltage of first voltage divider(15/100)
@@ -474,7 +476,8 @@ private:
 	uint8_t _adcBits;
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)
 	float _gyroRange; // supported values: 125, 250, 500, 1000, 2000 (degrees/second)
-	Version _version;
+	//Version _version;
+	EmotiBitVersionController::EmotiBitVersion _version;
 	uint8_t _imuFifoFrameLen = 0; // in bytes
 	const uint8_t _maxImuFifoFrameLen = 40; // in bytes
 	uint8_t _imuBuffer[40];
