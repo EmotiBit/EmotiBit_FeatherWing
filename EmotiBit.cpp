@@ -89,14 +89,84 @@ void EmotiBit::bmm150ReadTrimRegisters()
 	bmm150TrimData.dig_xyz1 = (uint16_t)(temp_msb | trim_xy1xy2[4]);
 }
 
+int EmotiBit::detectEmotiBitVersion()
+{
+	uint8_t versionEst = 0, otpEmotiBitVersion = 0;
+	// V02B, V02H and V03B all have pin 6 as hibernate, and this code supports only those versions
+	int hibernatePin = 6;
+	pinMode(hibernatePin, OUTPUT);
+
+	//int emotiBitI2cSdaPin = 11; 
+	//pinMode(emotiBitI2cSdaPin, INPUT);
+	int emotiBitEdrPin = A3; // in both V2 and V3 boards
+	int pinValueOnHibernateLow = -1, pinValueOnHibernateHigh = -1;
+
+	Serial.println("Making hibernate LOW");
+	digitalWrite(hibernatePin, LOW);
+	delay(500);
+	pinValueOnHibernateLow = analogRead(emotiBitEdrPin);
+	Serial.print("edr pin value: "); Serial.println(pinValueOnHibernateLow);
+
+	Serial.println("Making hibernate HIGH");
+	digitalWrite(hibernatePin, HIGH);
+	delay(500);
+	pinValueOnHibernateHigh = analogRead(emotiBitEdrPin);
+	Serial.print("edr pin value: "); Serial.println(pinValueOnHibernateHigh);
+
+	// V2 gets activated
+	if (pinValueOnHibernateLow > pinValueOnHibernateHigh )
+	{
+		versionEst = 2;
+	}
+	// V3 gets activate
+	else if (pinValueOnHibernateLow < pinValueOnHibernateHigh )
+	{
+		versionEst = 3;
+	}
+	else
+	{
+		Serial.println("unable to detect Hibernate logic. Pausing execution");
+		while (1);
+	}
+	Serial.print("Estimated version of the emotibit is: "); Serial.println(versionEst);
+
+	Serial.print("Powering emotibit according to the estimate. ");
+
+	if (versionEst == 2)
+	{
+		digitalWrite(hibernatePin, LOW);
+		Serial.println("made hibernate LOW");
+	}
+	else
+	{
+		digitalWrite(hibernatePin, HIGH);
+		Serial.println("made hibernate HIGH");
+	}
+
+	otpEmotiBitVersion = edaCorrection.readEmotiBitVersion(&tempHumiditySensor);
+	if (otpEmotiBitVersion == 255)
+	{
+		Serial.print("using the Estimated emotibit version detected from power up sequence: "); Serial.println(versionEst);
+		return versionEst;
+	}
+	else
+	{
+		return otpEmotiBitVersion;
+	}
+
+}
+
 uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 {
-	_version = version;
+	_version = (EmotiBit::Version)detectEmotiBitVersion();
+	Serial.println("Stopping code execution");
+	while (1);
+	//_version = version;
 
 	bool status = true;
 
 	SamdStorageAdcValues samdStorageAdcValues;
-
+	//EmotiBitPinMapping emotiBitPinMapping;
 	String fwVersionModifier = "";
 	if (testingMode == TestingMode::ACUTE)
 	{

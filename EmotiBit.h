@@ -21,6 +21,7 @@
 #include <ArduinoLowPower.h>
 #include "AdcCorrection.h"
 #include "EdaCorrection.h"
+//#include "EmotiBitPinMapping.h"
 
 //#include <Adafruit_SleepyDog.h>
 
@@ -36,7 +37,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.17";
+	String firmware_version = "1.2.18";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -224,6 +225,7 @@ public:
 	NCP5623 led;
 	MLX90632 thermopile;
 	EdaCorrection edaCorrection;
+
 	float edrAmplification;
 	float vRef1; // Reference voltage of first voltage divider(15/100)
 	float vRef2; // Reference voltage from second voltage divider(100/100)
@@ -418,6 +420,7 @@ public:
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
 	void processDebugInputs(String &debugPackets, uint16_t &packetNumber);
 	String getHardwareVersion();
+	int detectEmotiBitVersion();
 
 	// ----------- END ino refactoring ---------------
 
