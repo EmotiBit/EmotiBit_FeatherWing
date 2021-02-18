@@ -116,33 +116,87 @@ int EmotiBit::detectEmotiBitVersion()
 	// V2 gets activated
 	if (pinValueOnHibernateLow > pinValueOnHibernateHigh )
 	{
-		versionEst = 2;
+		versionEst = 4;// according to EmotiBit::Version
 	}
 	// V3 gets activate
 	else if (pinValueOnHibernateLow < pinValueOnHibernateHigh )
 	{
-		versionEst = 3;
+		versionEst = 5;// according to EmotiBit::Version
 	}
 	else
 	{
 		Serial.println("unable to detect Hibernate logic. Pausing execution");
 		while (1);
 	}
-	Serial.print("Estimated version of the emotibit is: "); Serial.println(versionEst);
+	
 
-	Serial.print("Powering emotibit according to the estimate. ");
-
-	if (versionEst == 2)
+	if (versionEst == 4)
 	{
+		Serial.print("Estimated version of the emotibit is: V02.");
+		Serial.print("Powering emotibit according to the estimate. ");
 		digitalWrite(hibernatePin, LOW);
 		Serial.println("made hibernate LOW");
 	}
-	else
+	else if (versionEst == 5)
 	{
+		Serial.print("Estimated version of the emotibit is: V03.");
+		Serial.print("Powering emotibit according to the estimate. ");
 		digitalWrite(hibernatePin, HIGH);
 		Serial.println("made hibernate HIGH");
 	}
 
+	if (_EmotiBit_i2c != nullptr)
+	{
+		delete(_EmotiBit_i2c);
+	}
+	_EmotiBit_i2c = new TwoWire(&sercom1, 11, 13);
+	// Flush the I2C
+	Serial.print("Setting up I2C....");
+	_EmotiBit_i2c->begin();
+	uint32_t i2cRate = 100000;
+	Serial.print("setting clock to");
+	Serial.print(i2cRate);
+	_EmotiBit_i2c->setClock(i2cRate);
+	Serial.print("...setting PIO_SERCOM");
+	pinPeripheral(11, PIO_SERCOM);
+	pinPeripheral(13, PIO_SERCOM);
+	Serial.print("...flushing");
+	_EmotiBit_i2c->flush();
+	
+	bool status = true;
+	// Setup Temperature / Humidity Sensor
+	Serial.println("Configuring Temperature / Humidity Sensor");
+#ifdef USE_ALT_SI7013 
+	status = tempHumiditySensor.setup(*_EmotiBit_i2c, 0x41);
+#else
+	status = tempHumiditySensor.setup(*_EmotiBit_i2c);
+#endif
+	if (status)
+	{
+		tempHumiditySensor.changeSetting(Si7013::Settings::RESOLUTION_H11_T11);
+		tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NORMAL);
+		tempHumiditySensor.changeSetting(Si7013::Settings::VIN_UNBUFFERED);
+		tempHumiditySensor.changeSetting(Si7013::Settings::VREFP_VDDA);
+		tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NO_HOLD);
+
+		tempHumiditySensor.readSerialNumber();
+		Serial.print("Si7013 Electronic Serial Number: ");
+		Serial.print(tempHumiditySensor.sernum_a);
+		Serial.print(", ");
+		Serial.print(tempHumiditySensor.sernum_b);
+		Serial.print("\n");
+		Serial.print("Model: ");
+		Serial.println(tempHumiditySensor._model);
+		chipBegun.SI7013 = true;
+
+		tempHumiditySensor.startHumidityTempMeasurement();
+	}
+	else
+	{
+		hibernate();
+	}
+
+	while (tempHumiditySensor.getStatus() != Si7013::STATUS_IDLE);
 	otpEmotiBitVersion = edaCorrection.readEmotiBitVersion(&tempHumiditySensor);
 	if (otpEmotiBitVersion == 255)
 	{
@@ -156,11 +210,11 @@ int EmotiBit::detectEmotiBitVersion()
 
 }
 
-uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
+uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
 	_version = (EmotiBit::Version)detectEmotiBitVersion();
-	Serial.println("Stopping code execution");
-	while (1);
+	//Serial.println("Stopping code execution");
+	//while (1);
 	//_version = version;
 
 	bool status = true;
@@ -343,35 +397,35 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	// Setup battery Reading
 	pinMode(_batteryReadPin, INPUT);
 
-	// Enable analog circuitry
-	Serial.print("\nCycling EmotiBit power...");
-	pinMode(_hibernatePin, OUTPUT);
-	if (_version == Version::V03B)
-	{
-		digitalWrite(_hibernatePin, LOW);
-		Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" LOW");
-	}
-	else
-	{
-		digitalWrite(_hibernatePin, HIGH);
-		Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" HIGH");
-	}
-
-	delay(250);
-
-	// Enable analog circuitry
-	Serial.print("Enabling EmotiBit power...");
+	//// Enable analog circuitry
+	//Serial.print("\nCycling EmotiBit power...");
 	//pinMode(_hibernatePin, OUTPUT);
-	if (_version == Version::V03B)
-	{
-		digitalWrite(_hibernatePin, HIGH);
-		Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" HIGH");
-	}
-	else
-	{
-		digitalWrite(_hibernatePin, LOW);
-		Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" LOW");
-	}
+	//if (_version == Version::V03B)
+	//{
+	//	digitalWrite(_hibernatePin, LOW);
+	//	Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" LOW");
+	//}
+	//else
+	//{
+	//	digitalWrite(_hibernatePin, HIGH);
+	//	Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" HIGH");
+	//}
+
+	//delay(250);
+
+	//// Enable analog circuitry
+	//Serial.print("Enabling EmotiBit power...");
+	////pinMode(_hibernatePin, OUTPUT);
+	//if (_version == Version::V03B)
+	//{
+	//	digitalWrite(_hibernatePin, HIGH);
+	//	Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" HIGH");
+	//}
+	//else
+	//{
+	//	digitalWrite(_hibernatePin, LOW);
+	//	Serial.print("Made pin "); Serial.print(_hibernatePin); Serial.println(" LOW");
+	//}
 
 	Serial.println("\nSensor setup:");
 	// Setup EDA
@@ -420,23 +474,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 		analogReadCorrection(samdStorageAdcValues._offsetCorrection, samdStorageAdcValues._gainCorrection);
 	}
 
-	if (_EmotiBit_i2c != nullptr)
-	{
-		delete(_EmotiBit_i2c);
-	}
-	_EmotiBit_i2c = new TwoWire(&sercom1, 11, 13);
-	// Flush the I2C
-	Serial.print("Setting up I2C....");
-	_EmotiBit_i2c->begin();
-	uint32_t i2cRate = 100000;
-	Serial.print("setting clock to");
-	Serial.print(i2cRate);
-	_EmotiBit_i2c->setClock(i2cRate);
-	Serial.print("...setting PIO_SERCOM");
-	pinPeripheral(11, PIO_SERCOM);
-	pinPeripheral(13, PIO_SERCOM);
-	Serial.print("...flushing");
-	_EmotiBit_i2c->flush();
+	
 	Serial.print("\n");
 	//_EmotiBit_i2c->endTransmission();
 	//_EmotiBit_i2c->clearWriteError();
@@ -606,37 +644,7 @@ uint8_t EmotiBit::setup(Version version, size_t bufferCapacity)
 	//BMI160.detachInterrupt();
 	//BMI160.setRegister()
 
-	// Setup Temperature / Humidity Sensor
-	Serial.println("Configuring Temperature / Humidity Sensor");
-#ifdef USE_ALT_SI7013 
-	status = tempHumiditySensor.setup(*_EmotiBit_i2c, 0x41);
-#else
-	status = tempHumiditySensor.setup(*_EmotiBit_i2c);
-#endif
-	if (status)
-	{
-		tempHumiditySensor.changeSetting(Si7013::Settings::RESOLUTION_H11_T11);
-		tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NORMAL);
-		tempHumiditySensor.changeSetting(Si7013::Settings::VIN_UNBUFFERED);
-		tempHumiditySensor.changeSetting(Si7013::Settings::VREFP_VDDA);
-		tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NO_HOLD);
 
-		tempHumiditySensor.readSerialNumber();
-		Serial.print("Si7013 Electronic Serial Number: ");
-		Serial.print(tempHumiditySensor.sernum_a);
-		Serial.print(", ");
-		Serial.print(tempHumiditySensor.sernum_b);
-		Serial.print("\n");
-		Serial.print("Model: ");
-		Serial.println(tempHumiditySensor._model);
-		chipBegun.SI7013 = true;
-
-		tempHumiditySensor.startHumidityTempMeasurement();
-	}
-	else
-	{
-		hibernate();
-	}
 
 	// Thermopile
 	Serial.println("Configuring MLX90632");

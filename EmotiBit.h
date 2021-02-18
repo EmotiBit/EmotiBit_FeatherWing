@@ -37,7 +37,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.18";
+	String firmware_version = "1.2.19";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -426,7 +426,7 @@ public:
 
 	
   EmotiBit();
-  uint8_t setup(Version version = Version::V02H, size_t bufferCapacity = 64);   /**< Setup all the sensors */
+  uint8_t setup(size_t bufferCapacity = 64);   /**< Setup all the sensors */
 	uint8_t update();
   void setAnalogEnablePin(uint8_t i); /**< Power on/off the analog circuitry */
   int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
