@@ -69,6 +69,7 @@ Bootup
 #include "spi_flash/include/spi_flash.h"
 #include <FlashStorage.h>
 #include "SAMD_AnalogCorrection.h"
+#include "wiring_private.h"
 
 // use the macro below to print different log messages on the serial when debugging
 //#define ADC_CORRECTION_VERBOSE

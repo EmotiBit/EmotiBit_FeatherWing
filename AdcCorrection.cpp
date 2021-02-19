@@ -719,7 +719,7 @@ void AdcCorrection::echoResults(uint16_t gainCorr, uint16_t offsetCorr)
 	adcAfterCorrection[0] = getAverageAnalogInput(A0);
 	adcAfterCorrection[1] = getAverageAnalogInput(A1);
 	adcAfterCorrection[2] = getAverageAnalogInput(A2);
-
+	pinMode(LED_BUILTIN, OUTPUT);
 	digitalWrite(LED_BUILTIN, LOW);
 	uint32_t timeCurrent = millis();
 	while (!Serial.available())
@@ -739,6 +739,7 @@ void AdcCorrection::echoResults(uint16_t gainCorr, uint16_t offsetCorr)
 		delay(1000);
 	}
 	digitalWrite(LED_BUILTIN, HIGH);
+	pinPeripheral(LED_BUILTIN, PIO_SERCOM);
 	Serial.read();// pop from the buffer
 	Serial.println("COPY AND PASTE the folowing into the feather records");
 	Serial.println("==============================================");
