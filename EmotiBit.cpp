@@ -95,6 +95,7 @@ int EmotiBit::detectEmotiBitVersion()
 	int otpEmotiBitVersion = 0;
 	// V02B, V02H and V03B all have pin 6 as hibernate, and this code supports only those versions
 	int hibernatePin = 6;
+	int emotiBitI2cClkPin = 13;
 	_sdCardChipSelectPin = 19;
 	pinMode(hibernatePin, OUTPUT);
 	bool status;
@@ -126,6 +127,8 @@ int EmotiBit::detectEmotiBitVersion()
 		{
 			Serial.println("Please make Sure SD-Card is present.");
 			Serial.println("Version not detected. stopping execution.");
+			pinMode(emotiBitI2cClkPin, OUTPUT);
+			digitalWrite(emotiBitI2cClkPin, LOW);
 			while (1);
 		}
 	}
@@ -205,6 +208,7 @@ int EmotiBit::detectEmotiBitVersion()
 	else if (otpEmotiBitVersion == -1)// Sensor not detected on the I2C
 	{
 		Serial.println("Stopping code execution");
+		
 		while (true);
 	}
 	else
