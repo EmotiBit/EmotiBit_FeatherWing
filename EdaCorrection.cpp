@@ -751,8 +751,9 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection()
 #else
 		Serial.println("of the main EmotiBit sensor");
 #endif
-
+		
 		Serial.print("correctionData.edlReadings[0]: "); Serial.println(correctionData.edlReadings[0], 6);
+		Serial.println("Uncomment ACCESS_MAIN_ADDRESS in code to use emotibit with calibration.");
 		progress = EdaCorrection::Progress::FINISH;// prevets the emotiBit class variables to be updated in normalModeoperations()
 		correctionDataReady = false;
 #endif

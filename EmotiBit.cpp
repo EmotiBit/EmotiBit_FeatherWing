@@ -223,7 +223,7 @@ int EmotiBit::detectEmotiBitVersion()
 	_EmotiBit_i2c->setClock(400000);// setting the rate back to 400K for normal I2C operation
 	if (otpEmotiBitVersion == 255)
 	{
-		Serial.print("using the Estimated emotibit version detected from power up sequence: "); Serial.println(versionEst);
+		Serial.print("using the Estimated emotibit version detected from power up sequence: "); Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)versionEst));
 		Serial.println("************************** END DETECTING EMOTIBIT VERSION ************************************");
 		return versionEst;
 	}
