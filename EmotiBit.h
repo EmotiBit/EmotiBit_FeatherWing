@@ -37,7 +37,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.22";
+	String firmware_version = "1.2.23";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -351,7 +351,7 @@ public:
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 
-	void setupSdCard();
+	bool setupSdCard();
 	void updateButtonPress();
 	void hibernate();
 	void startTimer(int frequencyHz);

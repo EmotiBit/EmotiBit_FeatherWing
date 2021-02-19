@@ -95,41 +95,41 @@ int EmotiBit::detectEmotiBitVersion()
 	int otpEmotiBitVersion = 0;
 	// V02B, V02H and V03B all have pin 6 as hibernate, and this code supports only those versions
 	int hibernatePin = 6;
+	_sdCardChipSelectPin = 19;
 	pinMode(hibernatePin, OUTPUT);
-
-	//int emotiBitI2cSdaPin = 11; 
-	//pinMode(emotiBitI2cSdaPin, INPUT);
-	int emotiBitEdrPin = A3; // in both V2 and V3 boards
-	int pinValueOnHibernateLow = -1, pinValueOnHibernateHigh = -1;
+	bool status;
 
 	Serial.println("Making hibernate LOW");
 	digitalWrite(hibernatePin, LOW);
-	delay(500);
-	pinValueOnHibernateLow = analogRead(emotiBitEdrPin);
-	Serial.print("edr pin value: "); Serial.println(pinValueOnHibernateLow);
-
-	Serial.println("Making hibernate HIGH");
-	digitalWrite(hibernatePin, HIGH);
-	delay(500);
-	pinValueOnHibernateHigh = analogRead(emotiBitEdrPin);
-	Serial.print("edr pin value: "); Serial.println(pinValueOnHibernateHigh);
-
-	// V2 gets activated
-	if (pinValueOnHibernateLow > pinValueOnHibernateHigh )
+	delay(100);
+	// Try Setting up SD Card
+	status = setupSdCard();
+	delay(200);
+	if (status)
 	{
-		versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V02H;// according to EmotiBit::Version
-	}
-	// V3 gets activate
-	else if (pinValueOnHibernateLow < pinValueOnHibernateHigh )
-	{
-		versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V03B;// according to EmotiBit::Version
+		versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V02H;
 	}
 	else
 	{
-		Serial.println("unable to detect Hibernate logic. Pausing execution");
-		while (1);
+		// status is false
+		Serial.println("Making hibernate HIGH");
+		digitalWrite(hibernatePin, HIGH);
+		delay(100);
+		// Try Setting up SD Card
+		status = setupSdCard();
+		delay(200);
+		if (status)
+		{
+			versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V03B;
+		}
+		else
+		{
+			Serial.println("Please make Sure SD-Card is present.");
+			Serial.println("Version not detected. stopping execution.");
+			while (1);
+		}
 	}
-	
+
 	Serial.print("Estimated version of the emotibit is:"); Serial.println(emotiBitVersionController.getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)versionEst));
 	Serial.println();
 	Serial.print("Powering emotibit according to the estimate. ");
@@ -161,7 +161,7 @@ int EmotiBit::detectEmotiBitVersion()
 	Serial.print("...flushing");
 	_EmotiBit_i2c->flush();
 	
-	bool status = true;
+	status = true;
 	// Setup Temperature / Humidity Sensor
 	Serial.println("Configuring Temperature / Humidity Sensor");
 #ifdef USE_ALT_SI7013 
@@ -209,7 +209,14 @@ int EmotiBit::detectEmotiBitVersion()
 	}
 	else
 	{
-		return otpEmotiBitVersion;
+		if (otpEmotiBitVersion == versionEst)
+		{
+			return otpEmotiBitVersion;
+		}
+		else
+		{
+			// Resolve conflict. 
+		}
 	}
 
 }
@@ -715,10 +722,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		_edlDigFiltAlpha = pow(M_E, -2.f * PI * edaCrossoverFilterFreq / (_samplingRates.eda / _samplesAveraged.eda));
 	}
 	*/
-	delay(500);
-
-	// Setup SD Card
-	setupSdCard();
 	led.setLED(uint8_t(EmotiBit::Led::RED), true);
 
 	//WiFi Setup;
@@ -890,7 +893,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 } // Setup
 
-void EmotiBit::setupSdCard()
+bool EmotiBit::setupSdCard()
 {
 	Serial.print("\nInitializing SD card...");
 	// see if the card is present and can be initialized:
@@ -911,9 +914,9 @@ void EmotiBit::setupSdCard()
 		Serial.println(_sdCardChipSelectPin);
 		// don't do anything more:
 		// ToDo: Handle case where we still want to send network data
-		while (true) {
-			hibernate();
-		}
+		//while (true) {
+		//	hibernate();
+		return false;
 	}
 	Serial.println("card initialized.");
 	SD.ls(LS_R);
@@ -928,6 +931,7 @@ void EmotiBit::setupSdCard()
 			hibernate();
 		}
 	}
+	return true;
 
 }
 
