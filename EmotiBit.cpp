@@ -100,6 +100,7 @@ int EmotiBit::detectEmotiBitVersion()
 	pinMode(hibernatePin, OUTPUT);
 	bool status;
 	bool isConfigFilePresent = true;
+	Serial.println("****************************** DETECTING EMOTIBIT VERSION ************************************");
 	Serial.println("Making hibernate LOW");
 	digitalWrite(hibernatePin, LOW);
 	delay(100);
@@ -184,7 +185,7 @@ int EmotiBit::detectEmotiBitVersion()
 	
 	status = true;
 	// Setup Temperature / Humidity Sensor
-	Serial.println("Configuring Temperature / Humidity Sensor");
+	Serial.println("\n\nConfiguring Temperature / Humidity Sensor");
 #ifdef USE_ALT_SI7013 
 	status = tempHumiditySensor.setup(*_EmotiBit_i2c, 0x41);
 #else
@@ -221,6 +222,7 @@ int EmotiBit::detectEmotiBitVersion()
 	if (otpEmotiBitVersion == 255)
 	{
 		Serial.print("using the Estimated emotibit version detected from power up sequence: "); Serial.println(versionEst);
+		Serial.println("************************** END DETECTING EMOTIBIT VERSION ************************************");
 		return versionEst;
 	}
 	else if (otpEmotiBitVersion == -1)// Sensor not detected on the I2C
@@ -233,6 +235,7 @@ int EmotiBit::detectEmotiBitVersion()
 	{
 		if (otpEmotiBitVersion == versionEst)
 		{
+			Serial.println("************************** END DETECTING EMOTIBIT VERSION ************************************");
 			return otpEmotiBitVersion;
 		}
 		else
@@ -240,7 +243,7 @@ int EmotiBit::detectEmotiBitVersion()
 			// Resolve conflict. 
 		}
 	}
-
+	
 }
 
 uint8_t EmotiBit::setup(size_t bufferCapacity)
@@ -312,6 +315,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			AdcCorrection adcCorrection;
 			if (!adcCorrection.begin(samdStorageAdcValues._gainCorrection, samdStorageAdcValues._offsetCorrection, samdStorageAdcValues.valid))
 			{
+				Serial.println("Exiting ADC Correction.");
+				delay(3000);
 				break;
 			}
 			//adcCorrection.execute(samdStorageAdcValues._gainCorrection, samdStorageAdcValues._offsetCorrection, samdStorageAdcValues.valid);

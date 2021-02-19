@@ -3,63 +3,9 @@
 
 AdcCorrection::AdcCorrection()
 {
-	Serial.println("Enter the ADC Correction Rig version being used.");
-	Serial.println("Enter 0 for VER_0: R-Ladder Correction");
-	Serial.println("Enter 1 for VER_1: AbsV correction");
-
-	int rigVersionInput = -1, dataFormatVerInput = -1;
-	while (rigVersionInput == -1)
-	{
-		rigVersionInput = serialToInt();
-	}
-	Serial.println("------------------"); Serial.print("RigVersion entered: "); Serial.println(rigVersionInput);
-	if ((int)AdcCorrection::DataFormatVersion::COUNT == 2) // if there exist only 1 format version(0 and Unknown)
-	{
-		dataFormatVerInput = (int)AdcCorrection::DataFormatVersion::DATA_FORMAT_0;
-		Serial.print("dataFormatVersion chosen: "); Serial.println(dataFormatVerInput); Serial.println("------------------");
-	}
-	else
-	{
-		Serial.println("Enter the Data Format Version being used");
-		while (dataFormatVerInput != -1)
-		{
-			dataFormatVerInput = serialToInt();
-		}
-		Serial.print("dataFormatVersion chosen: "); Serial.println(dataFormatVerInput); Serial.println("------------------");
-	}
-	dataFormatVersion = (AdcCorrection::DataFormatVersion)dataFormatVerInput;
-
-
-	if (rigVersionInput == (int)AdcCorrection::AdcCorrectionRigVersion::VER_0 || rigVersionInput == (int)AdcCorrection::AdcCorrectionRigVersion::VER_1)
-	{
-		setRigVersion((AdcCorrection::AdcCorrectionRigVersion)rigVersionInput);
-		numAdcPoints = 3;
-		if (dataFormatVerInput == (int)AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
-		{
-			BYTES_PER_ADC_DATA_POINT = 4;
-			ATWINC_DATA_ARRAY_SIZE = BYTES_PER_ADC_DATA_POINT * numAdcPoints;
-		}
-		else
-		{
-			// enter the format version details for other versions here
-		}
-		adcCorrectionRig.N[0] = 1;  adcCorrectionRig.N[1] = 1;  adcCorrectionRig.N[2] = 10;
-		adcCorrectionRig.D[0] = 11; adcCorrectionRig.D[1] = 2;  adcCorrectionRig.D[2] = 11;
-		adcInputPins[0] = A0;
-		adcInputPins[1] = A1;
-		adcInputPins[2] = A2;
-		rigMetadata[0] = numAdcPoints;
-		rigMetadata[1] = (uint8_t)dataFormatVerInput;
-		rigMetadata[2] = (int8_t)getRigVersion();
-		_isupdatedAtwincMetadataArray = true;
-	}
-	else
-	{
-		// handle other versions
-		Serial.println("You are using an invalid version");
-		Serial.println("stopping Execution");
-		while (1);
-	}
+	Serial.println("################################");
+	Serial.println("#####  ADC Correction Mode  ####");
+	Serial.println("################################\n");
 }
 
 AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version)
@@ -135,10 +81,65 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 	bool state;
 	AdcCorrection::Status status;
 	analogReadResolution(12); // Setting ADC resolution to 12 bits
-	Serial.println("################################");
-	Serial.println("#####  ADC Correction Mode  ####");
-	Serial.println("################################\n");
-	Serial.println("- Enter T to for TESTING MODE::  Values are calculated but not written to the flash");
+	Serial.println("Enter the ADC Correction Rig version being used.");
+	Serial.println("Enter 0 for VER_0: R-Ladder Correction");
+	Serial.println("Enter 1 for VER_1: AbsV correction");
+	Serial.println("Any other number to exit");
+	int rigVersionInput = -1, dataFormatVerInput = -1;
+	while (rigVersionInput == -1)
+	{
+		rigVersionInput = serialToInt();
+	}
+	if (rigVersionInput != (int)AdcCorrection::AdcCorrectionRigVersion::VER_0 && rigVersionInput != (int)AdcCorrection::AdcCorrectionRigVersion::VER_1)
+	{
+		return false;
+	}
+	Serial.println("------------------"); Serial.print("RigVersion entered: "); Serial.println(rigVersionInput);
+	if ((int)AdcCorrection::DataFormatVersion::COUNT == 1) // if there exist only 1 format version
+	{
+		dataFormatVerInput = (int)AdcCorrection::DataFormatVersion::DATA_FORMAT_0;
+		Serial.print("dataFormatVersion chosen: "); Serial.println(dataFormatVerInput); Serial.println("------------------");
+	}
+	else
+	{
+		Serial.println("Enter the Data Format Version being used");
+		while (dataFormatVerInput != -1)
+		{
+			dataFormatVerInput = serialToInt();
+		}
+		Serial.print("dataFormatVersion chosen: "); Serial.println(dataFormatVerInput); Serial.println("------------------");
+	}
+	dataFormatVersion = (AdcCorrection::DataFormatVersion)dataFormatVerInput;
+
+
+	if (rigVersionInput == (int)AdcCorrection::AdcCorrectionRigVersion::VER_0 || rigVersionInput == (int)AdcCorrection::AdcCorrectionRigVersion::VER_1)
+	{
+		setRigVersion((AdcCorrection::AdcCorrectionRigVersion)rigVersionInput);
+		numAdcPoints = 3;
+		if (dataFormatVerInput == (int)AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
+		{
+			BYTES_PER_ADC_DATA_POINT = 4;
+			ATWINC_DATA_ARRAY_SIZE = BYTES_PER_ADC_DATA_POINT * numAdcPoints;
+		}
+		else
+		{
+			// enter the format version details for other versions here
+		}
+		adcCorrectionRig.N[0] = 1;  adcCorrectionRig.N[1] = 1;  adcCorrectionRig.N[2] = 10;
+		adcCorrectionRig.D[0] = 11; adcCorrectionRig.D[1] = 2;  adcCorrectionRig.D[2] = 11;
+		adcInputPins[0] = A0;
+		adcInputPins[1] = A1;
+		adcInputPins[2] = A2;
+		rigMetadata[0] = numAdcPoints;
+		rigMetadata[1] = (uint8_t)dataFormatVerInput;
+		rigMetadata[2] = (int8_t)getRigVersion();
+		_isupdatedAtwincMetadataArray = true;
+	}
+	else
+	{
+		// handle other versions
+	}
+	Serial.println("- Enter T to for TESTING MODE::  Values are calculated but not written to the flash. The Samd is updated.\n\t\t\t\tReprogram feather again to remove any changes made to the correction values.");
 	Serial.println("- Enter P to for PROGRAMMING MODE(use for Shipping):: Values are calculated are written to the AT-Winc flash");
 	Serial.println("- Enter any other key to continue to normal bootup");
 	while (!Serial.available());
@@ -150,7 +151,7 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 			Serial.read();
 		}
 		uint32_t now = millis();
-		while (!Serial.available() && millis() - now < 2000)
+		while (!Serial.available() && millis() - now < 1000)
 		{
 		}
 		//Serial.println("  - Press E to update with already existing correction values.\n  - Press any other key to perform correction");
@@ -164,9 +165,16 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 				{
 					while (true)
 					{
+						Serial.println("-------------------------");
 						Serial.println("Enter the existing correction data in the format shown below");
 						Serial.println("N, D, ADC_MSB, ADC_LSB");
+						Serial.println("Enter X to exit");
 						while (!Serial.available());
+						if (Serial.peek() == 'X')
+						{
+							Serial.println("Exiting adc update.");
+							return false;
+						}
 						for (int i = 0; i < 12; i++)
 						{
 							String splitString = Serial.readStringUntil(',');
@@ -195,6 +203,15 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 						}
 					}
 				}
+			}
+			else
+			{
+				Serial.println("Invalid Option entered");
+				while (Serial.available())
+				{
+					Serial.read();
+				}
+				return false;
 			}
 		}
 		else
@@ -238,6 +255,17 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 		if (modeChoice == 'P') // Programmer Mode
 		{
 			status = writeAtwincFlash();
+			if (status == AdcCorrection::Status::SUCCESS)
+			{
+#ifdef ADC_CORRECTION_VERBOSE
+				Serial.println("Data written on the ATWINC flash successfully.");
+#endif
+			}
+			else
+			{
+				Serial.println("Failed to write to the ATWINC flash");
+				return false;
+			}
 		}
 		else
 		{
@@ -245,19 +273,10 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 			Serial.println("TESTING MODE. ATwinc flash not updated.");
 			Serial.println("-------");
 		}
-		if (status == AdcCorrection::Status::SUCCESS)
-		{
-#ifdef ADC_CORRECTION_VERBOSE
-			Serial.println("Data written on the ATWINC flash successfully.");
-#endif
-		}
-		else
-		{
-			Serial.println("Failed to write to the ATWINC flash");
-		}
 	}
 	else
 	{
+		Serial.println("Invalid Option Chosen.");
 		return false;
 	}
 	return true;

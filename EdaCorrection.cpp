@@ -104,6 +104,7 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 				{
 					if (isOtpValid)// metadata presence is checked in the OTP read operation
 					{
+						Serial.println("-------------------------- EDA CALIBRATION DATA ------------------------------------");
 						Serial.print("The EmotiBit Version stored for EDA correction is: "); Serial.println((int)_emotiBitVersion);
 						Serial.print("The data format version stored for EDA correction is: "); Serial.println((int)otpDataFormat);
 						calcEdaCorrection();
@@ -129,6 +130,11 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 							{
 								Serial.println("\nupdated emotibit class with these values");
 								Serial.println("\nYou can now use this EmotiBit without restarting to measure the EDA test rig values");
+								Serial.println("-------------------------- EDA CALIBRATION DATA ------------------------------------");
+							}
+							else 
+							{
+								Serial.println("\n-------------------------- EDA CALIBRATION DATA ------------------------------------");
 							}
 							//edaCorrection.correctionDataReady = false; // once the values are updated, we can set it to false to not enter this case again
 							//otpMemoryMap.echoWriteCount();
