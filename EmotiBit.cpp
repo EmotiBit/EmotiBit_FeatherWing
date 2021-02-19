@@ -99,16 +99,24 @@ int EmotiBit::detectEmotiBitVersion()
 	_sdCardChipSelectPin = 19;
 	pinMode(hibernatePin, OUTPUT);
 	bool status;
-
+	bool isConfigFilePresent = true;
 	Serial.println("Making hibernate LOW");
 	digitalWrite(hibernatePin, LOW);
 	delay(100);
 	// Try Setting up SD Card
-	status = setupSdCard();
+	status = setupSdCard(isConfigFilePresent);
 	delay(200);
 	if (status)
 	{
-		versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V02H;
+		if (isConfigFilePresent)
+		{
+			versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V02H;
+		}
+		else
+		{
+			Serial.println("Disabling EmotiBit Power");
+			digitalWrite(hibernatePin, HIGH);// disables emotibit power supply
+		}
 	}
 	else
 	{
@@ -117,22 +125,32 @@ int EmotiBit::detectEmotiBitVersion()
 		digitalWrite(hibernatePin, HIGH);
 		delay(100);
 		// Try Setting up SD Card
-		status = setupSdCard();
+		status = setupSdCard(isConfigFilePresent);
 		delay(200);
 		if (status)
 		{
-			versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V03B;
+			if (isConfigFilePresent)
+			{
+				versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V03B;
+			}
+			else
+			{
+				Serial.println("Disabling EmotiBit Power");
+				digitalWrite(hibernatePin, LOW);// disables emotibit power supply
+			}
 		}
 		else
 		{
 			Serial.println("Please make Sure SD-Card is present.");
 			Serial.println("Version not detected. stopping execution.");
-			pinMode(emotiBitI2cClkPin, OUTPUT);
-			digitalWrite(emotiBitI2cClkPin, LOW);
-			while (1);
 		}
 	}
-
+	if (!status || !isConfigFilePresent)
+	{
+		pinMode(emotiBitI2cClkPin, OUTPUT);
+		digitalWrite(emotiBitI2cClkPin, LOW);
+		while (1);
+	}
 	Serial.print("Estimated version of the emotibit is:"); Serial.println(emotiBitVersionController.getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)versionEst));
 	Serial.println();
 	Serial.print("Powering emotibit according to the estimate. ");
@@ -897,7 +915,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 } // Setup
 
-bool EmotiBit::setupSdCard()
+bool EmotiBit::setupSdCard(bool &isConfigFilePresent)
 {
 	Serial.print("\nInitializing SD card...");
 	// see if the card is present and can be initialized:
@@ -931,9 +949,14 @@ bool EmotiBit::setupSdCard()
 		Serial.println("SD card configuration file parsing failed.");
 		Serial.println("Create a file 'config.txt' with the following JSON:");
 		Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
-		while (true) {
-			hibernate();
-		}
+		isConfigFilePresent = false;
+		//while (true) {
+			//hibernate();
+		//}
+	}
+	else
+	{
+		isConfigFilePresent = true;
 	}
 	return true;
 
