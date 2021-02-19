@@ -186,6 +186,8 @@ int EmotiBit::detectEmotiBitVersion()
 	status = true;
 	// Setup Temperature / Humidity Sensor
 	Serial.println("\n\nConfiguring Temperature / Humidity Sensor");
+	//ToDo: change how sensor with different address is referenced.
+	// the macro USE_ALT_SI7013 is defined in EdaCorrection.h
 #ifdef USE_ALT_SI7013 
 	status = tempHumiditySensor.setup(*_EmotiBit_i2c, 0x41);
 #else
@@ -335,12 +337,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			Serial.print("\n\n##### EmotiBit Version "); Serial.print(emotiBitVersionController.getHardwareVersion(_version)); Serial.println(" ####");
 			edaCorrection.begin((uint8_t)_version);
 		}
-		else if (input == 'V')
-		{
-			Serial.print("\nJust Writing EmotiBit Version to the OTP");
-			Serial.print("\n\n##### EmotiBit Version "); Serial.print(emotiBitVersionController.getHardwareVersion(_version)); Serial.println(" ####");
-			edaCorrection.writeEmotiBitVersionToOtp(&tempHumiditySensor, (uint8_t)_version);
-		}
+		//else if (input == 'V')
+		//{
+		//	Serial.print("\nJust Writing EmotiBit Version to the OTP");
+		//	Serial.print("\n\n##### EmotiBit Version "); Serial.print(emotiBitVersionController.getHardwareVersion(_version)); Serial.println(" ####");
+		//	edaCorrection.writeEmotiBitVersionToOtp(&tempHumiditySensor, (uint8_t)_version);
+		//}
 		else
 		{
 			_debugMode = true;

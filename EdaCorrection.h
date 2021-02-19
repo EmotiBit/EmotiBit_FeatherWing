@@ -224,7 +224,7 @@ public:
 
 	bool checkSensorConnection(Si7013* si7013);
 
-	EdaCorrection::Status writeEmotiBitVersionToOtp(Si7013 *si7013, int8_t version = -1);
+	//EdaCorrection::Status writeEmotiBitVersionToOtp(Si7013 *si7013, int8_t version = -1);
 
 	EdaCorrection::Status writeToOtp(Si7013* si7013, uint8_t addr, char val, uint8_t mask=0xFF);
 	/*

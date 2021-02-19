@@ -12,12 +12,23 @@ void EdaCorrection::begin(uint8_t emotiBitVersion)
 	char choice = Serial.read();
 	if (choice == 'A')
 	{
+		// clear any extra characters entered in the serial monitor
+		while (Serial.available())
+		{
+			Serial.read();
+		}
 		EdaCorrection::Status status;
 		status = enterUpdateMode(emotiBitVersion, EdaCorrection::OtpDataFormat::DATA_FORMAT_0);
 	}
 	else
 	{
 		Serial.println("Exiting EDA Calibration mode");
+		// clear any extra characters entered in the serial monitor
+		while (Serial.available())
+		{
+			Serial.read();
+		}
+		delay(2000);
 	}
 	
 }
@@ -46,18 +57,31 @@ EdaCorrection::Status EdaCorrection::enterUpdateMode(uint8_t emotiBitVersion, Ed
 		Serial.println("## IN DUMMY MODE ##");
 		Serial.println("###################");
 	}
+	// remove any extra chharacters entered
+	while (Serial.available())
+	{
+		Serial.read();
+	}
 	Serial.println("Initializing state machine. State: WAITING_FOR_SERIAL_DATA");
 	progress = EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA;
 	Serial.println("Follow the instructions to obtain calibration values:\n");
-	Serial.println("- The tester should now the use the EmotiBit with the High precision EDA test rig");
-	Serial.println("- You should use the EmotiBit Oscilloscope in TESTING MODE, connect to the EmotiBit attached to the EDA test rig. Record EDL and EDR values using the Oscilloscope.");
+	Serial.println("- The tester should now the use the EmotiBit with the High precision EDA test rig. ");
+	Serial.println("- You should use the EmotiBit Oscilloscope in TESTING MODE, connect to the EmotiBit attached to the EDA test rig.");
+	Serial.println("- Record EDL and EDR values using the Oscilloscope.");
 	Serial.println("- Once you have the appropriate data, please plug in the serial cable and enter the data.");
 	Serial.println("- Copy and paste the 5 EDL values and 5 EDR values in the format shown below");
-	Serial.println("  - EDL_0R, EDL_10K, EDL_100K, EDL_1M, EDL_10M, vRef2_0R, vRef2_10K, vRef2_100K, vRef2_1M, vRef2_10M");
-	Serial.println("\n\n- Enter any character to proceed with execution");
-	while (!Serial.available()); Serial.read();
-	Serial.print("Proceeding with normal execution in\n");
-	uint8_t msgTimer = 3;
+	Serial.println("  - EDL_0R, EDL_10K, EDL_100K, EDL_1M, EDL_10M, EDR_0R, EDR_10K, EDR_100K, EDR_1M, EDR_10M");
+	Serial.println("\n\n- Enter any character to proceed with execution\n\n");
+	while (!Serial.available()); 
+	// remove any extra chharacters entered
+	while (Serial.available())
+	{
+		Serial.read();
+	}
+	Serial.println("The EmotiBit will resume normal operation. UNPLUG THE USB CABLE. ");
+	Serial.println("The tester should open the EmotiBit Oscilloscope in TESTING MODE");
+	Serial.println("Follow the steps listed above\n");
+	uint8_t msgTimer = 5;
 	while (msgTimer > 0)
 	{
 		Serial.print(msgTimer); Serial.print("\t");
@@ -316,7 +340,7 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 
 	Serial.println("\nIf you are in Dummy mode, NO OTP R/W ACTIONS WILL BE PERFORMED");
 	Serial.println("This is how the OTP is will be updated(If NOT IN DUMMY MODE)");
-	Serial.println("You can change R/W locations in OTP by toggling ACCESS_MAIN_ADDRESS\n");
+	Serial.println("You can change R/W locations in OTP by toggling ACCESS_MAIN_ADDRESS(in code)\n");
 
 	for (int iterEdl = 0; iterEdl < NUM_EDL_READINGS; iterEdl++)
 	{
@@ -333,10 +357,11 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 			Serial.println(otpData.inByte[byte], DEC);
 		}
 #ifndef ACCESS_MAIN_ADDRESS
+		// just write 1 float(4 Bytes) into the test address space(0xA0 - 0xA3)
 		break;
 #endif
 	}
-
+	// only write the EDR value if writing to the main address space.
 #ifdef ACCESS_MAIN_ADDRESS
 	//vref2
 	otpData.inFloat = correctionData.vRef2;
@@ -367,6 +392,10 @@ bool EdaCorrection::getUserApproval()
 	if (Serial.available())
 	{
 		char response = Serial.read();
+		while (Serial.available())
+		{
+			Serial.read();
+		}
 		if (response == 'Y')
 		{
 			setApprovalStatus(true);
@@ -403,6 +432,7 @@ bool EdaCorrection::checkSensorConnection(Si7013* si7013)
 
 bool EdaCorrection::isOtpRegWritten(Si7013* si7013, uint8_t addr, bool isOtpOperation)
 {
+	while (si7013->getStatus() != Si7013::STATUS_IDLE);
 	if (si7013->readRegister8(addr, isOtpOperation) == 255)
 	{
 		return false;
@@ -421,6 +451,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, ch
 		return EdaCorrection::Status::FAILURE;
 	}
 	// for real write
+	while (si7013->getStatus() != Si7013::STATUS_IDLE);
 	si7013->writeToOtp(addr, val, mask);
 	//ToDo: Think about adding a Delay after write.
 	// For testing
@@ -429,45 +460,30 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, ch
 	return EdaCorrection::Status::SUCCESS;
 }
 
-EdaCorrection::Status EdaCorrection::writeEmotiBitVersionToOtp(Si7013 *si7013, int8_t version)
-{
-	if (version == -1) // called from the Eda Correction class
-		version = _emotiBitVersion;
-	else  // Called form Setup to just write the Version
-	{
-		Serial.println("Are you sure you want to proceed with writing the OTP?");
-		Serial.println("Press Y to proceed or any other key to abort");
-		while(!Serial.available());
-		if (Serial.read() != 'Y')
-		{
-			Serial.println("|||| Aborting ||||");
-			delay(2000);
-			return EdaCorrection::Status::FAILURE;
-		}
-		else
-		{
-			Serial.println("Proceeding to write the OTP");
-			Serial.print("EmotiBit version being written: "); Serial.println(version);
-		}
-	}
-	
-	if (otpMemoryMap.emotiBitVersionWritten == false)
-	{
-		otpMemoryMap.writeCount.emotiBitVersion++;
-		if ((uint8_t)writeToOtp(si7013, otpMemoryMap.emotiBitVersionAddr, version) == (uint8_t)EdaCorrection::Status::SUCCESS)
-		{
-			otpMemoryMap.emotiBitVersionWritten = true;
-		}
-		else
-		{
-			triedRegOverwrite = true;
-		}
-	}
-	else
-	{
-		otpMemoryMap.writeCount.emotiBitVersion++;
-	}
-}
+//EdaCorrection::Status EdaCorrection::writeEmotiBitVersionToOtp(Si7013 *si7013, int8_t version)
+//{
+//	if (version == -1) // called from the Eda Correction class
+//		version = _emotiBitVersion;
+//	else  // Called form Setup to just write the Version
+//	{
+//		Serial.println("Are you sure you want to proceed with writing the OTP?");
+//		Serial.println("Press Y to proceed or any other key to abort");
+//		while(!Serial.available());
+//		if (Serial.read() != 'Y')
+//		{
+//			Serial.println("|||| Aborting ||||");
+//			delay(2000);
+//			return EdaCorrection::Status::FAILURE;
+//		}
+//		else
+//		{
+//			Serial.println("Proceeding to write the OTP");
+//			Serial.print("EmotiBit version being written: "); Serial.println(version);
+//		}
+//	}
+//	
+//	
+//}
 
 EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 {
@@ -502,7 +518,23 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 					otpMemoryMap.writeCount.dataVersion++;
 				}
 				// writing metadata-EmotiBit Version
-				writeEmotiBitVersionToOtp(si7013);
+				//writeEmotiBitVersionToOtp(si7013);
+				if (otpMemoryMap.emotiBitVersionWritten == false)
+				{
+					otpMemoryMap.writeCount.emotiBitVersion++;
+					if ((uint8_t)writeToOtp(si7013, otpMemoryMap.emotiBitVersionAddr, _emotiBitVersion) == (uint8_t)EdaCorrection::Status::SUCCESS)
+					{
+						otpMemoryMap.emotiBitVersionWritten = true;
+					}
+					else
+					{
+						triedRegOverwrite = true;
+					}
+				}
+				else
+				{
+					otpMemoryMap.writeCount.emotiBitVersion++;
+				}
 
 				// writing the vref 2 to OTP
 				otpData.inFloat = correctionData.vRef2;
@@ -552,6 +584,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 
 
 #else
+				// Write only the first reading edl[0] into the test address space. total 4 bytes written.
 
 				otpData.inFloat = correctionData.edlReadings[0];
 				for (uint8_t byte = 0; byte < BYTES_PER_FLOAT; byte++)
@@ -650,11 +683,11 @@ EdaCorrection::Status EdaCorrection::readFromOtp(Si7013* si7013, bool isOtpOpera
 		}
 		correctionData.vRef2 = otpData.inFloat;
 #endif
-		// reading the main address block or the test address block
 		for (uint8_t i = 0; i < NUM_EDL_READINGS; i++)
 		{
 			for (uint8_t j = 0; j < BYTES_PER_FLOAT; j++)
 			{
+		// reading the main address block or the test address block
 #ifdef ACCESS_MAIN_ADDRESS
 				otpData.inByte[j] = si7013->readRegister8(otpMemoryMap.edlAddresses[i] + j, isOtpOperation);
 #else
