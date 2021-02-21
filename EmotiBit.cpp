@@ -377,7 +377,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = &dataClipping;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DEBUG] = &debugBuffer;
 
-	_vcc = 3.3f;						// Vcc voltage
 
 	if (_version == EmotiBitVersionController::EmotiBitVersion::V01B || _version == EmotiBitVersionController::EmotiBitVersion::V01C)
 	{
@@ -397,6 +396,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	// Set board specific constants
 	_adcBits =             emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::ADC_BITS);
 	adcRes =               emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::ADC_MAX_VALUE);
+	_vcc =                 emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::VCC);
 	edrAmplification =     emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::EDR_AMPLIFICATION);
 	edaFeedbackAmpR =      emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::EDA_FEEDBACK_R);
 	vRef1 =                emotiBitVersionController.emotiBitConstantsMapping.getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants::VREF1);
@@ -473,9 +473,10 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	pinMode(_batteryReadPin, INPUT);
 	Serial.println("\nSensor setup:");
 	// Setup EDA
-	Serial.println("Configuring EDA...");
-	pinMode(_edlPin, INPUT);
-	pinMode(_edrPin, INPUT);
+	Serial.println("Configuring ADC Corrections...");
+	_edlPin = A0;
+	//pinMode(_edlPin, INPUT);
+	//pinMode(_edrPin, INPUT);
 	samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
 	if (!samdStorageAdcValues.valid)
 	{
@@ -491,7 +492,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		else
 		{
 			analogReadResolution(_adcBits);
-			Serial.println("Reading correction data from the flash");
+			Serial.println("Reading correction data from the AT-WINC flash");
 			Serial.println("Calculating correction values");
 			adcCorrection.calcCorrectionValues();
 			// Store the values on the flash
@@ -917,8 +918,10 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	if (_debugMode) 
 	{
+		Serial.println("**********************************************************");
 		Serial.println("\nDEBUG MODE");
 		Serial.println("Enter ? to know more about available options in DEBUG MODE");
+		Serial.println("**********************************************************");
 	}
 } // Setup
 
@@ -1329,9 +1332,6 @@ int8_t EmotiBit::updateEDAData()
 		edlTemp = average(edlBuffer);
 		edrTemp = average(edrBuffer);
 
-		// Perform data conversion
-		edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
-		edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
 
 		pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
 		if (edlClipped) {
@@ -1342,6 +1342,9 @@ int8_t EmotiBit::updateEDAData()
 		if (edrClipped) {
 			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
 		}
+		// Perform data conversion
+		edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
+		edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
 
 
 		// EDL Digital Filter
