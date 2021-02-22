@@ -474,9 +474,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.println("\nSensor setup:");
 	// Setup EDA
 	Serial.println("Configuring ADC Corrections...");
-	_edlPin = A0;
-	//pinMode(_edlPin, INPUT);
-	//pinMode(_edrPin, INPUT);
+	//_edlPin = A0;
+	pinMode(_edlPin, INPUT);
+	pinMode(_edrPin, INPUT);
 	samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
 	if (!samdStorageAdcValues.valid)
 	{
@@ -1332,6 +1332,9 @@ int8_t EmotiBit::updateEDAData()
 		edlTemp = average(edlBuffer);
 		edrTemp = average(edrBuffer);
 
+		// Perform data conversion
+		edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
+		edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
 
 		pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
 		if (edlClipped) {
@@ -1342,9 +1345,6 @@ int8_t EmotiBit::updateEDAData()
 		if (edrClipped) {
 			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
 		}
-		// Perform data conversion
-		edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
-		edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
 
 
 		// EDL Digital Filter

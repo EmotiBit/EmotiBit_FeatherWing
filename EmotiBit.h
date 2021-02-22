@@ -37,7 +37,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.29-t";
+	String firmware_version = "1.2.30";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
