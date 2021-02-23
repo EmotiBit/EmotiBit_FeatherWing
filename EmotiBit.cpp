@@ -88,7 +88,7 @@ void EmotiBit::bmm150ReadTrimRegisters()
 	temp_msb = ((uint16_t)(trim_xy1xy2[5] & 0x7F)) << 8;
 	bmm150TrimData.dig_xyz1 = (uint16_t)(temp_msb | trim_xy1xy2[4]);
 }
-
+/*
 int EmotiBit::detectEmotiBitVersion()
 {
 	uint8_t versionEst = 0;
@@ -247,10 +247,11 @@ int EmotiBit::detectEmotiBitVersion()
 	}
 	
 }
-
+*/
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
-	_version = (EmotiBitVersionController::EmotiBitVersion)detectEmotiBitVersion();
+	EmotiBitVersionController::EmotiBitVersionDetection detectVersion(_EmotiBit_i2c, &tempHumiditySensor, &SD, &_emotiBitWiFi);
+	_version = (EmotiBitVersionController::EmotiBitVersion)detectVersion.begin();
 	bool initResult = false;
 	// IMPORTANT. Need pin initialization for emotibit to work
 	// initializing the pin and constant mapping
@@ -925,6 +926,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 } // Setup
 
+/*
 bool EmotiBit::setupSdCard(bool &isConfigFilePresent)
 {
 	Serial.print("\nInitializing SD card...");
@@ -971,6 +973,7 @@ bool EmotiBit::setupSdCard(bool &isConfigFilePresent)
 	return true;
 
 }
+*/
 
 bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) {
 	static EmotiBitPacket::Header header;
@@ -2773,7 +2776,7 @@ void EmotiBit::hibernate() {
 	LowPower.deepSleep();
 }
 
-
+/*
 // Loads the configuration from a file
 bool EmotiBit::loadConfigFile(const String &filename) {
 	// Open file for reading
@@ -2828,7 +2831,7 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 	file.close();
 	return true;
 }
-
+*/
 
 bool EmotiBit::writeSdCardMessage(const String & s) {
 	// Break up the message in to bite-size chunks to avoid over running the UDP or SD card write buffers

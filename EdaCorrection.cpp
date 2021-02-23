@@ -636,7 +636,8 @@ int EdaCorrection::readEmotiBitVersion(Si7013* si7013)
 	{
 		// Sensor found
 		uint8_t emotibitVersion = 0;
-		emotibitVersion = (uint8_t)si7013->readRegister8(otpMemoryMap.emotiBitVersionAddr, true);
+		uint8_t emotiBitVersionAddr = 0xB7;
+		emotibitVersion = (uint8_t)si7013->readRegister8(emotiBitVersionAddr, true);
 		if (emotibitVersion == 255)
 		{
 			Serial.println("OTP has not yet been updated");
@@ -645,8 +646,8 @@ int EdaCorrection::readEmotiBitVersion(Si7013* si7013)
 		{
 			Serial.println("######################");
 			Serial.print("The EmotiBit Version read from OTP is: ");
-			Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)emotibitVersion));
-			//Serial.println(EmotiBitemotibitVersion);
+			//Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)emotibitVersion));
+			Serial.println(emotibitVersion);
 			Serial.println("######################");
 		}
 		return emotibitVersion;

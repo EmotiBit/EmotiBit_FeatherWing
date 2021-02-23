@@ -1,3 +1,5 @@
+#ifndef _EDA_CORRECTION_H
+#define _EDA_CORRECTION_H
 /*
 This class has been designed to work asynchronously as writing to the SI-7013 chip can be performed only using I2c and
 emotibit only allows I2C communication during ISR.
@@ -51,7 +53,7 @@ NORMAL
 #include "Arduino.h"
 #include "Wire.h"
 #include "EmotiBit_Si7013.h"
-#include "EmotiBitVersionController.h"
+//#include "EmotiBitVersionController.h"
 //#define USE_ALT_SI7013
 #define ACCESS_MAIN_ADDRESS
 
@@ -222,7 +224,7 @@ public:
 	*/
 	bool getApprovalStatus();
 
-	bool checkSensorConnection(Si7013* si7013);
+	static bool checkSensorConnection(Si7013* si7013);
 
 	//EdaCorrection::Status writeEmotiBitVersionToOtp(Si7013 *si7013, int8_t version = -1);
 
@@ -237,7 +239,7 @@ public:
 	/*
 	Returns the emotiBit version read from the OTP
 	*/
-	int readEmotiBitVersion(Si7013* si7013);
+	static int readEmotiBitVersion(Si7013* si7013);
 
 	//uint8_t readFromOtp(TwoWire* emotibit_i2c, uint8_t addr);
 	/*
@@ -255,3 +257,5 @@ public:
 
 	void displayCorrections();
 };
+
+#endif

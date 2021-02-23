@@ -1,13 +1,26 @@
-// the Emotibit Pin mapping class handles mapping of the Feather pin number to the EmotiBit pin name
+// the Emotibit Version Controller class handles all things related to EmotiBit Versions. This includes
+// 1. Detecting EmotiBit Version on startup
+// 2. Loading feather-emotibit pin mappings
+// 3. Loading emotibit specific constants
 // Author : Nitin
 // date: 17 Feb 2021
 
-#ifndef _EMOTIBIT_PIN_MAPPING_H
-#define _EMOTIBIT_PIN_MAPPING_H
+#ifndef _EMOTIBIT_VERSION_CONTROLLER_H
+#define _EMOTIBIT_VERSION_CONTROLLER_H
 
+#include <Arduino.h>
+#include <Wire.h>
+#include <SdFat.h>
+#include <EmotiBit_Si7013.h>
+#include "wiring_private.h"
+#include <ArduinoJson.h>
+#include "EmotiBitWiFi.h"
+#include "EdaCorrection.h"
 
 class EmotiBitVersionController
 {
+private:
+	const char *_configFilename = "config.txt";
 public:
 	// !!! The following ORDER of the enum class holding the Version numbers SHOULD NOT BE ALTERED.
 	// New versions shold be ADDED to the end of this list 
@@ -105,8 +118,35 @@ public:
 		bool setSystemConstantForTesting(SystemConstants constant);
 	}emotiBitConstantsMapping;
 
+	class EmotiBitVersionDetection
+	{
+	private:
+		int _versionEst;
+		int _otpEmotiBitVersion;
+		int _hibernatePin;
+		int _emotiBitI2cClkPin;
+		int _emotiBitI2cDataPin;
+		int _sdCardChipSelectPin;
+		const char *_configFileName = "config.txt";
+		bool _isConfigFilePresent;
+	private:
+		TwoWire *_EmotiBit_i2c;
+		Si7013 *_tempHumiditySensor;
+		SdFat *_SD;
+		EmotiBitWiFi *_emotiBitWiFi;
+		EmotiBitPinMapping *_emotiBitPinMapping;
+		EmotiBitConstantsMapping *_emotiBitConstantsMapping;
+		//EdaCorrection *_edaCorrection;
+
+	public:
+		EmotiBitVersionDetection(TwoWire* EmotiBit_I2c, Si7013 *tempHumiditySensor, SdFat *SD, EmotiBitWiFi *emotiBitWiFi);
+		int begin();
+		bool setupSdCard();
+		bool loadConfigFile();
+
+	};
+
 public:
 	static const char* getHardwareVersion(EmotiBitVersion version);
-
 };
 #endif
