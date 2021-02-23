@@ -227,7 +227,6 @@ public:
 
 	bool checkSensorConnection(Si7013* si7013);
 
-	//EdaCorrection::Status writeEmotiBitVersionToOtp(Si7013 *si7013, int8_t version = -1);
 
 	EdaCorrection::Status writeToOtp(Si7013* si7013, uint8_t addr, char val, uint8_t mask=0xFF);
 	/*
@@ -236,11 +235,6 @@ public:
 	sets progress to FINISH
 	*/
 	EdaCorrection::Status writeToOtp(Si7013* si7013);
-
-	/*
-	Returns the emotiBit version read from the OTP
-	*/
-	//static int readEmotiBitVersion(Si7013* si7013);
 
 	//uint8_t readFromOtp(TwoWire* emotibit_i2c, uint8_t addr);
 	/*

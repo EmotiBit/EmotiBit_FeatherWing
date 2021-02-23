@@ -88,166 +88,7 @@ void EmotiBit::bmm150ReadTrimRegisters()
 	temp_msb = ((uint16_t)(trim_xy1xy2[5] & 0x7F)) << 8;
 	bmm150TrimData.dig_xyz1 = (uint16_t)(temp_msb | trim_xy1xy2[4]);
 }
-/*
-int EmotiBit::detectEmotiBitVersion()
-{
-	uint8_t versionEst = 0;
-	int otpEmotiBitVersion = 0;
-	// V02B, V02H and V03B all have pin 6 as hibernate, and this code supports only those versions
-	int hibernatePin = 6;
-	int emotiBitI2cClkPin = 13;
-	_sdCardChipSelectPin = 19;
-	pinMode(hibernatePin, OUTPUT);
-	bool status;
-	bool isConfigFilePresent = true;
-	Serial.println("****************************** DETECTING EMOTIBIT VERSION ************************************");
-	Serial.println("Making hibernate LOW");
-	digitalWrite(hibernatePin, LOW);
-	delay(100);
-	// Try Setting up SD Card
-	status = setupSdCard(isConfigFilePresent);
-	delay(200);
-	if (status)
-	{
-		if (isConfigFilePresent)
-		{
-			versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V02H;
-		}
-		else
-		{
-			Serial.println("Disabling EmotiBit Power");
-			digitalWrite(hibernatePin, HIGH);// disables emotibit power supply
-		}
-	}
-	else
-	{
-		// status is false
-		Serial.println("Making hibernate HIGH");
-		digitalWrite(hibernatePin, HIGH);
-		delay(100);
-		// Try Setting up SD Card
-		status = setupSdCard(isConfigFilePresent);
-		delay(200);
-		if (status)
-		{
-			if (isConfigFilePresent)
-			{
-				versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V03B;
-			}
-			else
-			{
-				Serial.println("Disabling EmotiBit Power");
-				digitalWrite(hibernatePin, LOW);// disables emotibit power supply
-			}
-		}
-		else
-		{
-			Serial.println("Please make Sure SD-Card is present.");
-			Serial.println("Version not detected. stopping execution.");
-		}
-	}
-	if (!status || !isConfigFilePresent)
-	{
-		pinMode(emotiBitI2cClkPin, OUTPUT);
-		digitalWrite(emotiBitI2cClkPin, LOW);
-		while (1);
-	}
-	Serial.print("Estimated version of the emotibit is:"); Serial.println(emotiBitVersionController.getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)versionEst));
-	Serial.println();
-	Serial.print("Powering emotibit according to the estimate. ");
-	if (versionEst == (uint8_t)EmotiBitVersionController::EmotiBitVersion::V02H)
-	{
-		digitalWrite(hibernatePin, LOW);
-		Serial.println("made hibernate LOW");
-	}
-	else if (versionEst == (uint8_t)EmotiBitVersionController::EmotiBitVersion::V03B)
-	{
-		digitalWrite(hibernatePin, HIGH);
-		Serial.println("made hibernate HIGH");
-	}
-	if (_EmotiBit_i2c != nullptr)
-	{
-		delete(_EmotiBit_i2c);
-	}
-	_EmotiBit_i2c = new TwoWire(&sercom1, 11, 13);
-	// Flush the I2C
-	Serial.print("Setting up I2C....");
-	_EmotiBit_i2c->begin();
-	uint32_t i2cRate = 100000;
-	Serial.print("setting clock to");
-	Serial.print(i2cRate);
-	_EmotiBit_i2c->setClock(i2cRate);
-	Serial.print("...setting PIO_SERCOM");
-	pinPeripheral(11, PIO_SERCOM);
-	pinPeripheral(13, PIO_SERCOM);
-	Serial.print("...flushing");
-	_EmotiBit_i2c->flush();
-	
-	status = true;
-	// Setup Temperature / Humidity Sensor
-	Serial.println("\n\nConfiguring Temperature / Humidity Sensor");
-	//ToDo: change how sensor with different address is referenced.
-	// the macro USE_ALT_SI7013 is defined in EdaCorrection.h
-#ifdef USE_ALT_SI7013 
-	status = tempHumiditySensor.setup(*_EmotiBit_i2c, 0x41);
-#else
-	status = tempHumiditySensor.setup(*_EmotiBit_i2c);
-#endif
-	if (status)
-	{
-		tempHumiditySensor.changeSetting(Si7013::Settings::RESOLUTION_H11_T11);
-		tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NORMAL);
-		tempHumiditySensor.changeSetting(Si7013::Settings::VIN_UNBUFFERED);
-		tempHumiditySensor.changeSetting(Si7013::Settings::VREFP_VDDA);
-		tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NO_HOLD);
 
-		tempHumiditySensor.readSerialNumber();
-		Serial.print("Si7013 Electronic Serial Number: ");
-		Serial.print(tempHumiditySensor.sernum_a);
-		Serial.print(", ");
-		Serial.print(tempHumiditySensor.sernum_b);
-		Serial.print("\n");
-		Serial.print("Model: ");
-		Serial.println(tempHumiditySensor._model);
-		chipBegun.SI7013 = true;
-
-		tempHumiditySensor.startHumidityTempMeasurement();
-	}
-	else
-	{
-		hibernate();
-	}
-
-	while (tempHumiditySensor.getStatus() != Si7013::STATUS_IDLE);
-	otpEmotiBitVersion = edaCorrection.readEmotiBitVersion(&tempHumiditySensor);
-	_EmotiBit_i2c->setClock(400000);// setting the rate back to 400K for normal I2C operation
-	if (otpEmotiBitVersion == 255)
-	{
-		Serial.print("using the Estimated emotibit version detected from power up sequence: "); Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)versionEst));
-		Serial.println("************************** END DETECTING EMOTIBIT VERSION ************************************");
-		return versionEst;
-	}
-	else if (otpEmotiBitVersion == -1)// Sensor not detected on the I2C
-	{
-		Serial.println("Stopping code execution");
-		
-		while (true);
-	}
-	else
-	{
-		if (otpEmotiBitVersion == versionEst)
-		{
-			Serial.println("************************** END DETECTING EMOTIBIT VERSION ************************************");
-			return otpEmotiBitVersion;
-		}
-		else
-		{
-			// Resolve conflict. 
-		}
-	}
-	
-}
-*/
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
 	if (_EmotiBit_i2c != nullptr)
@@ -343,12 +184,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			Serial.print("\n\n##### EmotiBit Version "); Serial.print(emotiBitVersionController.getHardwareVersion(_version)); Serial.println(" ####");
 			edaCorrection.begin((uint8_t)_version);
 		}
-		//else if (input == 'V')
-		//{
-		//	Serial.print("\nJust Writing EmotiBit Version to the OTP");
-		//	Serial.print("\n\n##### EmotiBit Version "); Serial.print(emotiBitVersionController.getHardwareVersion(_version)); Serial.println(" ####");
-		//	edaCorrection.writeEmotiBitVersionToOtp(&tempHumiditySensor, (uint8_t)_version);
-		//}
 		else
 		{
 			_debugMode = true;
@@ -931,54 +766,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 } // Setup
 
-/*
-bool EmotiBit::setupSdCard(bool &isConfigFilePresent)
-{
-	Serial.print("\nInitializing SD card...");
-	// see if the card is present and can be initialized:
-	bool success = false;
-	for (int i = 0; i < 3; i++)
-	{
-		Serial.print(i);
-		Serial.print(",");
-		if (SD.begin(_sdCardChipSelectPin))
-		{
-			success = true;
-			break;
-		}
-		delay(100);
-	}
-	if (!success) {
-		Serial.print("...Card failed, or not present on chip select ");
-		Serial.println(_sdCardChipSelectPin);
-		// don't do anything more:
-		// ToDo: Handle case where we still want to send network data
-		//while (true) {
-		//	hibernate();
-		return false;
-	}
-	Serial.println("card initialized.");
-	SD.ls(LS_R);
-
-	Serial.print(F("\nLoading configuration file: "));
-	Serial.println(_configFilename);
-	if (!loadConfigFile(_configFilename)) {
-		Serial.println("SD card configuration file parsing failed.");
-		Serial.println("Create a file 'config.txt' with the following JSON:");
-		Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
-		isConfigFilePresent = false;
-		//while (true) {
-			//hibernate();
-		//}
-	}
-	else
-	{
-		isConfigFilePresent = true;
-	}
-	return true;
-
-}
-*/
 
 bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) {
 	static EmotiBitPacket::Header header;
@@ -2691,18 +2478,6 @@ void EmotiBit::readSensors()
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
 }
 
-/*
-String EmotiBit::getHardwareVersion()
-{
-	if (_version == EmotiBitVersionController::EmotiBitVersion::V02H) {
-		return "V02h";
-	}
-	else if (_version == EmotiBitVersionController::EmotiBitVersion::V03B)
-	{
-		return "V03b";
-	}
-}
-*/
 
 
 #ifdef __arm__
@@ -2781,62 +2556,6 @@ void EmotiBit::hibernate() {
 	LowPower.deepSleep();
 }
 
-/*
-// Loads the configuration from a file
-bool EmotiBit::loadConfigFile(const String &filename) {
-	// Open file for reading
-	File file = SD.open(filename);
-
-	if (!file) {
-		Serial.print("File ");
-		Serial.print(filename);
-		Serial.println(" not found");
-		return false;
-	}
-
-	Serial.print("Parsing: ");
-	Serial.println(filename);
-
-	// Allocate the memory pool on the stack.
-	// Don't forget to change the capacity to match your JSON document.
-	// Use arduinojson.org/assistant to compute the capacity.
-	//StaticJsonBuffer<1024> jsonBuffer;
-	StaticJsonBuffer<1024> jsonBuffer;
-
-	// Parse the root object
-	JsonObject &root = jsonBuffer.parseObject(file);
-
-	if (!root.success()) {
-		Serial.println(F("Failed to parse config file"));
-		return false;
-	}
-
-	size_t configSize;
-	// Copy values from the JsonObject to the Config
-	configSize = root.get<JsonVariant>("WifiCredentials").as<JsonArray>().size();
-	Serial.print("ConfigSize: ");
-	Serial.println(configSize);
-	for (size_t i = 0; i < configSize; i++) {
-		String ssid = root["WifiCredentials"][i]["ssid"] | "";
-		String pass = root["WifiCredentials"][i]["password"] | "";
-		Serial.print("Adding SSID: ");
-		Serial.println(ssid);
-		_emotiBitWiFi.addCredential( ssid, pass);
-		Serial.println(ssid);
-		Serial.println(pass);
-	}
-
-	//strlcpy(config.hostname,                   // <- destination
-	//	root["hostname"] | "example.com",  // <- source
-	//	sizeof(config.hostname));          // <- destination's capacity
-
-	// Close the file (File's destructor doesn't close the file)
-	// ToDo: Handle multiple credentials
-
-	file.close();
-	return true;
-}
-*/
 
 bool EmotiBit::writeSdCardMessage(const String & s) {
 	// Break up the message in to bite-size chunks to avoid over running the UDP or SD card write buffers
