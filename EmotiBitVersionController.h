@@ -15,12 +15,18 @@
 #include "wiring_private.h"
 #include <ArduinoJson.h>
 #include "EmotiBitWiFi.h"
-#include "EdaCorrection.h"
+//#include "EdaCorrection.h"
+
+// Controls which sensor is used OTP access. uncomment the line below is use external SI-7013 connected to teh emotibit
+//#define USE_ALT_SI7013
 
 class EmotiBitVersionController
 {
 private:
 	const char *_configFilename = "config.txt";
+public:
+	// Important: changing this address will change where the EmotiBit version is stored on the OTP
+	static const uint8_t EMOTIBIT_VERSION_ADDR_SI7013_OTP = 0xB7;
 public:
 	// !!! The following ORDER of the enum class holding the Version numbers SHOULD NOT BE ALTERED.
 	// New versions shold be ADDED to the end of this list 
@@ -129,6 +135,7 @@ public:
 		int _sdCardChipSelectPin;
 		const char *_configFileName = "config.txt";
 		bool _isConfigFilePresent;
+		bool *_si7013ChipBegun;
 	private:
 		TwoWire *_EmotiBit_i2c;
 		Si7013 *_tempHumiditySensor;
@@ -139,10 +146,11 @@ public:
 		//EdaCorrection *_edaCorrection;
 
 	public:
-		EmotiBitVersionDetection(TwoWire* EmotiBit_I2c, Si7013 *tempHumiditySensor, SdFat *SD, EmotiBitWiFi *emotiBitWiFi);
+		EmotiBitVersionDetection(TwoWire* EmotiBit_I2c, Si7013 *tempHumiditySensor, SdFat *SD, EmotiBitWiFi *emotiBitWiFi, bool *si7013ChipBegun);
 		int begin();
 		bool setupSdCard();
 		bool loadConfigFile();
+		int readEmotiBitVersionFromSi7013(Si7013 *si7013);
 
 	};
 

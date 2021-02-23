@@ -53,8 +53,8 @@ NORMAL
 #include "Arduino.h"
 #include "Wire.h"
 #include "EmotiBit_Si7013.h"
-//#include "EmotiBitVersionController.h"
-//#define USE_ALT_SI7013
+#include "EmotiBitVersionController.h"
+
 #define ACCESS_MAIN_ADDRESS
 
 class EdaCorrection
@@ -74,7 +74,8 @@ public:
 		size_t edlAddresses[NUM_EDL_CORRECTION_VALUES] = { 0x82, 0x86, 0x8A, 0x8E, 0x92 };
 		size_t edrAddresses = 0xB0 ;
 		size_t edlTestAddress = 0xA0;
-		size_t emotiBitVersionAddr = 0xB7;
+		//size_t emotiBitVersionAddr = 0xB7;// moved to EmotiBitVersionController class
+		size_t emotiBitVersionAddr = EmotiBitVersionController::EMOTIBIT_VERSION_ADDR_SI7013_OTP;
 		size_t dataVersionAddr = 0xB6;
 		bool emotiBitVersionWritten = false;
 		bool dataVersionWritten = false;
@@ -224,7 +225,7 @@ public:
 	*/
 	bool getApprovalStatus();
 
-	static bool checkSensorConnection(Si7013* si7013);
+	bool checkSensorConnection(Si7013* si7013);
 
 	//EdaCorrection::Status writeEmotiBitVersionToOtp(Si7013 *si7013, int8_t version = -1);
 
@@ -239,7 +240,7 @@ public:
 	/*
 	Returns the emotiBit version read from the OTP
 	*/
-	static int readEmotiBitVersion(Si7013* si7013);
+	//static int readEmotiBitVersion(Si7013* si7013);
 
 	//uint8_t readFromOtp(TwoWire* emotibit_i2c, uint8_t addr);
 	/*

@@ -250,7 +250,12 @@ int EmotiBit::detectEmotiBitVersion()
 */
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
-	EmotiBitVersionController::EmotiBitVersionDetection detectVersion(_EmotiBit_i2c, &tempHumiditySensor, &SD, &_emotiBitWiFi);
+	if (_EmotiBit_i2c != nullptr)
+	{
+		delete(_EmotiBit_i2c);
+	}
+	_EmotiBit_i2c = new TwoWire(&sercom1, 11, 13);
+	EmotiBitVersionController::EmotiBitVersionDetection detectVersion(_EmotiBit_i2c, &tempHumiditySensor, &SD, &_emotiBitWiFi, &chipBegun.SI7013);
 	_version = (EmotiBitVersionController::EmotiBitVersion)detectVersion.begin();
 	bool initResult = false;
 	// IMPORTANT. Need pin initialization for emotibit to work

@@ -624,6 +624,8 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 	}
 }
 
+// moved to EmotiBitVersionController class
+/*
 int EdaCorrection::readEmotiBitVersion(Si7013* si7013)
 {
 	if (checkSensorConnection(si7013) == false)
@@ -653,7 +655,7 @@ int EdaCorrection::readEmotiBitVersion(Si7013* si7013)
 		return emotibitVersion;
 	}
 }
-
+*/
 
 EdaCorrection::Status EdaCorrection::readFromOtp(Si7013* si7013, bool isOtpOperation)
 {

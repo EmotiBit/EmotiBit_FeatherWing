@@ -269,7 +269,7 @@ bool EmotiBitVersionController::EmotiBitConstantsMapping::setSystemConstantForTe
 	//ToDo: write the function to assign test values to the constants 
 }
 
-EmotiBitVersionController::EmotiBitVersionDetection::EmotiBitVersionDetection(TwoWire* EmotiBit_I2c, Si7013 *tempHumiditySensor, SdFat *SD, EmotiBitWiFi *emotiBitWiFi)
+EmotiBitVersionController::EmotiBitVersionDetection::EmotiBitVersionDetection(TwoWire* EmotiBit_I2c, Si7013 *tempHumiditySensor, SdFat *SD, EmotiBitWiFi *emotiBitWiFi, bool *si7013ChipBegun)
 {
 	_EmotiBit_i2c = EmotiBit_I2c;
 	_tempHumiditySensor = tempHumiditySensor;
@@ -283,6 +283,7 @@ EmotiBitVersionController::EmotiBitVersionDetection::EmotiBitVersionDetection(Tw
 	_emotiBitI2cDataPin = 11;
 	_sdCardChipSelectPin = 19;
 	_isConfigFilePresent = false;
+	_si7013ChipBegun = si7013ChipBegun;
 }
 
 int EmotiBitVersionController::EmotiBitVersionDetection::begin()
@@ -292,7 +293,7 @@ int EmotiBitVersionController::EmotiBitVersionDetection::begin()
 	// V02B, V02H and V03B all have pin 6 as hibernate, and this code supports only those versions
 	//int hibernatePin = 6;
 	//int emotiBitI2cClkPin = 13;
-	//int _sdCardChipSelectPin = 19; // ToDo: change the notation to non-private member
+	//int _sdCardChipSelectPin = 19; 
 	pinMode(_hibernatePin, OUTPUT);
 	bool status;
 	//bool isConfigFilePresent = true;
@@ -361,11 +362,6 @@ int EmotiBitVersionController::EmotiBitVersionDetection::begin()
 		digitalWrite(_hibernatePin, HIGH);
 		Serial.println("made hibernate HIGH");
 	}
-	if (_EmotiBit_i2c != nullptr)
-	{
-		delete(_EmotiBit_i2c);
-	}
-	_EmotiBit_i2c = new TwoWire(&sercom1, _emotiBitI2cDataPin, _emotiBitI2cClkPin);
 	// Flush the I2C
 	Serial.print("Setting up I2C....");
 	_EmotiBit_i2c->begin();
@@ -382,8 +378,7 @@ int EmotiBitVersionController::EmotiBitVersionDetection::begin()
 	status = true;
 	// Setup Temperature / Humidity Sensor
 	Serial.println("\n\nConfiguring Temperature / Humidity Sensor");
-	//ToDo: change how sensor with different address is referenced.
-	// the macro USE_ALT_SI7013 is defined in EdaCorrection.h
+	// moved the macro definition from EdaCorrection to EmotiBitVersionController
 #ifdef USE_ALT_SI7013 
 	status = _tempHumiditySensor->setup(*_EmotiBit_i2c, 0x41);
 #else
@@ -405,20 +400,29 @@ int EmotiBitVersionController::EmotiBitVersionDetection::begin()
 		Serial.print("\n");
 		Serial.print("Model: ");
 		Serial.println(_tempHumiditySensor->_model);
-		// ToDo: Move this to the setup function
 		//chipBegun.SI7013 = true;
+		*_si7013ChipBegun = true;
 
 		_tempHumiditySensor->startHumidityTempMeasurement();
 	}
 	else
 	{
-		// ToDo: Resolve if sensor not found
+		// ToDo: Move this to a separate function
 		//hibernate();
+		if (_versionEst == (int)EmotiBitVersionController::EmotiBitVersion::V02H)
+		{
+			digitalWrite(_hibernatePin, LOW);
+			Serial.println("made hibernate LOW");
+		}
+		else if (_versionEst == (int)EmotiBitVersionController::EmotiBitVersion::V03B)
+		{
+			digitalWrite(_hibernatePin, HIGH);
+			Serial.println("made hibernate HIGH");
+		}
 	}
 
 	while (_tempHumiditySensor->getStatus() != Si7013::STATUS_IDLE);
-	//ToDo: handle passing the EdaCorreciton class instance
-	_otpEmotiBitVersion = EdaCorrection::readEmotiBitVersion(_tempHumiditySensor);
+	_otpEmotiBitVersion = readEmotiBitVersionFromSi7013(_tempHumiditySensor);
 	_EmotiBit_i2c->setClock(400000);// setting the rate back to 400K for normal I2C operation
 	if (_otpEmotiBitVersion == 255)
 	{
@@ -546,4 +550,34 @@ bool EmotiBitVersionController::EmotiBitVersionDetection::loadConfigFile()
 
 	file.close();
 	return true;
+}
+
+int EmotiBitVersionController::EmotiBitVersionDetection::readEmotiBitVersionFromSi7013(Si7013* si7013)
+{
+	if (!si7013->sendCommand(0x00)) // returns false if failed to send command
+	{
+		// Si7013 not found on EmotiBit
+		Serial.println("Si-7013 not found on EmotiBit. Check I2C wiring.");
+		return -1;
+	}
+	else
+	{
+		// Sensor found
+		uint8_t emotibitVersion = 0;
+		uint8_t emotiBitVersionAddr = EmotiBitVersionController::EMOTIBIT_VERSION_ADDR_SI7013_OTP;
+		emotibitVersion = (uint8_t)si7013->readRegister8(emotiBitVersionAddr, true);
+		if (emotibitVersion == 255)
+		{
+			Serial.println("OTP has not yet been updated");
+		}
+		else
+		{
+			Serial.println("######################");
+			Serial.print("The EmotiBit Version read from OTP is: ");
+			Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)emotibitVersion));
+			//Serial.println(emotibitVersion);
+			Serial.println("######################");
+		}
+		return emotibitVersion;
+	}
 }
