@@ -91,6 +91,28 @@ void EmotiBit::bmm150ReadTrimRegisters()
 
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
+	bool status = true;
+
+	SamdStorageAdcValues samdStorageAdcValues;
+	String fwVersionModifier = "";
+	if (testingMode == TestingMode::ACUTE)
+	{
+		fwVersionModifier = "-TA";
+	}
+	else if (testingMode == TestingMode::CHRONIC)
+	{
+		fwVersionModifier = "-TC";
+	}
+
+	firmware_version += fwVersionModifier;
+
+	//Serial.print("\n\nEmotiBit version: ");
+	//Serial.println(emotiBitVersionController.getHardwareVersion(_version));
+	Serial.print("Firmware version: ");
+	Serial.println(firmware_version);
+
+	Serial.println("All Serial inputs must be used with **No Line Ending** option from the serial monitor");
+
 	if (_EmotiBit_i2c != nullptr)
 	{
 		delete(_EmotiBit_i2c);
@@ -120,27 +142,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	emotiBitVersionController.emotiBitConstantsMapping.echoConstants();
 #endif
 
-	bool status = true;
-
-	SamdStorageAdcValues samdStorageAdcValues;
-	String fwVersionModifier = "";
-	if (testingMode == TestingMode::ACUTE)
-	{
-		fwVersionModifier = "-TA";
-	}
-	else if (testingMode == TestingMode::CHRONIC)
-	{
-		fwVersionModifier = "-TC";
-	}
-
-	firmware_version += fwVersionModifier;
-
-	Serial.print("\n\nEmotiBit version: ");
-	Serial.println(emotiBitVersionController.getHardwareVersion(_version));
-	Serial.print("Firmware version: ");
-	Serial.println(firmware_version);
-
-	Serial.println("All Serial inputs must be used with **No Line Ending** option from the serial monitor");
 
 	if (!_outDataPackets.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
 		Serial.println("Failed to reserve memory for output");
@@ -697,7 +698,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.print(", (Si7013_SNB), ");
 	Serial.print(tempHumiditySensor.sernum_b);
 	Serial.print("\n");
-	Serial.println("### GSR Calibration ##");
+	//Serial.println("### GSR Calibration ##");
 	Serial.println("### ADC correction ###");
 	if (samdStorageAdcValues.valid)
 	{

@@ -70,7 +70,7 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uin
 		if (atwincAdcDataCorruptionTest == AdcCorrection::Status::FAILURE || atwincAdcMetaDataCorruptionTest == AdcCorrection::Status::FAILURE)
 		{
 			Serial.println("data on atwinc corrupted or not present");
-			Serial.println("Using the ADC withut any correction");
+			Serial.println("Using the ADC without any correction");
 			return;
 		}
 		else// passed data corruption test. Data detected on the AT-Winc flash!
