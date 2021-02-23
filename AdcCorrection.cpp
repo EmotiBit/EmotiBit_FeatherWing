@@ -8,8 +8,9 @@ AdcCorrection::AdcCorrection()
 	Serial.println("################################\n");
 }
 
-AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version)
+AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 {
+	Serial.println("No correction found on SAMD. Calculating correction by reading ATWINC");
 	if( version == AdcCorrection::AdcCorrectionRigVersion::UNKNOWN)
 	{
 		readAtwincFlash(ATWINC_MEM_LOC_METADATA_LOC, RIG_METADATA_SIZE, rigMetadata, 0);
@@ -65,6 +66,23 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version)
 		else
 		{
 			atwincAdcMetaDataCorruptionTest = AdcCorrection::Status::FAILURE;
+		}
+		if (atwincAdcDataCorruptionTest == AdcCorrection::Status::FAILURE || atwincAdcMetaDataCorruptionTest == AdcCorrection::Status::FAILURE)
+		{
+			Serial.println("data on atwinc corrupted or not present");
+			Serial.println("Using the ADC withut any correction");
+			return;
+		}
+		else// passed data corruption test. Data detected on the AT-Winc flash!
+		{
+			Serial.println("Reading correction data from the AT-WINC flash");
+			Serial.println("Calculating correction values");
+			calcCorrectionValues();
+			// Store the values on the flash
+			Serial.println("Storing correction values on the SAMD flash");
+			gainCorr = getGainCorrection();
+			offsetCorr = getOffsetCorrection();
+			valid = true;
 		}
 	}
 	else

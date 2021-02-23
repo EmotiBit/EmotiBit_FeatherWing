@@ -319,28 +319,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	pinMode(_edlPin, INPUT);
 	pinMode(_edrPin, INPUT);
 	samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
+	analogReadResolution(_adcBits);
 	if (!samdStorageAdcValues.valid)
 	{
-#ifdef ADC_CORRECTION_VERBOSE
-		Serial.println("No correction found on SAMD. Calculating correction by reading ATWINC");
-#endif
-		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN);
-		if (adcCorrection.atwincAdcDataCorruptionTest == AdcCorrection::Status::FAILURE || adcCorrection.atwincAdcMetaDataCorruptionTest == AdcCorrection::Status::FAILURE)
+		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, samdStorageAdcValues._gainCorrection, samdStorageAdcValues._offsetCorrection, samdStorageAdcValues.valid);
+		if (adcCorrection.atwincAdcDataCorruptionTest != AdcCorrection::Status::FAILURE && adcCorrection.atwincAdcMetaDataCorruptionTest != AdcCorrection::Status::FAILURE)
 		{
-			Serial.println("data on atwinc corrupted or not present");
-			Serial.println("Using the ADC withut any correction");
-		}
-		else
-		{
-			analogReadResolution(_adcBits);
-			Serial.println("Reading correction data from the AT-WINC flash");
-			Serial.println("Calculating correction values");
-			adcCorrection.calcCorrectionValues();
-			// Store the values on the flash
-			Serial.println("Storing correction values on the SAMD flash");
-			samdStorageAdcValues._gainCorrection = adcCorrection.getGainCorrection();
-			samdStorageAdcValues._offsetCorrection = adcCorrection.getOffsetCorrection();
-			samdStorageAdcValues.valid = true;
 			samdFlashStorage.write(samdStorageAdcValues);// Writing it to the SAMD flash storage
 			Serial.print("Gain Correction:"); Serial.print(samdStorageAdcValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
 			Serial.println("Enabling the ADC with the correction values");
@@ -349,7 +333,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	else
 	{
-		analogReadResolution(_adcBits);
+		//analogReadResolution(_adcBits);
 		Serial.println("Correction data exists on the samd flash");
 		Serial.print("Gain Correction:"); Serial.print(samdStorageAdcValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
 		Serial.println("Enabling the ADC with the correction values");

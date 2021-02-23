@@ -151,7 +151,7 @@ public:
 	@Constructor
 	@usage: Called from setup when the Correction values are not stored in the SAMD flash
 	*/
-	AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version);
+	AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid);
 
 	/*
 	@usage: This function calls various other class functions to 

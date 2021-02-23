@@ -37,7 +37,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.32";
+	String firmware_version = "1.2.33";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -50,18 +50,6 @@ public:
 		MANUAL
 	};
 
-	// !!! The following ORDER of the enum class holding the Version numbers SHOULD NOT BE ALTERED.
-	// New versions shold be ADDED to the end of this list 
-	/*
-	enum class Version {
-		V01B = 0,
-		V01C = 1,
-		V02B = 2,
-		V02F = 3,
-		V02H = 4,
-		V03B = 5
-	};
-	*/
 	//struct IMUSettings {
 	//int gyroResolution = 250;
 	//int accResolution = 2;
