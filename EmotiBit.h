@@ -37,7 +37,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.31";
+	String firmware_version = "1.2.35";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -351,7 +351,7 @@ public:
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 
-	//bool setupSdCard(bool &isConfigFilePresent);
+	bool setupSdCard();
 	void updateButtonPress();
 	void hibernate();
 	void startTimer(int frequencyHz);
@@ -367,7 +367,7 @@ public:
 	void setPowerMode(PowerMode mode);
 	bool writeSdCardMessage(const String &s);
 	int freeMemory();
-	//bool loadConfigFile(const String &filename);
+	bool loadConfigFile(const String &filename);
 	bool addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision = 4);
 	bool addPacket(EmotiBit::DataType t);
 	void parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber);

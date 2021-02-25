@@ -8,6 +8,8 @@
 #ifndef _EMOTIBIT_VERSION_CONTROLLER_H
 #define _EMOTIBIT_VERSION_CONTROLLER_H
 
+#include <SPI.h>
+#include <SdFat.h>
 #include <Arduino.h>
 #include <Wire.h>
 #include <SdFat.h>
@@ -133,24 +135,24 @@ public:
 		int _emotiBitI2cClkPin;
 		int _emotiBitI2cDataPin;
 		int _sdCardChipSelectPin;
-		const char *_configFileName = "config.txt";
-		bool _isConfigFilePresent;
-		bool *_si7013ChipBegun;
+		//const char *_configFileName = "config.txt";
+		//bool _isConfigFilePresent;
+		//bool *_si7013ChipBegun;
 	private:
 		TwoWire *_EmotiBit_i2c;
-		Si7013 *_tempHumiditySensor;
-		SdFat *_SD;
-		EmotiBitWiFi *_emotiBitWiFi;
-		EmotiBitPinMapping *_emotiBitPinMapping;
-		EmotiBitConstantsMapping *_emotiBitConstantsMapping;
+		Si7013 _tempHumiditySensor;
+		//SdFat *_SD;
+		//EmotiBitWiFi *_emotiBitWiFi;
+		//EmotiBitPinMapping *_emotiBitPinMapping;
+		//EmotiBitConstantsMapping *_emotiBitConstantsMapping;
 		//EdaCorrection *_edaCorrection;
 
 	public:
-		EmotiBitVersionDetection(TwoWire* EmotiBit_I2c, Si7013 *tempHumiditySensor, SdFat *SD, EmotiBitWiFi *emotiBitWiFi, bool *si7013ChipBegun);
+		EmotiBitVersionDetection(TwoWire* EmotiBit_I2c);
 		int begin();
-		bool setupSdCard();
-		bool loadConfigFile();
-		int readEmotiBitVersionFromSi7013(Si7013 *si7013);
+		bool detectSdCard();
+		//bool loadConfigFile();
+		int readEmotiBitVersionFromSi7013();
 
 	};
 

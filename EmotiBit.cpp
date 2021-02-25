@@ -255,10 +255,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		delete(_EmotiBit_i2c);
 	}
 	_EmotiBit_i2c = new TwoWire(&sercom1, 11, 13);
-	EmotiBitVersionController::EmotiBitVersionDetection detectVersion(_EmotiBit_i2c, &tempHumiditySensor, &SD, &_emotiBitWiFi, &chipBegun.SI7013);
+	EmotiBitVersionController::EmotiBitVersionDetection detectVersion(_EmotiBit_i2c);
 	_version = (EmotiBitVersionController::EmotiBitVersion)detectVersion.begin();
 	bool initResult = false;
-	// IMPORTANT. Need pin initialization for emotibit to work
+
+	// IMPORTANT. Need pin initialization(Performed below) for emotibit to work
 	// initializing the pin and constant mapping
 	initResult = emotiBitVersionController.emotiBitPinMapping.initMapping(_version);
 	if (!initResult)
@@ -685,6 +686,40 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	//BMI160.setRegister()
 
 
+	// Setup Temperature / Humidity Sensor
+	Serial.println("\n\nConfiguring Temperature / Humidity Sensor");
+	// moved the macro definition from EdaCorrection to EmotiBitVersionController
+#ifdef USE_ALT_SI7013 
+	status = tempHumiditySensor.setup(*_EmotiBit_i2c, 0x41);
+#else
+	status = tempHumiditySensor.setup(*_EmotiBit_i2c);
+#endif
+	if (status)
+	{
+		// Si-7013 detected on the EmotiBit
+		tempHumiditySensor.changeSetting(Si7013::Settings::RESOLUTION_H11_T11);
+		tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NORMAL);
+		tempHumiditySensor.changeSetting(Si7013::Settings::VIN_UNBUFFERED);
+		tempHumiditySensor.changeSetting(Si7013::Settings::VREFP_VDDA);
+		tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NO_HOLD);
+
+		tempHumiditySensor.readSerialNumber();
+		Serial.print("Si7013 Electronic Serial Number: ");
+		Serial.print(tempHumiditySensor.sernum_a);
+		Serial.print(", ");
+		Serial.print(tempHumiditySensor.sernum_b);
+		Serial.print("\n");
+		Serial.print("Model: ");
+		Serial.println(tempHumiditySensor._model);
+		chipBegun.SI7013 = true;
+
+		tempHumiditySensor.startHumidityTempMeasurement();
+	}
+	else
+	{
+		hibernate();
+	}
+
 
 	// Thermopile
 	Serial.println("Configuring MLX90632");
@@ -758,6 +793,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		_edlDigFiltAlpha = pow(M_E, -2.f * PI * edaCrossoverFilterFreq / (_samplingRates.eda / _samplesAveraged.eda));
 	}
 	*/
+	setupSdCard();
 	led.setLED(uint8_t(EmotiBit::Led::RED), true);
 
 	//WiFi Setup;
@@ -931,8 +967,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 } // Setup
 
-/*
-bool EmotiBit::setupSdCard(bool &isConfigFilePresent)
+bool EmotiBit::setupSdCard()
 {
 	Serial.print("\nInitializing SD card...");
 	// see if the card is present and can be initialized:
@@ -966,19 +1001,14 @@ bool EmotiBit::setupSdCard(bool &isConfigFilePresent)
 		Serial.println("SD card configuration file parsing failed.");
 		Serial.println("Create a file 'config.txt' with the following JSON:");
 		Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
-		isConfigFilePresent = false;
-		//while (true) {
-			//hibernate();
-		//}
+		while (true) {
+			hibernate();
+		}
 	}
-	else
-	{
-		isConfigFilePresent = true;
-	}
+
 	return true;
 
 }
-*/
 
 bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) {
 	static EmotiBitPacket::Header header;
@@ -2781,7 +2811,6 @@ void EmotiBit::hibernate() {
 	LowPower.deepSleep();
 }
 
-/*
 // Loads the configuration from a file
 bool EmotiBit::loadConfigFile(const String &filename) {
 	// Open file for reading
@@ -2836,7 +2865,7 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 	file.close();
 	return true;
 }
-*/
+
 
 bool EmotiBit::writeSdCardMessage(const String & s) {
 	// Break up the message in to bite-size chunks to avoid over running the UDP or SD card write buffers
