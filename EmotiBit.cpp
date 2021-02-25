@@ -88,168 +88,31 @@ void EmotiBit::bmm150ReadTrimRegisters()
 	temp_msb = ((uint16_t)(trim_xy1xy2[5] & 0x7F)) << 8;
 	bmm150TrimData.dig_xyz1 = (uint16_t)(temp_msb | trim_xy1xy2[4]);
 }
-/*
-int EmotiBit::detectEmotiBitVersion()
-{
-	uint8_t versionEst = 0;
-	int otpEmotiBitVersion = 0;
-	// V02B, V02H and V03B all have pin 6 as hibernate, and this code supports only those versions
-	int hibernatePin = 6;
-	int emotiBitI2cClkPin = 13;
-	_sdCardChipSelectPin = 19;
-	pinMode(hibernatePin, OUTPUT);
-	bool status;
-	bool isConfigFilePresent = true;
-	Serial.println("****************************** DETECTING EMOTIBIT VERSION ************************************");
-	Serial.println("Making hibernate LOW");
-	digitalWrite(hibernatePin, LOW);
-	delay(100);
-	// Try Setting up SD Card
-	status = setupSdCard(isConfigFilePresent);
-	delay(200);
-	if (status)
-	{
-		if (isConfigFilePresent)
-		{
-			versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V02H;
-		}
-		else
-		{
-			Serial.println("Disabling EmotiBit Power");
-			digitalWrite(hibernatePin, HIGH);// disables emotibit power supply
-		}
-	}
-	else
-	{
-		// status is false
-		Serial.println("Making hibernate HIGH");
-		digitalWrite(hibernatePin, HIGH);
-		delay(100);
-		// Try Setting up SD Card
-		status = setupSdCard(isConfigFilePresent);
-		delay(200);
-		if (status)
-		{
-			if (isConfigFilePresent)
-			{
-				versionEst = (uint8_t)EmotiBitVersionController::EmotiBitVersion::V03B;
-			}
-			else
-			{
-				Serial.println("Disabling EmotiBit Power");
-				digitalWrite(hibernatePin, LOW);// disables emotibit power supply
-			}
-		}
-		else
-		{
-			Serial.println("Please make Sure SD-Card is present.");
-			Serial.println("Version not detected. stopping execution.");
-		}
-	}
-	if (!status || !isConfigFilePresent)
-	{
-		pinMode(emotiBitI2cClkPin, OUTPUT);
-		digitalWrite(emotiBitI2cClkPin, LOW);
-		while (1);
-	}
-	Serial.print("Estimated version of the emotibit is:"); Serial.println(emotiBitVersionController.getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)versionEst));
-	Serial.println();
-	Serial.print("Powering emotibit according to the estimate. ");
-	if (versionEst == (uint8_t)EmotiBitVersionController::EmotiBitVersion::V02H)
-	{
-		digitalWrite(hibernatePin, LOW);
-		Serial.println("made hibernate LOW");
-	}
-	else if (versionEst == (uint8_t)EmotiBitVersionController::EmotiBitVersion::V03B)
-	{
-		digitalWrite(hibernatePin, HIGH);
-		Serial.println("made hibernate HIGH");
-	}
-	if (_EmotiBit_i2c != nullptr)
-	{
-		delete(_EmotiBit_i2c);
-	}
-	_EmotiBit_i2c = new TwoWire(&sercom1, 11, 13);
-	// Flush the I2C
-	Serial.print("Setting up I2C....");
-	_EmotiBit_i2c->begin();
-	uint32_t i2cRate = 100000;
-	Serial.print("setting clock to");
-	Serial.print(i2cRate);
-	_EmotiBit_i2c->setClock(i2cRate);
-	Serial.print("...setting PIO_SERCOM");
-	pinPeripheral(11, PIO_SERCOM);
-	pinPeripheral(13, PIO_SERCOM);
-	Serial.print("...flushing");
-	_EmotiBit_i2c->flush();
-	
-	status = true;
-	// Setup Temperature / Humidity Sensor
-	Serial.println("\n\nConfiguring Temperature / Humidity Sensor");
-	//ToDo: change how sensor with different address is referenced.
-	// the macro USE_ALT_SI7013 is defined in EdaCorrection.h
-#ifdef USE_ALT_SI7013 
-	status = tempHumiditySensor.setup(*_EmotiBit_i2c, 0x41);
-#else
-	status = tempHumiditySensor.setup(*_EmotiBit_i2c);
-#endif
-	if (status)
-	{
-		tempHumiditySensor.changeSetting(Si7013::Settings::RESOLUTION_H11_T11);
-		tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NORMAL);
-		tempHumiditySensor.changeSetting(Si7013::Settings::VIN_UNBUFFERED);
-		tempHumiditySensor.changeSetting(Si7013::Settings::VREFP_VDDA);
-		tempHumiditySensor.changeSetting(Si7013::Settings::ADC_NO_HOLD);
 
-		tempHumiditySensor.readSerialNumber();
-		Serial.print("Si7013 Electronic Serial Number: ");
-		Serial.print(tempHumiditySensor.sernum_a);
-		Serial.print(", ");
-		Serial.print(tempHumiditySensor.sernum_b);
-		Serial.print("\n");
-		Serial.print("Model: ");
-		Serial.println(tempHumiditySensor._model);
-		chipBegun.SI7013 = true;
-
-		tempHumiditySensor.startHumidityTempMeasurement();
-	}
-	else
-	{
-		hibernate();
-	}
-
-	while (tempHumiditySensor.getStatus() != Si7013::STATUS_IDLE);
-	otpEmotiBitVersion = edaCorrection.readEmotiBitVersion(&tempHumiditySensor);
-	_EmotiBit_i2c->setClock(400000);// setting the rate back to 400K for normal I2C operation
-	if (otpEmotiBitVersion == 255)
-	{
-		Serial.print("using the Estimated emotibit version detected from power up sequence: "); Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)versionEst));
-		Serial.println("************************** END DETECTING EMOTIBIT VERSION ************************************");
-		return versionEst;
-	}
-	else if (otpEmotiBitVersion == -1)// Sensor not detected on the I2C
-	{
-		Serial.println("Stopping code execution");
-		
-		while (true);
-	}
-	else
-	{
-		if (otpEmotiBitVersion == versionEst)
-		{
-			Serial.println("************************** END DETECTING EMOTIBIT VERSION ************************************");
-			return otpEmotiBitVersion;
-		}
-		else
-		{
-			// Resolve conflict. 
-		}
-	}
-	
-}
-*/
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
+	bool status = true;
+
+	SamdStorageAdcValues samdStorageAdcValues;
+	String fwVersionModifier = "";
+	if (testingMode == TestingMode::ACUTE)
+	{
+		fwVersionModifier = "-TA";
+	}
+	else if (testingMode == TestingMode::CHRONIC)
+	{
+		fwVersionModifier = "-TC";
+	}
+
+	firmware_version += fwVersionModifier;
+
+	//Serial.print("\n\nEmotiBit version: ");
+	//Serial.println(emotiBitVersionController.getHardwareVersion(_version));
+	Serial.print("Firmware version: ");
+	Serial.println(firmware_version);
+
+	Serial.println("All Serial inputs must be used with **No Line Ending** option from the serial monitor");
+
 	if (_EmotiBit_i2c != nullptr)
 	{
 		delete(_EmotiBit_i2c);
@@ -280,27 +143,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	emotiBitVersionController.emotiBitConstantsMapping.echoConstants();
 #endif
 
-	bool status = true;
-
-	SamdStorageAdcValues samdStorageAdcValues;
-	String fwVersionModifier = "";
-	if (testingMode == TestingMode::ACUTE)
-	{
-		fwVersionModifier = "-TA";
-	}
-	else if (testingMode == TestingMode::CHRONIC)
-	{
-		fwVersionModifier = "-TC";
-	}
-
-	firmware_version += fwVersionModifier;
-
-	Serial.print("\n\nEmotiBit version: ");
-	Serial.println(emotiBitVersionController.getHardwareVersion(_version));
-	Serial.print("Firmware version: ");
-	Serial.println(firmware_version);
-
-	Serial.println("All Serial inputs must be used with **No Line Ending** option from the serial monitor");
 
 	if (!_outDataPackets.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
 		Serial.println("Failed to reserve memory for output");
@@ -344,12 +186,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			Serial.print("\n\n##### EmotiBit Version "); Serial.print(emotiBitVersionController.getHardwareVersion(_version)); Serial.println(" ####");
 			edaCorrection.begin((uint8_t)_version);
 		}
-		//else if (input == 'V')
-		//{
-		//	Serial.print("\nJust Writing EmotiBit Version to the OTP");
-		//	Serial.print("\n\n##### EmotiBit Version "); Serial.print(emotiBitVersionController.getHardwareVersion(_version)); Serial.println(" ####");
-		//	edaCorrection.writeEmotiBitVersionToOtp(&tempHumiditySensor, (uint8_t)_version);
-		//}
 		else
 		{
 			_debugMode = true;
@@ -485,28 +321,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	pinMode(_edlPin, INPUT);
 	pinMode(_edrPin, INPUT);
 	samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
+	analogReadResolution(_adcBits);
 	if (!samdStorageAdcValues.valid)
 	{
-#ifdef ADC_CORRECTION_VERBOSE
-		Serial.println("No correction found on SAMD. Calculating correction by reading ATWINC");
-#endif
-		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN);
-		if (adcCorrection.atwincAdcDataCorruptionTest == AdcCorrection::Status::FAILURE || adcCorrection.atwincAdcMetaDataCorruptionTest == AdcCorrection::Status::FAILURE)
+		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, samdStorageAdcValues._gainCorrection, samdStorageAdcValues._offsetCorrection, samdStorageAdcValues.valid);
+		if (adcCorrection.atwincAdcDataCorruptionTest != AdcCorrection::Status::FAILURE && adcCorrection.atwincAdcMetaDataCorruptionTest != AdcCorrection::Status::FAILURE)
 		{
-			Serial.println("data on atwinc corrupted or not present");
-			Serial.println("Using the ADC withut any correction");
-		}
-		else
-		{
-			analogReadResolution(_adcBits);
-			Serial.println("Reading correction data from the AT-WINC flash");
-			Serial.println("Calculating correction values");
-			adcCorrection.calcCorrectionValues();
-			// Store the values on the flash
-			Serial.println("Storing correction values on the SAMD flash");
-			samdStorageAdcValues._gainCorrection = adcCorrection.getGainCorrection();
-			samdStorageAdcValues._offsetCorrection = adcCorrection.getOffsetCorrection();
-			samdStorageAdcValues.valid = true;
 			samdFlashStorage.write(samdStorageAdcValues);// Writing it to the SAMD flash storage
 			Serial.print("Gain Correction:"); Serial.print(samdStorageAdcValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
 			Serial.println("Enabling the ADC with the correction values");
@@ -515,7 +335,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	else
 	{
-		analogReadResolution(_adcBits);
+		//analogReadResolution(_adcBits);
 		Serial.println("Correction data exists on the samd flash");
 		Serial.print("Gain Correction:"); Serial.print(samdStorageAdcValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
 		Serial.println("Enabling the ADC with the correction values");
@@ -914,7 +734,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.print(", (Si7013_SNB), ");
 	Serial.print(tempHumiditySensor.sernum_b);
 	Serial.print("\n");
-	Serial.println("### GSR Calibration ##");
+	//Serial.println("### GSR Calibration ##");
 	Serial.println("### ADC correction ###");
 	if (samdStorageAdcValues.valid)
 	{
@@ -2721,18 +2541,6 @@ void EmotiBit::readSensors()
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
 }
 
-/*
-String EmotiBit::getHardwareVersion()
-{
-	if (_version == EmotiBitVersionController::EmotiBitVersion::V02H) {
-		return "V02h";
-	}
-	else if (_version == EmotiBitVersionController::EmotiBitVersion::V03B)
-	{
-		return "V03b";
-	}
-}
-*/
 
 
 #ifdef __arm__

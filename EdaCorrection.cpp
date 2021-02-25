@@ -460,30 +460,6 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, ch
 	return EdaCorrection::Status::SUCCESS;
 }
 
-//EdaCorrection::Status EdaCorrection::writeEmotiBitVersionToOtp(Si7013 *si7013, int8_t version)
-//{
-//	if (version == -1) // called from the Eda Correction class
-//		version = _emotiBitVersion;
-//	else  // Called form Setup to just write the Version
-//	{
-//		Serial.println("Are you sure you want to proceed with writing the OTP?");
-//		Serial.println("Press Y to proceed or any other key to abort");
-//		while(!Serial.available());
-//		if (Serial.read() != 'Y')
-//		{
-//			Serial.println("|||| Aborting ||||");
-//			delay(2000);
-//			return EdaCorrection::Status::FAILURE;
-//		}
-//		else
-//		{
-//			Serial.println("Proceeding to write the OTP");
-//			Serial.print("EmotiBit version being written: "); Serial.println(version);
-//		}
-//	}
-//	
-//	
-//}
 
 EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 {
@@ -624,38 +600,6 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 	}
 }
 
-// moved to EmotiBitVersionController class
-/*
-int EdaCorrection::readEmotiBitVersion(Si7013* si7013)
-{
-	if (checkSensorConnection(si7013) == false)
-	{
-		// Si7013 not found on EmotiBit
-		Serial.println("Si-7013 not found on EmotiBit. Check I2C wiring.");
-		return -1;
-	}
-	else
-	{
-		// Sensor found
-		uint8_t emotibitVersion = 0;
-		uint8_t emotiBitVersionAddr = 0xB7;
-		emotibitVersion = (uint8_t)si7013->readRegister8(emotiBitVersionAddr, true);
-		if (emotibitVersion == 255)
-		{
-			Serial.println("OTP has not yet been updated");
-		}
-		else
-		{
-			Serial.println("######################");
-			Serial.print("The EmotiBit Version read from OTP is: ");
-			//Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersionController::EmotiBitVersion)emotibitVersion));
-			Serial.println(emotibitVersion);
-			Serial.println("######################");
-		}
-		return emotibitVersion;
-	}
-}
-*/
 
 EdaCorrection::Status EdaCorrection::readFromOtp(Si7013* si7013, bool isOtpOperation)
 {
