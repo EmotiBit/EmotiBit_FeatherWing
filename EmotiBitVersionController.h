@@ -158,5 +158,8 @@ public:
 
 public:
 	static const char* getHardwareVersion(EmotiBitVersion version);
+	int getAssignedPin(EmotiBitVersionController::EmotiBitPinMapping::EmotiBitPinName pin);
+	float getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants constant);
+	int getSystemConstant(EmotiBitVersionController::EmotiBitConstantsMapping::SystemConstants constant);
 };
 #endif

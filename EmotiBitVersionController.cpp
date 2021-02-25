@@ -82,6 +82,11 @@ bool EmotiBitVersionController::EmotiBitPinMapping::initMapping(EmotiBitVersionC
 	return true;
 }
 
+int EmotiBitVersionController::getAssignedPin(EmotiBitVersionController::EmotiBitPinMapping::EmotiBitPinName pin)
+{
+	return emotiBitPinMapping.getAssignedPin(pin);
+}
+
 int EmotiBitVersionController::EmotiBitPinMapping::getAssignedPin(EmotiBitPinMapping::EmotiBitPinName pin)
 {
 	if ((int)pin >= _MAX_EMOTIBIT_PIN_COUNT)
@@ -195,6 +200,11 @@ bool EmotiBitVersionController::EmotiBitConstantsMapping::_initMappingSystemCons
 #endif
 }
 
+float EmotiBitVersionController::getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants constant)
+{
+	return emotiBitConstantsMapping.getMathConstant(constant);
+}
+
 float EmotiBitVersionController::EmotiBitConstantsMapping::getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants constant)
 {
 	if (_initAssignmentComplete)
@@ -214,6 +224,11 @@ float EmotiBitVersionController::EmotiBitConstantsMapping::getMathConstant(Emoti
 		Serial.println("Constants not initialized yet. call emotiBitVersionController.emotibitConstantMapping.initMapping()");
 		return _INVALID_REQUEST;
 	}
+}
+
+int EmotiBitVersionController::getSystemConstant(EmotiBitVersionController::EmotiBitConstantsMapping::SystemConstants constant)
+{
+	return emotiBitConstantsMapping.getSystemConstant(constant);
 }
 
 int EmotiBitVersionController::EmotiBitConstantsMapping::getSystemConstant(EmotiBitVersionController::EmotiBitConstantsMapping::SystemConstants constant)
@@ -323,6 +338,7 @@ int EmotiBitVersionController::EmotiBitVersionDetection::begin()
 	else
 	{
 		// Sd-Card not detected in V2 startup
+		Serial.println("Card not detected with V2 power-up sequence");
 		Serial.println("Making hibernate HIGH");
 		digitalWrite(_hibernatePin, HIGH);
 		delay(100);
@@ -349,7 +365,6 @@ int EmotiBitVersionController::EmotiBitVersionDetection::begin()
 			Serial.println("initialization failed. Things to check:");
 			Serial.println("* is a card inserted?");
 			Serial.println("* is your wiring correct?");
-			Serial.println("* did you change the chipSelect pin to match your shield or module?");
 			Serial.println("Version not detected. stopping execution.");
 			pinMode(_emotiBitI2cClkPin, OUTPUT);
 			digitalWrite(_emotiBitI2cClkPin, LOW);
