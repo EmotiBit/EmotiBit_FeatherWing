@@ -139,7 +139,7 @@ public:
 		//bool _isConfigFilePresent;
 		//bool *_si7013ChipBegun;
 	private:
-		TwoWire *_EmotiBit_i2c;
+		TwoWire *_emotiBit_i2c;
 		Si7013 _tempHumiditySensor;
 		//SdFat *_SD;
 		//EmotiBitWiFi *_emotiBitWiFi;

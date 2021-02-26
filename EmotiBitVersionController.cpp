@@ -269,9 +269,9 @@ bool EmotiBitVersionController::EmotiBitConstantsMapping::setSystemConstantForTe
 	//ToDo: write the function to assign test values to the constants 
 }
 
-EmotiBitVersionController::EmotiBitVersionDetection::EmotiBitVersionDetection(TwoWire* EmotiBit_I2c)
+EmotiBitVersionController::EmotiBitVersionDetection::EmotiBitVersionDetection(TwoWire* emotiBit_I2c)
 {
-	_EmotiBit_i2c = EmotiBit_I2c;
+	_emotiBit_i2c = emotiBit_I2c;
 	//_tempHumiditySensor = tempHumiditySensor;
 	//_SD = SD;
 	//_emotiBitWiFi = emotiBitWiFi;
@@ -323,6 +323,7 @@ int EmotiBitVersionController::EmotiBitVersionDetection::begin()
 	else
 	{
 		// Sd-Card not detected in V2 startup
+		Serial.println("SD-Card not detected with V2 power up Sequence.\nTrying V3 power-up sequence");
 		Serial.println("Making hibernate HIGH");
 		digitalWrite(_hibernatePin, HIGH);
 		delay(100);
@@ -349,7 +350,6 @@ int EmotiBitVersionController::EmotiBitVersionDetection::begin()
 			Serial.println("initialization failed. Things to check:");
 			Serial.println("* is a card inserted?");
 			Serial.println("* is your wiring correct?");
-			Serial.println("* did you change the chipSelect pin to match your shield or module?");
 			Serial.println("Version not detected. stopping execution.");
 			pinMode(_emotiBitI2cClkPin, OUTPUT);
 			digitalWrite(_emotiBitI2cClkPin, LOW);
@@ -377,25 +377,25 @@ int EmotiBitVersionController::EmotiBitVersionDetection::begin()
 	}
 	// Flush the I2C
 	Serial.print("Setting up I2C....");
-	_EmotiBit_i2c->begin();
+	_emotiBit_i2c->begin();
 	uint32_t i2cRate = 100000;
 	Serial.print("setting clock to");
 	Serial.print(i2cRate);
-	_EmotiBit_i2c->setClock(i2cRate);
+	_emotiBit_i2c->setClock(i2cRate);
 	Serial.print("...setting PIO_SERCOM");
 	pinPeripheral(_emotiBitI2cDataPin, PIO_SERCOM);
 	pinPeripheral(_emotiBitI2cClkPin, PIO_SERCOM);
 	Serial.print("...flushing");
-	_EmotiBit_i2c->flush();
+	_emotiBit_i2c->flush();
 
 	status = true;
 	// Setup Temperature / Humidity Sensor
 	Serial.println("\n\nConfiguring Temperature / Humidity Sensor");
 	// moved the macro definition from EdaCorrection to EmotiBitVersionController
 #ifdef USE_ALT_SI7013 
-	status = _tempHumiditySensor.setup(*_EmotiBit_i2c, 0x41);
+	status = _tempHumiditySensor.setup(*_emotiBit_i2c, 0x41);
 #else
-	status = _tempHumiditySensor.setup(*_EmotiBit_i2c);
+	status = _tempHumiditySensor.setup(*_emotiBit_i2c);
 #endif
 	if (status)
 	{
@@ -439,7 +439,7 @@ int EmotiBitVersionController::EmotiBitVersionDetection::begin()
 		}
 	}
 
-	//_EmotiBit_i2c->setClock(400000);// setting the rate back to 400K for normal I2C operation
+	//_emotiBit_i2c->setClock(400000);// setting the rate back to 400K for normal I2C operation
 	if (_otpEmotiBitVersion == 255)
 	{
 		Serial.println("OTP has not yet been updated");
