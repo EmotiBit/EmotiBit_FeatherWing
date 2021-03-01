@@ -348,8 +348,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	pinMode(_edrPin, INPUT);
 	samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
 	analogReadResolution(_adcBits);
+
+	// If the correction data does not exist on the SAMD flash
 	if (!samdStorageAdcValues.valid)
 	{
+		// Instantiate the ADC Correction class to read data from the AT-Winc flash to calculate the correction values
 		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, samdStorageAdcValues._gainCorrection, samdStorageAdcValues._offsetCorrection, samdStorageAdcValues.valid);
 		if (adcCorrection.atwincAdcDataCorruptionTest != AdcCorrection::Status::FAILURE && adcCorrection.atwincAdcMetaDataCorruptionTest != AdcCorrection::Status::FAILURE)
 		{
@@ -359,6 +362,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			analogReadCorrection(samdStorageAdcValues._offsetCorrection, samdStorageAdcValues._gainCorrection);
 		}
 	}
+	// Correction values found on the SAMD Flash
 	else
 	{
 		//analogReadResolution(_adcBits);

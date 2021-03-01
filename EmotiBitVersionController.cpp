@@ -290,7 +290,7 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 	else
 	{
 		// Sd-Card not detected in V2 startup
-		Serial.println("Card not detected with V2 power-up sequence");
+		Serial.println("SD-Card not detected with V2 power up Sequence.\nTrying V3 power-up sequence");
 		Serial.println("Making hibernate HIGH");
 		digitalWrite(HIBERNATE_PIN, HIGH);
 		// Try Setting up SD Card
