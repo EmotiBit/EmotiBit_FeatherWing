@@ -270,27 +270,22 @@ bool EmotiBitVersionController::setSystemConstantForTesting(SystemConstants cons
 	//ToDo: write the function to assign test values to the constants 
 }
 
-int EmotiBitVersionController::detectEmotiBitVersion(TwoWire* EmotiBit_i2c)
+EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmotiBitVersion(TwoWire* EmotiBit_i2c, bool &isSi7013Detected)
 {
-	_versionEst = 0;
-	_otpEmotiBitVersion = 0;
+	_versionEst = EmotiBitVersion::UNKNOWN;
+	_otpEmotiBitVersion = -1;
 	// V02B, V02H and V03B all have pin 6 as hibernate, and this code supports only those versions
-	//int hibernatePin = 6;
-	//int emotiBitI2cClkPin = 13;
-	//int _sdCardChipSelectPin = 19; 
 	pinMode(HIBERNATE_PIN, OUTPUT);
 	bool status;
 	Serial.println("****************************** DETECTING EMOTIBIT VERSION ************************************");
 	Serial.println("Making hibernate LOW");
 	digitalWrite(HIBERNATE_PIN, LOW);
-	delay(100);
 	// Try Setting up SD Card
 	status = detectSdCard();
-	delay(200);
 	if (status)
 	{
-		// SD-CArd detected
-		_versionEst = (int)EmotiBitVersion::V02H;
+		// SD-Card detected
+		_versionEst = EmotiBitVersion::V02H;
 	}
 	else
 	{
@@ -298,85 +293,71 @@ int EmotiBitVersionController::detectEmotiBitVersion(TwoWire* EmotiBit_i2c)
 		Serial.println("Card not detected with V2 power-up sequence");
 		Serial.println("Making hibernate HIGH");
 		digitalWrite(HIBERNATE_PIN, HIGH);
-		delay(100);
 		// Try Setting up SD Card
 		status = detectSdCard();
-		delay(200);
 		if (status)
 		{
-			_versionEst = (int)EmotiBitVersion::V03B;
+			_versionEst = EmotiBitVersion::V03B;
 		}
 		else
 		{
-			Serial.println("initialization failed. Things to check:");
-			Serial.println("* is a card inserted?");
-			Serial.println("* is your wiring correct?");
-			Serial.println("Version not detected. stopping execution.");
-			pinMode(EMOTIBIT_I2C_CLK_PIN, OUTPUT);
-			digitalWrite(EMOTIBIT_I2C_CLK_PIN, LOW);
-			// ToDo: figure out how to call hibernate here
-			while (true);
+			//pinMode(EMOTIBIT_I2C_CLK_PIN, OUTPUT);
+			//digitalWrite(EMOTIBIT_I2C_CLK_PIN, LOW);
+			// SD-Card not present
+			_versionEst = EmotiBitVersion::UNKNOWN;
+			return _versionEst;
 		}
 	}
-	Serial.print("Estimated version of the emotibit is:"); Serial.println(getHardwareVersion((EmotiBitVersion)_versionEst));
+	Serial.print("Estimated version of the emotibit is:"); Serial.println(getHardwareVersion(_versionEst));
 	Serial.println();
 	Serial.print("Powering emotibit according to the estimate. ");
-	if (_versionEst == (int)EmotiBitVersion::V02H)
+	if (_versionEst == EmotiBitVersion::V02H)
 	{
 		digitalWrite(HIBERNATE_PIN, LOW);
 		Serial.println("made hibernate LOW");
 	}
-	else if (_versionEst == (int)EmotiBitVersion::V03B)
+	else if (_versionEst == EmotiBitVersion::V03B)
 	{
 		digitalWrite(HIBERNATE_PIN, HIGH);
 		Serial.println("made hibernate HIGH");
 	}
-	// Flush the I2C
-	Serial.print("Setting up I2C....");
-	EmotiBit_i2c->begin();
-	uint32_t i2cRate = 100000;
-	Serial.print("setting clock to");
-	Serial.print(i2cRate);
-	EmotiBit_i2c->setClock(i2cRate);
-	Serial.print("...setting PIO_SERCOM");
-	pinPeripheral(EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
-	pinPeripheral(EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
-	Serial.print("...flushing");
-	EmotiBit_i2c->flush();
-
+	// Activating power-supply.
+	delay(100);
 	status = true;
 	// Setup Temperature / Humidity Sensor
-	Serial.println("\n\nConfiguring Temperature / Humidity Sensor");
+	Serial.println("\n\nReading Temperature / Humidity Sensor OTP for EmotiBit version");
 	// moved the macro definition from EdaCorrection to EmotiBitVersionController
 #ifdef USE_ALT_SI7013 
 	status = _tempHumiditySensor.setup(*EmotiBit_i2c, 0x41);
 #else
+	//ToDo: Fix setup() function in Si7013 library. it returns true, irrespective of sensor being present or not
 	status = _tempHumiditySensor.setup(*EmotiBit_i2c);
 #endif
 	if (status)
 	{
 		// Si-7013 detected on the EmotiBit
-		while (_tempHumiditySensor.getStatus() != Si7013::STATUS_IDLE);
-		_otpEmotiBitVersion = readEmotiBitVersionFromSi7013();
+		if (!_tempHumiditySensor.sendCommand(0x00)) // returns false if failed to send command
+		{
+			isSi7013Detected = false;
+			return _versionEst;
+		}
+		// Sensor detected
+		else
+		{
+			while (_tempHumiditySensor.getStatus() != Si7013::STATUS_IDLE);
+			_otpEmotiBitVersion = readEmotiBitVersionFromSi7013();
+			isSi7013Detected = true;
+			Serial.println("Si7013 detected.");
+		}
 	}
 	else
 	{
 		// Si-7013 Not detected
-		// Killing EmotiBit Power
-		//hibernate();
-		if (_versionEst == (int)EmotiBitVersion::V02H)
-		{
-			digitalWrite(HIBERNATE_PIN, HIGH);
-			Serial.println("made hibernate HIGH");
-		}
-		else if (_versionEst == (int)EmotiBitVersion::V03B)
-		{
-			digitalWrite(HIBERNATE_PIN, LOW);
-			Serial.println("made hibernate LOW");
-		}
+		Serial.println("Si-7013 not Detected on EmotiBit.");
+		isSi7013Detected = false;
+		return _versionEst;
 	}
 
-	//_EmotiBit_i2c->setClock(400000);// setting the rate back to 400K for normal I2C operation
 	if (_otpEmotiBitVersion == 255)
 	{
 		Serial.println("OTP has not yet been updated");
@@ -384,14 +365,9 @@ int EmotiBitVersionController::detectEmotiBitVersion(TwoWire* EmotiBit_i2c)
 		Serial.println("************************** END DETECTING EMOTIBIT VERSION ************************************");
 		return _versionEst;
 	}
-	else if (_otpEmotiBitVersion == -1)// Sensor not detected on the I2C
-	{
-		Serial.println("Stopping code execution");
-		while (true);
-	}
 	else
 	{
-		if (_otpEmotiBitVersion == _versionEst)
+		if (_otpEmotiBitVersion == (int)_versionEst)
 		{
 			Serial.println("######################");
 			Serial.print("The EmotiBit Version read from OTP is: ");
@@ -399,12 +375,13 @@ int EmotiBitVersionController::detectEmotiBitVersion(TwoWire* EmotiBit_i2c)
 			//Serial.println(emotibitVersion);
 			Serial.println("######################");
 			Serial.println("************************** END DETECTING EMOTIBIT VERSION ************************************");
-			return _otpEmotiBitVersion;
+			return (EmotiBitVersionController::EmotiBitVersion)_otpEmotiBitVersion;
 		}
 		else
 		{
 			// Version on EmotiBit not equal to estimated version
 			// ToDO: Resolve conflict. 
+			Serial.println("Mismatch between estimated Version and Version found on Emotibit");
 		}
 	}
 }
@@ -415,7 +392,7 @@ bool EmotiBitVersionController::detectSdCard()
 	SdFat sd;
 	Serial.print("\nInitializing SD card...");
 
-	// coed snippet taken from CardInfo exmaple from the SD library in Arduino
+	// code snippet taken from CardInfo exmaple from the SD library in Arduino
 	// we'll use the initialization code from the utility libraries
 	// since we're just testing if the card is working!
 	if (!sd.cardBegin(SD_CARD_CHIP_SEL_PIN, SD_SCK_MHZ(50)))
@@ -430,17 +407,7 @@ bool EmotiBitVersionController::detectSdCard()
 }
 int EmotiBitVersionController::readEmotiBitVersionFromSi7013()
 {
-	if (!_tempHumiditySensor.sendCommand(0x00)) // returns false if failed to send command
-	{
-		// Si7013 not found on EmotiBit
-		Serial.println("Si-7013 not found on EmotiBit. Check I2C wiring.");
-		return -1;
-	}
-	else
-	{
-		// Sensor found
-		uint8_t emotibitVersion = 0;
-		emotibitVersion = (uint8_t)_tempHumiditySensor.readRegister8(EMOTIBIT_VERSION_ADDR_SI7013_OTP, true);
-		return emotibitVersion;
-	}
+	uint8_t emotibitVersion = 0;
+	emotibitVersion = (uint8_t)_tempHumiditySensor.readRegister8(EMOTIBIT_VERSION_ADDR_SI7013_OTP, true);
+	return emotibitVersion;
 }

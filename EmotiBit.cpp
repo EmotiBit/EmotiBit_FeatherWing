@@ -92,13 +92,40 @@ void EmotiBit::bmm150ReadTrimRegisters()
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
 	bool status = true;
+	bool isSi7013Detected = false;
 	if (_EmotiBit_i2c != nullptr)
 	{
 		delete(_EmotiBit_i2c);
 	}
 	_EmotiBit_i2c = new TwoWire(&sercom1, EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
-	//EmotiBitVersionController::EmotiBitVersionDetection detectVersion(_EmotiBit_i2c);
-	_version = (EmotiBitVersionController::EmotiBitVersion)emotiBitVersionController.detectEmotiBitVersion(_EmotiBit_i2c);
+	// Flush the I2C
+	Serial.print("Setting up I2C....");
+	_EmotiBit_i2c->begin();
+	uint32_t i2cRate = 100000;
+	Serial.print("setting clock to");
+	Serial.print(i2cRate);
+	_EmotiBit_i2c->setClock(i2cRate);
+	Serial.print("...setting PIO_SERCOM");
+	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
+	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
+	_version = emotiBitVersionController.detectEmotiBitVersion(_EmotiBit_i2c, isSi7013Detected);
+	// If version is unknown
+	if (_version == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
+	{
+		Serial.println("initialization failed.");
+		Serial.println("Things to check:");
+		Serial.println("* is a card inserted?");
+		Serial.println("* is your wiring correct?");
+		Serial.println("Version not detected. stopping execution.");
+		hibernate();//hibernate with unknown version
+	}
+	else if (!isSi7013Detected && (_version == EmotiBitVersionController::EmotiBitVersion::V02H || _version == EmotiBitVersionController::EmotiBitVersion::V03B))
+	{
+		Serial.println("Si-7013 not found on EmotiBit. Check I2C wiring.");
+		// Assigning constant so that we can use the System Constant::HIBERNATE_LEVEL in hibernate()
+		emotiBitVersionController.initConstantMapping(_version);
+		hibernate();//hibernate with unknown version
+	}
 
 	SamdStorageAdcValues samdStorageAdcValues;
 	String fwVersionModifier = "";
@@ -114,7 +141,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	firmware_version += fwVersionModifier;
 
 	Serial.print("\n\nEmotiBit version: ");
-	Serial.println(emotiBitVersionController.getHardwareVersion(_version));
+	Serial.println(EmotiBitVersionController::getHardwareVersion(_version));
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
 	Serial.println("All Serial inputs must be used with **No Line Ending** option from the serial monitor");
@@ -136,11 +163,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		while (1);
 	}
 
-//#ifdef DEBUG
+#ifdef DEBUG
 	// testing if mapping was successful
 	emotiBitVersionController.echoPinMapping();
 	emotiBitVersionController.echoConstants();
-//#endif
+#endif
 
 
 	if (!_outDataPackets.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
@@ -182,7 +209,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		}
 		else if (input == 'E')
 		{
-			Serial.print("\n\n##### EmotiBit Version "); Serial.print(emotiBitVersionController.getHardwareVersion(_version)); Serial.println(" ####");
+			Serial.print("\n\n##### EmotiBit Version "); Serial.print(EmotiBitVersionController::getHardwareVersion(_version)); Serial.println(" ####");
 			edaCorrection.begin((uint8_t)_version);
 		}
 		else
@@ -723,7 +750,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.println("\nEmotiBit Setup complete");
 
 	Serial.print("\nEmotiBit version: ");
-	Serial.println(emotiBitVersionController.getHardwareVersion(_version));
+	Serial.println(EmotiBitVersionController::getHardwareVersion(_version));
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
 	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
@@ -1229,41 +1256,6 @@ int8_t EmotiBit::updateEDAData()
 		{
 			edaTemp = vRef1 / ((edaFeedbackAmpR * (edaTemp - vRef1)) - (_edaSeriesResistance * vRef1));
 		}
-
-		/*
-		if (_version == EmotiBitVersionController::EmotiBitVersion::V02H)
-		{
-			// Compatible with V02h
-			if (edaTemp - vRef1 < 0.000086f)
-			{
-				edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
-			}
-			else
-			{
-				edaTemp = vRef1 / (edaFeedbackAmpR * (edaTemp - vRef1)); // Conductance in Siemens
-			}
-		}
-		else if(_version == EmotiBitVersionController::EmotiBitVersion::V03B)
-		{
-			
-			//Calculation:
-
-			//Vo = Vin*(1+Rfb/R1), R1 = 4.99M, Rfb = Rc+Rskin; Rc = 220K
-			//Vo = Vin*(1+(Rc+Rskin)/R1)
-			//Rskin = R1*(Vo/Vin - 1) - Rc
-			//S = Vin/((R1*(Vo-Vin) - Rc*Vin)
-			
-			if (edaTemp < 0.442804) // for V03b --> 0.442804 = 0.4268(1+200K/5.07M)
-			{
-				edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
-			}
-			else
-			{
-				//ToDo: Add a variable in code to store 220K Series resistance for the GSR
-				edaTemp = vRef1 / ((edaFeedbackAmpR * (edaTemp - vRef1)) - (220000 * vRef1)); // Conductance in Siemens
-			}
-		}
-		*/
 
 		edaTemp = edaTemp * 1000000.f; // Convert to uSiemens
 
@@ -1925,7 +1917,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 #endif
 	//bool EmotiBit::printConfigInfo(File file, String datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
-	String hardware_version = emotiBitVersionController.getHardwareVersion(_version);
+	String hardware_version = EmotiBitVersionController::getHardwareVersion(_version);
 	String feather_version = "Adafruit Feather M0 WiFi";
 
 	const uint16_t bufferSize = 1024;
@@ -2566,25 +2558,39 @@ void EmotiBit::hibernate() {
 	Serial.println("hibernate()");
 	Serial.println("Stopping timer...");
 	stopTimer();
-
 	// Delay to ensure the timer has finished
 	delay((1000 * 5) / BASE_SAMPLING_FREQ);
 
-	// Turn on all the LEDs to indicate hibernate started
-	led.setLED(uint8_t(EmotiBit::Led::RED), true);
-	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+	if (_version != EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
+	{
+		// If hibernate was called because Si7013 was not detected in version detection.
+		if (chipBegun.SI7013)
+		{
+			// Turn on all the LEDs to indicate hibernate started
+			led.setLED(uint8_t(EmotiBit::Led::RED), true);
+			led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+			led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 
-	chipBegun.MAX30101 = false;
-	chipBegun.BMM150 = false;
-	chipBegun.BMI160 = false;
-	chipBegun.SI7013 = false;
-	chipBegun.NCP5623 = false;
-	chipBegun.MLX90632 = false;
+			chipBegun.MAX30101 = false;
+			chipBegun.BMM150 = false;
+			chipBegun.BMI160 = false;
+			chipBegun.SI7013 = false;
+			chipBegun.NCP5623 = false;
+			chipBegun.MLX90632 = false;
 
-	Serial.println("Shutting down WiFi...");
-	_emotiBitWiFi.end();
-
+			Serial.println("Shutting down WiFi...");
+			_emotiBitWiFi.end();
+		}
+		else
+		{
+			// Version
+			_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
+		}
+	}
+	else 
+	{
+		_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
+	}
 	Serial.println("Shutting down serial interfaces...");
 	SPI.end(); 
 	Wire.end();
@@ -2595,6 +2601,7 @@ void EmotiBit::hibernate() {
 		delete(_EmotiBit_i2c);
 	}
 	
+	// If version is known, avoid setting Hibernate pin as INPUT till emotibit is powered OFF
 	// Setup all pins (digital and analog) in INPUT mode (default is nothing)  
 	for (uint32_t ul = 0; ul < PINS_COUNT; ul++)
 	{
@@ -2606,13 +2613,18 @@ void EmotiBit::hibernate() {
 			Serial.println(ul);
 		}
 	}
-
 	// Turn off EmotiBit power
 	Serial.println("Disabling EmotiBit power");
 	pinMode(_hibernatePin, OUTPUT);
-	digitalWrite(_hibernatePin, emotiBitVersionController.getSystemConstant(SystemConstants::EMOTIBIT_HIBERNATE_LEVEL));
+	if (_version != EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
+	{
+		digitalWrite(_hibernatePin, emotiBitVersionController.getSystemConstant(SystemConstants::EMOTIBIT_HIBERNATE_LEVEL));
+	}
+	else
+	{
+		digitalWrite(_hibernatePin, LOW);
+	}
 	pinMode(_hibernatePin, INPUT);
-
 	//deepSleep();
 	Serial.println("Entering deep sleep...");
 	LowPower.deepSleep();

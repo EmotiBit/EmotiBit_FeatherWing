@@ -14,10 +14,8 @@
 #include <Wire.h>
 #include <SdFat.h>
 #include <EmotiBit_Si7013.h>
-#include "wiring_private.h"
 #include <ArduinoJson.h>
 #include "EmotiBitWiFi.h"
-//#include "EdaCorrection.h"
 
 // Controls which sensor is used OTP access. uncomment the line below is use external SI-7013 connected to the emotibit
 //#define USE_ALT_SI7013
@@ -67,6 +65,18 @@ enum class SystemConstants
 class EmotiBitVersionController
 {
 
+public:
+	// !!! The following ORDER of the enum class holding the Version numbers SHOULD NOT BE ALTERED.
+	// New versions shold be ADDED to the end of this list 
+	enum class EmotiBitVersion {
+		UNKNOWN = -1,
+		V01B = 0,
+		V01C = 1,
+		V02B = 2,
+		V02F = 3,
+		V02H = 4,
+		V03B = 5
+	};
 	// For detecting EmotiBit Version
 public:
 #if defined(ADAFRUIT_FEATHER_M0) 
@@ -76,7 +86,7 @@ public:
 	static const int SD_CARD_CHIP_SEL_PIN = 19;
 #endif
 private:
-	int _versionEst;
+	EmotiBitVersion _versionEst;
 	int _otpEmotiBitVersion;
 	//TwoWire *_EmotiBit_i2c;
 	Si7013 _tempHumiditySensor;
@@ -84,17 +94,6 @@ private:
 public:
 	// Important: changing this address will change where the EmotiBit version is stored on the OTP
 	static const uint8_t EMOTIBIT_VERSION_ADDR_SI7013_OTP = 0xB7;
-public:
-	// !!! The following ORDER of the enum class holding the Version numbers SHOULD NOT BE ALTERED.
-	// New versions shold be ADDED to the end of this list 
-	enum class EmotiBitVersion {
-		V01B = 0,
-		V01C = 1,
-		V02B = 2,
-		V02F = 3,
-		V02H = 4,
-		V03B = 5
-	};
 
 	// For Handling Pin Mapping
 private:
@@ -138,7 +137,7 @@ public:
 
 	// member functions to perform version detection
 public:
-	int detectEmotiBitVersion(TwoWire* EmotiBit_i2c);
+	EmotiBitVersion detectEmotiBitVersion(TwoWire* EmotiBit_i2c, bool &isSi7013Detected);
 	bool detectSdCard();
 	int readEmotiBitVersionFromSi7013();
 
