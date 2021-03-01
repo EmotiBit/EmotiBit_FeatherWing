@@ -19,13 +19,68 @@
 #include "EmotiBitWiFi.h"
 //#include "EdaCorrection.h"
 
-// Controls which sensor is used OTP access. uncomment the line below is use external SI-7013 connected to teh emotibit
+// Controls which sensor is used OTP access. uncomment the line below is use external SI-7013 connected to the emotibit
 //#define USE_ALT_SI7013
+
+// All EmotiBit Pin names should be entered in this class structure.
+enum class EmotiBitPinName
+{
+	EMOTIBIT_I2C_CLOCK = 0,
+	EMOTIBTI_I2C_DATA = 1,
+	HIBERNATE = 2,
+	EMOTIBIT_BUTTON = 3,
+	EDL = 4,
+	EDR = 5,
+	SD_CARD_CHIP_SELECT = 6,
+	SPI_CLK = 7,
+	SPI_MOSI = 8,
+	SPI_MISO = 9,
+	PPG_INT = 10,
+	BMI_INT1 = 11,
+	BMI_INT2 = 12,
+	BMM_INT = 13,
+	BATTERY_READ_PIN = 14,
+	COUNT = 15 //cannot be more than 28 (16 + 12) 
+};
+
+enum class MathConstants
+{
+	VCC = 0,
+	ADC_BITS = 1,
+	ADC_MAX_VALUE = 2,
+	EDR_AMPLIFICATION = 3,
+	VREF1 = 4,
+	VREF2 = 5,
+	EDA_FEEDBACK_R = 6,
+	EDA_CROSSOVER_FILTER_FREQ = 7,
+	EDA_SERIES_RESISTOR = 8,
+	COUNT = 9 // cannot be > than the _MAX_MATH_CONSTANT_COUNT
+};
+
+enum class SystemConstants
+{
+	EMOTIBIT_HIBERNATE_LEVEL = 0,
+	LED_DRIVER_CURRENT = 1,
+	COUNT = 2 // cannot be greater than the _MAX_SYSTEM_CONSTANT_COUNT
+};
 
 class EmotiBitVersionController
 {
+
+	// For detecting EmotiBit Version
+public:
+#if defined(ADAFRUIT_FEATHER_M0) 
+	static const int HIBERNATE_PIN = 6;
+	static const int EMOTIBIT_I2C_CLK_PIN = 13;
+	static const int EMOTIBIT_I2C_DAT_PIN = 11;
+	static const int SD_CARD_CHIP_SEL_PIN = 19;
+#endif
 private:
-	const char *_configFilename = "config.txt";
+	int _versionEst;
+	int _otpEmotiBitVersion;
+	//TwoWire *_EmotiBit_i2c;
+	Si7013 _tempHumiditySensor;
+
 public:
 	// Important: changing this address will change where the EmotiBit version is stored on the OTP
 	static const uint8_t EMOTIBIT_VERSION_ADDR_SI7013_OTP = 0xB7;
@@ -41,125 +96,53 @@ public:
 		V03B = 5
 	};
 
-	class EmotiBitPinMapping
-	{
-	public:
-		enum class EmotiBitPinName
-		{
-			EMOTIBIT_I2C_CLOCK,
-			EMOTIBTI_I2C_DATA,
-			HIBERNATE,
-			EMOTIBIT_BUTTON,
-			EDL,
-			EDR,
-			SD_CARD_CHIP_SELECT,
-			SPI_CLK,
-			SPI_MOSI,
-			SPI_MISO,
-			PPG_INT,
-			BMI_INT1,
-			BMI_INT2,
-			BMM_INT,
-			BATTERY_READ_PIN,
-			COUNT //cannot be more than 28 (16 + 12) 
-		};
+	// For Handling Pin Mapping
+private:
+	static const int _MAX_EMOTIBIT_PIN_COUNT = 28;
+	int _assignedPin[_MAX_EMOTIBIT_PIN_COUNT] = { 0 };
 
-	private:
-		static const int _MAX_EMOTIBIT_PIN_COUNT = 28;
-		int _assignedPin[_MAX_EMOTIBIT_PIN_COUNT] = { 0 };
-		//const char *emotiBitPinNameString[28];
+	// For Handling Constant Mapping
+private:
+	static const int _MAX_MATH_CONSTANT_COUNT = 10;
+	static const int _MAX_SYSTEM_CONSTANT_COUNT = 10;
+private:
+	float _assignedMathConstants[_MAX_MATH_CONSTANT_COUNT] = { 0 };
+	int _assignedSystemConstants[_MAX_SYSTEM_CONSTANT_COUNT] = { 0 };
+	const int _INVALID_CONSTANT_FOR_VERSION = -1;
+	const int _INVALID_REQUEST = -2; // addresses out of bounds(for array indexing) request
+	bool _initAssignmentComplete = false;
 
-	public:
-		/*
-		* At the time of initialization, assign all the pin numbers to the emotibit pin names
-		*/
-		bool initMapping(EmotiBitVersionController::EmotiBitVersion version);
 
-		int getAssignedPin(EmotiBitPinMapping::EmotiBitPinName pin);
+	// Member functions to control pin mapping
+public:
+	/*
+	* At the time of initialization, assign all the pin numbers to the emotibit pin names
+	*/
+	bool initPinMapping(EmotiBitVersionController::EmotiBitVersion version);
 
-		void echoPinMapping();
+	int getAssignedPin(EmotiBitPinName pin);
 
-	}emotiBitPinMapping;
+	void echoPinMapping();
 
-	class EmotiBitConstantsMapping
-	{
-	public:
-		enum class MathConstants
-		{
-			VCC,
-			ADC_BITS,
-			ADC_MAX_VALUE,
-			EDR_AMPLIFICATION,
-			VREF1,
-			VREF2,
-			EDA_FEEDBACK_R,
-			EDA_CROSSOVER_FILTER_FREQ,
-			EDA_SERIES_RESISTOR,
-			COUNT // cannot be > than the _MAX_MATH_CONSTANT_COUNT
-		};
+	// member functions to control constant mapping
+private:
+	bool _initMappingMathConstants(EmotiBitVersionController::EmotiBitVersion version);
+	bool _initMappingSystemConstants(EmotiBitVersionController::EmotiBitVersion version);
+public:
+	bool initConstantMapping(EmotiBitVersionController::EmotiBitVersion version);
+	float getMathConstant(MathConstants constant);
+	int getSystemConstant(SystemConstants constant);
+	void echoConstants();
+	bool setMathConstantForTesting(MathConstants constant);
+	bool setSystemConstantForTesting(SystemConstants constant);
 
-		enum class SystemConstants
-		{
-			EMOTIBIT_HIBERNATE_LEVEL,
-			LED_DRIVER_CURRENT,
-			COUNT // cannot be greater than the _MAX_SYSTEM_CONSTANT_COUNT
-		};
-	private:
-		static const int _MAX_MATH_CONSTANT_COUNT = 10;
-		static const int _MAX_SYSTEM_CONSTANT_COUNT = 10;
-
-	private:
-		float _assignedMathConstants[_MAX_MATH_CONSTANT_COUNT] = { 0 };
-		int _assignedSystemConstants[_MAX_SYSTEM_CONSTANT_COUNT] = { 0 };
-		const int _INVALID_CONSTANT_FOR_VERSION = -1;
-		const int _INVALID_REQUEST = -2; // addresses out of bounds(for array indexing) request
-		bool _initAssignmentComplete = false;
-	private:
-		bool _initMappingMathConstants(EmotiBitVersionController::EmotiBitVersion version);
-		bool _initMappingSystemConstants(EmotiBitVersionController::EmotiBitVersion version);
-	public:
-		bool initMapping(EmotiBitVersionController::EmotiBitVersion version);
-		float getMathConstant(MathConstants constant);
-		int getSystemConstant(SystemConstants constant);
-		void echoConstants();
-		bool setMathConstantForTesting(MathConstants constant);
-		bool setSystemConstantForTesting(SystemConstants constant);
-	}emotiBitConstantsMapping;
-
-	class EmotiBitVersionDetection
-	{
-	private:
-		int _versionEst;
-		int _otpEmotiBitVersion;
-		int _hibernatePin;
-		int _emotiBitI2cClkPin;
-		int _emotiBitI2cDataPin;
-		int _sdCardChipSelectPin;
-		//const char *_configFileName = "config.txt";
-		//bool _isConfigFilePresent;
-		//bool *_si7013ChipBegun;
-	private:
-		TwoWire *_EmotiBit_i2c;
-		Si7013 _tempHumiditySensor;
-		//SdFat *_SD;
-		//EmotiBitWiFi *_emotiBitWiFi;
-		//EmotiBitPinMapping *_emotiBitPinMapping;
-		//EmotiBitConstantsMapping *_emotiBitConstantsMapping;
-		//EdaCorrection *_edaCorrection;
-
-	public:
-		EmotiBitVersionDetection(TwoWire* EmotiBit_I2c);
-		int begin();
-		bool detectSdCard();
-		//bool loadConfigFile();
-		int readEmotiBitVersionFromSi7013();
-
-	};
+	// member functions to perform version detection
+public:
+	int detectEmotiBitVersion(TwoWire* EmotiBit_i2c);
+	bool detectSdCard();
+	int readEmotiBitVersionFromSi7013();
 
 public:
 	static const char* getHardwareVersion(EmotiBitVersion version);
-	int getAssignedPin(EmotiBitVersionController::EmotiBitPinMapping::EmotiBitPinName pin);
-	float getMathConstant(EmotiBitVersionController::EmotiBitConstantsMapping::MathConstants constant);
-	int getSystemConstant(EmotiBitVersionController::EmotiBitConstantsMapping::SystemConstants constant);
 };
 #endif
