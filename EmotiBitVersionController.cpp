@@ -397,7 +397,8 @@ bool EmotiBitVersionController::detectSdCard()
 	// code snippet taken from CardInfo exmaple from the SdFat library in Arduino. Tested with version 2.0.4
 	// we'll use the initialization code from the utility libraries
 	// since we're just testing if the card is working!
-	if (!sd.cardBegin(SdSpiConfig(SD_CARD_CHIP_SEL_PIN, DEDICATED_SPI, SD_SCK_MHZ(50))))
+	//if (!sd.cardBegin(SdSpiConfig(SD_CARD_CHIP_SEL_PIN, DEDICATED_SPI, SD_SCK_MHZ(50))))
+	if(!sd.begin(SD_CARD_CHIP_SEL_PIN))
 	{
 		return false;
 	}

@@ -827,6 +827,7 @@ bool EmotiBit::setupSdCard()
 	{
 		Serial.print(i);
 		Serial.print(",");
+		// begin function initializes SPI at MAX speed by deafult. check /src/SpiDriver/SdSpiDriver.h for details on the constructor
 		if (SD.begin(_sdCardChipSelectPin))
 		{
 			success = true;

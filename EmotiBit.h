@@ -12,7 +12,7 @@
 #include <SparkFun_MLX90632_Arduino_Library.h>
 #include "DoubleBufferFloat.h"
 #include <ArduinoJson.h>
-#include <SdFat.h>
+//#include <SdFat.h>
 #include "wiring_private.h"
 #include "EmotiBitWiFi.h"
 #include <SPI.h>
@@ -37,7 +37,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.40";
+	String firmware_version = "1.2.41";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
