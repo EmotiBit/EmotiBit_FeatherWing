@@ -117,8 +117,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println("* is a card inserted?");
 		Serial.println("* is your wiring correct?");
 		Serial.println("Version not detected. stopping execution.");
-		hibernate();//hibernate with unknown version
+		emotiBitVersionController.initConstantMapping(EmotiBitVersionController::EmotiBitVersion::V03B);// Assume the version is V03B to set Hibernate level as Required
+		_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
+		hibernate();
 	}
+	// If Si-7013 was not detected, hibernate with the estimated version
 	else if (!isSi7013Detected && (_version == EmotiBitVersionController::EmotiBitVersion::V02H || _version == EmotiBitVersionController::EmotiBitVersion::V03B))
 	{
 		Serial.println("Si-7013 not found on EmotiBit. Check I2C wiring.");
@@ -150,17 +153,15 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	// IMPORTANT. Need pin initialization(Performed below) for emotibit to work
 	// initializing the pin and constant mapping
-	initResult = emotiBitVersionController.initPinMapping(_version);
-	if (!initResult)
-	{
-		Serial.println("Pin mapping failed. Stopping execution.\n");
-		while (1);
-	}
+	emotiBitVersionController.initPinMapping(_version); // Any unknown version is handled in the version detection code.
 	initResult = emotiBitVersionController.initConstantMapping(_version);
+	
+	// Constant Mapping fails if NUM_CONSTANTS not updated in versionController Class
 	if (!initResult)
 	{
-		Serial.println("Constant Mapping Failed. Check the code. Stopping execution");
-		while (1);
+		Serial.println("Constant Mapping Failed. Stopping execution");
+		emotiBitVersionController.initConstantMapping(EmotiBitVersionController::EmotiBitVersion::V03B);// Assume the version is V03B to set Hibernate level as Required
+		hibernate();
 	}
 
 #ifdef DEBUG
@@ -2564,10 +2565,11 @@ void EmotiBit::hibernate() {
 	stopTimer();
 	// Delay to ensure the timer has finished
 	delay((1000 * 5) / BASE_SAMPLING_FREQ);
-
+	
+	// if version is known
 	if (_version != EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
 	{
-		// If hibernate was called because Si7013 was not detected in version detection.
+		// Proceed ONLY IF Si-7013 was enabled. Skips this if hibernate was called because Si-7013 was not detected.
 		if (chipBegun.SI7013)
 		{
 			// Turn on all the LEDs to indicate hibernate started
@@ -2585,15 +2587,6 @@ void EmotiBit::hibernate() {
 			Serial.println("Shutting down WiFi...");
 			_emotiBitWiFi.end();
 		}
-		else
-		{
-			// Version
-			_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
-		}
-	}
-	else 
-	{
-		_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
 	}
 	Serial.println("Shutting down serial interfaces...");
 	SPI.end(); 
@@ -2620,15 +2613,9 @@ void EmotiBit::hibernate() {
 	// Turn off EmotiBit power
 	Serial.println("Disabling EmotiBit power");
 	pinMode(_hibernatePin, OUTPUT);
-	if (_version != EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
-	{
-		digitalWrite(_hibernatePin, emotiBitVersionController.getSystemConstant(SystemConstants::EMOTIBIT_HIBERNATE_LEVEL));
-	}
-	else
-	{
-		digitalWrite(_hibernatePin, LOW);
-	}
-	pinMode(_hibernatePin, INPUT);
+	digitalWrite(_hibernatePin, emotiBitVersionController.getSystemConstant(SystemConstants::EMOTIBIT_HIBERNATE_LEVEL));
+	delay(100);
+	pinMode(_hibernatePin, INPUT_PULLDOWN); // For V3, make sure the hibernate pin is not floating 
 	//deepSleep();
 	Serial.println("Entering deep sleep...");
 	LowPower.deepSleep();

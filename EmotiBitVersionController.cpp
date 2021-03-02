@@ -63,6 +63,7 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 	else
 	{
 		// unknown version
+		Serial.println("Unknown Version");
 		return false;
 	}
 #elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
@@ -76,6 +77,7 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 	else
 	{
 		// unknown version
+		Serial.println("Unknown Version");
 		return false;
 	}
 #endif
