@@ -12,10 +12,7 @@
 #include <SdFat.h>
 #include <Arduino.h>
 #include <Wire.h>
-#include <SdFat.h>
 #include <EmotiBit_Si7013.h>
-#include <ArduinoJson.h>
-#include "EmotiBitWiFi.h"
 
 // Controls which sensor is used OTP access. uncomment the line below is use external SI-7013 connected to the emotibit
 //#define USE_ALT_SI7013
