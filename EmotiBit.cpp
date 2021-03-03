@@ -139,6 +139,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	else if (testingMode == TestingMode::CHRONIC)
 	{
 		fwVersionModifier = "-TC";
+		_debugMode = true;
 	}
 
 	firmware_version += fwVersionModifier;
