@@ -813,7 +813,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (_debugMode) 
 	{
 		Serial.println("**********************************************************");
-		Serial.println("\nDEBUG MODE");
+		Serial.println("DEBUG MODE");
 		Serial.println("Enter ? to know more about available options in DEBUG MODE");
 		Serial.println("**********************************************************");
 	}
@@ -1031,21 +1031,19 @@ void EmotiBit::updateButtonPress()
 uint8_t EmotiBit::update()
 {
 
-
-
-		static uint16_t serialPrevAvailable = Serial.available();
-		if (Serial.available() > serialPrevAvailable)
-		{
-			// There's new data available on serial
-			// Print to show we're alive
-			//Serial.print(Serial.available());
-			//Serial.print(':');
-			//Serial.print(serialPrevAvailable);
-			//Serial.print(">");
-			//Serial.println(Serial.peek());
-			Serial.println("hi");
-		}
-		serialPrevAvailable = Serial.available();
+	static uint16_t serialPrevAvailable = Serial.available();
+	if (Serial.available() > serialPrevAvailable)
+	{
+		// There's new data available on serial
+		// Print to show we're alive
+		//Serial.print(Serial.available());
+		//Serial.print(':');
+		//Serial.print(serialPrevAvailable);
+		//Serial.print(">");
+		//Serial.println(Serial.peek());
+		Serial.println("hi");
+	}
+	serialPrevAvailable = Serial.available();
 
 	if (_debugMode)
 	{
@@ -1058,7 +1056,15 @@ uint8_t EmotiBit::update()
 			writeSerialData(_serialData);
 		}
 	}
-
+	// if not in debug mode, always clear the input serial buffer
+	else
+	{
+		while (Serial.available())
+		{
+			Serial.read();
+		}
+		serialPrevAvailable = 0; // set Previously available to 0
+	}
 
 
 	// Handle updating WiFi connction + syncing
