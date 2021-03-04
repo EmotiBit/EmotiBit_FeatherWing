@@ -14,8 +14,8 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uin
 	if( version == AdcCorrection::AdcCorrectionRigVersion::UNKNOWN)
 	{
 		readAtwincFlash(ATWINC_MEM_LOC_METADATA_LOC, RIG_METADATA_SIZE, rigMetadata, 0);
-		// Put a check here to see if the data in the metadata array is not corrupted
-		if (rigMetadata[0] == 3)// the numAdcPoints is 3
+		// If the flash has not been updated, the value read = 255
+		if (rigMetadata[0] != 255 && rigMetadata[1] != 255 && rigMetadata[2] != 255)
 		{
 			atwincAdcMetaDataCorruptionTest = AdcCorrection::Status::SUCCESS;
 			numAdcPoints = (uint8_t)rigMetadata[0];
@@ -31,29 +31,27 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uin
 			if (atwincFlashIntegrityCheck() == AdcCorrection::Status::SUCCESS)
 			{
 				readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, ATWINC_DATA_ARRAY_SIZE, atwincDataArray);
-				if (rigMetadata[1] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_0)
+				// depending on the version, read the At-Winc to extract the required values
+				if (rigMetadata[1] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_0 || rigMetadata[1] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_1)
 				{
-					for (int i = 0; i < numAdcPoints; i++)
+					// Retrieve calculation values depending on the data format version
+					if (rigMetadata[2] == (uint8_t)AdcCorrection::AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
 					{
-						for (int j = 0; j < BYTES_PER_ADC_DATA_POINT; j++)
+						for (int i = 0; i < numAdcPoints; i++)
 						{
-							if (j == 0)
+							for (int j = 0; j < BYTES_PER_ADC_DATA_POINT; j++)
 							{
-								adcCorrectionRig.N[i] = atwincDataArray[BYTES_PER_ADC_DATA_POINT * i + j];
-							}
-							else if (j == 1)
-							{
-								adcCorrectionRig.D[i] = atwincDataArray[BYTES_PER_ADC_DATA_POINT * i + j];
+								if (j == 0)
+								{
+									adcCorrectionRig.N[i] = atwincDataArray[BYTES_PER_ADC_DATA_POINT * i + j];
+								}
+								else if (j == 1)
+								{
+									adcCorrectionRig.D[i] = atwincDataArray[BYTES_PER_ADC_DATA_POINT * i + j];
+								}
 							}
 						}
 					}
-					/*
-					adcCorrectionRig.N[0] = 1;  adcCorrectionRig.N[1] = 1;  adcCorrectionRig.N[2] = 10;
-					adcCorrectionRig.D[0] = 11; adcCorrectionRig.D[1] = 2;  adcCorrectionRig.D[2] = 11;
-					*/
-					adcInputPins[0] = A0;
-					adcInputPins[1] = A1;
-					adcInputPins[2] = A2;
 				}
 				atwincAdcDataCorruptionTest = AdcCorrection::Status::SUCCESS;
 			}
@@ -113,10 +111,11 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 		return false;
 	}
 	Serial.println("------------------"); Serial.print("RigVersion entered: "); Serial.println(rigVersionInput);
-	if ((int)AdcCorrection::DataFormatVersion::COUNT == 1) // if there exist only 1 format version
+	// if there exist only 1 format version, use that
+	if ((int)AdcCorrection::DataFormatVersion::COUNT == 1) 
 	{
-		dataFormatVerInput = (int)AdcCorrection::DataFormatVersion::DATA_FORMAT_0;
-		Serial.print("dataFormatVersion chosen: "); Serial.println(dataFormatVerInput); Serial.println("------------------");
+		dataFormatVersion = AdcCorrection::DataFormatVersion::DATA_FORMAT_0;
+		Serial.print("dataFormatVersion chosen: "); Serial.println((int)dataFormatVersion); Serial.println("------------------");
 	}
 	else
 	{
@@ -126,15 +125,22 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 			dataFormatVerInput = serialToInt();
 		}
 		Serial.print("dataFormatVersion chosen: "); Serial.println(dataFormatVerInput); Serial.println("------------------");
+		dataFormatVersion = (AdcCorrection::DataFormatVersion)dataFormatVerInput;
 	}
-	dataFormatVersion = (AdcCorrection::DataFormatVersion)dataFormatVerInput;
 
-
+	// Rig version sets rigVersion, numAdcPoints, Calculation Constants
 	if (rigVersionInput == (int)AdcCorrection::AdcCorrectionRigVersion::VER_0 || rigVersionInput == (int)AdcCorrection::AdcCorrectionRigVersion::VER_1)
 	{
 		setRigVersion((AdcCorrection::AdcCorrectionRigVersion)rigVersionInput);
 		numAdcPoints = 3;
-		if (dataFormatVerInput == (int)AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
+		adcCorrectionRig.N[0] = 1;  adcCorrectionRig.N[1] = 1;  adcCorrectionRig.N[2] = 10;
+		adcCorrectionRig.D[0] = 11; adcCorrectionRig.D[1] = 2;  adcCorrectionRig.D[2] = 11;
+		adcInputPins[0] = A0;
+		adcInputPins[1] = A1;
+		adcInputPins[2] = A2;
+
+		// Set bytes required per measurement depending on the dataformat chosen
+		if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
 		{
 			BYTES_PER_ADC_DATA_POINT = 4;
 			ATWINC_DATA_ARRAY_SIZE = BYTES_PER_ADC_DATA_POINT * numAdcPoints;
@@ -143,20 +149,19 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 		{
 			// enter the format version details for other versions here
 		}
-		adcCorrectionRig.N[0] = 1;  adcCorrectionRig.N[1] = 1;  adcCorrectionRig.N[2] = 10;
-		adcCorrectionRig.D[0] = 11; adcCorrectionRig.D[1] = 2;  adcCorrectionRig.D[2] = 11;
-		adcInputPins[0] = A0;
-		adcInputPins[1] = A1;
-		adcInputPins[2] = A2;
+
+		// update metadata array values
 		rigMetadata[0] = numAdcPoints;
-		rigMetadata[1] = (uint8_t)dataFormatVerInput;
+		rigMetadata[1] = (uint8_t)dataFormatVersion;
 		rigMetadata[2] = (int8_t)getRigVersion();
+		
 		_isupdatedAtwincMetadataArray = true;
 	}
 	else
 	{
 		// handle other versions
 	}
+
 	Serial.println("- Enter T to for TESTING MODE::  Values are calculated but not written to the flash. The Samd is updated.\n\t\t\t\tReprogram feather again to remove any changes made to the correction values.");
 	Serial.println("- Enter P to for PROGRAMMING MODE(use for Shipping):: Values are calculated are written to the AT-Winc flash");
 	Serial.println("- Enter any other key to continue to normal bootup");
@@ -169,14 +174,13 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 			Serial.read();
 		}
 		uint32_t now = millis();
-		while (!Serial.available() && millis() - now < 1000)
-		{
-		}
-		//Serial.println("  - Press E to update with already existing correction values.\n  - Press any other key to perform correction");
-		//while (!Serial.available());
+		// wait for 1 second
+		while (!Serial.available() && millis() - now < 1000);
 		if (Serial.available())
 		{
 			char input = Serial.read();
+			// Special mode
+			// if the user entered E, update with Existing correction values
 			if (input == 'E')
 			{
 				if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
@@ -232,6 +236,7 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 				return false;
 			}
 		}
+		// Start ADC correction from scratch
 		else
 		{
 #ifdef ADC_CORRECTION_VERBOSE
@@ -253,11 +258,12 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 			Serial.println("\nIF YOU SEE THIS MESSAGE, YOUR MEASUREMENTS MAY BE INACCURATE...");
 			Serial.println("You should re-run ADC calibration...");
 
-			// write all the functoin calls here
+			// Measure the voltages on all the ADC pins
 			readAdcPins();
 #ifdef ADC_CORRECTION_VERBOSE
 			Serial.println("Consolidating all values into one atwinc data array");
 #endif
+			// update the AtWinc data array with measured values
 			status = updateAtwincDataArray();
 		}
 #ifdef ADC_CORRECTION_VERBOSE
@@ -299,7 +305,9 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 	}
 	return true;
 }
-
+/*
+Converts serial input char array to int
+*/
 int AdcCorrection::serialToInt()
 {
 	// flush the serial buffer
@@ -330,9 +338,11 @@ int AdcCorrection::serialToInt()
 	return versionInString.toInt();
 }
 
-
 AdcCorrection::Status AdcCorrection::updateAtwincDataArray()
 {
+	/*
+	The data is stored in the format [Numerator, Denominator, MSB, LSB]
+	*/
 	if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
 	{
 		for (int i = 0; i < numAdcPoints; i++)
@@ -502,17 +512,21 @@ AdcCorrection::Status AdcCorrection::readAtwincFlash(size_t readMemLoc, uint16_t
 
 bool AdcCorrection::calcCorrectionValues()
 {
-	//if ((uint8_t)getRigVersion() == (uint8_t) AdcCorrection::AdcCorrectionRigVersion::VER_0)
-	//{
+	// determines which location in the data array to query for measured low and high values
+	if ((uint8_t)getRigVersion() == (uint8_t) AdcCorrection::AdcCorrectionRigVersion::VER_0 || (uint8_t)getRigVersion() == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_1)
+	{
 		if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
 		{
 			int16_t offsetCorr = 0, gainCorr = 0;
 			float rawOffsetCorr = 0.0, rawGainCorr = 0.0;
 			float slope;
-			uint8_t dataArrayNoffset = 0, dataArrayDoffset = 1, dataArrayAdcMsbOffset = 2, dataArrayAdcLsbOffset = 3;
+			uint8_t dataArrayNoffset = 0, dataArrayDoffset = 1, dataArrayAdcMsbOffset = 2, dataArrayAdcLsbOffset = 3;  // [N, D, MSB, LSB] 
+			// ADC-High value measured and stored in AtWinc Data Array 
 			uint8_t AdcHighMem[2]; // Adc High value - [MSB] [LSB] 
+			// ADC-Low value measured and stored in At-Winc data array
 			uint8_t AdcLowMem[2];  // Adc Low Value - [MSB] [LSB]
-			uint8_t adcLowPos = 0, adcHighPos = 2; // Position of the ADC low and high points in the 
+			// Position of the ADC low and high points in the AtWinc Data Array. For RigVer=0 or RigVer=1, Data stored = [ADC-Low, ADC-Mid, ADC-High]
+			uint8_t adcLowPos = 0, adcHighPos = 2; // version dependent
 			AdcLowMem[0] = atwincDataArray[adcLowPos * BYTES_PER_ADC_DATA_POINT + dataArrayAdcMsbOffset]; // ADC Low point MSB
 			AdcLowMem[1] = atwincDataArray[adcLowPos * BYTES_PER_ADC_DATA_POINT + dataArrayAdcLsbOffset];  // ADC Low point LSB
 			AdcHighMem[0] = atwincDataArray[adcHighPos * BYTES_PER_ADC_DATA_POINT + dataArrayAdcMsbOffset];  // ADC High point MSB
@@ -532,9 +546,8 @@ bool AdcCorrection::calcCorrectionValues()
 			Serial.print("\nslope in floating point is: "); Serial.println(slope, 6);
 			Serial.print("gainCorr in float: "); Serial.println(2048 / slope, 6);
 #endif
-			// refer http://ww1.microchip.com/downloads/en/DeviceDoc/90003185A.pdf
-			
 
+			// refer http://ww1.microchip.com/downloads/en/DeviceDoc/90003185A.pdf
 			rawOffsetCorr = (float)adcLowMeasured - (slope * adcLowIdeal);
 #ifdef ADC_CORRECTION_VERBOSE
 			Serial.print("offset correction before Rounding: ");
@@ -566,7 +579,7 @@ bool AdcCorrection::calcCorrectionValues()
 			Serial.print("\toffsetCorr:"); Serial.println(offsetCorr);
 #endif
 		}
-	//}
+	}
 }
 
 uint16_t AdcCorrection::getGainCorrection()
