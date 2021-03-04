@@ -272,7 +272,7 @@ bool EmotiBitVersionController::setSystemConstantForTesting(SystemConstants cons
 	//ToDo: write the function to assign test values to the constants 
 }
 
-EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmotiBitVersion(TwoWire* EmotiBit_i2c, bool &isSi7013Detected)
+EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmotiBitVersion(TwoWire* EmotiBit_i2c)
 {
 	_versionEst = EmotiBitVersion::UNKNOWN;
 	_otpEmotiBitVersion = -1;
@@ -307,6 +307,7 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 			//digitalWrite(EMOTIBIT_I2C_CLK_PIN, LOW);
 			// SD-Card not present
 			_versionEst = EmotiBitVersion::UNKNOWN;
+			versionDetectionComplete = false;
 			return _versionEst;
 		}
 	}
@@ -340,7 +341,7 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 		// Si-7013 detected on the EmotiBit
 		if (!_tempHumiditySensor.sendCommand(0x00)) // returns false if failed to send command
 		{
-			isSi7013Detected = false;
+			versionDetectionComplete = false;
 			return _versionEst;
 		}
 		// Sensor detected
@@ -348,7 +349,6 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 		{
 			while (_tempHumiditySensor.getStatus() != Si7013::STATUS_IDLE);
 			_otpEmotiBitVersion = readEmotiBitVersionFromSi7013();
-			isSi7013Detected = true;
 			Serial.println("Si7013 detected.");
 		}
 	}
@@ -356,7 +356,7 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 	{
 		// Si-7013 Not detected
 		Serial.println("Si-7013 not Detected on EmotiBit.");
-		isSi7013Detected = false;
+		versionDetectionComplete = false;
 		return _versionEst;
 	}
 
@@ -365,6 +365,7 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 		Serial.println("OTP has not yet been updated");
 		Serial.print("using the Estimated emotibit version detected from power up sequence: "); Serial.println(getHardwareVersion((EmotiBitVersion)_versionEst));
 		Serial.println("************************** END DETECTING EMOTIBIT VERSION ************************************");
+		versionDetectionComplete = true;
 		return _versionEst;
 	}
 	else
@@ -377,6 +378,7 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 			//Serial.println(emotibitVersion);
 			Serial.println("######################");
 			Serial.println("************************** END DETECTING EMOTIBIT VERSION ************************************");
+			versionDetectionComplete = true;
 			return (EmotiBitVersionController::EmotiBitVersion)_otpEmotiBitVersion;
 		}
 		else

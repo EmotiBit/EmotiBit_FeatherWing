@@ -92,7 +92,6 @@ void EmotiBit::bmm150ReadTrimRegisters()
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
 	bool status = true;
-	bool isSi7013Detected = false;
 	if (_EmotiBit_i2c != nullptr)
 	{
 		delete(_EmotiBit_i2c);
@@ -108,7 +107,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.print("...setting PIO_SERCOM");
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
-	_version = emotiBitVersionController.detectEmotiBitVersion(_EmotiBit_i2c, isSi7013Detected);
+	_version = emotiBitVersionController.detectEmotiBitVersion(_EmotiBit_i2c);
 	// If version is unknown
 	if (_version == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
 	{
@@ -119,17 +118,16 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println("Version not detected. stopping execution.");
 		emotiBitVersionController.initConstantMapping(EmotiBitVersionController::EmotiBitVersion::V03B);// Assume the version is V03B to set Hibernate level as Required
 		_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
-		hibernate();
+		hibernate(false);// hibenrate with setup incomplete
 	}
 	// If Si-7013 was not detected, hibernate with the estimated version
-	else if (!isSi7013Detected && (_version == EmotiBitVersionController::EmotiBitVersion::V02H || _version == EmotiBitVersionController::EmotiBitVersion::V03B))
+	else if (!emotiBitVersionController.versionDetectionComplete && (_version == EmotiBitVersionController::EmotiBitVersion::V02H || _version == EmotiBitVersionController::EmotiBitVersion::V03B))
 	{
 		Serial.println("Si-7013 not found on EmotiBit. Check I2C wiring.");
 		// Assigning constant so that we can use the System Constant::HIBERNATE_LEVEL in hibernate()
 		emotiBitVersionController.initConstantMapping(_version);
-		hibernate();//hibernate with unknown version
+		hibernate(false);//hibernate with setup incomplete
 	}
-
 	SamdStorageAdcValues samdStorageAdcValues;
 	String fwVersionModifier = "";
 	if (testingMode == TestingMode::ACUTE)
@@ -162,7 +160,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		Serial.println("Constant Mapping Failed. Stopping execution");
 		emotiBitVersionController.initConstantMapping(EmotiBitVersionController::EmotiBitVersion::V03B);// Assume the version is V03B to set Hibernate level as Required
-		hibernate();
+		hibernate(false);// hiberante with setup incomplete
 	}
 
 #ifdef DEBUG
@@ -175,7 +173,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (!_outDataPackets.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
 		Serial.println("Failed to reserve memory for output");
 		while (true) {
-			hibernate();
+			hibernate(false);// hiberante with setup incomplete
 		}
 	}
 
@@ -253,7 +251,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		Serial.println("This code is not compatible with V01 (Alpha) boards");
 		Serial.println("Download v0.6.0 for Alpha boards");
-		while (true);
+		hibernate(false);
 	}
 
 	// Set board-specific pins 
@@ -345,7 +343,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.println("\nSensor setup:");
 	// Setup EDA
 	Serial.println("Configuring ADC Corrections...");
-	//_edlPin = A0;
 	pinMode(_edlPin, INPUT);
 	pinMode(_edrPin, INPUT);
 	samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
@@ -405,7 +402,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		static uint32_t hibernateTimer = millis();
 		if (millis() - hibernateTimer > 2000)
 		{
-			hibernate();
+			hibernate(false);
 		}
 	}
 	ppgSensor.wakeUp();
@@ -529,7 +526,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	else
 	{
-		hibernate();
+		hibernate(false);
 	}
 
 	// ToDo: Add interrupts to accurately record timing of data capture
@@ -569,7 +566,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	else
 	{
-		hibernate();
+		hibernate(false);
 	}
 
 
@@ -598,7 +595,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	else
 	{
-		hibernate();
+		hibernate(false);
 	}
 
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
@@ -2567,35 +2564,28 @@ int EmotiBit::freeMemory() {
 
 
 // NEW Hibernate
-void EmotiBit::hibernate() {
+void EmotiBit::hibernate(bool i2cSetupComplete) {
 	Serial.println("hibernate()");
 	Serial.println("Stopping timer...");
 	stopTimer();
 	// Delay to ensure the timer has finished
 	delay((1000 * 5) / BASE_SAMPLING_FREQ);
-	
-	// if version is known
-	if (_version != EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
+	// if i2c sensor setup has been completed
+	if (i2cSetupComplete)
 	{
-		// Proceed ONLY IF Si-7013 was enabled. Skips this if hibernate was called because Si-7013 was not detected.
-		if (chipBegun.SI7013)
-		{
-			// Turn on all the LEDs to indicate hibernate started
-			led.setLED(uint8_t(EmotiBit::Led::RED), true);
-			led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-			led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-
-			chipBegun.MAX30101 = false;
-			chipBegun.BMM150 = false;
-			chipBegun.BMI160 = false;
-			chipBegun.SI7013 = false;
-			chipBegun.NCP5623 = false;
-			chipBegun.MLX90632 = false;
-
-			Serial.println("Shutting down WiFi...");
-			_emotiBitWiFi.end();
-		}
+		// Turn on all the LEDs to indicate hibernate started
+		led.setLED(uint8_t(EmotiBit::Led::RED), true);
+		led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+		led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+		chipBegun.MAX30101 = false;
+		chipBegun.BMM150 = false;
+		chipBegun.BMI160 = false;
+		chipBegun.SI7013 = false;
+		chipBegun.NCP5623 = false;
+		chipBegun.MLX90632 = false;
 	}
+	Serial.println("Shutting down WiFi...");
+	_emotiBitWiFi.end();
 	Serial.println("Shutting down serial interfaces...");
 	SPI.end(); 
 	Wire.end();

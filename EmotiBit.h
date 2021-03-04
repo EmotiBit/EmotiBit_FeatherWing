@@ -37,7 +37,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.43";
+	String firmware_version = "1.2.44";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -341,7 +341,7 @@ public:
 
 	bool setupSdCard();
 	void updateButtonPress();
-	void hibernate();
+	void hibernate(bool i2cSetupComplete = true);
 	void startTimer(int frequencyHz);
 	void setTimerFrequency(int frequencyHz);
 	//void TC3_Handler();

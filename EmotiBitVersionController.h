@@ -107,7 +107,8 @@ private:
 	const int _INVALID_CONSTANT_FOR_VERSION = -1;
 	const int _INVALID_REQUEST = -2; // addresses out of bounds(for array indexing) request
 	bool _initAssignmentComplete = false;
-
+public:
+	bool versionDetectionComplete = false;
 
 	// Member functions to control pin mapping
 public:
@@ -134,7 +135,7 @@ public:
 
 	// member functions to perform version detection
 public:
-	EmotiBitVersion detectEmotiBitVersion(TwoWire* EmotiBit_i2c, bool &isSi7013Detected);
+	EmotiBitVersion detectEmotiBitVersion(TwoWire* EmotiBit_i2c);
 	bool detectSdCard();
 	int readEmotiBitVersionFromSi7013();
 
