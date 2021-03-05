@@ -152,8 +152,8 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 
 		// update metadata array values
 		rigMetadata[0] = numAdcPoints;
-		rigMetadata[1] = (uint8_t)dataFormatVersion;
-		rigMetadata[2] = (int8_t)getRigVersion();
+		rigMetadata[1] = (int8_t)getRigVersion();
+		rigMetadata[2] = (uint8_t)dataFormatVersion;
 		
 		_isupdatedAtwincMetadataArray = true;
 	}

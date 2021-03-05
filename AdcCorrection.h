@@ -72,7 +72,7 @@ Bootup
 #include "wiring_private.h"
 
 // use the macro below to print different log messages on the serial when debugging
-//#define ADC_CORRECTION_VERBOSE
+#define ADC_CORRECTION_VERBOSE
 #define ATWINC_FLASH_4M_SZ (512 * 1024UL)
 
 typedef struct {
