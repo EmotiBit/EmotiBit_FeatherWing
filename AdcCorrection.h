@@ -94,8 +94,11 @@ public:
 	
 	const size_t ATWINC_MEM_LOC_DUPLICATE_DATA = 448*1024;  // primary start address for storing the adc values
 	const size_t ATWINC_MEM_LOC_PRIMARY_DATA = 480 * 1024; // secondary start address for storing the adc values
-	const size_t ATWINC_MEM_LOC_METADATA_LOC = (512 * 1024) - 3; // stores the metadata 
+	const size_t ATWINC_MEM_LOC_METADATA = (512 * 1024) - 3; // stores the metadata 
 	const size_t ATWINC_MEM_LOC_LAST_SECTOR_FIRST_BYTE = (508 * 1024);
+	const size_t METADATA_LOC_NUM_ADC = 0;
+	const size_t METADATA_LOC_RIG_VERSION = 1;
+	const size_t METADATA_LOC_DATA_FORMAT = 2;
 
 	enum class DataFormatVersion
 	{
@@ -200,7 +203,7 @@ public:
 		Updates the HighPrecisionRig struct with the ADC values
 	@Notes: Based on the function spi_flash_read in WiFi101\src\spi_flash\source\sspi_flash.c in WiFi101 Library by Arduino
 	*/
-	AdcCorrection::Status readAtwincFlash(size_t readMemLoc, uint16_t dataSize, uint8_t* data, uint8_t isReadData = 1);
+	AdcCorrection::Status readAtwincFlash(size_t readMemLoc, uint16_t dataSize, uint8_t* data);
 	
 	
 	

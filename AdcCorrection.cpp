@@ -13,14 +13,14 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uin
 	Serial.println("No correction found on SAMD. Calculating correction by reading ATWINC");
 	if( version == AdcCorrection::AdcCorrectionRigVersion::UNKNOWN)
 	{
-		readAtwincFlash(ATWINC_MEM_LOC_METADATA_LOC, RIG_METADATA_SIZE, rigMetadata, 0);
+		readAtwincFlash(ATWINC_MEM_LOC_METADATA, RIG_METADATA_SIZE, rigMetadata);
 		// If the flash has not been updated, the value read = 255
-		if (rigMetadata[0] != 255 && rigMetadata[1] != 255 && rigMetadata[2] != 255)
+		if (rigMetadata[METADATA_LOC_NUM_ADC] != 255 && rigMetadata[METADATA_LOC_RIG_VERSION] != 255 && rigMetadata[METADATA_LOC_DATA_FORMAT] != 255)
 		{
 			atwincAdcMetaDataCorruptionTest = AdcCorrection::Status::SUCCESS;
-			numAdcPoints = (uint8_t)rigMetadata[0];
-			setRigVersion((AdcCorrection::AdcCorrectionRigVersion)((uint8_t)rigMetadata[1]));
-			dataFormatVersion = (AdcCorrection::DataFormatVersion)((uint8_t)rigMetadata[2]); // typecasting uint8 to AdcCorrectionRigVersion
+			numAdcPoints = (uint8_t)rigMetadata[METADATA_LOC_NUM_ADC];
+			setRigVersion((AdcCorrection::AdcCorrectionRigVersion)((uint8_t)rigMetadata[METADATA_LOC_RIG_VERSION]));
+			dataFormatVersion = (AdcCorrection::DataFormatVersion)((uint8_t)rigMetadata[METADATA_LOC_DATA_FORMAT]); // typecasting uint8 to AdcCorrectionRigVersion
 			_isupdatedAtwincMetadataArray = true;
 			if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
 			{
@@ -32,10 +32,10 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uin
 			{
 				readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, ATWINC_DATA_ARRAY_SIZE, atwincDataArray);
 				// depending on the version, read the At-Winc to extract the required values
-				if (rigMetadata[1] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_0 || rigMetadata[1] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_1)
+				if (rigMetadata[METADATA_LOC_RIG_VERSION] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_0 || rigMetadata[METADATA_LOC_RIG_VERSION] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_1)
 				{
 					// Retrieve calculation values depending on the data format version
-					if (rigMetadata[2] == (uint8_t)AdcCorrection::AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
+					if (rigMetadata[METADATA_LOC_DATA_FORMAT] == (uint8_t)AdcCorrection::AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
 					{
 						for (int i = 0; i < numAdcPoints; i++)
 						{
@@ -151,9 +151,9 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 		}
 
 		// update metadata array values
-		rigMetadata[0] = numAdcPoints;
-		rigMetadata[1] = (int8_t)getRigVersion();
-		rigMetadata[2] = (uint8_t)dataFormatVersion;
+		rigMetadata[METADATA_LOC_NUM_ADC] = numAdcPoints;
+		rigMetadata[METADATA_LOC_RIG_VERSION] = (int8_t)getRigVersion();
+		rigMetadata[METADATA_LOC_DATA_FORMAT] = (uint8_t)dataFormatVersion;
 		
 		_isupdatedAtwincMetadataArray = true;
 	}
@@ -466,7 +466,7 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 #ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("Writing meta data");
 #endif
-	ret = spi_flash_write(rigMetadata, ATWINC_MEM_LOC_METADATA_LOC, RIG_METADATA_SIZE);
+	ret = spi_flash_write(rigMetadata, ATWINC_MEM_LOC_METADATA, RIG_METADATA_SIZE);
 	if (M2M_SUCCESS != ret)
 	{
 		Serial.print("Unable to write metadata SPI sector\r\n");
@@ -475,7 +475,7 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 	// ToDo: add a return success
 }
 
-AdcCorrection::Status AdcCorrection::readAtwincFlash(size_t readMemLoc, uint16_t readSize, uint8_t* data, uint8_t readAdcData)
+AdcCorrection::Status AdcCorrection::readAtwincFlash(size_t readMemLoc, uint16_t readSize, uint8_t* data)
 {
 	if (!_isAtwincDownloadMode)
 	{
@@ -782,8 +782,8 @@ void AdcCorrection::echoResults(uint16_t gainCorr, uint16_t offsetCorr)
 	Serial.print(adcAfterCorrection[0]); Serial.print(",");
 	Serial.print(adcAfterCorrection[1]); Serial.print(",");
 	Serial.print(adcAfterCorrection[2]);
-	uint8_t tempData[12], tempdata2[3];
-	readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, 12, tempData);
+	uint8_t tempData[ATWINC_DATA_ARRAY_SIZE];
+	readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, ATWINC_DATA_ARRAY_SIZE, tempData);
 	for (int i = 0; i < ATWINC_DATA_ARRAY_SIZE; i++)
 	{
 		Serial.print(","); Serial.print(tempData[i]);
@@ -815,12 +815,14 @@ void AdcCorrection::echoResults(uint16_t gainCorr, uint16_t offsetCorr)
 	Serial.println("\n==============================================");
 	Serial.println("After you have copied the data, enter any character to continue");
 	while (!Serial.available()); Serial.read();
+/*
 #ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("\ntesting AT-WINC flash read");
 	readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, 12, tempData);
 	readAtwincFlash(ATWINC_MEM_LOC_DUPLICATE_DATA, 12, tempData);
-	readAtwincFlash(ATWINC_MEM_LOC_METADATA_LOC, 3, tempData, 0);
+	readAtwincFlash(ATWINC_MEM_LOC_METADATA, 3, tempData2);
 #endif
+*/
 	WiFi.end();
 
 }
