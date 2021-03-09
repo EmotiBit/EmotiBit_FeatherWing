@@ -2605,7 +2605,7 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	pinMode(_hibernatePin, OUTPUT);
 	digitalWrite(_hibernatePin, emotiBitVersionController.getSystemConstant(SystemConstants::EMOTIBIT_HIBERNATE_LEVEL));
 	delay(100);
-	pinMode(_hibernatePin, INPUT); // For V3, make sure the hibernate pin is not floating 
+	pinMode(_hibernatePin, emotiBitVersionController.getSystemConstant(SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE));  
 	//deepSleep();
 	Serial.println("Entering deep sleep...");
 	LowPower.deepSleep();

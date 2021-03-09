@@ -56,6 +56,7 @@ enum class SystemConstants
 {
 	EMOTIBIT_HIBERNATE_LEVEL = 0,
 	LED_DRIVER_CURRENT = 1,
+	EMOTIBIT_HIBERNATE_PIN_MODE = 2,
 	COUNT = 2 // cannot be greater than the _MAX_SYSTEM_CONSTANT_COUNT
 };
 
