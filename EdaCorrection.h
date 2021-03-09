@@ -110,10 +110,10 @@ public:// flags
 	bool isOtpValid = true;
 	//bool displayedValidityStatus = false;
 	//bool readOtpValues = false; // flag to monitor if the class has read the OTP 
-	bool calculationPerformed = false; // flag to monitor is calculation was performed from values read from OTP
+	//bool calculationPerformed = false; // flag to monitor is calculation was performed from values read from OTP
 	bool dummyWrite = false; // flag to check if in dummy mode or real OTP mode
 	bool triedRegOverwrite = false; // flag to monitor if we are writing to previously written OTP location
-	bool correctionDataReady = false;
+	//bool correctionDataReady = false;
 
 public: 
 #ifndef ACCESS_MAIN_ADDRESS
@@ -178,7 +178,7 @@ public:
 
 	bool getEdaCalibrationValues(Si7013* si7013, float &vref1, float &vref2, float &Rfeedback);
 
-	void normalModeOperations(float &vref1, float &vref2, float &Rfeedback);
+	//void normalModeOperations(float &vref1, float &vref2, float &Rfeedback);
 
 	/*
 	usage: returns if the program is in update mode.
@@ -193,7 +193,7 @@ public:
 	usage: called in emotibit.update
 	on every call, checks if the Serial input buffers have any data
 	*/
-	EdaCorrection::Status update(Si7013* si7013); // change the name to make it more "special purpose"
+	EdaCorrection::Status update(Si7013* si7013, float &vref1, float &vref2, float &Rfeedback); // change the name to make it more "special purpose"
 	
 	
 	/*

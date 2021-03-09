@@ -249,6 +249,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			Serial.print("\n\n##### EmotiBit Version "); Serial.print(EmotiBitVersionController::getHardwareVersion(_version)); Serial.println(" ####");
 			if (!edaCorrection.begin((uint8_t)_version))
 			{
+				Serial.print("_edaCalibrationMode = true");
 				_edaCalibrationMode = false;
 			}
 		}
@@ -1100,7 +1101,7 @@ uint8_t EmotiBit::update()
 		sendModePacket(sentModePacket, _outDataPacketCounter);
 	}
 
-	edaCorrection.update(&tempHumiditySensor);
+	edaCorrection.update(&tempHumiditySensor,vRef1, vRef2, edaFeedbackAmpR);
 
 	/*
 	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL && edaCorrection.progress != EdaCorrection::Progress::FINISH)
