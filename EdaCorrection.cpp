@@ -1,7 +1,7 @@
 #include "EdaCorrection.h"
 
 
-void EdaCorrection::begin(uint8_t emotiBitVersion)
+bool EdaCorrection::begin(uint8_t emotiBitVersion)
 {
 	Serial.println("################################");
 	Serial.println("#####  EDA Correction Mode  ####");
@@ -19,6 +19,7 @@ void EdaCorrection::begin(uint8_t emotiBitVersion)
 		}
 		EdaCorrection::Status status;
 		status = enterUpdateMode(emotiBitVersion, EdaCorrection::OtpDataFormat::DATA_FORMAT_0);
+		return true;
 	}
 	else
 	{
@@ -29,6 +30,7 @@ void EdaCorrection::begin(uint8_t emotiBitVersion)
 			Serial.read();
 		}
 		delay(2000);
+		return false;
 	}
 	
 }
@@ -88,10 +90,77 @@ EdaCorrection::Status EdaCorrection::enterUpdateMode(uint8_t emotiBitVersion, Ed
 		delay(1000);
 		msgTimer--;
 	}
+	progress = Progress::SENSOR_CONNECTION_CHECK;
 	return EdaCorrection::Status::SUCCESS;
 
 }
 
+
+bool EdaCorrection::getEdaCalibrationValues(Si7013* si7013, float &vref1, float &vref2, float &Rfeedback)
+{
+	if (_mode != Mode::UPDATE)
+	{
+		Status status;
+		status = readFromOtp(si7013);
+		if (status == Status::FAILURE)
+		{
+			if (!isSensorConnected)
+			{
+				Serial.println("Sensor not connected.");
+				return false;
+			}
+			else if (!isOtpValid)
+			{
+				Serial.println("OTP has not been updated. Not performing correction calculation.");
+				Serial.print("Perform EDA correction first.");
+				Serial.println(" Using EDA without correction");
+				//otpMemoryMap.echoWriteCount();
+				progress = EdaCorrection::Progress::FINISH;
+				return false;
+			}
+		}
+		else
+		{
+			Serial.println("-------------------------- EDA CALIBRATION DATA ------------------------------------");
+			Serial.print("The EmotiBit Version stored for EDA correction is: "); Serial.println((int)_emotiBitVersion);
+			Serial.print("The data format version stored for EDA correction is: "); Serial.println((int)otpDataFormat);
+			calcEdaCorrection();
+			Serial.print("Estimated Rskin values BEFORE correction:|");
+			float RskinEst = 0;
+			for (int i = 0; i < NUM_EDL_READINGS; i++)
+			{
+				RskinEst = (((correctionData.edlReadings[i] / vref1) - 1)*Rfeedback);
+				Serial.print(RskinEst); Serial.print(" | ");
+			}
+			vref1 = correctionData.vRef1;// updated vref1
+			vref2 = correctionData.vRef2;// updated vref2
+			Rfeedback = correctionData.Rfb;// updated edaFeedbackAmpR
+			Serial.print("\nEstimated Rskin values AFTER correction: |");
+			for (int i = 0; i < NUM_EDL_READINGS; i++)
+			{
+				RskinEst = (((correctionData.edlReadings[i] / vref1) - 1)*Rfeedback);
+				Serial.print(RskinEst); Serial.print(" | ");
+			}
+			if (dummyWrite)
+			{
+				Serial.println("\nupdated emotibit class with these values");
+				Serial.println("\nYou can now use this EmotiBit without restarting to measure the EDA test rig values");
+				Serial.println("-------------------------- EDA CALIBRATION DATA ------------------------------------");
+			}
+			else
+			{
+				Serial.println("\n-------------------------- EDA CALIBRATION DATA ------------------------------------");
+			}
+			progress = EdaCorrection::Progress::FINISH;
+			return true;
+		}
+	}
+	else
+	{
+		Serial.println("In UPDATE mode. EDA will be calibrated.");
+	}
+}
+/*
 void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfeedback)
 {
 	// reading the OTP is done in the ISR
@@ -189,7 +258,7 @@ void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfee
 		}
 	}
 }
-
+*/
 EdaCorrection::Mode EdaCorrection::getMode()
 {
 	return _mode;
@@ -238,82 +307,110 @@ EdaCorrection::Status EdaCorrection::getFloatFromString()
 	return EdaCorrection::Status::SUCCESS;
 }
 
-EdaCorrection::Status EdaCorrection::monitorSerial()
+EdaCorrection::Status EdaCorrection::update(Si7013* si7013)
 {
-
-	if (progress == EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA)
+	if (getMode() == EdaCorrection::Mode::UPDATE)
 	{
-		if (Serial.available())
+		if (progress == EdaCorrection::Progress::SENSOR_CONNECTION_CHECK)
 		{
-			Serial.println("Serial data detected.");
-			Serial.println("####################");
-			Serial.println("### EDA TESTING  ###");
-			Serial.println("####################");
-			if (dummyWrite)
+			if (checkSensorConnection(si7013) == true)
 			{
-			Serial.println("#### DUMMY MODE ####");
+				Serial.println("Si7013 detected. Proceeding to WAITING_FOR_SERIAL_DATA");
+				progress = EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA;
 			}
-			else 
+			else
 			{
-				Serial.println("!!! OTP MODE !!!");
+				Serial.println("Sensor not detected. Switching to MODE::NORMAL");
+				progress = EdaCorrection::Progress::FINISH;
+				_mode = Mode::NORMAL;
+			}
+
+		}
+		else if (progress == EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA)
+		{
+			Serial.println("Waiting fr serial");
+			if (Serial.available())
+			{
+				Serial.println("Serial data detected.");
+				Serial.println("####################");
+				Serial.println("### EDA TESTING  ###");
+				Serial.println("####################");
+				if (dummyWrite)
+				{
+					Serial.println("#### DUMMY MODE ####");
+				}
+				else
+				{
+					Serial.println("!!! OTP MODE !!!");
 #ifdef USE_ALT_SI7013
-				Serial.println("!!! Writing to Alternate(External) I2C sensor !!!");
+					Serial.println("!!! Writing to Alternate(External) I2C sensor !!!");
 #else
-				Serial.println("!!! Writing to main EmotiBit I2C sensor !!!");
+					Serial.println("!!! Writing to main EmotiBit I2C sensor !!!");
 #endif
 #ifdef ACCESS_MAIN_ADDRESS
-				Serial.println("!!! Writing to Main Address space !!!");
+					Serial.println("!!! Writing to Main Address space !!!");
 #else
-				Serial.println("!!! Writing to Test Address Space(0xA0 - 0xA7) !!!\n");
+					Serial.println("!!! Writing to Test Address Space(0xA0 - 0xA7) !!!\n");
 #endif
-			}
-			if (getFloatFromString() != EdaCorrection::Status::SUCCESS)
-			{
-				Serial.println("Please check and enter again");
-				Serial.println("Expected Format");
-				Serial.println("EDL_0R, EDL_10K, EDL_100K, EDL_1M, EDL_10M, vRef2_0R, vRef2_10K, vRef2_100K, vRef2_1M, vRef2_10M");
-			}
-			else
-			{
-				echoEdaReadingsOnScreen();
-				progress = EdaCorrection::Progress::WAITING_USER_APPROVAL;
-			}
-		}
-	}
-	else if (progress == EdaCorrection::Progress::WAITING_USER_APPROVAL)
-	{
-		if (_responseRecorded == false)
-		{
-			getUserApproval();
-		}
-		else
-		{
-			if (getApprovalStatus() == true)
-			{
-				Serial.println("#### GOT APPROVAL ####");
-				if (!dummyWrite)
-				{
-					Serial.println(".....");
-					Serial.println("Writing to the OTP");
-					Serial.println("...");
 				}
-				progress = EdaCorrection::Progress::WRITING_TO_OTP;
+				if (getFloatFromString() != EdaCorrection::Status::SUCCESS)
+				{
+					Serial.println("Please check and enter again");
+					Serial.println("Expected Format");
+					Serial.println("EDL_0R, EDL_10K, EDL_100K, EDL_1M, EDL_10M, vRef2_0R, vRef2_10K, vRef2_100K, vRef2_1M, vRef2_10M");
+				}
+				else
+				{
+					echoEdaReadingsOnScreen();
+					progress = EdaCorrection::Progress::WAITING_USER_APPROVAL;
+				}
+			}
+		}
+		else if (progress == EdaCorrection::Progress::WAITING_USER_APPROVAL)
+		{
+			if (_responseRecorded == false)
+			{
+				getUserApproval();
 			}
 			else
 			{
+				if (getApprovalStatus() == true)
+				{
+					Serial.println("#### GOT APPROVAL ####");
+					if (!dummyWrite)
+					{
+						Serial.println(".....");
+						Serial.println("Writing to the OTP");
+						Serial.println("...");
+					}
+					progress = EdaCorrection::Progress::WRITING_TO_OTP;
+				}
+				else
+				{
 
-				correctionData.vRef1 = 0; correctionData.vRef2 = 0; correctionData.Rfb = 0;
-				for (int i = 0; i < NUM_EDL_READINGS; i++)
-				{
-					correctionData.edlReadings[i] = 0;
-					correctionData.edrReadings[i] = 0;
+					correctionData.vRef1 = 0; correctionData.vRef2 = 0; correctionData.Rfb = 0;
+					for (int i = 0; i < NUM_EDL_READINGS; i++)
+					{
+						correctionData.edlReadings[i] = 0;
+						correctionData.edrReadings[i] = 0;
+					}
+
+					// ask to enter the second time 
+					Serial.println("back to Progress::WAITING_FOR_SERIAL_DATA");
+					Serial.println("Enter the eda values into the serial monitor");
+					progress = EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA;
+					_responseRecorded = false;
 				}
-				
-				// ask to enter the second time 
-				Serial.println("back to Progress::WAITING_FOR_SERIAL_DATA");
-				Serial.println("Enter the eda values into the serial monitor");
-				progress = EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA;
-				_responseRecorded = false;
+			}
+		}
+		else if(progress == Progress::WRITING_TO_OTP)
+		{
+			// if OTP was written and EmotiBit needs to be power cycled
+			if (!powerCycled)
+			{
+				Serial.println("OTP has been updated. Please power cycle emotibit by removing the battery and the USB(if attached).");
+				Serial.println("Stopping code Execution");
+				while (1);
 			}
 		}
 	}
@@ -453,10 +550,9 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, ch
 	// for real write
 	while (si7013->getStatus() != Si7013::STATUS_IDLE);
 	si7013->writeToOtp(addr, val, mask);
-	//ToDo: Think about adding a Delay after write.
 	// For testing
 	//Serial.print(addr, HEX); Serial.print(":Y:"); Serial.println(val);
-	successfulwrite = true;
+	//successfulwrite = true;
 	return EdaCorrection::Status::SUCCESS;
 }
 
@@ -469,59 +565,80 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 	}
 	else
 	{
-
-		if (checkSensorConnection(si7013) == true)// sensor is present
+		//if (checkSensorConnection(si7013) == true)// sensor is present
+		//{
+		if (progress == EdaCorrection::Progress::WRITING_TO_OTP)
 		{
-			if (progress == EdaCorrection::Progress::WRITING_TO_OTP && triedRegOverwrite == false)
-			{
-
 #ifdef ACCESS_MAIN_ADDRESS
-				// writing the metadata- dataFormatVersion
-				if (otpMemoryMap.dataVersionWritten == false)
+			// writing the metadata- dataFormatVersion
+			if (otpMemoryMap.dataVersionWritten == false)
+			{
+				otpMemoryMap.writeCount.dataVersion++;
+				if ((uint8_t)writeToOtp(si7013, otpMemoryMap.dataVersionAddr, (uint8_t)otpDataFormat) == (uint8_t)EdaCorrection::Status::SUCCESS)
 				{
-					otpMemoryMap.writeCount.dataVersion++;
-					if ((uint8_t)writeToOtp(si7013, otpMemoryMap.dataVersionAddr, (uint8_t)otpDataFormat) == (uint8_t)EdaCorrection::Status::SUCCESS)
-					{
-						otpMemoryMap.dataVersionWritten = true;
-					}
-					else
-					{
-						triedRegOverwrite = true;
-					}
+					otpMemoryMap.dataVersionWritten = true;
 				}
 				else
 				{
-					otpMemoryMap.writeCount.dataVersion++;
+					triedRegOverwrite = true;
 				}
-				// writing metadata-EmotiBit Version
-				//writeEmotiBitVersionToOtp(si7013);
-				if (otpMemoryMap.emotiBitVersionWritten == false)
+			}
+			else
+			{
+				otpMemoryMap.writeCount.dataVersion++;
+			}
+			// writing metadata-EmotiBit Version
+			//writeEmotiBitVersionToOtp(si7013);
+			if (otpMemoryMap.emotiBitVersionWritten == false)
+			{
+				otpMemoryMap.writeCount.emotiBitVersion++;
+				if ((uint8_t)writeToOtp(si7013, otpMemoryMap.emotiBitVersionAddr, _emotiBitVersion) == (uint8_t)EdaCorrection::Status::SUCCESS)
 				{
-					otpMemoryMap.writeCount.emotiBitVersion++;
-					if ((uint8_t)writeToOtp(si7013, otpMemoryMap.emotiBitVersionAddr, _emotiBitVersion) == (uint8_t)EdaCorrection::Status::SUCCESS)
-					{
-						otpMemoryMap.emotiBitVersionWritten = true;
-					}
-					else
-					{
-						triedRegOverwrite = true;
-					}
+					otpMemoryMap.emotiBitVersionWritten = true;
 				}
 				else
 				{
-					otpMemoryMap.writeCount.emotiBitVersion++;
+					triedRegOverwrite = true;
 				}
+			}
+			else
+			{
+				otpMemoryMap.writeCount.emotiBitVersion++;
+			}
 
-				// writing the vref 2 to OTP
-				otpData.inFloat = correctionData.vRef2;
-				for (uint8_t j = 0; j < 4; j++)
+			// writing the vref 2 to OTP
+			otpData.inFloat = correctionData.vRef2;
+			for (uint8_t j = 0; j < 4; j++)
+			{
+				if (otpMemoryMap.edrDataWritten[j] == false)
 				{
-					if (otpMemoryMap.edrDataWritten[j] == false)
+					otpMemoryMap.writeCount.edrData[j]++;
+					if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edrAddresses + j, otpData.inByte[j]) == (uint8_t)EdaCorrection::Status::SUCCESS)
 					{
-						otpMemoryMap.writeCount.edrData[j]++;
-						if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edrAddresses + j, otpData.inByte[j]) == (uint8_t)EdaCorrection::Status::SUCCESS)
+						otpMemoryMap.edrDataWritten[j] = true;
+					}
+					else
+					{
+						triedRegOverwrite = true;
+					}
+				}
+				else
+				{
+					otpMemoryMap.writeCount.edrData[j]++;
+				}
+			}
+			// writing the main EDL values
+			for (uint8_t iterEdl = 0; iterEdl < NUM_EDL_READINGS; iterEdl++)
+			{
+				otpData.inFloat = correctionData.edlReadings[iterEdl];
+				for (uint8_t byte = 0; byte < BYTES_PER_FLOAT; byte++)
+				{
+					if (otpMemoryMap.edlDataWritten[iterEdl][byte] == false)
+					{
+						otpMemoryMap.writeCount.edlData[iterEdl][byte]++;
+						if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edlAddresses[iterEdl] + byte, otpData.inByte[byte]) == (uint8_t)EdaCorrection::Status::SUCCESS)
 						{
-							otpMemoryMap.edrDataWritten[j] = true;
+							otpMemoryMap.edlDataWritten[iterEdl][byte] = true;
 						}
 						else
 						{
@@ -530,72 +647,47 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 					}
 					else
 					{
-						otpMemoryMap.writeCount.edrData[j]++;
+						otpMemoryMap.writeCount.edlData[iterEdl][byte]++;
 					}
 				}
-				// writing the main EDL values
-				for (uint8_t iterEdl = 0; iterEdl < NUM_EDL_READINGS; iterEdl++)
-				{
-					otpData.inFloat = correctionData.edlReadings[iterEdl];
-					for (uint8_t byte = 0; byte < BYTES_PER_FLOAT; byte++)
-					{
-						if (otpMemoryMap.edlDataWritten[iterEdl][byte] == false)
-						{
-							otpMemoryMap.writeCount.edlData[iterEdl][byte]++;
-							if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edlAddresses[iterEdl] + byte, otpData.inByte[byte]) == (uint8_t)EdaCorrection::Status::SUCCESS)
-							{
-								otpMemoryMap.edlDataWritten[iterEdl][byte] = true;
-							}
-							else
-							{
-								triedRegOverwrite = true;
-							}
-						}
-						else
-						{
-							otpMemoryMap.writeCount.edlData[iterEdl][byte]++;
-						}
-					}
-				}
+			}
 
 
 #else
-				// Write only the first reading edl[0] into the test address space. total 4 bytes written.
+			// Write only the first reading edl[0] into the test address space. total 4 bytes written.
 
-				otpData.inFloat = correctionData.edlReadings[0];
-				for (uint8_t byte = 0; byte < BYTES_PER_FLOAT; byte++)
+			otpData.inFloat = correctionData.edlReadings[0];
+			for (uint8_t byte = 0; byte < BYTES_PER_FLOAT; byte++)
+			{
+				if (otpMemoryMap.testDataWritten[byte] == false)
 				{
-					if (otpMemoryMap.testDataWritten[byte] == false)
+					if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edlTestAddress + byte, otpData.inByte[byte]) == (uint8_t)EdaCorrection::Status::SUCCESS)
 					{
-						if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edlTestAddress + byte, otpData.inByte[byte]) == (uint8_t)EdaCorrection::Status::SUCCESS)
-						{
-							otpMemoryMap.testDataWritten[byte] = true;
-						}
-						else
-						{
-							triedRegOverwrite = true;
-						}
+						otpMemoryMap.testDataWritten[byte] = true;
 					}
 					else
 					{
-						// write the case were u are trying to write to same location again
+						triedRegOverwrite = true;
 					}
-
 				}
-
+				else
+				{
+					// write the case were u are trying to write to same location again
+				}
+			}
 #endif
 			_mode = EdaCorrection::Mode::NORMAL;
 			powerCycled = false;
 			return EdaCorrection::Status::SUCCESS;
-			}
 		}
-		else
-		{
-			// sensor not present
-			isSensorConnected = false;
-			_mode = EdaCorrection::Mode::NORMAL;
-			return EdaCorrection::Status::FAILURE;
-		}
+		//}
+		//else
+		//{
+		//	// sensor not present
+		//	isSensorConnected = false;
+		//	_mode = EdaCorrection::Mode::NORMAL;
+		//	return EdaCorrection::Status::FAILURE;
+		//}
 
 	}
 }
@@ -605,20 +697,18 @@ EdaCorrection::Status EdaCorrection::readFromOtp(Si7013* si7013, bool isOtpOpera
 {
 	if (!dummyWrite)
 	{
-
 		if (checkSensorConnection(si7013) == false)
 		{
 			isSensorConnected = false;
-			readOtpValues = true;
+			//readOtpValues = true;
 			isOtpValid = false;
 			return EdaCorrection::Status::FAILURE;
 		}
 #ifdef ACCESS_MAIN_ADDRESS
 		if(si7013->readRegister8(otpMemoryMap.dataVersionAddr, isOtpOperation) == 255)
-		//if ((uint8_t)readFromOtp(emotiBit_i2c, SI_7013_OTP_ADDRESS_EMOTIBIT_VERSION) == 255)
 		{
 			isOtpValid = false;
-			readOtpValues = true;
+			//readOtpValues = true;
 			return EdaCorrection::Status::FAILURE;
 		}
 		otpDataFormat = (EdaCorrection::OtpDataFormat)si7013->readRegister8(otpMemoryMap.dataVersionAddr, isOtpOperation);
@@ -648,7 +738,8 @@ EdaCorrection::Status EdaCorrection::readFromOtp(Si7013* si7013, bool isOtpOpera
 	{
 		// do nothing here. displaycorrections() will echo the already saved variables.
 	}
-	readOtpValues = true;
+	//readOtpValues = true;
+	return EdaCorrection::Status::SUCCESS;
 }
 
 
@@ -669,15 +760,8 @@ void EdaCorrection::displayCorrections()
 EdaCorrection::Status EdaCorrection::calcEdaCorrection()
 {
 	correctionData.vRef1 = correctionData.edlReadings[0];
+	// correctionData.vRef2 is updated in getFloatFromString while writing to OTP or from readFromOtp while reading
 	correctionData.Rfb = 0;
-	// Avg of 10K,100K and 1M
-	/*
-	for (int i = 1; i < 4; i++)
-	{
-		correctionData.Rfb += (correctionData.trueRskin[i] / ((correctionData.edlReadings[i] / correctionData.vRef1) - 1)); // use the EDl @10K, @100K, @1M
-	}
-	correctionData.Rfb = correctionData.Rfb / 3;// taking avg of 3 readings
-	*/
 	// using 1M to find Rfeedback
 	correctionData.Rfb += (correctionData.trueRskin[3] / ((correctionData.edlReadings[3] / correctionData.vRef1) - 1));
 	if (dummyWrite)
@@ -705,8 +789,6 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection()
 		correctionDataReady = false;
 #endif
 	}
-
-	//calculationPerformed = true;
 }
 
 void EdaCorrection::OtpMemoryMap_V0::echoWriteCount()

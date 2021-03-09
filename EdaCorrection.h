@@ -65,7 +65,7 @@ private:
 	uint8_t FLOAT_PRECISION = 7;
 	uint8_t _emotiBitVersion;
 	bool powerCycled = true;
-	bool successfulwrite = false;
+	//bool successfulwrite = false;
 public:
 	class OtpMemoryMap_V0 {
 	public:
@@ -109,7 +109,7 @@ public:
 public:// flags
 	bool isOtpValid = true;
 	//bool displayedValidityStatus = false;
-	bool readOtpValues = false; // flag to monitor if the class has read the OTP 
+	//bool readOtpValues = false; // flag to monitor if the class has read the OTP 
 	bool calculationPerformed = false; // flag to monitor is calculation was performed from values read from OTP
 	bool dummyWrite = false; // flag to check if in dummy mode or real OTP mode
 	bool triedRegOverwrite = false; // flag to monitor if we are writing to previously written OTP location
@@ -157,6 +157,7 @@ public:
 	enum class Progress
 	{
 		BEGIN,
+		SENSOR_CONNECTION_CHECK,
 		WAITING_FOR_SERIAL_DATA,
 		WAITING_USER_APPROVAL,
 		WRITING_TO_OTP,
@@ -167,13 +168,15 @@ public:
 
 public:
 
-	void begin(uint8_t emotiBitVersion);
+	bool begin(uint8_t emotiBitVersion);
 
 	/*
 	usage: called in emotibit.setup(). Once called, it enables the emotibit to keep sensing the Serial on ever "loop" 
 	changes progress from NOT_BEGUN to WAITING_FOR_SERIAL_DATA
 	*/
 	EdaCorrection::Status enterUpdateMode(uint8_t emotiBitVersion, EdaCorrection::OtpDataFormat dataFormat);
+
+	bool getEdaCalibrationValues(Si7013* si7013, float &vref1, float &vref2, float &Rfeedback);
 
 	void normalModeOperations(float &vref1, float &vref2, float &Rfeedback);
 
@@ -190,7 +193,7 @@ public:
 	usage: called in emotibit.update
 	on every call, checks if the Serial input buffers have any data
 	*/
-	EdaCorrection::Status monitorSerial(); // change the name to make it more "special purpose"
+	EdaCorrection::Status update(Si7013* si7013); // change the name to make it more "special purpose"
 	
 	
 	/*
