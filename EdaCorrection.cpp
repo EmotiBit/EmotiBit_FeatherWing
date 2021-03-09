@@ -64,8 +64,7 @@ EdaCorrection::Status EdaCorrection::enterUpdateMode(uint8_t emotiBitVersion, Ed
 	{
 		Serial.read();
 	}
-	Serial.println("Initializing state machine. State: WAITING_FOR_SERIAL_DATA");
-	//progress = EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA;
+	Serial.println("Initializing state machine. State: SENSOR_CONNECTION_CHECK");
 	progress = Progress::SENSOR_CONNECTION_CHECK;
 	Serial.println("Follow the instructions to obtain calibration values:\n");
 	Serial.println("- The tester should now the use the EmotiBit with the High precision EDA test rig. ");
@@ -98,7 +97,7 @@ EdaCorrection::Status EdaCorrection::enterUpdateMode(uint8_t emotiBitVersion, Ed
 
 bool EdaCorrection::getEdaCalibrationValues(Si7013* si7013, float &vref1, float &vref2, float &Rfeedback)
 {
-	if (_mode != Mode::UPDATE)
+	if (_mode == Mode::NORMAL)
 	{
 		Status status;
 		status = readFromOtp(si7013);
@@ -160,105 +159,7 @@ bool EdaCorrection::getEdaCalibrationValues(Si7013* si7013, float &vref1, float 
 		Serial.println("In UPDATE mode. EDA will be calibrated.");
 	}
 }
-/*
-void EdaCorrection::normalModeOperations(float &vref1, float &vref2, float &Rfeedback)
-{
-	// reading the OTP is done in the ISR
-	// the correction values should be generated in the update function outside the ISR,
-	// to reduce the load on the ISR
-	// call calcCorrection
-	if (triedRegOverwrite) // enters this if register overwrite triggered in OTP-Write
-	{
-		Serial.println("Register OverWrite Protection Triggered");
-		Serial.println("Please check the OTP of the Si7013 independently.");
-		if (successfulwrite)
-		{
-			Serial.println("New memory location(s) has been correctly updated.");
-			Serial.println("Completely power down the EmotiBit and start EmotiBit again");
-		}
 
-		//otpMemoryMap.echoWriteCount();
-		progress = EdaCorrection::Progress::FINISH;// prevents re-enterin normal mode operations
-	}
-	else
-	{
-		if (!powerCycled) // if the OTP is written on the current power-up, prompt the user to power doem emotibit
-		{
-			Serial.println("Done writing to the OTP. Completely power down the EmotiBit by unpluging the Serial cable and removing the battery.");
-			Serial.println("After the initial power down, can start using the EmotiBit normally.");
-			//otpMemoryMap.echoWriteCount();
-			progress = EdaCorrection::Progress::FINISH;// stops entering this function again from emotibit.update
-		}
-		else // OTP not updated on the current power-on
-		{
-			if (readOtpValues) // wait till the OTP has been read in the ISR after power ON
-			{
-				if (isSensorConnected) // if the sensor is connected
-				{
-					if (isOtpValid)// metadata presence is checked in the OTP read operation
-					{
-						Serial.println("-------------------------- EDA CALIBRATION DATA ------------------------------------");
-						Serial.print("The EmotiBit Version stored for EDA correction is: "); Serial.println((int)_emotiBitVersion);
-						Serial.print("The data format version stored for EDA correction is: "); Serial.println((int)otpDataFormat);
-						calcEdaCorrection();
-						if (correctionDataReady)// do not echo on screen if writing to test memory space
-						{
-							Serial.print("Estimated Rskin values BEFORE correction:|");
-							float RskinEst = 0;
-							for (int i = 0; i < NUM_EDL_READINGS; i++)
-							{
-								RskinEst = (((correctionData.edlReadings[i] / vref1) - 1)*Rfeedback);
-								Serial.print(RskinEst); Serial.print(" | ");
-							}
-							vref1 = correctionData.vRef1;// updated vref1
-							vref2 = correctionData.vRef2;// updated vref2
-							Rfeedback = correctionData.Rfb;// updated edaFeedbackAmpR
-							Serial.print("\nEstimated Rskin values AFTER correction: |");
-							for (int i = 0; i < NUM_EDL_READINGS; i++)
-							{
-								RskinEst = (((correctionData.edlReadings[i] / vref1) - 1)*Rfeedback);
-								Serial.print(RskinEst); Serial.print(" | ");
-							}
-							if (dummyWrite)
-							{
-								Serial.println("\nupdated emotibit class with these values");
-								Serial.println("\nYou can now use this EmotiBit without restarting to measure the EDA test rig values");
-								Serial.println("-------------------------- EDA CALIBRATION DATA ------------------------------------");
-							}
-							else 
-							{
-								Serial.println("\n-------------------------- EDA CALIBRATION DATA ------------------------------------");
-							}
-							//edaCorrection.correctionDataReady = false; // once the values are updated, we can set it to false to not enter this case again
-							//otpMemoryMap.echoWriteCount();
-							progress = EdaCorrection::Progress::FINISH;
-						}
-					}
-					else
-					{
-						Serial.println("OTP has not been updated. Not performing correction calculation.");
-						Serial.println("Perform EDA correction first.");
-						Serial.println("Using EDA without correction");
-						//otpMemoryMap.echoWriteCount();
-						progress = EdaCorrection::Progress::FINISH;
-
-					}
-				}	
-				else // Sensor not connected
-				{
-#ifdef USE_ALT_SI7013
-					Serial.println("EDA Correction ERROR: External SI-7013 sensor not detected on I2C line. Please check connection");
-#else
-					Serial.println("EDA Correction ERROR: Main EmotiBit SI-7013 sensor not detected on I2C line. Please check connection");
-#endif
-					//otpMemoryMap.echoWriteCount();
-					progress = EdaCorrection::Progress::FINISH;
-				}
-			}
-		}
-	}
-}
-*/
 EdaCorrection::Mode EdaCorrection::getMode()
 {
 	return _mode;
@@ -329,28 +230,6 @@ EdaCorrection::Status EdaCorrection::update(Si7013* si7013, float &vref1, float 
 		{
 			if (Serial.available())
 			{
-				Serial.println("Serial data detected.");
-				Serial.println("####################");
-				Serial.println("### EDA TESTING  ###");
-				Serial.println("####################");
-				if (dummyWrite)
-				{
-					Serial.println("#### DUMMY MODE ####");
-				}
-				else
-				{
-					Serial.println("!!! OTP MODE !!!");
-#ifdef USE_ALT_SI7013
-					Serial.println("!!! Writing to Alternate(External) I2C sensor !!!");
-#else
-					Serial.println("!!! Writing to main EmotiBit I2C sensor !!!");
-#endif
-#ifdef ACCESS_MAIN_ADDRESS
-					Serial.println("!!! Writing to Main Address space !!!");
-#else
-					Serial.println("!!! Writing to Test Address Space(0xA0 - 0xA7) !!!\n");
-#endif
-				}
 				if (getFloatFromString() != EdaCorrection::Status::SUCCESS)
 				{
 					Serial.println("Please check and enter again");
@@ -359,6 +238,29 @@ EdaCorrection::Status EdaCorrection::update(Si7013* si7013, float &vref1, float 
 				}
 				else
 				{
+					Serial.println("Serial data detected.");
+					Serial.println("####################");
+					Serial.println("### EDA TESTING  ###");
+					Serial.println("####################");
+					if (dummyWrite)
+					{
+						Serial.println("#### DUMMY MODE ####");
+					}
+					else
+					{
+						Serial.println("!!! OTP MODE !!!");
+						//ToDo: think about removing the serial prints. This removes the dependency on the VersionController class
+#ifdef USE_ALT_SI7013
+						Serial.println("!!! Writing to Alternate(External) I2C sensor !!!");
+#else
+						Serial.println("!!! Writing to main EmotiBit I2C sensor !!!");
+#endif
+#ifdef ACCESS_MAIN_ADDRESS
+						Serial.println("!!! Writing to Main Address space !!!");
+#else
+						Serial.println("!!! Writing to Test Address Space(0xA0 - 0xA7) !!!\n");
+#endif
+					}
 					echoEdaReadingsOnScreen();
 					progress = EdaCorrection::Progress::WAITING_USER_APPROVAL;
 				}
@@ -445,7 +347,6 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 		Serial.print(correctionData.edrReadings[i], FLOAT_PRECISION); Serial.print("\t");
 	}
 	Serial.print("\nAvg Vref2 :"); Serial.println(correctionData.vRef2, FLOAT_PRECISION);
-	//_EdaReadingsPrinted = true;
 
 	Serial.println("\nIf you are in Dummy mode, NO OTP R/W ACTIONS WILL BE PERFORMED");
 	Serial.println("This is how the OTP is will be updated(If NOT IN DUMMY MODE)");
@@ -564,7 +465,6 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, ch
 	si7013->writeToOtp(addr, val, mask);
 	// For testing
 	//Serial.print(addr, HEX); Serial.print(":Y:"); Serial.println(val);
-	//successfulwrite = true;
 	return EdaCorrection::Status::SUCCESS;
 }
 
@@ -575,6 +475,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 	{
 		if (dummyWrite)
 		{
+			// Do nothing more.
 			progress = Progress::FINISH;
 		}
 		else
@@ -598,7 +499,6 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 				otpMemoryMap.writeCount.dataVersion++;
 			}
 			// writing metadata-EmotiBit Version
-			//writeEmotiBitVersionToOtp(si7013);
 			if (otpMemoryMap.emotiBitVersionWritten == false)
 			{
 				otpMemoryMap.writeCount.emotiBitVersion++;
@@ -788,8 +688,6 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection()
 		
 		Serial.print("correctionData.edlReadings[0]: "); Serial.println(correctionData.edlReadings[0], 6);
 		Serial.println("Uncomment ACCESS_MAIN_ADDRESS in code to use emotibit with calibration.");
-		//progress = EdaCorrection::Progress::FINISH;// prevets the emotiBit class variables to be updated in normalModeoperations()
-		//correctionDataReady = false;
 #endif
 	}
 }

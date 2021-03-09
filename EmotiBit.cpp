@@ -1060,9 +1060,9 @@ uint8_t EmotiBit::update()
 			writeSerialData(_serialData);
 		}
 	}
-	// if not in debug mode, always clear the input serial buffer
 	else
 	{
+		// if not in debug mode, or Eda Correction mode, always clear the input serial buffer
 		if (!_edaCalibrationMode)
 		{
 			while (Serial.available())
@@ -1101,14 +1101,9 @@ uint8_t EmotiBit::update()
 		sendModePacket(sentModePacket, _outDataPacketCounter);
 	}
 
+	// function call to handle UPDATE mode in Eda Correction
 	edaCorrection.update(&tempHumiditySensor,vRef1, vRef2, edaFeedbackAmpR);
 
-	/*
-	else if (edaCorrection.getMode() == EdaCorrection::Mode::NORMAL && edaCorrection.progress != EdaCorrection::Progress::FINISH)
-	{
-		edaCorrection.normalModeOperations(vRef1, vRef2, edaFeedbackAmpR);
-	}
-	*/
 	// Handle data buffer reading and sending
 	static uint32_t dataSendTimer = millis();
 	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
@@ -2363,20 +2358,14 @@ void EmotiBit::readSensors()
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, HIGH);
 	
 	uint32_t readSensorsBegin = micros();
+	
+	// Write to OTP once edaCorrection class is at the right state. 
 	if (edaCorrection.getMode() == EdaCorrection::Mode::UPDATE)
 	{
 		_EmotiBit_i2c->setClock(100000);// change the I2C clock speed to 100000
 		edaCorrection.writeToOtp(&tempHumiditySensor);
 		_EmotiBit_i2c->setClock(400000);// change the I2C clock speed back to 400000
 	}
-	/*
-	else if (tempHumiditySensor.getStatus() == Si7013::STATUS_IDLE && edaCorrection.getMode() == EdaCorrection::Mode::NORMAL && !edaCorrection.readOtpValues)
-	{
-		_EmotiBit_i2c->setClock(100000);// change the I2C clock speed to 100000
-		edaCorrection.readFromOtp(&tempHumiditySensor);
-		_EmotiBit_i2c->setClock(400000);// change the I2C clock speed back to 400000
-	}
-	*/
 
 	// Battery (all analog reads must be in the ISR)
 	// TODO: use the stored/averaged Battery value instead of calling readBatteryPercent again

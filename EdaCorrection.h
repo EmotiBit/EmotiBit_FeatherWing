@@ -10,14 +10,15 @@ The class will work in 2 modes
 UPDATE MODE
 *******************
 The class is a state machine with the following states:
-1. WAITING_FOR_SERIAL_DATA
-2. WAITING_FOR_USER_APPROVAL
-3. WRITING_TO_OTP
-4. FINISH
+1. SENSOR_CONNECTION_CHECK
+2. WAITING_FOR_SERIAL_DATA
+3. WAITING_FOR_USER_APPROVAL
+4. WRITING_TO_OTP
+5. FINISH
 Code flow:
 1. The user activates this special correction class on startup by pressing a "special" key before
 	emotibit starts setup.
-	1. This changes the class state to the initial state of WAITING_FOR_SERIAL_DATA
+	1. This changes the mode to Mode::UPDATE and sets progress to SENSOR_CONNECTION_CHECK
 2. Once the special mode has been activated, the EmotiBit periodically listens on the serial monitor
 	for input.
 	1. The input is the array of characters copied from the Oscilloscope testing helper terminal
@@ -30,11 +31,11 @@ Code flow:
 	1. This "request for approval" is echoed on the screen periodically as a part of the emotibit.update() routine.
 5. Once the user approves writing to the OTP:
 	1. the class changes the state to WRITING_TO_OTP
-	2. Now, the class member function tries to write the values to the OTP as a part of the ISR
-6. Once the Values have been written to the OTP, the class moves to the last state FINISHED.
-7. The values stored in the OTP can then be read at any time to calculate the correction values.
-8. class will have a data member which sets on every emotibit setup, which tracks if the emotibit has data
-	written on the OTP
+	2. The values are written to the OT in the ISR sub routine.
+6. Once the Values have been written to the OTP, the class moves to the last state FINISH.
+7. Once the OTP is updates, the EmotiBit needs to be power cycled.
+8. The values stored in the OTP can then be read at any time to calculate the correction values.
+
 ***************
 NORMAL
 
@@ -42,11 +43,9 @@ NORMAL
 2. After the I2C is initialized, read the OTP data snd calculate the correction values.
 3. update the emotibit class variables accordingly.
 5. proceed with normal execution.
-
 */
 
 // PLEASE SEE
-// comment/uncomment the USE_ALT_SI7013 #define to run it in test mode/real mode
 // Note: Test mode also WRITES TO THE OTP
 // To not use the OTP, choose dummyMode from Serial while execution
 
@@ -65,7 +64,6 @@ private:
 	uint8_t FLOAT_PRECISION = 7;
 	uint8_t _emotiBitVersion;
 	bool powerCycled = true;
-	//bool successfulwrite = false;
 public:
 	class OtpMemoryMap_V0 {
 	public:
@@ -93,7 +91,6 @@ public:
 		void echoWriteCount();
 	}otpMemoryMap;
 	bool isSensorConnected = true;
-	//bool sensorConnectionTested = false;
 	static const uint8_t NUM_EDL_READINGS = OtpMemoryMap_V0::NUM_EDL_CORRECTION_VALUES;
 	static const size_t MAX_OTP_SIZE = 54;
 	const uint8_t BYTES_PER_FLOAT = sizeof(float);
@@ -101,19 +98,14 @@ public:
 	struct CorrectionData {
 		float edlReadings[NUM_EDL_READINGS] = { 0 };
 		float edrReadings[NUM_EDL_READINGS] = { 0 };
-		//char  otpBuffer[MAX_OTP_SIZE] = { 0 };
 		float trueRskin[NUM_EDL_READINGS] = { 0,10000.0,100000.0,1000000.0,10000000.0 };
 		float vRef1 = 0, vRef2= 0, Rfb= 0;
 	}correctionData;
 
 public:// flags
 	bool isOtpValid = true;
-	//bool displayedValidityStatus = false;
-	//bool readOtpValues = false; // flag to monitor if the class has read the OTP 
-	//bool calculationPerformed = false; // flag to monitor is calculation was performed from values read from OTP
 	bool dummyWrite = false; // flag to check if in dummy mode or real OTP mode
 	bool triedRegOverwrite = false; // flag to monitor if we are writing to previously written OTP location
-	//bool correctionDataReady = false;
 
 public: 
 #ifndef ACCESS_MAIN_ADDRESS
@@ -131,12 +123,6 @@ public:
 		NORMAL,
 		UPDATE
 	};
-
-	/*enum class EmotiBitVersion
-	{
-		EMOTIBIT_V02H = 0,
-		NUM_VERSIONS
-	}emotiBitVersion;*/
 
 	enum class OtpDataFormat
 	{
@@ -178,7 +164,6 @@ public:
 
 	bool getEdaCalibrationValues(Si7013* si7013, float &vref1, float &vref2, float &Rfeedback);
 
-	//void normalModeOperations(float &vref1, float &vref2, float &Rfeedback);
 
 	/*
 	usage: returns if the program is in update mode.
