@@ -10,7 +10,7 @@ AdcCorrection::AdcCorrection()
 
 AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 {
-	Serial.println("No correction found on SAMD. Calculating correction by reading ATWINC");
+	//Serial.println("No correction found on SAMD. Calculating correction by reading ATWINC");
 	if( version == AdcCorrection::AdcCorrectionRigVersion::UNKNOWN)
 	{
 		readAtwincFlash(ATWINC_MEM_LOC_METADATA, RIG_METADATA_SIZE, rigMetadata);

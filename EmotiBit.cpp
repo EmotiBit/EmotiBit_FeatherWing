@@ -1,6 +1,6 @@
 #include "EmotiBit.h"
 
-FlashStorage(samdFlashStorage, SamdStorageAdcValues);
+//FlashStorage(samdFlashStorage, SamdStorageAdcValues);
 
 EmotiBit* myEmotiBit = nullptr;
 void(*onInterruptCallback)(void);
@@ -91,6 +91,7 @@ void EmotiBit::bmm150ReadTrimRegisters()
 
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
+	//EmotiBitUtilities::printFreeRAM("Begining of setup", 1);
 	bool status = true;
 	if (_EmotiBit_i2c != nullptr)
 	{
@@ -136,7 +137,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		hibernate(false);
 	}
 
-	SamdStorageAdcValues samdStorageAdcValues;
 	String fwVersionModifier = "";
 	if (testingMode == TestingMode::ACUTE)
 	{
@@ -212,11 +212,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			hibernate(false);// hiberante with setup incomplete
 		}
 	}
-
+	//EmotiBitUtilities::printFreeRAM("Reserved Memory for out data packets", 1);
 	uint32_t now = millis();
 	while (!Serial.available() && millis() - now < 2000)
 	{
 	}
+	AdcCorrection::AdcCorrectionValues adcCorrectionValues;
 	while (Serial.available())
 	{
 		char input;
@@ -226,22 +227,22 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		{
 			//AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::VER_0, AdcCorrection::DataFormatVersion::DATA_FORMAT_0);
 			AdcCorrection adcCorrection;
-			if (!adcCorrection.begin(samdStorageAdcValues._gainCorrection, samdStorageAdcValues._offsetCorrection, samdStorageAdcValues.valid))
+			if (!adcCorrection.begin(adcCorrectionValues._gainCorrection, adcCorrectionValues._offsetCorrection, adcCorrectionValues.valid))
 			{
 				Serial.println("Exiting ADC Correction.");
 				delay(3000);
 				break;
 			}
 			//adcCorrection.execute(samdStorageAdcValues._gainCorrection, samdStorageAdcValues._offsetCorrection, samdStorageAdcValues.valid);
-			samdFlashStorage.write(samdStorageAdcValues);
-			if (samdStorageAdcValues.valid)
+			//samdFlashStorage.write(samdStorageAdcValues);
+			if (adcCorrectionValues.valid)
 			{
-				adcCorrection.echoResults(samdStorageAdcValues._gainCorrection, samdStorageAdcValues._offsetCorrection);
+				adcCorrection.echoResults(adcCorrectionValues._gainCorrection, adcCorrectionValues._offsetCorrection);
 			}
-			else
+			/*else
 			{
 				Serial.println("Data was not stored on the SAMD flash. something went wrong. Please try again");
-			}
+			}*/
 		}
 		else if (input == 'E')
 		{
@@ -574,31 +575,31 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.println("\nConfiguring GSR...");
 	pinMode(_edlPin, INPUT);
 	pinMode(_edrPin, INPUT);
-	samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
+	//samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
 	analogReadResolution(_adcBits);
 	Serial.println("Configuring ADC Corrections...");
 	// If the correction data does not exist on the SAMD flash
-	if (!samdStorageAdcValues.valid)
+	if (!adcCorrectionValues.valid)
 	{
 		// Instantiate the ADC Correction class to read data from the AT-Winc flash to calculate the correction values
-		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, samdStorageAdcValues._gainCorrection, samdStorageAdcValues._offsetCorrection, samdStorageAdcValues.valid);
+		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, adcCorrectionValues._gainCorrection, adcCorrectionValues._offsetCorrection, adcCorrectionValues.valid);
 		if (adcCorrection.atwincAdcDataCorruptionTest != AdcCorrection::Status::FAILURE && adcCorrection.atwincAdcMetaDataCorruptionTest != AdcCorrection::Status::FAILURE)
 		{
-			samdFlashStorage.write(samdStorageAdcValues);// Writing it to the SAMD flash storage
-			Serial.print("Gain Correction:"); Serial.print(samdStorageAdcValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
+			//samdFlashStorage.write(samdStorageAdcValues);// Writing it to the SAMD flash storage
+			Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(adcCorrectionValues._offsetCorrection);
 			Serial.println("Enabling the ADC with the correction values");
-			analogReadCorrection(samdStorageAdcValues._offsetCorrection, samdStorageAdcValues._gainCorrection);
+			analogReadCorrection(adcCorrectionValues._offsetCorrection, adcCorrectionValues._gainCorrection);
 		}
 	}
 	// Correction values found on the SAMD Flash
-	else
-	{
-		//analogReadResolution(_adcBits);
-		Serial.println("Correction data exists on the samd flash");
-		Serial.print("Gain Correction:"); Serial.print(samdStorageAdcValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(samdStorageAdcValues._offsetCorrection);
-		Serial.println("Enabling the ADC with the correction values");
-		analogReadCorrection(samdStorageAdcValues._offsetCorrection, samdStorageAdcValues._gainCorrection);
-	}
+	//else
+	//{
+	//	//analogReadResolution(_adcBits);
+	//	Serial.println("Correction data exists on the samd flash");
+	//	Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(adcCorrectionValues._offsetCorrection);
+	//	Serial.println("Enabling the ADC with the correction values");
+	//	analogReadCorrection(adcCorrectionValues._offsetCorrection, adcCorrectionValues._gainCorrection);
+	//}
 	
 	Serial.println("Configuring EDA Calibrations...");
 	edaCorrection.getEdaCalibrationValues(&tempHumiditySensor, vRef1, vRef2, edaFeedbackAmpR);
@@ -649,7 +650,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	*/
 	setupSdCard();
 	led.setLED(uint8_t(EmotiBit::Led::RED), true);
-
+	//EmotiBitUtilities::printFreeRAM("Sd card init", 1);
 	//WiFi Setup;
 	Serial.println("\nSetting up WiFi");
 #if defined(ADAFRUIT_FEATHER_M0)
@@ -660,7 +661,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 
 	setPowerMode(PowerMode::NORMAL_POWER);
-
+	//EmotiBitUtilities::printFreeRAM("WiFi Init", 1);
 	typeTags[(uint8_t)EmotiBit::DataType::EDA] = EmotiBitPacket::TypeTag::EDA;
 	typeTags[(uint8_t)EmotiBit::DataType::EDL] = EmotiBitPacket::TypeTag::EDL;
 	typeTags[(uint8_t)EmotiBit::DataType::EDR] = EmotiBitPacket::TypeTag::EDR;
@@ -769,15 +770,15 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.print(tempHumiditySensor.sernum_b);
 	Serial.print("\n");
 	//Serial.println("### GSR Calibration ##");
-	Serial.println("### ADC correction ###");
-	if (samdStorageAdcValues.valid)
-	{
-		Serial.print("Gain Correction:"); Serial.print(samdStorageAdcValues._gainCorrection); Serial.print("\tOffset Correction: "); Serial.println(samdStorageAdcValues._offsetCorrection);
-	}
-	else
-	{
-		Serial.println("Using ADC without correction");
-	}
+	//Serial.println("### ADC correction ###");
+	//if (adcCorrectionValues.valid)
+	//{
+	//	Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); Serial.print("\tOffset Correction: "); Serial.println(adcCorrectionValues._offsetCorrection);
+	//}
+	//else
+	//{
+	//	Serial.println("Using ADC without correction");
+	//}
 	uint8_t ledOffdelay = 100;	// Aesthetic delay
 	led.setLED(uint8_t(EmotiBit::Led::RED), false);
 	delay(ledOffdelay);
@@ -1032,7 +1033,14 @@ void EmotiBit::updateButtonPress()
 
 uint8_t EmotiBit::update()
 {
-
+	//static uint32_t timeSincePrint = millis();
+	//static bool firstprint = true;
+	//if (firstprint || millis() - timeSincePrint > 2000)
+	//{
+	//	EmotiBitUtilities::printFreeRAM("In Update", 1, 0);
+	//	firstprint = false;
+	//	timeSincePrint = millis();
+	//}
 	static uint16_t serialPrevAvailable = Serial.available();
 	if (Serial.available() > serialPrevAvailable)
 	{

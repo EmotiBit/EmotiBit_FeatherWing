@@ -67,7 +67,7 @@ Bootup
 #include "Arduino.h"
 #include <WiFi101.h>
 #include "spi_flash/include/spi_flash.h"
-#include <FlashStorage.h>
+//#include <FlashStorage.h>
 #include "SAMD_AnalogCorrection.h"
 #include "wiring_private.h"
 
@@ -75,11 +75,6 @@ Bootup
 #define ADC_CORRECTION_VERBOSE
 #define ATWINC_FLASH_4M_SZ (512 * 1024UL)
 
-typedef struct {
-	bool valid;
-	uint16_t _gainCorrection;
-	uint16_t _offsetCorrection;
-}SamdStorageAdcValues;
 
 class AdcCorrection
 {
@@ -99,6 +94,12 @@ public:
 	const size_t METADATA_LOC_NUM_ADC = 0;
 	const size_t METADATA_LOC_RIG_VERSION = 1;
 	const size_t METADATA_LOC_DATA_FORMAT = 2;
+
+	struct AdcCorrectionValues {
+		bool valid = false;
+		uint16_t _gainCorrection;
+		uint16_t _offsetCorrection;
+	};
 
 	enum class DataFormatVersion
 	{
