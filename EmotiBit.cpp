@@ -245,12 +245,10 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		}
 		else if (input == 'E')
 		{
-			_edaCalibrationMode = true;
 			Serial.print("\n\n##### EmotiBit Version "); Serial.print(EmotiBitVersionController::getHardwareVersion(_version)); Serial.println(" ####");
 			if (!edaCorrection.begin((uint8_t)_version))
 			{
 				Serial.print("_edaCalibrationMode = true");
-				_edaCalibrationMode = false;
 			}
 		}
 		else
@@ -1049,7 +1047,7 @@ uint8_t EmotiBit::update()
 	}
 	serialPrevAvailable = Serial.available();
 
-	if (_debugMode)
+	if (_debugMode && edaCorrection.getMode() != EdaCorrection::Mode::UPDATE)
 	{
 		static String debugPackets;
 		processDebugInputs(debugPackets, _outDataPacketCounter);
@@ -1062,8 +1060,8 @@ uint8_t EmotiBit::update()
 	}
 	else
 	{
-		// if not in debug mode, or Eda Correction mode, always clear the input serial buffer
-		if (!_edaCalibrationMode)
+		// if not in debug mode, or Eda Correction UPDATE mode, always clear the input serial buffer
+		if (edaCorrection.getMode() != EdaCorrection::Mode::UPDATE)
 		{
 			while (Serial.available())
 			{

@@ -37,12 +37,11 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.49";
+	String firmware_version = "1.2.50";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
 	bool _debugMode = false;
-	bool _edaCalibrationMode = false;
 	bool dummyIsrWithDelay = false;
 	uint32_t targetFileSyncDelay = 1;
 
