@@ -2984,6 +2984,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("Press B to toggle ON Battery update");
 			Serial.println("Press a to toggle OFF ADC correction");
 			Serial.println("Press A to toggle ON ADC correction");
+			Serial.println("Press f to print the FW version");
 			//Serial.println("Press 0 to simulate nan events in the thermopile");
 
 		}
@@ -3189,6 +3190,11 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		{
 			Serial.println("ADC Correction Enabled");
 			ADC->CTRLB.bit.CORREN = 1;
+		}
+		else if (c == 'f')
+		{
+			Serial.print("Firmware version: ");
+			Serial.println(firmware_version);
 		}
 	}
 }
