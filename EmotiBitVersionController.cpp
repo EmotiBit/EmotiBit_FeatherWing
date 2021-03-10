@@ -131,6 +131,7 @@ bool EmotiBitVersionController::initConstantMapping(EmotiBitVersionController::E
 	{
 		return false;
 	}
+	_initAssignmentComplete = true;
 	return true;
 }
 
@@ -166,7 +167,6 @@ bool EmotiBitVersionController::_initMappingMathConstants(EmotiBitVersionControl
 		_assignedMathConstants[(int)MathConstants::EDA_SERIES_RESISTOR] = _INVALID_CONSTANT_FOR_VERSION;
 		_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ] = _INVALID_CONSTANT_FOR_VERSION;
 	}
-	_initAssignmentComplete = true;
 	return true;
 #endif
 }
