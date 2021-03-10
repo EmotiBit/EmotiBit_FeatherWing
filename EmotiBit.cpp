@@ -1546,6 +1546,7 @@ int8_t EmotiBit::updateIMUData() {
 
 			Serial.println("getMotion9");
 		}
+		static DigitalFilter filterMz(DigitalFilter::FilterType::LOWPASS, 0.2, _samplingRates.magnetometer);
 
 		// ToDo: Utilize IMU 1024 buffer to help mitigate buffer overruns
 
@@ -1568,7 +1569,14 @@ int8_t EmotiBit::updateIMUData() {
 		// ToDo: determine correct magnetometer clipping
 		pushData(EmotiBit::DataType::MAGNETOMETER_X, convertMagnetoX(mx, rh), &timestamp);
 		pushData(EmotiBit::DataType::MAGNETOMETER_Y, convertMagnetoY(my, rh), &timestamp);
-		pushData(EmotiBit::DataType::MAGNETOMETER_Z, convertMagnetoZ(mz, rh), &timestamp);
+
+		mz = convertMagnetoZ(mz, rh);
+		if (_enableFilter.mz)
+		{
+			mz = filterMz.filter(mz);
+			//mz = -32;
+		}
+		pushData(EmotiBit::DataType::MAGNETOMETER_Z, mz, &timestamp);
 		if (bmm150XYClipped) {
 			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_X, &timestamp);
 			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_Y, &timestamp);
@@ -3023,6 +3031,8 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("Press a to toggle OFF ADC correction");
 			Serial.println("Press A to toggle ON ADC correction");
 			Serial.println("Press f to print the FW version");
+			Serial.println("press | to enable Digital filters");
+			Serial.println("Press - to disable Digital filters");
 			//Serial.println("Press 0 to simulate nan events in the thermopile");
 
 		}
@@ -3233,6 +3243,16 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		{
 			Serial.print("Firmware version: ");
 			Serial.println(firmware_version);
+		}
+		else if (c == '|')
+		{
+			Serial.println("enabling filter(s)");
+			_enableFilter.mz = true;
+		}
+		else if (c == '-')
+		{
+			Serial.println("disabling filter(s)");
+			_enableFilter.mz = false;
 		}
 	}
 }

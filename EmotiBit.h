@@ -22,6 +22,7 @@
 #include "AdcCorrection.h"
 #include "EdaCorrection.h"
 #include "EmotiBitVersionController.h"
+#include "EmotiBitSignalProcessingUtils.h"
 //#include "EmotiBitUtilities.h"
 //#include <Adafruit_SleepyDog.h>
 
@@ -37,8 +38,8 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.57";
-	TestingMode testingMode = TestingMode::NONE;
+	String firmware_version = "1.2.58";
+	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
 	bool _debugMode = false;
@@ -107,6 +108,10 @@ public:
 		uint8_t gyr_bwp = BMI160_DLPF_MODE_NORM;
 		uint8_t gyr_us = BMI160_DLPF_MODE_NORM;
 		uint8_t mag_odr = BMI160MagRate::BMI160_MAG_RATE_25HZ;
+	};
+	
+	struct EnableFilter {
+		bool mz = true;
 	};
 
 	struct SamplingRates {
@@ -458,6 +463,7 @@ private:
 
 	SensorTimer _sensorTimer = SensorTimer::MANUAL;
 	SamplingRates _samplingRates;
+	EnableFilter _enableFilter;
 	SamplesAveraged _samplesAveraged;
 	uint8_t _batteryReadPin;
 	uint8_t _edlPin;
