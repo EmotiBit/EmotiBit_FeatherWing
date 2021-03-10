@@ -37,7 +37,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.55";
+	String firmware_version = "1.2.56";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -214,7 +214,8 @@ public:
 	NCP5623 led;
 	MLX90632 thermopile;
 	EdaCorrection *edaCorrection = nullptr;
-	EmotiBitVersionController emotiBitVersionController;
+
+	int _emotiBitSystemConstants[(int)SystemConstants::COUNT];
 
 	float edrAmplification;
 	float vRef1; // Reference voltage of first voltage divider(15/100)
