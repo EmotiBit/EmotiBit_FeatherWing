@@ -240,9 +240,16 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		else if (input == 'E')
 		{
 			Serial.print("\n\n##### EmotiBit Version "); Serial.print(EmotiBitVersionController::getHardwareVersion(_version)); Serial.println(" ####");
-			if (!edaCorrection.begin((uint8_t)_version))
+			if (edaCorrection != nullptr)
 			{
-				Serial.print("_edaCalibrationMode = true");
+				delete edaCorrection;
+			}
+			edaCorrection = new EdaCorrection;
+			if (!edaCorrection->begin((uint8_t)_version))
+			{
+				// exit begin. delete pointer and free memory
+				delete edaCorrection;
+				edaCorrection = nullptr;
 			}
 		}
 		else
@@ -593,7 +600,20 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	
 	Serial.println("Configuring EDA Calibrations...");
-	edaCorrection.getEdaCalibrationValues(&tempHumiditySensor, vRef1, vRef2, edaFeedbackAmpR);
+	
+	// If Eda Correction mode was not initialized
+	if (edaCorrection == nullptr)
+	{
+		edaCorrection = new EdaCorrection;
+		edaCorrection->getEdaCalibrationValues(&tempHumiditySensor, vRef1, vRef2, edaFeedbackAmpR);
+		// delete after the OTP has been read for calibration
+		delete edaCorrection;
+		edaCorrection = nullptr;
+	}
+	else
+	{
+		Serial.println("In EDA Calibration mode");
+	}
 
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 
@@ -641,7 +661,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	*/
 	setupSdCard();
 	led.setLED(uint8_t(EmotiBit::Led::RED), true);
-	//EmotiBitUtilities::printFreeRAM("Sd card init", 1);
+	//::printFreeRAM("Sd card init", 1);
 	//WiFi Setup;
 	Serial.println("\nSetting up WiFi");
 #if defined(ADAFRUIT_FEATHER_M0)
@@ -1046,7 +1066,7 @@ uint8_t EmotiBit::update()
 	}
 	serialPrevAvailable = Serial.available();
 
-	if (_debugMode && edaCorrection.getMode() != EdaCorrection::Mode::UPDATE)
+	if (_debugMode && edaCorrection == nullptr)
 	{
 		static String debugPackets;
 		processDebugInputs(debugPackets, _outDataPacketCounter);
@@ -1060,7 +1080,7 @@ uint8_t EmotiBit::update()
 	else
 	{
 		// if not in debug mode, or Eda Correction UPDATE mode, always clear the input serial buffer
-		if (edaCorrection.getMode() != EdaCorrection::Mode::UPDATE)
+		if (edaCorrection == nullptr)
 		{
 			while (Serial.available())
 			{
@@ -1099,8 +1119,17 @@ uint8_t EmotiBit::update()
 	}
 
 	// function call to handle UPDATE mode in Eda Correction
-	edaCorrection.update(&tempHumiditySensor,vRef1, vRef2, edaFeedbackAmpR);
-
+	if (edaCorrection != nullptr)
+	{
+		edaCorrection->update(&tempHumiditySensor, vRef1, vRef2, edaFeedbackAmpR);
+		// if the correction/calibration has been completed
+		if (edaCorrection->getMode() == EdaCorrection::Mode::NORMAL && edaCorrection->progress == EdaCorrection::Progress::FINISH)
+		{
+			delete edaCorrection;
+			edaCorrection = nullptr;
+			Serial.println("Deleted eda correction instance");
+		}
+	}
 	// Handle data buffer reading and sending
 	static uint32_t dataSendTimer = millis();
 	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
@@ -2357,11 +2386,14 @@ void EmotiBit::readSensors()
 	uint32_t readSensorsBegin = micros();
 	
 	// Write to OTP once edaCorrection class is at the right state. 
-	if (edaCorrection.getMode() == EdaCorrection::Mode::UPDATE)
+	if (edaCorrection != nullptr)
 	{
-		_EmotiBit_i2c->setClock(100000);// change the I2C clock speed to 100000
-		edaCorrection.writeToOtp(&tempHumiditySensor);
-		_EmotiBit_i2c->setClock(400000);// change the I2C clock speed back to 400000
+		if (edaCorrection->getMode() == EdaCorrection::Mode::UPDATE)
+		{
+			_EmotiBit_i2c->setClock(100000);// change the I2C clock speed to 100000
+			edaCorrection->writeToOtp(&tempHumiditySensor);
+			_EmotiBit_i2c->setClock(400000);// change the I2C clock speed back to 400000
+		}
 	}
 
 	// Battery (all analog reads must be in the ISR)

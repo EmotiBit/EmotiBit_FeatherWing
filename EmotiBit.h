@@ -37,7 +37,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.53";
+	String firmware_version = "1.2.54";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -213,7 +213,7 @@ public:
 	MAX30105 ppgSensor;
 	NCP5623 led;
 	MLX90632 thermopile;
-	EdaCorrection edaCorrection;
+	EdaCorrection *edaCorrection = nullptr;
 	EmotiBitVersionController emotiBitVersionController;
 
 	float edrAmplification;
