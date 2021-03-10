@@ -128,6 +128,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println("Si-7013 not found on EmotiBit. Check I2C wiring.");
 		// Assigning constant so that we can use the System Constant::HIBERNATE_LEVEL in hibernate()
 		emotiBitVersionController.initConstantMapping(_version);
+		_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
 		hibernate(false);//hibernate with setup incomplete
 	}
 
@@ -142,6 +143,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (testingMode == TestingMode::ACUTE)
 	{
 		fwVersionModifier = "-TA";
+		_debugMode = true;
 	}
 	else if (testingMode == TestingMode::CHRONIC)
 	{
@@ -178,6 +180,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	emotiBitVersionController.echoConstants();
 #endif
 
+	// ToDo: Create a organized way to store class vairables
 	// Set board-specific pins 
 	_batteryReadPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::BATTERY_READ_PIN);
 	_hibernatePin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::HIBERNATE);
@@ -666,7 +669,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	*/
 	setupSdCard();
 	led.setLED(uint8_t(EmotiBit::Led::RED), true);
-	//::printFreeRAM("Sd card init", 1);
+	//EmotiBitUtilities::printFreeRAM("Sd card init", 1);
 	//WiFi Setup;
 	Serial.println("\nSetting up WiFi");
 #if defined(ADAFRUIT_FEATHER_M0)
