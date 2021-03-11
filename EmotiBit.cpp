@@ -1909,8 +1909,10 @@ int8_t EmotiBit::readBatteryPercent() {
 	// See battery discharge profile here:
 	// https://www.richtek.com/Design%20Support/Technical%20Document/AN024
 	float bv = readBatteryVoltage();
+	int8_t result;
+	static DigitalFilter filterBatt(DigitalFilter::FilterType::IIR_LOWPASS, ((BASE_SAMPLING_FREQ)/(BATTERY_SAMPLING_DIV))/(_samplesAveraged.battery), 0.01);
 	if (bv > 4.15f) {
-		return 100;
+		result = 100;
 	}
 	else if (bv > 3.65f) {
 		float temp;
@@ -1918,7 +1920,7 @@ int8_t EmotiBit::readBatteryPercent() {
 		temp /= (4.15f - 3.65f);
 		temp *= 93.f;
 		temp += 7.f;
-		return (int8_t)temp;
+		result = (int8_t)temp;
 	}
 	else if (bv > 3.3f) {
 		float temp;
@@ -1926,8 +1928,10 @@ int8_t EmotiBit::readBatteryPercent() {
 		temp /= (4.65f - 3.3f);
 		temp *= 7.f;
 		temp += 0.f;
-		return (int8_t)temp;
+		result = (int8_t)temp;
 	}
+	result = filterBatt.filter(result);
+	return result;
 	//else if (bv > 4.1f) {
 	//	return 95;
 	//}
