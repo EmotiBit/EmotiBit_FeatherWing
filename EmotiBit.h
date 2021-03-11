@@ -22,7 +22,7 @@
 #include "AdcCorrection.h"
 #include "EdaCorrection.h"
 #include "EmotiBitVersionController.h"
-#include "EmotiBitSignalProcessingUtils.h"
+#include "DigitalFilters.h"
 //#include "EmotiBitUtilities.h"
 //#include <Adafruit_SleepyDog.h>
 
@@ -110,8 +110,11 @@ public:
 		uint8_t mag_odr = BMI160MagRate::BMI160_MAG_RATE_25HZ;
 	};
 	
-	struct EnableFilter {
+	struct EnableDigitalFilter {
+		bool mx = true;
+		bool my = true;
 		bool mz = true;
+		bool eda = true;
 	};
 
 	struct SamplingRates {
@@ -463,7 +466,7 @@ private:
 
 	SensorTimer _sensorTimer = SensorTimer::MANUAL;
 	SamplingRates _samplingRates;
-	EnableFilter _enableFilter;
+	EnableDigitalFilter _enableDigitalFilter;
 	SamplesAveraged _samplesAveraged;
 	uint8_t _batteryReadPin;
 	uint8_t _edlPin;

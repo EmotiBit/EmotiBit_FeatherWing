@@ -656,10 +656,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	// EDL Filter Parameters
 	edaCrossoverFilterFreq = emotiBitVersionController.getMathConstant(MathConstants::EDA_CROSSOVER_FILTER_FREQ);
+	/*
 	if (edaCrossoverFilterFreq > 0)// valid assignment of constant
 	{
 		_edlDigFiltAlpha = pow(M_E, -2.f * PI * edaCrossoverFilterFreq / (_samplingRates.eda / _samplesAveraged.eda));
-	}
+	}*/
 	/*
 	if (_version == EmotiBitVersionController::EmotiBitVersion::V02H)
 	{
@@ -1279,13 +1280,18 @@ int8_t EmotiBit::updateEDAData()
 		// EDL Digital Filter
 		if (edaCrossoverFilterFreq > 0)// use only is a valid crossover freq is assigned
 		{
-			if (_edlDigFilteredVal < 0)
+			static DigitalFilter filterEda(DigitalFilter::FilterType::IIR_LOWPASS, (_samplingRates.eda / _samplesAveraged.eda), edaCrossoverFilterFreq);
+			//if (_edlDigFilteredVal < 0)
+			//{
+			//	// initialize filter
+			//	_edlDigFilteredVal = edlTemp;
+			//}
+			//_edlDigFilteredVal = edlTemp * (1. - _edlDigFiltAlpha) + _edlDigFilteredVal * _edlDigFiltAlpha;
+			//edlTemp = _edlDigFilteredVal;
+			if (_enableDigitalFilter.eda)
 			{
-				// initialize filter
-				_edlDigFilteredVal = edlTemp;
+				edlTemp = filterEda.filter(edlTemp);
 			}
-			_edlDigFilteredVal = edlTemp * (1. - _edlDigFiltAlpha) + _edlDigFilteredVal * _edlDigFiltAlpha;
-			edlTemp = _edlDigFilteredVal;
 		}
 		// Link to diff amp biasing: https://ocw.mit.edu/courses/media-arts-and-sciences/mas-836-sensor-technologies-for-interactive-environments-spring-2011/readings/MITMAS_836S11_read02_bias.pdf
 		edaTemp = (edrTemp - vRef2) / edrAmplification;	// Remove VGND bias and amplification from EDR measurement
@@ -1546,7 +1552,9 @@ int8_t EmotiBit::updateIMUData() {
 
 			Serial.println("getMotion9");
 		}
-		static DigitalFilter filterMz(DigitalFilter::FilterType::LOWPASS, 0.2, _samplingRates.magnetometer);
+		static DigitalFilter filterMx(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.magnetometer,1);
+		static DigitalFilter filterMy(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.magnetometer, 1);
+		static DigitalFilter filterMz(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.magnetometer, 1);
 
 		// ToDo: Utilize IMU 1024 buffer to help mitigate buffer overruns
 
@@ -1567,15 +1575,23 @@ int8_t EmotiBit::updateIMUData() {
 		pushData(EmotiBit::DataType::GYROSCOPE_Z, convertRawGyro(gz), &timestamp);
 
 		// ToDo: determine correct magnetometer clipping
-		pushData(EmotiBit::DataType::MAGNETOMETER_X, convertMagnetoX(mx, rh), &timestamp);
-		pushData(EmotiBit::DataType::MAGNETOMETER_Y, convertMagnetoY(my, rh), &timestamp);
-
+		mx = convertMagnetoX(mx, rh);
+		my = convertMagnetoY(my, rh);
 		mz = convertMagnetoZ(mz, rh);
-		if (_enableFilter.mz)
+		if (_enableDigitalFilter.mx)
+		{
+			mx = filterMx.filter(mx);
+		}
+		if (_enableDigitalFilter.my)
+		{
+			my = filterMy.filter(my);
+		}
+		if (_enableDigitalFilter.mz)
 		{
 			mz = filterMz.filter(mz);
-			//mz = -32;
 		}
+		pushData(EmotiBit::DataType::MAGNETOMETER_X, mx, &timestamp);
+		pushData(EmotiBit::DataType::MAGNETOMETER_Y, my, &timestamp);
 		pushData(EmotiBit::DataType::MAGNETOMETER_Z, mz, &timestamp);
 		if (bmm150XYClipped) {
 			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_X, &timestamp);
@@ -3247,12 +3263,18 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		else if (c == '|')
 		{
 			Serial.println("enabling filter(s)");
-			_enableFilter.mz = true;
+			_enableDigitalFilter.mx = true;
+			_enableDigitalFilter.my = true;
+			_enableDigitalFilter.mz = true;
+			_enableDigitalFilter.eda = true;
 		}
 		else if (c == '-')
 		{
 			Serial.println("disabling filter(s)");
-			_enableFilter.mz = false;
+			_enableDigitalFilter.mx = false;
+			_enableDigitalFilter.my = false;
+			_enableDigitalFilter.mz = false;
+			_enableDigitalFilter.eda = false;
 		}
 	}
 }
