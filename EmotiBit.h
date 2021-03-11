@@ -22,7 +22,7 @@
 #include "AdcCorrection.h"
 #include "EdaCorrection.h"
 #include "EmotiBitVersionController.h"
-#include "DigitalFilters.h"
+#include "DigitalFilter.h"
 //#include "EmotiBitUtilities.h"
 //#include <Adafruit_SleepyDog.h>
 
@@ -38,7 +38,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.59";
+	String firmware_version = "1.2.60";
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
