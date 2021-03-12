@@ -259,6 +259,10 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				delete edaCorrection;
 				edaCorrection = nullptr;
 			}
+			else
+			{
+				acquireData.tempHumidity = false;
+			}
 		}
 		else
 		{
@@ -1137,6 +1141,7 @@ uint8_t EmotiBit::update()
 			delete edaCorrection;
 			edaCorrection = nullptr;
 			Serial.println("Deleted eda correction instance");
+			acquireData.tempHumidity = true;
 		}
 	}
 	// Handle data buffer reading and sending
