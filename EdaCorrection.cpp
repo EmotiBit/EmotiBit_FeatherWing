@@ -113,7 +113,6 @@ bool EdaCorrection::getEdaCalibrationValues(Si7013* si7013, float &vref1, float 
 				Serial.println("OTP has not been updated. Not performing correction calculation.");
 				Serial.print("Perform EDA correction first.");
 				Serial.println(" Using EDA without correction");
-				//otpMemoryMap.echoWriteCount();
 				progress = EdaCorrection::Progress::FINISH;// _mode = NORMAL
 				return false;
 			}
@@ -325,6 +324,13 @@ EdaCorrection::Status EdaCorrection::update(Si7013* si7013, float &vref1, float 
 					Serial.println("Stopping code Execution");
 					while (1);
 				}
+				else if (triedRegOverwrite)
+				{
+					_mode = Mode::NORMAL;
+					Serial.println("tried to over write Addr: 0x"); Serial.println(overWriteAddr,HEX);
+					Serial.println("check OTP state using test code. Stopping execution");
+					while (1);
+				}
 			}
 		}
 	}
@@ -484,7 +490,6 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 			// writing the metadata- dataFormatVersion
 			if (otpMemoryMap.dataVersionWritten == false)
 			{
-				otpMemoryMap.writeCount.dataVersion++;
 				if ((uint8_t)writeToOtp(si7013, otpMemoryMap.dataVersionAddr, (uint8_t)otpDataFormat) == (uint8_t)EdaCorrection::Status::SUCCESS)
 				{
 					otpMemoryMap.dataVersionWritten = true;
@@ -492,16 +497,14 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 				else
 				{
 					triedRegOverwrite = true;
+					overWriteAddr = otpMemoryMap.dataVersionAddr;
+					progress = Progress::FINISH;
+					return EdaCorrection::Status::FAILURE;
 				}
-			}
-			else
-			{
-				otpMemoryMap.writeCount.dataVersion++;
 			}
 			// writing metadata-EmotiBit Version
 			if (otpMemoryMap.emotiBitVersionWritten == false)
 			{
-				otpMemoryMap.writeCount.emotiBitVersion++;
 				if ((uint8_t)writeToOtp(si7013, otpMemoryMap.emotiBitVersionAddr, _emotiBitVersion) == (uint8_t)EdaCorrection::Status::SUCCESS)
 				{
 					otpMemoryMap.emotiBitVersionWritten = true;
@@ -509,11 +512,10 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 				else
 				{
 					triedRegOverwrite = true;
+					overWriteAddr = otpMemoryMap.emotiBitVersionAddr;
+					progress = Progress::FINISH;
+					return EdaCorrection::Status::FAILURE;
 				}
-			}
-			else
-			{
-				otpMemoryMap.writeCount.emotiBitVersion++;
 			}
 
 			// writing the vref 2 to OTP
@@ -522,7 +524,6 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 			{
 				if (otpMemoryMap.edrDataWritten[j] == false)
 				{
-					otpMemoryMap.writeCount.edrData[j]++;
 					if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edrAddresses + j, otpData.inByte[j]) == (uint8_t)EdaCorrection::Status::SUCCESS)
 					{
 						otpMemoryMap.edrDataWritten[j] = true;
@@ -530,11 +531,10 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 					else
 					{
 						triedRegOverwrite = true;
+						overWriteAddr = otpMemoryMap.edrAddresses + j;
+						progress = Progress::FINISH;
+						return EdaCorrection::Status::FAILURE;
 					}
-				}
-				else
-				{
-					otpMemoryMap.writeCount.edrData[j]++;
 				}
 			}
 			// writing the main EDL values
@@ -545,7 +545,6 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 				{
 					if (otpMemoryMap.edlDataWritten[iterEdl][byte] == false)
 					{
-						otpMemoryMap.writeCount.edlData[iterEdl][byte]++;
 						if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edlAddresses[iterEdl] + byte, otpData.inByte[byte]) == (uint8_t)EdaCorrection::Status::SUCCESS)
 						{
 							otpMemoryMap.edlDataWritten[iterEdl][byte] = true;
@@ -553,11 +552,10 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 						else
 						{
 							triedRegOverwrite = true;
+							overWriteAddr = otpMemoryMap.edlAddresses[iterEdl] + byte;
+							progress = Progress::FINISH;
+							return EdaCorrection::Status::FAILURE;
 						}
-					}
-					else
-					{
-						otpMemoryMap.writeCount.edlData[iterEdl][byte]++;
 					}
 				}
 			}
@@ -578,6 +576,9 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 					else
 					{
 						triedRegOverwrite = true;
+						overWriteAddr = otpMemoryMap.edlTestAddress + byte;
+						progress = Progress::FINISH;
+						return EdaCorrection::Status::SUCCESS;
 					}
 				}
 				else
@@ -691,7 +692,7 @@ EdaCorrection::Status EdaCorrection::calcEdaCorrection()
 #endif
 	}
 }
-
+/*
 void EdaCorrection::OtpMemoryMap_V0::echoWriteCount()
 {
 	if (writeCount.dataVersion)// only echo if an attempt has been made to write to the OTP
@@ -715,3 +716,4 @@ void EdaCorrection::OtpMemoryMap_V0::echoWriteCount()
 		}
 	}
 }
+*/

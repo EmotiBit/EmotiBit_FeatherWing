@@ -80,12 +80,12 @@ public:
 		bool edrDataWritten[4] = {false};
 		bool edlDataWritten[NUM_EDL_CORRECTION_VALUES][4] = { {false} };
 		bool testDataWritten[4] = {false};
-		struct WriteCount {
+		/*struct WriteCount {
 			uint8_t emotiBitVersion = 0;
 			uint8_t dataVersion = 0;
 			uint8_t edrData[4] = {0} ;
 			uint8_t edlData[NUM_EDL_CORRECTION_VALUES][4] = { {0} };
-		}writeCount;
+		}writeCount;*/
 
 	public:
 		void echoWriteCount();
@@ -106,6 +106,7 @@ public:// flags
 	bool isOtpValid = true;
 	bool dummyWrite = false; // flag to check if in dummy mode or real OTP mode
 	bool triedRegOverwrite = false; // flag to monitor if we are writing to previously written OTP location
+	uint8_t overWriteAddr = 0;
 
 public: 
 #ifndef ACCESS_MAIN_ADDRESS
