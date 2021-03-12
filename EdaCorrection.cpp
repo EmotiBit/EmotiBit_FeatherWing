@@ -639,7 +639,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 #else
 			//Serial.println("Beginning OTP write");
 			otpData.inFloat = testData;
-			for (uint8_t byte = 2; byte < BYTES_PER_FLOAT; byte++)
+			for (uint8_t byte = 0; byte < BYTES_PER_FLOAT; byte++)
 			{
 				if (otpMemoryMap.testDataWritten[byte] == false)
 				{
