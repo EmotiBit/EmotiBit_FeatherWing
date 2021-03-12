@@ -54,7 +54,7 @@ NORMAL
 #include "EmotiBit_Si7013.h"
 #include "EmotiBitVersionController.h"
 
-#define ACCESS_MAIN_ADDRESS
+//#define ACCESS_MAIN_ADDRESS
 
 class EdaCorrection
 {
@@ -94,6 +94,7 @@ public:
 	static const uint8_t NUM_EDL_READINGS = OtpMemoryMap_V0::NUM_EDL_CORRECTION_VALUES;
 	static const size_t MAX_OTP_SIZE = 54;
 	const uint8_t BYTES_PER_FLOAT = sizeof(float);
+	float testData = 3.141592; // data to be written to the test address space
 
 	struct CorrectionData {
 		float edlReadings[NUM_EDL_READINGS] = { 0 };
@@ -106,7 +107,9 @@ public:// flags
 	bool isOtpValid = true;
 	bool dummyWrite = false; // flag to check if in dummy mode or real OTP mode
 	bool triedRegOverwrite = false; // flag to monitor if we are writing to previously written OTP location
-	uint8_t overWriteAddr = 0;
+	bool otpWriteFailed = false;
+	uint8_t overWriteAddr = 0; // set is writing to a "confirmed empty location" fails
+	uint8_t lastReadOtpValue = 0;
 
 public: 
 #ifndef ACCESS_MAIN_ADDRESS
@@ -217,7 +220,7 @@ public:
 	bool checkSensorConnection(Si7013* si7013);
 
 
-	EdaCorrection::Status writeToOtp(Si7013* si7013, uint8_t addr, char val, uint8_t mask=0xFF);
+	EdaCorrection::Status writeToOtp(Si7013* si7013, uint8_t addr, char val, bool &overWriteDetected, uint8_t mask = 0xFF);
 	/*
 	usage:
 	called in the ISR. writes data to the OTP

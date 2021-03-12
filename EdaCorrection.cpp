@@ -117,6 +117,7 @@ bool EdaCorrection::getEdaCalibrationValues(Si7013* si7013, float &vref1, float 
 				return false;
 			}
 		}
+#ifdef ACCESS_MAIN_ADDRESS
 		else
 		{
 			Serial.println("-------------------------- EDA CALIBRATION DATA ------------------------------------");
@@ -152,11 +153,18 @@ bool EdaCorrection::getEdaCalibrationValues(Si7013* si7013, float &vref1, float 
 			progress = EdaCorrection::Progress::FINISH;// _mode = NORMAL
 			return true;
 		}
+#else
+		else
+		{
+			Serial.print("The value read from test Address space is: "); Serial.println(otpData.inFloat,6);
+		}
+#endif
 	}
 	else
 	{
 		Serial.println("In UPDATE mode. EDA will be calibrated.");
 	}
+
 }
 
 EdaCorrection::Mode EdaCorrection::getMode()
@@ -227,6 +235,7 @@ EdaCorrection::Status EdaCorrection::update(Si7013* si7013, float &vref1, float 
 		}
 		else if (progress == EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA)
 		{
+#ifdef ACCESS_MAIN_ADDRESS
 			if (Serial.available())
 			{
 				if (getFloatFromString() != EdaCorrection::Status::SUCCESS)
@@ -254,16 +263,20 @@ EdaCorrection::Status EdaCorrection::update(Si7013* si7013, float &vref1, float 
 #else
 						Serial.println("!!! Writing to main EmotiBit I2C sensor !!!");
 #endif
-#ifdef ACCESS_MAIN_ADDRESS
+
 						Serial.println("!!! Writing to Main Address space !!!");
-#else
-						Serial.println("!!! Writing to Test Address Space(0xA0 - 0xA7) !!!\n");
-#endif
+
 					}
 					echoEdaReadingsOnScreen();
 					progress = EdaCorrection::Progress::WAITING_USER_APPROVAL;
 				}
 			}
+#else
+			Serial.println("!!! Writing to Test Address space !!!");
+			Serial.print("Writing "); Serial.print(testData,6); Serial.println(" to the test address space");
+			echoEdaReadingsOnScreen();
+			progress = EdaCorrection::Progress::WAITING_USER_APPROVAL;
+#endif
 		}
 		else if (progress == EdaCorrection::Progress::WAITING_USER_APPROVAL)
 		{
@@ -327,7 +340,15 @@ EdaCorrection::Status EdaCorrection::update(Si7013* si7013, float &vref1, float 
 				else if (triedRegOverwrite)
 				{
 					_mode = Mode::NORMAL;
-					Serial.println("tried to over write Addr: 0x"); Serial.println(overWriteAddr,HEX);
+					Serial.print("\ntried to over write Addr: 0x"); Serial.println(overWriteAddr,HEX);
+					Serial.print("Value stored in the OTP: "); Serial.println(lastReadOtpValue);
+					Serial.println("check OTP state using test code. Stopping execution");
+					while (1);
+				}
+				else if (otpWriteFailed)
+				{
+					_mode = Mode::NORMAL;
+					Serial.print("\nwriting to Addr: 0x"); Serial.println(overWriteAddr, HEX); Serial.println(" Failed");
 					Serial.println("check OTP state using test code. Stopping execution");
 					while (1);
 				}
@@ -340,6 +361,7 @@ EdaCorrection::Status EdaCorrection::update(Si7013* si7013, float &vref1, float 
 
 void EdaCorrection::echoEdaReadingsOnScreen()
 {
+#ifdef ACCESS_MAIN_ADDRESS
 	Serial.println("The EDA values entered by the user are:");
 
 	Serial.println("EDL readings:");
@@ -362,23 +384,14 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 	{
 		otpData.inFloat = correctionData.edlReadings[iterEdl];
 		Serial.print("EdlVal:"); Serial.println(correctionData.edlReadings[iterEdl], FLOAT_PRECISION);
-#ifdef ACCESS_MAIN_ADDRESS
 		uint8_t baseAddr = otpMemoryMap.edlAddresses[iterEdl];
-#else
-		uint8_t baseAddr = otpMemoryMap.edlTestAddress;
-#endif
 		for (int byte = 0; byte < BYTES_PER_FLOAT; byte++)
 		{
 			Serial.print("0x"); Serial.print(baseAddr + byte, HEX); Serial.print(" : ");
 			Serial.println(otpData.inByte[byte], DEC);
 		}
-#ifndef ACCESS_MAIN_ADDRESS
-		// just write 1 float(4 Bytes) into the test address space(0xA0 - 0xA3)
-		break;
-#endif
 	}
 	// only write the EDR value if writing to the main address space.
-#ifdef ACCESS_MAIN_ADDRESS
 	//vref2
 	otpData.inFloat = correctionData.vRef2;
 	Serial.println();
@@ -395,11 +408,16 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 	Serial.println((uint8_t)otpDataFormat, DEC);
 	Serial.print("0x"); Serial.print(otpMemoryMap.emotiBitVersionAddr, HEX); Serial.print(" : ");
 	Serial.println(_emotiBitVersion, DEC);
+#else
+	otpData.inFloat = testData;
+	for (int byte = 0; byte < BYTES_PER_FLOAT; byte++)
+	{
+		Serial.print("0x"); Serial.print(otpMemoryMap.edlTestAddress + byte, HEX); Serial.print(" : ");
+		Serial.println(otpData.inByte[byte], DEC);
+	}
 #endif
-
 	Serial.println("\nProceed with these values?");
 	Serial.println("Enter Y for yes and N to enter data again");
-
 }
 
 
@@ -449,7 +467,8 @@ bool EdaCorrection::checkSensorConnection(Si7013* si7013)
 bool EdaCorrection::isOtpRegWritten(Si7013* si7013, uint8_t addr, bool isOtpOperation)
 {
 	while (si7013->getStatus() != Si7013::STATUS_IDLE);
-	if (si7013->readRegister8(addr, isOtpOperation) == 255)
+	lastReadOtpValue = si7013->readRegister8(addr, isOtpOperation);
+	if (lastReadOtpValue == 255)
 	{
 		return false;
 	}
@@ -459,19 +478,46 @@ bool EdaCorrection::isOtpRegWritten(Si7013* si7013, uint8_t addr, bool isOtpOper
 	}
 }
 
-EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, char val, uint8_t mask)
+EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, char val, bool &overWriteDetected, uint8_t mask)
 {
+	
 	if (isOtpRegWritten(si7013, addr)) // if the mem location is already written to
 	{
 		//Serial.print(addr, HEX); Serial.println(":N");
+		overWriteDetected = true;
 		return EdaCorrection::Status::FAILURE;
 	}
-	// for real write
-	while (si7013->getStatus() != Si7013::STATUS_IDLE);
-	si7013->writeToOtp(addr, val, mask);
+	else
+	{
+		overWriteDetected = false;
+	}
 	// For testing
-	//Serial.print(addr, HEX); Serial.print(":Y:"); Serial.println(val);
-	return EdaCorrection::Status::SUCCESS;
+	/*
+	if (addr == otpMemoryMap.edlAddresses[4])
+	{
+		Serial.println("Sim fail");
+		return EdaCorrection::Status::FAILURE;
+	}
+	else
+	{
+		
+		Serial.print(addr, HEX); Serial.print(" .. ");
+		return EdaCorrection::Status::SUCCESS;
+	}
+	*/
+	// for real write
+
+	while (si7013->getStatus() != Si7013::STATUS_IDLE);
+	bool writeResult = false;
+	writeResult = si7013->writeToOtp(addr, val, mask);
+	if (writeResult)
+	{
+		return EdaCorrection::Status::SUCCESS;
+	}
+	else
+	{
+		return EdaCorrection::Status::FAILURE;
+	}
 }
 
 
@@ -486,17 +532,25 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 		}
 		else
 		{
+			bool overWriteDetected = false;
 #ifdef ACCESS_MAIN_ADDRESS
 			// writing the metadata- dataFormatVersion
 			if (otpMemoryMap.dataVersionWritten == false)
 			{
-				if ((uint8_t)writeToOtp(si7013, otpMemoryMap.dataVersionAddr, (uint8_t)otpDataFormat) == (uint8_t)EdaCorrection::Status::SUCCESS)
+				if ((uint8_t)writeToOtp(si7013, otpMemoryMap.dataVersionAddr, (uint8_t)otpDataFormat, overWriteDetected) == (uint8_t)EdaCorrection::Status::SUCCESS)
 				{
 					otpMemoryMap.dataVersionWritten = true;
 				}
 				else
 				{
-					triedRegOverwrite = true;
+					if (overWriteDetected)
+					{
+						triedRegOverwrite = true;
+					}
+					else
+					{
+						otpWriteFailed = true;
+					}
 					overWriteAddr = otpMemoryMap.dataVersionAddr;
 					progress = Progress::FINISH;
 					return EdaCorrection::Status::FAILURE;
@@ -505,13 +559,20 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 			// writing metadata-EmotiBit Version
 			if (otpMemoryMap.emotiBitVersionWritten == false)
 			{
-				if ((uint8_t)writeToOtp(si7013, otpMemoryMap.emotiBitVersionAddr, _emotiBitVersion) == (uint8_t)EdaCorrection::Status::SUCCESS)
+				if ((uint8_t)writeToOtp(si7013, otpMemoryMap.emotiBitVersionAddr, _emotiBitVersion, overWriteDetected) == (uint8_t)EdaCorrection::Status::SUCCESS)
 				{
 					otpMemoryMap.emotiBitVersionWritten = true;
 				}
 				else
 				{
-					triedRegOverwrite = true;
+					if (overWriteDetected)
+					{
+						triedRegOverwrite = true;
+					}
+					else
+					{
+						otpWriteFailed = true;
+					}
 					overWriteAddr = otpMemoryMap.emotiBitVersionAddr;
 					progress = Progress::FINISH;
 					return EdaCorrection::Status::FAILURE;
@@ -524,13 +585,20 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 			{
 				if (otpMemoryMap.edrDataWritten[j] == false)
 				{
-					if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edrAddresses + j, otpData.inByte[j]) == (uint8_t)EdaCorrection::Status::SUCCESS)
+					if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edrAddresses + j, otpData.inByte[j], overWriteDetected) == (uint8_t)EdaCorrection::Status::SUCCESS)
 					{
 						otpMemoryMap.edrDataWritten[j] = true;
 					}
 					else
 					{
-						triedRegOverwrite = true;
+						if (overWriteDetected)
+						{
+							triedRegOverwrite = true;
+						}
+						else
+						{
+							otpWriteFailed = true;
+						}
 						overWriteAddr = otpMemoryMap.edrAddresses + j;
 						progress = Progress::FINISH;
 						return EdaCorrection::Status::FAILURE;
@@ -545,13 +613,20 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 				{
 					if (otpMemoryMap.edlDataWritten[iterEdl][byte] == false)
 					{
-						if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edlAddresses[iterEdl] + byte, otpData.inByte[byte]) == (uint8_t)EdaCorrection::Status::SUCCESS)
+						if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edlAddresses[iterEdl] + byte, otpData.inByte[byte], overWriteDetected) == (uint8_t)EdaCorrection::Status::SUCCESS)
 						{
 							otpMemoryMap.edlDataWritten[iterEdl][byte] = true;
 						}
 						else
 						{
-							triedRegOverwrite = true;
+							if (overWriteDetected)
+							{
+								triedRegOverwrite = true;
+							}
+							else
+							{
+								otpWriteFailed = true;
+							}
 							overWriteAddr = otpMemoryMap.edlAddresses[iterEdl] + byte;
 							progress = Progress::FINISH;
 							return EdaCorrection::Status::FAILURE;
@@ -562,28 +637,30 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 
 
 #else
-			// Write only the first reading edl[0] into the test address space. total 4 bytes written.
-
-			otpData.inFloat = correctionData.edlReadings[0];
-			for (uint8_t byte = 0; byte < BYTES_PER_FLOAT; byte++)
+			//Serial.println("Beginning OTP write");
+			otpData.inFloat = testData;
+			for (uint8_t byte = 2; byte < BYTES_PER_FLOAT; byte++)
 			{
 				if (otpMemoryMap.testDataWritten[byte] == false)
 				{
-					if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edlTestAddress + byte, otpData.inByte[byte]) == (uint8_t)EdaCorrection::Status::SUCCESS)
+					if ((uint8_t)writeToOtp(si7013, otpMemoryMap.edlTestAddress + byte, otpData.inByte[byte], overWriteDetected) == (uint8_t)EdaCorrection::Status::SUCCESS)
 					{
 						otpMemoryMap.testDataWritten[byte] = true;
 					}
 					else
 					{
-						triedRegOverwrite = true;
+						if (overWriteDetected)
+						{
+							triedRegOverwrite = true;
+						}
+						else
+						{
+							otpWriteFailed = true;
+						}
 						overWriteAddr = otpMemoryMap.edlTestAddress + byte;
 						progress = Progress::FINISH;
 						return EdaCorrection::Status::SUCCESS;
 					}
-				}
-				else
-				{
-					// write the case were u are trying to write to same location again
 				}
 			}
 #endif
@@ -623,24 +700,28 @@ EdaCorrection::Status EdaCorrection::readFromOtp(Si7013* si7013, bool isOtpOpera
 			otpData.inByte[j] = si7013->readRegister8(otpMemoryMap.edrAddresses + j, isOtpOperation);
 		}
 		correctionData.vRef2 = otpData.inFloat;
-#endif
 		for (uint8_t i = 0; i < NUM_EDL_READINGS; i++)
 		{
 			for (uint8_t j = 0; j < BYTES_PER_FLOAT; j++)
 			{
-		// reading the main address block or the test address block
-#ifdef ACCESS_MAIN_ADDRESS
 				otpData.inByte[j] = si7013->readRegister8(otpMemoryMap.edlAddresses[i] + j, isOtpOperation);
-#else
-				otpData.inByte[j] = si7013->readRegister8(otpMemoryMap.edlTestAddress + j, isOtpOperation);
-#endif
 			}
 			correctionData.edlReadings[i] = otpData.inFloat;
 		}
+#else
+		for (uint8_t i = 0; i < NUM_EDL_READINGS; i++)
+		{
+			for (uint8_t j = 0; j < BYTES_PER_FLOAT; j++)
+			{
+				otpData.inByte[j] = si7013->readRegister8(otpMemoryMap.edlTestAddress + j, isOtpOperation);
+			}
+			testData = otpData.inFloat;
+		}
+#endif
 	}
 	else
 	{
-		// do nothing here. displaycorrections() will echo the already saved variables.
+		// do nothing here.
 	}
 	//readOtpValues = true;
 	return EdaCorrection::Status::SUCCESS;
