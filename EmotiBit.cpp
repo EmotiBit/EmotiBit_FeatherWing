@@ -98,17 +98,17 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		delete(_EmotiBit_i2c);
 	}
-	_EmotiBit_i2c = new TwoWire(&sercom1, EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
+	_EmotiBit_i2c = new TwoWire(0);
 	// Flush the I2C
 	Serial.print("Setting up I2C....");
-	_EmotiBit_i2c->begin();
+	_EmotiBit_i2c->begin(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
 	uint32_t i2cRate = 100000;
 	Serial.print("setting clock to");
 	Serial.print(i2cRate);
 	_EmotiBit_i2c->setClock(i2cRate);
 	Serial.print("...setting PIO_SERCOM");
-	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
-	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
+	//pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
+	//pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
 	_version = emotiBitVersionController.detectEmotiBitVersion(_EmotiBit_i2c);
 	// If version is unknown
 	if (_version == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
@@ -225,7 +225,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	while (!Serial.available() && millis() - now < 2000)
 	{
 	}
+#ifdef ADAFRUIT-FEATHER_M0
 	AdcCorrection::AdcCorrectionValues adcCorrectionValues;
+#endif
 	while (Serial.available())
 	{
 		char input;
@@ -233,6 +235,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 		if (input == 'A')
 		{
+#ifdef ADAFRUIT_FEATHER_M0
 			AdcCorrection adcCorrection;
 			if (!adcCorrection.begin(adcCorrectionValues._gainCorrection, adcCorrectionValues._offsetCorrection, adcCorrectionValues.valid))
 			{
@@ -244,6 +247,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			{
 				adcCorrection.echoResults(adcCorrectionValues._gainCorrection, adcCorrectionValues._offsetCorrection);
 			}
+#endif
 		}
 		else if (input == 'E')
 		{
@@ -379,7 +383,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		_EmotiBit_i2c->flush();
 		_EmotiBit_i2c->endTransmission();
 		_EmotiBit_i2c->clearWriteError();
+#ifdef ADAFRUIT_FEATHER_M0
 		_EmotiBit_i2c->end();
+#endif
 		static uint32_t hibernateTimer = millis();
 		if (millis() - hibernateTimer > 2000)
 		{
@@ -585,6 +591,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	pinMode(_edrPin, INPUT);
 	//samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
 	analogReadResolution(_adcBits);
+#ifdef ADAFRUIT_FEATHER_M0
 	Serial.println("Configuring ADC Corrections...");
 	// If the correction data does not exist on the SAMD flash
 	if (!adcCorrectionValues.valid)
@@ -606,7 +613,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); 
 		Serial.print("\toffset correction:"); Serial.println(adcCorrectionValues._offsetCorrection);
 	}
-	
+#endif
 	Serial.println("Configuring EDA Calibrations...");
 	
 	// If Eda Correction mode was not initialized
@@ -2645,8 +2652,10 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	_emotiBitWiFi.end();
 	Serial.println("Shutting down serial interfaces...");
 	SPI.end(); 
+#ifdef ADAFRUIT_FEATHER_M0
 	Wire.end();
 	_EmotiBit_i2c->end();
+#endif
 
 	if (_EmotiBit_i2c != nullptr)
 	{
@@ -2655,6 +2664,7 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	
 	// If version is known, avoid setting Hibernate pin as INPUT till emotibit is powered OFF
 	// Setup all pins (digital and analog) in INPUT mode (default is nothing)  
+#ifdef ADAFRUIT_FEATHER_M0
 	for (uint32_t ul = 0; ul < PINS_COUNT; ul++)
 	{
 		if (ul != _hibernatePin) {
@@ -2665,6 +2675,7 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 			Serial.println(ul);
 		}
 	}
+#endif
 	// Turn off EmotiBit power
 	Serial.println("Disabling EmotiBit power");
 	pinMode(_hibernatePin, OUTPUT);
@@ -3048,8 +3059,10 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("Press D to toggle ON recording ISR loop time");
 			Serial.println("Press b to toggle OFF Battry update");
 			Serial.println("Press B to toggle ON Battery update");
+#ifdef ADAFRUIT_FEATHER_M0
 			Serial.println("Press a to toggle OFF ADC correction");
 			Serial.println("Press A to toggle ON ADC correction");
+#endif
 			Serial.println("Press f to print the FW version");
 			Serial.println("press | to enable Digital filters");
 			Serial.println("Press - to disable Digital filters");
@@ -3249,6 +3262,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println(payload);
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}*/
+#ifdef ADAFRUIT_FEATHER_M0
 		else if (c == 'a')
 		{
 			Serial.println("ADC correction disabled");
@@ -3259,6 +3273,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("ADC Correction Enabled");
 			ADC->CTRLB.bit.CORREN = 1;
 		}
+#endif
 		else if (c == 'f')
 		{
 			Serial.print("Firmware version: ");
@@ -3282,7 +3297,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		}
 	}
 }
-
+#ifdef ADAFRUIT_FEATHER_M0
 void EmotiBit::setTimerFrequency(int frequencyHz) {
 	int compareValue = (CPU_HZ / (TIMER_PRESCALER_DIV * frequencyHz)) - 1;
 	TcCount16* TC = (TcCount16*)TC3;
@@ -3371,3 +3386,4 @@ void ReadSensors()
 
 	}
 }
+#endif

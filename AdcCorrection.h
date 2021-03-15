@@ -1,3 +1,4 @@
+#ifdef ADAFRUIT_FEATHER_M0
 /*
 change the name of the highPrecisionRig
 Add a function to write the rig metadata
@@ -288,4 +289,4 @@ public:
 	*/
 	int serialToInt();
 };
-
+#endif

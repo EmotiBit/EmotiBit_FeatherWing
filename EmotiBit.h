@@ -13,7 +13,7 @@
 #include "DoubleBufferFloat.h"
 #include <ArduinoJson.h>
 //#include <SdFat.h>
-#include "wiring_private.h"
+//#include "wiring_private.h"
 #include "EmotiBitWiFi.h"
 #include <SPI.h>
 #include <SdFat.h>

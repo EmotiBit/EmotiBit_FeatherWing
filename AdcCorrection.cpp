@@ -1,3 +1,4 @@
+#ifdef ADAFRUIT_FEATHER_M0
 #include "AdcCorrection.h"
 
 
@@ -826,3 +827,4 @@ void AdcCorrection::echoResults(uint16_t gainCorr, uint16_t offsetCorr)
 	WiFi.end();
 
 }
+#endif

@@ -80,6 +80,8 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 		Serial.println("Unknown Version");
 		return false;
 	}
+#elif defined(ARDUINO_FEATHER_ESP32)
+	// write the code here
 #endif
 	return true;
 }
