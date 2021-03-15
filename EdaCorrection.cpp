@@ -319,6 +319,7 @@ EdaCorrection::Status EdaCorrection::update(Si7013* si7013, float &vref1, float 
 		{
 			if (dummyWrite)
 			{
+#ifdef ACCESS_MAIN_ADDRESS
 				// update the correction values to the EmotiBit class
 				calcEdaCorrection();
 				vref1 = correctionData.vRef1;
@@ -326,6 +327,9 @@ EdaCorrection::Status EdaCorrection::update(Si7013* si7013, float &vref1, float 
 				Rfeedback = correctionData.Rfb;
 				Serial.println("You can now continue using the emotiBit in a calibrated state in this session");
 				_mode = Mode::NORMAL;
+#else
+				Serial.println("Done with simulation. OTP is not updated in dummy mode with TestAddress space");
+#endif
 			}
 			else
 			{
@@ -480,7 +484,8 @@ bool EdaCorrection::isOtpRegWritten(Si7013* si7013, uint8_t addr, bool isOtpOper
 
 EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, char val, bool &overWriteDetected, uint8_t mask)
 {
-	
+	// Moved this to the main writeToOtp function. All addresses are now read together at the begining of the Write cycle
+	/*
 	if (isOtpRegWritten(si7013, addr)) // if the mem location is already written to
 	{
 		//Serial.print(addr, HEX); Serial.println(":N");
@@ -491,22 +496,13 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013, uint8_t addr, ch
 	{
 		overWriteDetected = false;
 	}
+	*/
 	// For testing
 	/*
-	if (addr == otpMemoryMap.edlAddresses[4])
-	{
-		Serial.println("Sim fail");
-		return EdaCorrection::Status::FAILURE;
-	}
-	else
-	{
-		
-		Serial.print(addr, HEX); Serial.print(" .. ");
-		return EdaCorrection::Status::SUCCESS;
-	}
+	Serial.print(addr, HEX); Serial.print(" .. ");
+	return EdaCorrection::Status::SUCCESS;
 	*/
 	// for real write
-
 	while (si7013->getStatus() != Si7013::STATUS_IDLE);
 	bool writeResult = false;
 	writeResult = si7013->writeToOtp(addr, val, mask);
@@ -532,6 +528,22 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 		}
 		else
 		{
+			uint8_t otpStartAddr = 0x82;
+			uint8_t otpEndAddr = 0xB7;
+			//uint8_t otpStartAddr = 0xA8;
+			//uint8_t otpEndAddr = 0xAB;
+			uint8_t addrCounter = otpStartAddr;
+			while (addrCounter <= otpEndAddr)
+			{
+				if (isOtpRegWritten(si7013, addrCounter))
+				{
+					triedRegOverwrite = true;
+					overWriteAddr = addrCounter;
+					progress = Progress::FINISH;
+					return EdaCorrection::Status::FAILURE;
+				}
+				addrCounter++;
+			}
 			bool overWriteDetected = false;
 #ifdef ACCESS_MAIN_ADDRESS
 			// writing the metadata- dataFormatVersion
