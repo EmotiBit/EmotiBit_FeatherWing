@@ -1,5 +1,7 @@
 #include "EmotiBitWiFi.h"
+#ifdef ADAFRUIT_FEATHER_M0
 #include <driver/source/nmasic.h>
+#endif
 
 uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 {
@@ -10,9 +12,9 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 		Serial.println("No WiFi shield found. Try WiFi.setPins().");
 		return WL_NO_SHIELD;
 	}
-
+#ifdef ADAFRUIT_FEATHER_M0
 	checkWiFi101FirmwareVersion();
-
+#endif
 	while (status != WL_CONNECTED)
 	{
 		if (numCredentials == 0)
@@ -66,12 +68,18 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		Serial.println(ssid);
 		// ToDo: Add WEP support
 		_wifiOff = false;
+#ifdef ADAFRUIT_FEATHER_M0
 		status = WiFi.begin(ssid, pass);
+#elif defined ARDUINO_FEATHER_ESP32
+		status = WiFi.begin(ssid.c_str(), pass.c_str());
+#endif
 		_needsAdvertisingBegin = true;
 		delay(attemptDelay);
 		attempt++;
 	}
+#ifdef ADAFRUIT_FEATHER_M0
 	WiFi.setTimeout(25);
+#endif
 	wifiBeginStart = millis();
 	Serial.println("Connected to WiFi");
 	printWiFiStatus();
@@ -99,8 +107,13 @@ void EmotiBitWiFi::end()
 	{
 		Serial.println("Ending WiFi...");
 		_wifiOff = true;
+#ifdef ADAFRUIT_FEATHER_M0
 		WiFi.end();
+#elif defined ARDUINO_FEATHER_ESP32
+		// do the equivalent of wifi.end
+#endif
 	}
+
 }
 
 bool EmotiBitWiFi::isOff()
@@ -658,7 +671,7 @@ int8_t EmotiBitWiFi::status()
 	}
 	return (int8_t) WiFi.status();
 }
-
+#ifdef ADAFRUIT_FEATHER_M0
 void EmotiBitWiFi::checkWiFi101FirmwareVersion()
 {
 	// Print a welcome message
@@ -691,3 +704,4 @@ void EmotiBitWiFi::checkWiFi101FirmwareVersion()
 	Serial.print("Latest firmware version available : ");
 	Serial.println(latestFv);
 }
+#endif

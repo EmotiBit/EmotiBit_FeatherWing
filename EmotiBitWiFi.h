@@ -34,7 +34,7 @@
 #ifdef ADAFRUIT_FEATHER_M0
 #include <WiFi101.h>
 #elif defined ARDUINO_FEATHER_ESP32
-#include <WiFiNINA.h>
+#include <WiFi.h>
 #endif
 #include <WiFiUdp.h>
 #include "EmotiBitComms.h"

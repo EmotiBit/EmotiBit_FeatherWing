@@ -18,7 +18,9 @@
 #include <SPI.h>
 #include <SdFat.h>
 #include <ArduinoJson.h>
+#ifdef ADAFRUIT_FEATHER_M0
 #include <ArduinoLowPower.h>
+#endif
 #include "AdcCorrection.h"
 #include "EdaCorrection.h"
 #include "EmotiBitVersionController.h"

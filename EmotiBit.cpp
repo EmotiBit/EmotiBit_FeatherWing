@@ -93,6 +93,19 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
 	//EmotiBitUtilities::printFreeRAM("Begining of setup", 1);
 	EmotiBitVersionController emotiBitVersionController;
+#ifdef ADAFRUIT_FEATHER_M0
+	_EmotiBit_i2c = new TwoWire(&sercom1, EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
+	// Flush the I2C
+	Serial.print("Setting up I2C....");
+	_EmotiBit_i2c->begin();
+	uint32_t i2cRate = 100000;
+	Serial.print("setting clock to");
+	Serial.print(i2cRate);
+	_EmotiBit_i2c->setClock(i2cRate);
+	Serial.print("...setting PIO_SERCOM");
+	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
+	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
+#elif defined ARDUINO_FEATHER_ESP32
 	bool status = true;
 	if (_EmotiBit_i2c != nullptr)
 	{
@@ -107,6 +120,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.print(i2cRate);
 	_EmotiBit_i2c->setClock(i2cRate);
 	Serial.print("...setting PIO_SERCOM");
+#endif
+
 	//pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
 	//pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
 	_version = emotiBitVersionController.detectEmotiBitVersion(_EmotiBit_i2c);
@@ -683,7 +698,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 #if defined(ADAFRUIT_FEATHER_M0)
 	WiFi.setPins(8, 7, 4, 2);
 #endif
+#ifdef ADAFRUIT_FEATHER_M0
 	WiFi.lowPowerMode();
+#endif
 	_emotiBitWiFi.begin();
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 
@@ -789,7 +806,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.println(EmotiBitVersionController::getHardwareVersion(_version));
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
+#ifdef ADAFRUIT_FEATHER_M0
 	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
+#endif
 	Serial.println("Electronic Serial Number:");
 	Serial.print("Si7013_SNA),");
 	Serial.print(tempHumiditySensor.sernum_a);
@@ -815,9 +834,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	if (!_sendTestData)
 	{
+#ifdef ADAFRUIT_FEATHER_M0
 		attachToInterruptTC3(&ReadSensors, this);
 		Serial.println("Starting interrupts");
 		startTimer(BASE_SAMPLING_FREQ);
+#endif
 	}
 
 	// Debugging scope pins
@@ -956,7 +977,9 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 		{
 			if (header.typeTag.equals(EmotiBitPacket::TypeTag::RECORD_BEGIN)) 
 			{
+#ifdef ADAFRUIT_FEATHER_M0
 				stopTimer();	// stop the data sampling timer
+#endif
 				String datetimeString = packet.substring(dataStartChar, packet.length());
 				// Write the configuration info to json file
 				String infoFilename = datetimeString + "_info.json";
@@ -984,7 +1007,9 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 				}
 				if (!_sendTestData)
 				{
+#ifdef ADAFRUIT_FEATHER_M0
 					startTimer(BASE_SAMPLING_FREQ); // start up the data sampling timer
+#endif
 				}
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::RECORD_END)) { // Recording end
@@ -1177,7 +1202,6 @@ uint8_t EmotiBit::update()
 				{
 					// Avoid overrunning our reserve memory
 					if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
-
 					if (getPowerMode() == PowerMode::NORMAL_POWER)
 					{
 						_emotiBitWiFi.sendData(_outDataPackets);
@@ -1206,12 +1230,12 @@ uint8_t EmotiBit::update()
 	// Hibernate after writing data
 	if (getPowerMode() == PowerMode::HIBERNATE) {
 		Serial.println("Hibernate");
-
 		// Clear the remaining data buffer
 		if (getPowerMode() == PowerMode::NORMAL_POWER)
 		{
 			_emotiBitWiFi.sendData(_outDataPackets);
 		}
+
 		writeSdCardMessage(_outDataPackets);
 		_outDataPackets = "";
 
@@ -2607,7 +2631,7 @@ void EmotiBit::readSensors()
 }
 
 
-
+#ifdef ADAFRUIT_FEATHER_M0
 #ifdef __arm__
 // should use uinstd.h to define sbrk but Due causes a conflict
 extern "C" char* sbrk(int incr);
@@ -2625,13 +2649,17 @@ int EmotiBit::freeMemory() {
 	return __brkval ? &top - __brkval : &top - __malloc_heap_start;
 #endif  // __arm__
 }
+#endif
 
 
 // NEW Hibernate
 void EmotiBit::hibernate(bool i2cSetupComplete) {
 	Serial.println("hibernate()");
 	Serial.println("Stopping timer...");
+#ifdef ADAFRUIT_FEATHER_M0
 	stopTimer();
+#endif
+
 	// Delay to ensure the timer has finished
 	delay((1000 * 5) / BASE_SAMPLING_FREQ);
 	// if i2c sensor setup has been completed
@@ -2682,8 +2710,10 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	digitalWrite(_hibernatePin, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL]);
 	delay(100);
 	pinMode(_hibernatePin, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE]);	//deepSleep();
+#ifdef ADAFRUIT_FEATHER_M0
 	Serial.println("Entering deep sleep...");
 	LowPower.deepSleep();
+#endif
 }
 
 // Loads the configuration from a file
@@ -2780,11 +2810,11 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 	}
 }
 
+
 EmotiBit::PowerMode EmotiBit::getPowerMode()
 {
 	return _powerMode;
 }
-
 void EmotiBit::setPowerMode(PowerMode mode)
 {
 	_powerMode = mode;
@@ -2797,7 +2827,10 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		{
 			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
+#ifdef ADAFRUIT_FEATHER_M0
 		WiFi.lowPowerMode();
+#endif
+
 		modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
 	}
 	else if (getPowerMode() == PowerMode::LOW_POWER)
@@ -2807,7 +2840,9 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		{
 			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
+#ifdef ADAFRUIT_FEATHER_M0
 		WiFi.lowPowerMode();
+#endif
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
 	}
 	else if (getPowerMode() == PowerMode::MAX_LOW_POWER)
@@ -2817,7 +2852,9 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		{
 			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
+#ifdef ADAFRUIT_FEATHER_M0
 		WiFi.maxLowPowerMode();
+#endif
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
 	}
 	else if (getPowerMode() == PowerMode::WIRELESS_OFF)
@@ -2834,6 +2871,7 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		Serial.println("PowerMode Not Recognized");
 	}
 }
+
 
 void EmotiBit::writeSerialData(EmotiBit::DataType t)
 {
@@ -2993,6 +3031,7 @@ bool EmotiBit::createModePacket(String &modePacket, uint16_t &packetNumber)
 	payload += EmotiBitPacket::PayloadLabel::POWER_STATUS;
 	dataCount++;
 	payload += ',';
+#ifdef ADAFRUIT_FEATHER_M0
 	if (getPowerMode() == PowerMode::NORMAL_POWER)
 	{
 		payload += EmotiBitPacket::TypeTag::MODE_NORMAL_POWER;
@@ -3014,7 +3053,7 @@ bool EmotiBit::createModePacket(String &modePacket, uint16_t &packetNumber)
 		payload += EmotiBitPacket::TypeTag::MODE_HIBERNATE;
 	}
 	dataCount++;
-
+#endif
 	modePacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_MODE, packetNumber++, payload, dataCount);
 
 	return true;
@@ -3094,6 +3133,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println(payload);
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
+#ifdef ADAFRUIT_FEATHER_M0
 		else if (c == 'R')
 		{
 			payload = "Free RAM: ";
@@ -3119,6 +3159,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println(payload);
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
+#endif
 		else if (c == 'l')
 		{
 			chipBegun.NCP5623 = false;

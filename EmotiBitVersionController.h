@@ -83,10 +83,10 @@ public:
 	static const int EMOTIBIT_I2C_DAT_PIN = 11;
 	static const int SD_CARD_CHIP_SEL_PIN = 19;
 #elif defined (ARDUINO_FEATHER_ESP32) 
-	static const int HIBERNATE_PIN = 6;
+	static const int HIBERNATE_PIN = 32;
 	static const int EMOTIBIT_I2C_CLK_PIN = 13;
 	static const int EMOTIBIT_I2C_DAT_PIN = 27;
-	static const int SD_CARD_CHIP_SEL_PIN = 19;
+	static const int SD_CARD_CHIP_SEL_PIN = A5;
 #endif
 private:
 	EmotiBitVersion _versionEst;
