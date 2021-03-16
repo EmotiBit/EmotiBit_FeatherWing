@@ -91,6 +91,8 @@ public:
 		void echoWriteCount();
 	}otpMemoryMap;
 	bool isSensorConnected = true;
+	static const uint8_t OTP_ADDRESS_BEGIN = 0x82;
+	static const uint8_t OTP_ADDRESS_END = 0xB7;
 	static const uint8_t NUM_EDL_READINGS = OtpMemoryMap_V0::NUM_EDL_CORRECTION_VALUES;
 	static const size_t MAX_OTP_SIZE = 54;
 	const uint8_t BYTES_PER_FLOAT = sizeof(float);

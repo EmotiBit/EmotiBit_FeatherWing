@@ -528,12 +528,8 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 		}
 		else
 		{
-			uint8_t otpStartAddr = 0x82;
-			uint8_t otpEndAddr = 0xB7;
-			//uint8_t otpStartAddr = 0xA8;
-			//uint8_t otpEndAddr = 0xAB;
-			uint8_t addrCounter = otpStartAddr;
-			while (addrCounter <= otpEndAddr)
+			uint8_t addrCounter = OTP_ADDRESS_BEGIN;
+			while (addrCounter <= OTP_ADDRESS_END)
 			{
 				if (isOtpRegWritten(si7013, addrCounter))
 				{
