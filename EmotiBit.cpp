@@ -150,9 +150,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		fwVersionModifier = "-TC";
 		_debugMode = true;
 	}
-	else if (testingMode == TestingMode::PROGRAMMER)
+	else if (testingMode == TestingMode::ISR_CORRECTION_UPDATE)
 	{
-		fwVersionModifier = "-PM";
+		fwVersionModifier = "-ISR_CORR";
 		_debugMode = true;
 	}
 
@@ -264,12 +264,13 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				delete edaCorrection;
 				edaCorrection = nullptr;
 			}
-			/*
 			else
 			{
-				acquireData.tempHumidity = false;
+				if (testingMode == TestingMode::ISR_CORRECTION_UPDATE)
+				{
+					testingMode = TestingMode::NONE;
+				}
 			}
-			*/
 		}
 		else if (input == 'O')
 		{
@@ -1286,7 +1287,7 @@ int8_t EmotiBit::updateEDAData()
 		edlTemp = average(edlBuffer);
 		edrTemp = average(edrBuffer);
 
-		if (testingMode == TestingMode::PROGRAMMER)
+		if (testingMode == TestingMode::ISR_CORRECTION_UPDATE)
 		{
 			// send raw EDL values
 			pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);

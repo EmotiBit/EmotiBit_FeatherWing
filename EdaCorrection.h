@@ -54,7 +54,7 @@ NORMAL
 #include "EmotiBit_Si7013.h"
 #include "EmotiBitVersionController.h"
 
-//#define ACCESS_MAIN_ADDRESS
+#define ACCESS_MAIN_ADDRESS
 
 class EdaCorrection
 {

@@ -35,12 +35,12 @@ public:
 		NONE,
 		CHRONIC,
 		ACUTE,
-		PROGRAMMER,
+		ISR_CORRECTION_UPDATE,
 		length
 	};
 
-	String firmware_version = "1.2.65";
-	TestingMode testingMode = TestingMode::PROGRAMMER;
+	String firmware_version = "1.2.67";
+	TestingMode testingMode = TestingMode::ISR_CORRECTION_UPDATE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
 	bool _debugMode = false;
