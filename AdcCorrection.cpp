@@ -136,7 +136,7 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 	else
 	{
 		Serial.println("Enter the Data Format Version being used");
-		while (dataFormatVerInput != -1)
+		while (dataFormatVerInput == -1)
 		{
 			dataFormatVerInput = serialToInt();
 		}
@@ -839,16 +839,16 @@ void AdcCorrection::echoResults(uint16_t gainCorr, uint16_t offsetCorr)
 	}
 #endif
 #ifdef ADC_CORRECTION_VERBOSE
-	Serial.println("\nEnabling the ADC to use the correction values");
+	Serial.println("\nComparing results before and after correction");
 #endif
 	uint16_t adcBeforeCorrection[3], adcAfterCorrection[3];
 	adcBeforeCorrection[0] = getAverageAnalogInput(A0);
 	adcBeforeCorrection[1] = getAverageAnalogInput(A1);
 	adcBeforeCorrection[2] = getAverageAnalogInput(A2);
-	analogReadCorrection(offsetCorr, gainCorr);
 #ifdef ADC_CORRECTION_VERBOSE
-	Serial.println("\nComparing results before and after correction");
+	Serial.println("\nEnabling the ADC to use the correction values");
 #endif
+	analogReadCorrection(offsetCorr, gainCorr);
 	adcAfterCorrection[0] = getAverageAnalogInput(A0);
 	adcAfterCorrection[1] = getAverageAnalogInput(A1);
 	adcAfterCorrection[2] = getAverageAnalogInput(A2);
