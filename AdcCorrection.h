@@ -72,7 +72,7 @@ Bootup
 #include "wiring_private.h"
 
 // use the macro below to print different log messages on the serial when debugging
-//#define ADC_CORRECTION_VERBOSE
+#define ADC_CORRECTION_VERBOSE
 #define ATWINC_FLASH_4M_SZ (512 * 1024UL)
 
 
@@ -81,6 +81,8 @@ class AdcCorrection
 private:
 	uint16_t _gainCorr; //drop these. the global variable has the values needed
 	uint16_t _offsetCorr; //drop these. the global variable has the values needed
+	uint16_t _measuredAdcInIsr = 0;
+	int8_t _isrOffsetCorr = 0;
 	bool _isAtwincDownloadMode = 0;
 	uint8_t  _atwincFlashSize;
 	bool _isupdatedAtwincArray = false;
@@ -99,11 +101,13 @@ public:
 		bool valid = false;
 		uint16_t _gainCorrection;
 		uint16_t _offsetCorrection;
+		int8_t _isrOffsetCorr = 0;
 	};
 
 	enum class DataFormatVersion
 	{
 		DATA_FORMAT_0 = 0,
+		DATA_FORMAT_1 = 1,
 		COUNT,
 		UNKNOWN
 	};
@@ -155,7 +159,7 @@ public:
 	@Constructor
 	@usage: Called from setup when the Correction values are not stored in the SAMD flash
 	*/
-	AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid);
+	AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid, int8_t &isrOffsetCorr);
 
 	/*
 	@usage: This function calls various other class functions to 
@@ -164,6 +168,8 @@ public:
 	3. Calculate Corretion data and pass it to the setup function in EmotiBit.cpp
 	*/
 	bool begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid);
+
+	bool updateIsrOffsetCorr();
 
 	/*
 	@usage:

@@ -8,7 +8,7 @@ AdcCorrection::AdcCorrection()
 	Serial.println("################################\n");
 }
 
-AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
+AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid, int8_t &isrOffsetCorr)
 {
 	//Serial.println("No correction found on SAMD. Calculating correction by reading ATWINC");
 	if( version == AdcCorrection::AdcCorrectionRigVersion::UNKNOWN)
@@ -22,10 +22,17 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uin
 			setRigVersion((AdcCorrection::AdcCorrectionRigVersion)((uint8_t)rigMetadata[METADATA_LOC_RIG_VERSION]));
 			dataFormatVersion = (AdcCorrection::DataFormatVersion)((uint8_t)rigMetadata[METADATA_LOC_DATA_FORMAT]); // typecasting uint8 to AdcCorrectionRigVersion
 			_isupdatedAtwincMetadataArray = true;
-			if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
+			if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0 || dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_1)
 			{
 				BYTES_PER_ADC_DATA_POINT = 4;
-				ATWINC_DATA_ARRAY_SIZE = BYTES_PER_ADC_DATA_POINT * numAdcPoints;
+				if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
+				{
+					ATWINC_DATA_ARRAY_SIZE = BYTES_PER_ADC_DATA_POINT * numAdcPoints;
+				}
+				else if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_1)
+				{
+					ATWINC_DATA_ARRAY_SIZE = (BYTES_PER_ADC_DATA_POINT * numAdcPoints) + 1;
+				}
 			}
 
 			if (atwincFlashIntegrityCheck() == AdcCorrection::Status::SUCCESS)
@@ -35,7 +42,7 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uin
 				if (rigMetadata[METADATA_LOC_RIG_VERSION] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_0 || rigMetadata[METADATA_LOC_RIG_VERSION] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_1)
 				{
 					// Retrieve calculation values depending on the data format version
-					if (rigMetadata[METADATA_LOC_DATA_FORMAT] == (uint8_t)AdcCorrection::AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
+					if (rigMetadata[METADATA_LOC_DATA_FORMAT] == (uint8_t)AdcCorrection::AdcCorrection::DataFormatVersion::DATA_FORMAT_0 || rigMetadata[METADATA_LOC_DATA_FORMAT] == (uint8_t)AdcCorrection::AdcCorrection::DataFormatVersion::DATA_FORMAT_1)
 					{
 						for (int i = 0; i < numAdcPoints; i++)
 						{
@@ -50,6 +57,14 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uin
 									adcCorrectionRig.D[i] = atwincDataArray[BYTES_PER_ADC_DATA_POINT * i + j];
 								}
 							}
+						}
+						if (rigMetadata[METADATA_LOC_DATA_FORMAT] == (uint8_t)AdcCorrection::AdcCorrection::DataFormatVersion::DATA_FORMAT_1)
+						{
+							_isrOffsetCorr = (int8_t)atwincDataArray[ATWINC_DATA_ARRAY_SIZE - 1];
+						}
+						else
+						{
+							_isrOffsetCorr = 0;
 						}
 					}
 				}
@@ -73,7 +88,7 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uin
 		}
 		else// passed data corruption test. Data detected on the AT-Winc flash!
 		{
-			Serial.println("Reading correction data from the AT-WINC flash");
+			Serial.println("\nReading correction data from the AT-WINC flash");
 			Serial.println("Calculating correction values");
 			calcCorrectionValues();
 			// Store the values on the flash
@@ -81,6 +96,7 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uin
 			gainCorr = getGainCorrection();
 			offsetCorr = getOffsetCorrection();
 			valid = true;
+			isrOffsetCorr = _isrOffsetCorr;
 		}
 	}
 	else
@@ -183,7 +199,7 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 			// if the user entered E, update with Existing correction values
 			if (input == 'E')
 			{
-				if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
+				if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0 || dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
 				{
 					while (true)
 					{
@@ -305,6 +321,92 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 	}
 	return true;
 }
+
+
+bool AdcCorrection::updateIsrOffsetCorr()
+{
+#ifdef ADC_CORRECTION_VERBOSE 
+	Serial.println("updateIsrOffsetCorr()");
+#endif
+	char input = 'N';
+	while (input != 'Y')
+	{
+		Serial.println("Enter the isr offset corr");
+		_measuredAdcInIsr = serialToInt();
+		if (_measuredAdcInIsr > 0)
+		{
+			Serial.print("The value entered is: "); Serial.println(_measuredAdcInIsr);
+			Serial.println("Do you wish to proceed? Press Y for yes and N to enter data again");
+			while (!Serial.available());
+			input = Serial.read();
+			while (input != 'Y' && input != 'N')
+			{
+				Serial.println("Enter a valid option");
+				while (!Serial.available());
+				input = Serial.read();
+			}
+		}
+	}
+	readAtwincFlash(ATWINC_MEM_LOC_METADATA, RIG_METADATA_SIZE, rigMetadata);
+	// If the flash has not been updated, the value read = 255
+	if (rigMetadata[METADATA_LOC_NUM_ADC] != 255 && rigMetadata[METADATA_LOC_RIG_VERSION] != 255 && rigMetadata[METADATA_LOC_DATA_FORMAT] != 255)
+	{
+		atwincAdcMetaDataCorruptionTest = AdcCorrection::Status::SUCCESS;
+		numAdcPoints = (uint8_t)rigMetadata[METADATA_LOC_NUM_ADC];
+		setRigVersion((AdcCorrection::AdcCorrectionRigVersion)((uint8_t)rigMetadata[METADATA_LOC_RIG_VERSION]));
+		dataFormatVersion = (AdcCorrection::DataFormatVersion)((uint8_t)rigMetadata[METADATA_LOC_DATA_FORMAT]); // typecasting uint8 to AdcCorrectionRigVersion
+		//ToDo: change this hard coded number to depend on the data stored on the atwinc flash
+		_isrOffsetCorr = _measuredAdcInIsr - 372;// 372 is the ADC(expected voltage), ADC(0.3V)
+#ifdef ADC_CORRECTION_VERBOSE
+		Serial.print("\nThe isrOffset correction calculated is: "); Serial.println(_isrOffsetCorr);
+#endif
+		if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0 || dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_1)
+		{
+			BYTES_PER_ADC_DATA_POINT = 4;
+			ATWINC_DATA_ARRAY_SIZE = BYTES_PER_ADC_DATA_POINT * numAdcPoints;
+			if (atwincFlashIntegrityCheck() == AdcCorrection::Status::SUCCESS)
+			{
+				atwincAdcDataCorruptionTest = AdcCorrection::Status::SUCCESS;
+				readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, ATWINC_DATA_ARRAY_SIZE, atwincDataArray);
+				ATWINC_DATA_ARRAY_SIZE++;// update dataArray size
+				atwincDataArray[ATWINC_DATA_ARRAY_SIZE - 1] = _isrOffsetCorr;// update the last byte to hold the correction value
+				_isupdatedAtwincArray = true;
+				dataFormatVersion = AdcCorrection::DataFormatVersion::DATA_FORMAT_1;// updating the dataformat version to the new version
+				// update metadata array values
+				//rigMetadata[METADATA_LOC_NUM_ADC] = numAdcPoints;
+				//rigMetadata[METADATA_LOC_RIG_VERSION] = (int8_t)getRigVersion();
+				rigMetadata[METADATA_LOC_DATA_FORMAT] = (uint8_t)dataFormatVersion;
+				_isupdatedAtwincMetadataArray = true;
+#ifdef ADC_CORRECTION_VERBOSE
+				Serial.println("\nWriting to the Flash with the updated ISR correction");
+#endif
+				writeAtwincFlash();
+				Serial.println("Completed updating the flash");
+				return true;
+			}
+			else
+			{
+				atwincAdcDataCorruptionTest = AdcCorrection::Status::FAILURE;
+			}
+		}
+	}
+	else
+	{
+		// Adc Correction has not been performed
+#ifdef ADC_CORRECTION_VERBOSE
+		Serial.println("Flash has not been updated with adc correction");
+#endif
+		return false;
+	}
+	if (atwincAdcMetaDataCorruptionTest == AdcCorrection::Status::FAILURE || atwincAdcDataCorruptionTest == AdcCorrection::Status::FAILURE)
+	{
+#ifdef ADC_CORRECTION_VERBOSE
+		Serial.println("Failed data or metadata integrity test");
+#endif
+		return false;
+	}
+}
+
 /*
 Converts serial input char array to int
 */
@@ -418,7 +520,7 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 #ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("Erasing flash for write\n");
 #endif
-	ret = spi_flash_erase(ATWINC_MEM_LOC_PRIMARY_DATA, BYTES_PER_ADC_DATA_POINT * numAdcPoints);
+	ret = spi_flash_erase(ATWINC_MEM_LOC_PRIMARY_DATA, ATWINC_DATA_ARRAY_SIZE);
 	if (M2M_SUCCESS != ret)
 	{
 		Serial.print("Unable to erase SPI sector\r\n");
@@ -428,7 +530,7 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 #ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("Writing new data to the flash(primary)");
 #endif
-	ret = spi_flash_write(atwincDataArray, ATWINC_MEM_LOC_PRIMARY_DATA, BYTES_PER_ADC_DATA_POINT * numAdcPoints);
+	ret = spi_flash_write(atwincDataArray, ATWINC_MEM_LOC_PRIMARY_DATA, ATWINC_DATA_ARRAY_SIZE);
 	if (M2M_SUCCESS != ret)
 	{
 		Serial.print("Unable to write primary SPI sector\r\n");
@@ -437,7 +539,7 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 
 
 	// erasing the secondary sector
-	ret = spi_flash_erase(ATWINC_MEM_LOC_DUPLICATE_DATA, BYTES_PER_ADC_DATA_POINT * numAdcPoints);
+	ret = spi_flash_erase(ATWINC_MEM_LOC_DUPLICATE_DATA, ATWINC_DATA_ARRAY_SIZE);
 	if (M2M_SUCCESS != ret)
 	{
 		Serial.print("Unable to erase SPI sector\r\n");
@@ -447,7 +549,7 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 #ifdef ADC_CORRECTION_VERBOSE
 	Serial.println("Writing new data to the flash(secondary)");
 #endif
-	ret = spi_flash_write(atwincDataArray, ATWINC_MEM_LOC_DUPLICATE_DATA, BYTES_PER_ADC_DATA_POINT * numAdcPoints);
+	ret = spi_flash_write(atwincDataArray, ATWINC_MEM_LOC_DUPLICATE_DATA, ATWINC_DATA_ARRAY_SIZE);
 	if (M2M_SUCCESS != ret)
 	{
 		Serial.print("Unable to write secondary SPI sector\r\n");
@@ -515,7 +617,7 @@ bool AdcCorrection::calcCorrectionValues()
 	// determines which location in the data array to query for measured low and high values
 	if ((uint8_t)getRigVersion() == (uint8_t) AdcCorrection::AdcCorrectionRigVersion::VER_0 || (uint8_t)getRigVersion() == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_1)
 	{
-		if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
+		if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0 || dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_1)
 		{
 			int16_t offsetCorr = 0, gainCorr = 0;
 			float rawOffsetCorr = 0.0, rawGainCorr = 0.0;

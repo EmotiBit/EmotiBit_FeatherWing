@@ -35,11 +35,12 @@ public:
 		NONE,
 		CHRONIC,
 		ACUTE,
+		PROGRAMMER,
 		length
 	};
 
-	String firmware_version = "1.2.64";
-	TestingMode testingMode = TestingMode::NONE;
+	String firmware_version = "1.2.65";
+	TestingMode testingMode = TestingMode::PROGRAMMER;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
 	bool _debugMode = false;
@@ -345,6 +346,7 @@ public:
 	float _edlDigFiltAlpha = 0;
 	float _edlDigFilteredVal = -1;
 	float _edaSeriesResistance = 0;
+	int8_t _isrOffsetCorr = 0;
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 

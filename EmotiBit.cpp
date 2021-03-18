@@ -150,6 +150,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		fwVersionModifier = "-TC";
 		_debugMode = true;
 	}
+	else if (testingMode == TestingMode::PROGRAMMER)
+	{
+		fwVersionModifier = "-PM";
+		_debugMode = true;
+	}
 
 	firmware_version += fwVersionModifier;
 
@@ -265,6 +270,16 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				acquireData.tempHumidity = false;
 			}
 			*/
+		}
+		else if (input == 'O')
+		{
+			AdcCorrection adcCorrection;
+			bool retVal = false;
+			retVal = adcCorrection.updateIsrOffsetCorr();
+			if (!retVal)
+			{
+				Serial.println("Exiting correction mode without updating. Adc correction not performed or data corrupted.");
+			}
 		}
 		else
 		{
@@ -596,11 +611,13 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (!adcCorrectionValues.valid)
 	{
 		// Instantiate the ADC Correction class to read data from the AT-Winc flash to calculate the correction values
-		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, adcCorrectionValues._gainCorrection, adcCorrectionValues._offsetCorrection, adcCorrectionValues.valid);
+		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, adcCorrectionValues._gainCorrection, adcCorrectionValues._offsetCorrection, adcCorrectionValues.valid, adcCorrectionValues._isrOffsetCorr);
 		if (adcCorrection.atwincAdcDataCorruptionTest != AdcCorrection::Status::FAILURE && adcCorrection.atwincAdcMetaDataCorruptionTest != AdcCorrection::Status::FAILURE)
 		{
 			//samdFlashStorage.write(samdStorageAdcValues);// Writing it to the SAMD flash storage
+			_isrOffsetCorr = adcCorrectionValues._isrOffsetCorr;
 			Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(adcCorrectionValues._offsetCorrection);
+			Serial.print("isr offset Corr: "); Serial.println(_isrOffsetCorr);
 			Serial.println("Enabling the ADC with the correction values");
 			analogReadCorrection(adcCorrectionValues._offsetCorrection, adcCorrectionValues._gainCorrection);
 		}
@@ -1236,8 +1253,8 @@ int8_t EmotiBit::updateEDAData()
 	// ToDo: Optimize calculations for EDA
 
 	// Check EDL and EDR voltages for saturation
-	edlTemp = analogRead(_edlPin);
-	edrTemp = analogRead(_edrPin);
+	edlTemp = analogRead(_edlPin) - _isrOffsetCorr;
+	edrTemp = analogRead(_edrPin) - _isrOffsetCorr;
 
 	// Add data to buffer for sample averaging (oversampling)
 	edlBuffer.push_back(edlTemp);
@@ -1269,18 +1286,38 @@ int8_t EmotiBit::updateEDAData()
 		edlTemp = average(edlBuffer);
 		edrTemp = average(edrBuffer);
 
-		// Perform data conversion
-		edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
-		edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
+		if (testingMode == TestingMode::PROGRAMMER)
+		{
+			// send raw EDL values
+			pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
+			if (edlClipped) {
+				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDL, &edlBuffer.timestamp);
+			}
 
-		pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
-		if (edlClipped) {
-			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDL, &edlBuffer.timestamp);
+			pushData(EmotiBit::DataType::EDR, edrTemp, &edrBuffer.timestamp);
+			if (edrClipped) {
+				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
+			}
+			// Perform data conversion
+			edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
+			edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
 		}
+		else
+		{
+			// send converted EDL values
+			// Perform data conversion
+			edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
+			edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
 
-		pushData(EmotiBit::DataType::EDR, edrTemp, &edrBuffer.timestamp);
-		if (edrClipped) {
-			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
+			pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
+			if (edlClipped) {
+				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDL, &edlBuffer.timestamp);
+			}
+
+			pushData(EmotiBit::DataType::EDR, edrTemp, &edrBuffer.timestamp);
+			if (edrClipped) {
+				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
+			}
 		}
 
 
