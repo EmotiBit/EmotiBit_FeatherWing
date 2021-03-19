@@ -13,9 +13,7 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uin
 	//Serial.println("No correction found on SAMD. Calculating correction by reading ATWINC");
 	if( version == AdcCorrection::AdcCorrectionRigVersion::UNKNOWN)
 	{
-		readAtwincFlash(ATWINC_MEM_LOC_METADATA, RIG_METADATA_SIZE, rigMetadata);
-		// If the flash has not been updated, the value read = 255
-		if (rigMetadata[METADATA_LOC_NUM_ADC] != 255 && rigMetadata[METADATA_LOC_RIG_VERSION] != 255 && rigMetadata[METADATA_LOC_DATA_FORMAT] != 255)
+		if (isAtWincMetadataUpdated())
 		{
 			atwincAdcMetaDataCorruptionTest = AdcCorrection::Status::SUCCESS;
 			numAdcPoints = (uint8_t)rigMetadata[METADATA_LOC_NUM_ADC];
@@ -207,7 +205,7 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 			// if the user entered E, update with Existing correction values
 			if (input == 'E')
 			{
-				if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0 || dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0)
+				if (dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_0 || dataFormatVersion == AdcCorrection::DataFormatVersion::DATA_FORMAT_1)
 				{
 					while (true)
 					{
@@ -331,6 +329,21 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 }
 
 
+bool AdcCorrection::isAtWincMetadataUpdated()
+{
+	readAtwincFlash(ATWINC_MEM_LOC_METADATA, RIG_METADATA_SIZE, rigMetadata);
+	// If the flash has not been updated, the value read = 255
+	if (rigMetadata[METADATA_LOC_NUM_ADC] != 255 && rigMetadata[METADATA_LOC_RIG_VERSION] != 255 && rigMetadata[METADATA_LOC_DATA_FORMAT] != 255)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+
 bool AdcCorrection::updateIsrOffsetCorr()
 {
 	uint16_t expectedValue;
@@ -368,9 +381,7 @@ bool AdcCorrection::updateIsrOffsetCorr()
 			input = 'N';
 		}
 	}
-	readAtwincFlash(ATWINC_MEM_LOC_METADATA, RIG_METADATA_SIZE, rigMetadata);
-	// If the flash has not been updated, the value read = 255
-	if (rigMetadata[METADATA_LOC_NUM_ADC] != 255 && rigMetadata[METADATA_LOC_RIG_VERSION] != 255 && rigMetadata[METADATA_LOC_DATA_FORMAT] != 255)
+	if (isAtWincMetadataUpdated())
 	{
 		atwincAdcMetaDataCorruptionTest = AdcCorrection::Status::SUCCESS;
 		numAdcPoints = (uint8_t)rigMetadata[METADATA_LOC_NUM_ADC];
@@ -386,9 +397,7 @@ bool AdcCorrection::updateIsrOffsetCorr()
 				// read before writing again
 				readAtwincFlash(ATWINC_MEM_LOC_PRIMARY_DATA, ATWINC_DATA_ARRAY_SIZE, atwincDataArray);
 				_isrOffsetCorr.inFloat = _measuredAdcInIsr - expectedValue;
-#ifdef ADC_CORRECTION_VERBOSE
 				Serial.print("\nThe isrOffset correction calculated is: "); Serial.println(_isrOffsetCorr.inFloat,6);
-#endif
 				int prevSize = ATWINC_DATA_ARRAY_SIZE;
 				ATWINC_DATA_ARRAY_SIZE += 4;// update dataArray size
 				for (int byte = 0; byte < 4; byte++)

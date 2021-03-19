@@ -36,10 +36,11 @@ public:
 		CHRONIC,
 		ACUTE,
 		ISR_CORRECTION_UPDATE,
+		ISR_CORRECTION_TEST,
 		length
 	};
 
-	String firmware_version = "1.2.69";
+	String firmware_version = "1.2.71";
 	TestingMode testingMode = TestingMode::ISR_CORRECTION_UPDATE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 

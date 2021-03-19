@@ -284,6 +284,8 @@ public:
 	*/
 	AdcCorrection::Status initWifiModule();
 
+	bool isAtWincMetadataUpdated();
+
 	/*
 	Cheack the data and metadate location in the SPI flash to make sure data is not corrupt
 	*/

@@ -190,7 +190,15 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_batteryReadPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::BATTERY_READ_PIN);
 	_hibernatePin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::HIBERNATE);
 	buttonPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EMOTIBIT_BUTTON);
-	_edlPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDL);
+	//TODO: Find a better way to swap pin assignments in different modes
+	if (testingMode == TestingMode::ISR_CORRECTION_UPDATE || testingMode == TestingMode::ISR_CORRECTION_TEST)
+	{
+		_edlPin = A0;
+	}
+	else
+	{
+		_edlPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDL);
+	}
 	_edrPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDR);
 	_sdCardChipSelectPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::SD_CARD_CHIP_SELECT);
 
@@ -266,9 +274,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			}
 			else
 			{
+				Serial.println("Changing testing mode to CHRONIC");
 				if (testingMode == TestingMode::ISR_CORRECTION_UPDATE)
 				{
-					testingMode = TestingMode::NONE;
+					testingMode = TestingMode::CHRONIC;
+					_edlPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDL);// remap the EDL pin to the correct emotibit pin
 				}
 			}
 		}
@@ -280,6 +290,15 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			if (!retVal)
 			{
 				Serial.println("Exiting correction mode without updating. Adc correction not performed or data corrupted.");
+			}
+			else
+			{
+				// If the emotibit is in ISR_CORRECTION_UPDATE, then we need to cahnge the mode to use the isrOffsetCOrrection
+				if (testingMode == TestingMode::ISR_CORRECTION_UPDATE)
+				{
+					testingMode = TestingMode::ISR_CORRECTION_TEST;
+				}
+
 			}
 		}
 		else
@@ -1254,8 +1273,15 @@ int8_t EmotiBit::updateEDAData()
 	// ToDo: Optimize calculations for EDA
 
 	// Check EDL and EDR voltages for saturation
-	edlTemp = analogRead(_edlPin) - _isrOffsetCorr;
-	edrTemp = analogRead(_edrPin) - _isrOffsetCorr;
+	edlTemp = analogRead(_edlPin);
+	edrTemp = analogRead(_edrPin);
+	
+	// Correct for offset correction only when not in ISR_CORRECTION_UPDATE
+	if (testingMode != TestingMode::ISR_CORRECTION_UPDATE)
+	{
+		edlTemp = edlTemp - _isrOffsetCorr;
+		edrTemp = edrTemp - _isrOffsetCorr;
+	}
 
 	// Add data to buffer for sample averaging (oversampling)
 	edlBuffer.push_back(edlTemp);
@@ -1281,44 +1307,40 @@ int8_t EmotiBit::updateEDAData()
 	}
 	
 	if (edlBuffer.size() == _samplesAveraged.eda) {
+		static float edlRaw, edlTx;
+		static float edrRaw, edrTx;
 		//static uint32_t timestamp;
 
 		// Perform data averaging
 		edlTemp = average(edlBuffer);
 		edrTemp = average(edrBuffer);
+		// store raw values is case we need to transmit that over wifi
+		edlRaw = edlTemp;
+		edrRaw = edrTemp;
+		// Perform data conversion
+		edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
+		edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
 
 		if (testingMode == TestingMode::ISR_CORRECTION_UPDATE)
 		{
-			// send raw EDL values
-			pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
-			if (edlClipped) {
-				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDL, &edlBuffer.timestamp);
-			}
-
-			pushData(EmotiBit::DataType::EDR, edrTemp, &edrBuffer.timestamp);
-			if (edrClipped) {
-				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
-			}
-			// Perform data conversion
-			edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
-			edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
+			// transmit raw
+			edlTx = edlRaw; edrTx = edrRaw;
 		}
 		else
 		{
-			// send converted EDL values
-			// Perform data conversion
-			edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
-			edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
+			// transmit converted to volts
+			edlTx = edlTemp; edrTx = edrTemp;
+		}
 
-			pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
-			if (edlClipped) {
-				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDL, &edlBuffer.timestamp);
-			}
+		// send raw EDL values
+		pushData(EmotiBit::DataType::EDL, edlTx, &edlBuffer.timestamp);
+		if (edlClipped) {
+			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDL, &edlBuffer.timestamp);
+		}
 
-			pushData(EmotiBit::DataType::EDR, edrTemp, &edrBuffer.timestamp);
-			if (edrClipped) {
-				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
-			}
+		pushData(EmotiBit::DataType::EDR, edrTx, &edrBuffer.timestamp);
+		if (edrClipped) {
+			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
 		}
 
 
