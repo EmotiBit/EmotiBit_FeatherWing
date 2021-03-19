@@ -59,12 +59,12 @@ void setup() {
 	ret = spi_flash_erase(adcCorrection.ATWINC_MEM_LOC_LAST_SECTOR_FIRST_BYTE, 12);
 	Serial.println("Done erasing last sector");
 	Serial.print("The flash size is:"); Serial.println(atwincFlashSize);
-	Serial.println("Reading location to verify data was cleared");
-	Serial.println("Reading primary loc");
+	Serial.println("Reading location to verify data was cleared(expected value is 255for a erased memory location");
+	Serial.println("\nReading primary loc");
 	ret = adcCorrection.readAtwincFlash(adcCorrection.ATWINC_MEM_LOC_PRIMARY_DATA, readSize, data);
-	Serial.println("Reading secondary loc");
+	Serial.println("\nReading secondary loc");
 	ret = adcCorrection.readAtwincFlash(adcCorrection.ATWINC_MEM_LOC_DUPLICATE_DATA, readSize, data);
-	Serial.println("Reading metadata loc");
+	Serial.println("\nReading metadata loc");
 	ret = adcCorrection.readAtwincFlash(adcCorrection.ATWINC_MEM_LOC_LAST_SECTOR_FIRST_BYTE, readSize, data);
 	Serial.println("\nend of code");
 

@@ -1321,7 +1321,7 @@ int8_t EmotiBit::updateEDAData()
 		edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
 		edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
 
-		if (testingMode == TestingMode::ISR_CORRECTION_UPDATE)
+		if (testingMode == TestingMode::ISR_CORRECTION_UPDATE || testingMode == TestingMode::ISR_CORRECTION_TEST)
 		{
 			// transmit raw
 			edlTx = edlRaw; edrTx = edrRaw;
