@@ -280,6 +280,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 					testingMode = TestingMode::CHRONIC;
 					_edlPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDL);// remap the EDL pin to the correct emotibit pin
 				}
+				acquireData.tempHumidity = false;
 			}
 		}
 		else if (input == 'O')
@@ -1180,7 +1181,10 @@ uint8_t EmotiBit::update()
 			delete edaCorrection;
 			edaCorrection = nullptr;
 			Serial.println("Deleted eda correction instance");
-			//acquireData.tempHumidity = true;
+			if (!edaCorrection->dummyWrite)
+			{
+				acquireData.tempHumidity = true;
+			}
 		}
 	}
 	// Handle data buffer reading and sending

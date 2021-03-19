@@ -19,7 +19,14 @@ bool EdaCorrection::begin(uint8_t emotiBitVersion)
 		}
 		EdaCorrection::Status status;
 		status = enterUpdateMode(emotiBitVersion, EdaCorrection::OtpDataFormat::DATA_FORMAT_0);
-		return true;
+		if (status == Status::SUCCESS)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 	else
 	{
@@ -65,7 +72,6 @@ EdaCorrection::Status EdaCorrection::enterUpdateMode(uint8_t emotiBitVersion, Ed
 		Serial.read();
 	}
 	Serial.println("Initializing state machine. State: SENSOR_CONNECTION_CHECK");
-	progress = Progress::SENSOR_CONNECTION_CHECK;
 	Serial.println("Follow the instructions to obtain calibration values:\n");
 	Serial.println("- The tester should now the use the EmotiBit with the High precision EDA test rig. ");
 	Serial.println("- You should use the EmotiBit Oscilloscope in TESTING MODE, connect to the EmotiBit attached to the EDA test rig.");
@@ -90,6 +96,7 @@ EdaCorrection::Status EdaCorrection::enterUpdateMode(uint8_t emotiBitVersion, Ed
 		delay(1000);
 		msgTimer--;
 	}
+	progress = EdaCorrection::Progress::PING_USER;
 	return EdaCorrection::Status::SUCCESS;
 
 }
@@ -219,19 +226,10 @@ EdaCorrection::Status EdaCorrection::update(Si7013* si7013, float &vref1, float 
 {
 	if (getMode() == EdaCorrection::Mode::UPDATE)
 	{
-		if (progress == EdaCorrection::Progress::SENSOR_CONNECTION_CHECK)
+		if (progress == EdaCorrection::Progress::PING_USER)
 		{
-			if (checkSensorConnection(si7013) == true)
-			{
-				Serial.println("Si7013 detected. Proceeding to WAITING_FOR_SERIAL_DATA");
-				progress = EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA;
-			}
-			else
-			{
-				Serial.println("Sensor not detected. Switching to MODE::NORMAL");
-				_mode = Mode::NORMAL;
-			}
-
+			Serial.println("Si7013 detected. Proceeding to WAITING_FOR_SERIAL_DATA");
+			progress = Progress::WAITING_FOR_SERIAL_DATA;
 		}
 		else if (progress == EdaCorrection::Progress::WAITING_FOR_SERIAL_DATA)
 		{
@@ -465,6 +463,7 @@ bool EdaCorrection::getApprovalStatus()
 
 bool EdaCorrection::checkSensorConnection(Si7013* si7013)
 {
+	while (si7013->getStatus() != Si7013::STATUS_IDLE);
 	return (si7013->sendCommand(0x00)); // returns false if failed to send command
 }
 
