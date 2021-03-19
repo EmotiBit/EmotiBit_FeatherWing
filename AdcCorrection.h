@@ -81,12 +81,16 @@ class AdcCorrection
 private:
 	uint16_t _gainCorr; //drop these. the global variable has the values needed
 	uint16_t _offsetCorr; //drop these. the global variable has the values needed
-	uint16_t _measuredAdcInIsr = 0;
-	int8_t _isrOffsetCorr = 0;
+	float _measuredAdcInIsr = 0;
+	//int8_t _isrOffsetCorr = 0;
 	bool _isAtwincDownloadMode = 0;
 	uint8_t  _atwincFlashSize;
 	bool _isupdatedAtwincArray = false;
 	bool _isupdatedAtwincMetadataArray = false;
+	union IsrOffsetCorr {
+		float inFloat;
+		char inBytes[4];
+	}_isrOffsetCorr;
 public:
 	
 	const size_t ATWINC_MEM_LOC_DUPLICATE_DATA = 448*1024;  // primary start address for storing the adc values
@@ -101,7 +105,7 @@ public:
 		bool valid = false;
 		uint16_t _gainCorrection;
 		uint16_t _offsetCorrection;
-		int8_t _isrOffsetCorr = 0;
+		float _isrOffsetCorr = 0;
 	};
 
 	enum class DataFormatVersion
@@ -159,7 +163,7 @@ public:
 	@Constructor
 	@usage: Called from setup when the Correction values are not stored in the SAMD flash
 	*/
-	AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid, int8_t &isrOffsetCorr);
+	AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid, float &isrOffsetCorr);
 
 	/*
 	@usage: This function calls various other class functions to 
@@ -185,6 +189,7 @@ public:
 	*/
 	AdcCorrection::Status updateAtwincDataArray();
 	
+	bool parseAtwincDataArray();
 	
 	/*
 	@f: writeAtwincFlash

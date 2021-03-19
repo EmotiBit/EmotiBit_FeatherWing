@@ -618,7 +618,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			//samdFlashStorage.write(samdStorageAdcValues);// Writing it to the SAMD flash storage
 			_isrOffsetCorr = adcCorrectionValues._isrOffsetCorr;
 			Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); Serial.print("\toffset correction:"); Serial.println(adcCorrectionValues._offsetCorrection);
-			Serial.print("isr offset Corr: "); Serial.println(_isrOffsetCorr);
+			Serial.print("isr offset Corr: "); Serial.println(_isrOffsetCorr,6);
 			Serial.println("Enabling the ADC with the correction values");
 			analogReadCorrection(adcCorrectionValues._offsetCorrection, adcCorrectionValues._gainCorrection);
 		}

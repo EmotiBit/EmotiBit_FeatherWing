@@ -39,7 +39,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.68";
+	String firmware_version = "1.2.69";
 	TestingMode testingMode = TestingMode::ISR_CORRECTION_UPDATE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -346,7 +346,7 @@ public:
 	float _edlDigFiltAlpha = 0;
 	float _edlDigFilteredVal = -1;
 	float _edaSeriesResistance = 0;
-	int8_t _isrOffsetCorr = 0;
+	float _isrOffsetCorr = 0;
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 
