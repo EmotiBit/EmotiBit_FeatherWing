@@ -274,9 +274,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			}
 			else
 			{
-				Serial.println("Changing testing mode to CHRONIC");
 				if (testingMode == TestingMode::ISR_CORRECTION_UPDATE)
 				{
+					Serial.println("Changing testing mode to CHRONIC");
 					testingMode = TestingMode::CHRONIC;
 					_edlPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDL);// remap the EDL pin to the correct emotibit pin
 				}

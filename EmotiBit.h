@@ -40,8 +40,8 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.72";
-	TestingMode testingMode = TestingMode::ISR_CORRECTION_UPDATE;
+	String firmware_version = "1.2.73";
+	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
 	bool _debugMode = false;
