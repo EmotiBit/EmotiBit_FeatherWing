@@ -134,7 +134,7 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 	}
 	Serial.println("------------------"); Serial.print("RigVersion entered: "); Serial.println(rigVersionInput);
 	// if there exist only 1 format version, use that
-	if ((int)AdcCorrection::DataFormatVersion::COUNT == 1) 
+	if ((int)AdcCorrection::DataFormatVersion::COUNT <= 2) 
 	{
 		dataFormatVersion = AdcCorrection::DataFormatVersion::DATA_FORMAT_0;
 		Serial.print("dataFormatVersion chosen: "); Serial.println((int)dataFormatVersion); Serial.println("------------------");
@@ -354,7 +354,8 @@ bool AdcCorrection::updateIsrOffsetCorr()
 	String inputMeasurement;
 	while (input != 'Y')
 	{
-		Serial.println("Enter the measured EDL value in ISR and the expected value");
+		Serial.println("Enter the measured EDL value in ISR and the expected value if the format shown below:");
+		Serial.println("EDL Measured Avg, Expected Value");
 		while (!Serial.available());
 		inputMeasurement = Serial.readStringUntil(',');
 		_measuredAdcInIsr = inputMeasurement.toFloat();

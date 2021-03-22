@@ -152,10 +152,14 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	else if (testingMode == TestingMode::ISR_CORRECTION_UPDATE)
 	{
-		fwVersionModifier = "-ISR_CORR";
+		fwVersionModifier = "-ISR_CORR_UPDT";
 		_debugMode = true;
 	}
-
+	else if (testingMode == TestingMode::ISR_CORRECTION_TEST)
+	{
+		fwVersionModifier = "-ISR_CORR_TEST";
+		_debugMode = true;
+	}
 	firmware_version += fwVersionModifier;
 
 	Serial.print("\n\nEmotiBit version: ");
@@ -191,14 +195,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_hibernatePin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::HIBERNATE);
 	buttonPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EMOTIBIT_BUTTON);
 	//TODO: Find a better way to swap pin assignments in different modes
-	if (testingMode == TestingMode::ISR_CORRECTION_UPDATE || testingMode == TestingMode::ISR_CORRECTION_TEST)
-	{
-		_edlPin = A0;
-	}
-	else
-	{
-		_edlPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDL);
-	}
+	_edlPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDL);
 	_edrPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDR);
 	_sdCardChipSelectPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::SD_CARD_CHIP_SELECT);
 
@@ -274,14 +271,19 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			}
 			else
 			{
-				if (testingMode == TestingMode::ISR_CORRECTION_UPDATE)
+				if (!edaCorrection->dummyWrite)
 				{
-					Serial.println("Changing testing mode to CHRONIC");
-					testingMode = TestingMode::CHRONIC;
-					_edlPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDL);// remap the EDL pin to the correct emotibit pin
+					acquireData.tempHumidity = false;
 				}
-				acquireData.tempHumidity = false;
 			}
+		}
+		else if (input == 'I')
+		{
+			testingMode = TestingMode::ISR_CORRECTION_UPDATE;
+			_edlPin = A0;
+			Serial.println("\n\nTestingMode changed to ISR_CORRECTION_UPDATE");
+			Serial.println("Reading EDL values from pin A0. Make sure ADC correction jig is in place.");
+			delay(3000);
 		}
 		else if (input == 'O')
 		{
@@ -294,12 +296,10 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			}
 			else
 			{
+				Serial.println("Added ISR correction to the At-Winc flash.\n Verify EDL reading in the Oscilloscope.");
 				// If the emotibit is in ISR_CORRECTION_UPDATE, then we need to cahnge the mode to use the isrOffsetCOrrection
-				if (testingMode == TestingMode::ISR_CORRECTION_UPDATE)
-				{
-					testingMode = TestingMode::ISR_CORRECTION_TEST;
-				}
-
+				testingMode = TestingMode::ISR_CORRECTION_TEST;
+				_edlPin = A0;
 			}
 		}
 		else
