@@ -757,53 +757,23 @@ void AdcCorrection::readAdcPins()
 
 }
 
-// for below function, refer https://www.arduino.cc/en/Tutorial/BuiltInExamples/Smoothing
 int AdcCorrection::getAverageAnalogInput(uint8_t inputPin)
 {
-	//ToDo: Add a LED indication to help tester with execution
-	const int numReadings = 100;
-	int readings[numReadings] = { 0 };      // the readings from the analog input
-	int readIndex = 0;              // the index of the current reading
-	int total = 0;                  // the running total
-	float average = 0;                // the average
-
+	uint32_t sum = 0, counter = 0;
+	int average = 0;
 	uint32_t timeStart = millis();
-	//digitalWrite(LED_BUILTIN, HIGH);
-	while (true)
+	while (millis() - timeStart < 2000)
 	{
-		// subtract the last reading:
-		total = total - readings[readIndex];
-		// read from the sensor:
-		//Serial.println(analogRead(inputPin));
-		readings[readIndex] = analogRead(inputPin);
-		// add the reading to the total:
-		total = total + readings[readIndex];
-		// advance to the next position in the array:
-		readIndex = readIndex + 1;
-
-		// if we're at the end of the array...
-		if (readIndex >= numReadings) {
-			// ...wrap around to the beginning:
-			readIndex = 0;
-		}
-
-		// calculate the average:
-		average = (float)total / (float)numReadings;
-		// send it to the computer as ASCII digits
-		//Serial.print("Time:"); Serial.print(millis()); Serial.print("\t");
-		//Serial.println(average);
-		if (millis() - timeStart >= 2000)
-		{
-			break;
-		}
+		sum += analogRead(inputPin);
+		counter++;
+		delay(1);
 	}
-	//digitalWrite(LED_BUILTIN, LOW);
+	average = sum / counter;
 #ifdef ADC_CORRECTION_VERBOSE
-	Serial.print("Average value: "); Serial.println(average,6);
+	Serial.print("Samples averaged: "); Serial.println(counter);
+	Serial.print("Average value: "); Serial.println(average);
 #endif
-
-	return (int)round(average);
-
+	return ((float)sum / (float)counter);
 }
 
 
