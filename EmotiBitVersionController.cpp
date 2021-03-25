@@ -93,7 +93,7 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 12;
 		_assignedPin[(int)EmotiBitPinName::EDL] = A4;
 		_assignedPin[(int)EmotiBitPinName::EDR] = A3;
-		_assignedPin[(int)EmotiBitPinName::SD_CARD_CHIP_SELECT] = A5;
+		_assignedPin[(int)EmotiBitPinName::SD_CARD_CHIP_SELECT] = 4;
 		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_I2C_CLOCK] = 13;
 		_assignedPin[(int)EmotiBitPinName::EMOTIBTI_I2C_DATA] = 27;
 		_assignedPin[(int)EmotiBitPinName::PPG_INT] = 15;
@@ -164,7 +164,7 @@ bool EmotiBitVersionController::_initMappingMathConstants(EmotiBitVersionControl
 		Serial.println("Out of bounds error for Math constants. please check total constant count with array memory allocation.");
 		return false;
 	}
-#if defined(ADAFRUIT_FEATHER_M0)
+#if defined(ADAFRUIT_FEATHER_M0) || defined (ARDUINO_FEATHER_ESP32)
 	_assignedMathConstants[(int)MathConstants::VCC] = 3.3f;
 	_assignedMathConstants[(int)MathConstants::ADC_BITS] = 12;
 	_assignedMathConstants[(int)MathConstants::ADC_MAX_VALUE] = pow(2, _assignedMathConstants[(int)MathConstants::ADC_BITS]) - 1;;
@@ -199,7 +199,7 @@ bool EmotiBitVersionController::_initMappingSystemConstants(EmotiBitVersionContr
 		Serial.println("Out of bounds error for System constants. please check total constant count with array memory allocation.");
 		return false;
 	}
-#if defined(ADAFRUIT_FEATHER_M0)
+#if defined(ADAFRUIT_FEATHER_M0) || defined (ARDUINO_FEATHER_ESP32)
 	if (version == EmotiBitVersion::V02H)
 	{
 		_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL] = HIGH;
@@ -210,7 +210,7 @@ bool EmotiBitVersionController::_initMappingSystemConstants(EmotiBitVersionContr
 	{
 		_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL] = LOW;
 		_assignedSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT] = 6;
-		_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE] = INPUT_PULLDOWN;
+		_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE] = INPUT_PULLDOWN;// ToDo: verify for ESP32
 	}
 	else if (version == EmotiBitVersion::V02B)
 	{
@@ -423,8 +423,11 @@ bool EmotiBitVersionController::detectSdCard()
 	// code snippet taken from CardInfo exmaple from the SdFat library in Arduino. Tested with version 2.0.4
 	// we'll use the initialization code from the utility libraries
 	// since we're just testing if the card is working!
-	//if (!sd.cardBegin(SdSpiConfig(SD_CARD_CHIP_SEL_PIN, DEDICATED_SPI, SD_SCK_MHZ(50))))
+#if defined (ARDUINO_FEATHER_ESP32)
+	if (!sd.cardBegin(SdSpiConfig(SD_CARD_CHIP_SEL_PIN, DEDICATED_SPI, SD_SCK_MHZ(50))))
+#elif defined (ADAFRUIT_FEATHER_M0)
 	if(!sd.begin(SD_CARD_CHIP_SEL_PIN))
+#endif
 	{
 		return false;
 	}

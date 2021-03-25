@@ -86,7 +86,7 @@ public:
 	static const int HIBERNATE_PIN = 32;
 	static const int EMOTIBIT_I2C_CLK_PIN = 13;
 	static const int EMOTIBIT_I2C_DAT_PIN = 27;
-	static const int SD_CARD_CHIP_SEL_PIN = A5;
+	static const int SD_CARD_CHIP_SEL_PIN = 4;
 #endif
 private:
 	EmotiBitVersion _versionEst;

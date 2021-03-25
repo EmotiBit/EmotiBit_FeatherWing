@@ -16,8 +16,8 @@
 //#include "wiring_private.h"
 #include "EmotiBitWiFi.h"
 #include <SPI.h>
-#include <SdFat.h>
 #include <ArduinoJson.h>
+#include <SdFat.h>
 #ifdef ADAFRUIT_FEATHER_M0
 #include <ArduinoLowPower.h>
 #endif
@@ -326,7 +326,6 @@ public:
 	bool _newDataAvailable[(uint8_t)EmotiBit::DataType::length];
 	uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
 	bool sendData[(uint8_t)EmotiBit::DataType::length];
-
 	SdFat SD;
 	volatile uint8_t battLevel = 100;
 	volatile uint8_t battIndicationSeq = 0;

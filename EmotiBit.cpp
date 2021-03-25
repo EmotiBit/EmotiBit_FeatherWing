@@ -91,8 +91,12 @@ void EmotiBit::bmm150ReadTrimRegisters()
 
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
-	//EmotiBitUtilities::printFreeRAM("Begining of setup", 1);
 	EmotiBitVersionController emotiBitVersionController;
+	//EmotiBitUtilities::printFreeRAM("Begining of setup", 1);
+	Serial.print("I2C data pin:"); Serial.println(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN);
+	Serial.print("I2C clk pin: "); Serial.println(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
+	Serial.print("hibernate pin: "); Serial.println(EmotiBitVersionController::HIBERNATE_PIN);
+	Serial.print("chip sel pin: "); Serial.println(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN);
 #ifdef ADAFRUIT_FEATHER_M0
 	_EmotiBit_i2c = new TwoWire(&sercom1, EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
 	// Flush the I2C
@@ -106,24 +110,32 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
 #elif defined ARDUINO_FEATHER_ESP32
+	// just for V3. i2c does not setup without emotibit being powered. ToDo: figure out why
+	pinMode(EmotiBitVersionController::HIBERNATE_PIN, OUTPUT);
+	digitalWrite(EmotiBitVersionController::HIBERNATE_PIN, HIGH);
 	bool status = true;
 	if (_EmotiBit_i2c != nullptr)
 	{
 		delete(_EmotiBit_i2c);
 	}
 	_EmotiBit_i2c = new TwoWire(0);
-	// Flush the I2C
-	Serial.print("Setting up I2C....");
-	_EmotiBit_i2c->begin(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
+	Serial.print("Setting up I2C(For ESP32)....");
+	status = _EmotiBit_i2c->begin(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
+	//status = _EmotiBit_i2c->begin(27, 13);
+	if (status)
+	{
+		Serial.println("I2c setup complete");
+	}
+	else
+	{
+		Serial.println("I2c setup failed");
+	}
 	uint32_t i2cRate = 100000;
 	Serial.print("setting clock to");
 	Serial.print(i2cRate);
 	_EmotiBit_i2c->setClock(i2cRate);
-	Serial.print("...setting PIO_SERCOM");
 #endif
 
-	//pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
-	//pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
 	_version = emotiBitVersionController.detectEmotiBitVersion(_EmotiBit_i2c);
 	// If version is unknown
 	if (_version == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
@@ -189,7 +201,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		hibernate(false);// hiberante with setup incomplete
 	}
 
-#ifdef DEBUG
+#if defined(DEBUG) || defined(ARDUINO_FEATHER_ESP32)
 	// testing if mapping was successful
 	emotiBitVersionController.echoPinMapping();
 	emotiBitVersionController.echoConstants();
@@ -313,52 +325,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = &dataClipping;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DEBUG] = &debugBuffer;
 
-
-	/*
-#if defined(ADAFRUIT_FEATHER_M0)
-	_batteryReadPin = A7;
-	_adcBits = 12;
-	adcRes = pow(2, _adcBits) -1;	// adc bit resolution
-	if (_version == EmotiBitVersionController::EmotiBitVersion::V01B || _version == EmotiBitVersionController::EmotiBitVersion::V01C)
-	{
-		_hibernatePin = 5; // gpio pin assigned to the mosfet
-		buttonPin = 13;
-		_edlPin = A3;
-		_edrPin = A4;
-		_sdCardChipSelectPin = 6;
-	}
-	else if (_version == EmotiBitVersionController::EmotiBitVersion::V02H || _version == EmotiBitVersionController::EmotiBitVersion::V03B)
-	{
-		_hibernatePin = 6; // gpio pin assigned to the mosfet
-		buttonPin = 12;
-		_edlPin = A4;
-		_edrPin = A3;
-		_sdCardChipSelectPin = 19;
-		edrAmplification = 100.f / 3.3f;
-		edaFeedbackAmpR = 5070000.f; // empirically derived average edaFeedbackAmpR in Ohms (theoretical 4990000.f)
-		vRef1 = 0.426f; // empirically derived minimum voltage divider value [theoretical 15/(15 + 100)]
-		vRef2 = 1.634591173; // empirically derived average voltage divider value [theoretical _vcc * (100.f / (100.f + 100.f))]
-	}
-	else if (_version == EmotiBitVersionController::EmotiBitVersion::V02B)
-	{
-		_hibernatePin = 6; // gpio pin assigned to the mosfet
-		buttonPin = 12;
-		_edlPin = A4;
-		_edrPin = A3;
-		_sdCardChipSelectPin = 19;
-		edrAmplification = 100.f / 1.2f;
-		edaFeedbackAmpR = 4990000.f;; // edaFeedbackAmpR in Ohms
-	}
-#elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
-	if (_version == EmotiBitVersionController::EmotiBitVersion::V01B || _version == EmotiBitVersionController::EmotiBitVersion::V01C)
-	{
-		_hibernatePin = 27;//gpio pin assigned ot the mosfet
-		buttonPin = 16;
-		_gsrLowPin = A3;
-		_gsrHighPin = A4;
-	}
-#endif
-*/
 	// Print board-specific settings
 	Serial.println("\nHW version-specific settings:");
 	Serial.print("buttonPin = "); Serial.println(buttonPin);
@@ -375,7 +341,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.println("\nSensor setup:");
 	// setup LED DRIVER
 	Serial.println("Initializing NCP5623....");
-	led.begin(*_EmotiBit_i2c);
+	if (!led.begin(*_EmotiBit_i2c))
+	{
+		Serial.println("Led driver not found");
+		while (1);
+	}
 	// check if the LED current level is valid.
 	if (_emotiBitSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT] > 0)
 	{
@@ -872,6 +842,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 bool EmotiBit::setupSdCard()
 {
+#ifdef ADAFRUIT_FEATHER_M0
 	Serial.print("\nInitializing SD card...");
 	// see if the card is present and can be initialized:
 	bool success = false;
@@ -892,13 +863,13 @@ bool EmotiBit::setupSdCard()
 		Serial.println(_sdCardChipSelectPin);
 		// don't do anything more:
 		// ToDo: Handle case where we still want to send network data
-		//while (true) {
-		//	hibernate();
+		while (true) {
+			hibernate();
+		}
 		return false;
 	}
 	Serial.println("card initialized.");
 	SD.ls(LS_R);
-
 	Serial.print(F("\nLoading configuration file: "));
 	Serial.println(_configFilename);
 	if (!loadConfigFile(_configFilename)) {
@@ -909,9 +880,11 @@ bool EmotiBit::setupSdCard()
 			hibernate();
 		}
 	}
-
 	return true;
-
+#elif defined ARDUINO_FEATHER_ESP32
+	Serial.println("Updating wifi credentials (hardcoded)");
+	_emotiBitWiFi.addCredential("openbci-mesh2.4g", "brains12345");
+#endif
 }
 
 bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) {
