@@ -7,13 +7,18 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 {
 	uint8_t status = WiFi.status();
 	uint32_t startBegin = millis();
+#ifdef ADAFRUIT_FEATHER_M0
 
 	if (status == WL_NO_SHIELD) {
 		Serial.println("No WiFi shield found. Try WiFi.setPins().");
 		return WL_NO_SHIELD;
 	}
-#ifdef ADAFRUIT_FEATHER_M0
 	checkWiFi101FirmwareVersion();
+#elif defined ARDUINO_FEATHER_ESP32
+	// Taken from scanNetworks example
+	WiFi.mode(WIFI_STA);
+	WiFi.disconnect();
+	delay(100);
 #endif
 	while (status != WL_CONNECTED)
 	{
@@ -49,15 +54,15 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 
 uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxAttempts, uint16_t attemptDelay)
 {
-
 	int8_t status = WiFi.status();
 	int8_t attempt = 0;
+#ifdef ADAFRUIT_FEATHER_M0
 
 	if (status == WL_NO_SHIELD) {
 		Serial.println("No WiFi shield found. Try WiFi.setPins().");
 		return WL_NO_SHIELD;
 	}
-
+#endif
 	while (status != WL_CONNECTED) 
 	{
 		if (attempt > maxAttempts)

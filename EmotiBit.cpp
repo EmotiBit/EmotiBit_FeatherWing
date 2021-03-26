@@ -670,10 +670,18 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 #endif
 #ifdef ADAFRUIT_FEATHER_M0
 	WiFi.lowPowerMode();
+#elif defined ARDUINO_FEATHER_ESP32
+	//Serial.println("Updating wifi credentials (hardcoded)");
+	_emotiBitWiFi.addCredential("openbci-mesh2.4g", "brains12345");
+	_emotiBitWiFi.addCredential("Net-work-2.4G", "YouShallNotPass");
+	/*WiFi.begin("Net-work-2.4G", "YouShallNotPass");
+	while (WiFi.status() != WL_CONNECTED) {
+		delay(500);
+		Serial.println("Connecting to WiFi..");
+	}*/
 #endif
 	_emotiBitWiFi.begin();
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-
 	setPowerMode(PowerMode::NORMAL_POWER);
 	//EmotiBitUtilities::printFreeRAM("WiFi Init", 1);
 	typeTags[(uint8_t)EmotiBit::DataType::EDA] = EmotiBitPacket::TypeTag::EDA;
@@ -881,9 +889,7 @@ bool EmotiBit::setupSdCard()
 		}
 	}
 	return true;
-#elif defined ARDUINO_FEATHER_ESP32
-	Serial.println("Updating wifi credentials (hardcoded)");
-	_emotiBitWiFi.addCredential("openbci-mesh2.4g", "brains12345");
+
 #endif
 }
 
@@ -2796,11 +2802,11 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	if (getPowerMode() == PowerMode::NORMAL_POWER)
 	{
 		Serial.println("PowerMode::NORMAL_POWER");
+#ifdef ADAFRUIT_FEATHER_M0
 		if (_emotiBitWiFi.isOff())
 		{
 			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
-#ifdef ADAFRUIT_FEATHER_M0
 		WiFi.lowPowerMode();
 #endif
 
@@ -2809,11 +2815,11 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	else if (getPowerMode() == PowerMode::LOW_POWER)
 	{
 		Serial.println("PowerMode::LOW_POWER");
+#ifdef ADAFRUIT_FEATHER_M0
 		if (_emotiBitWiFi.isOff())
 		{
 			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
-#ifdef ADAFRUIT_FEATHER_M0
 		WiFi.lowPowerMode();
 #endif
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
@@ -2821,11 +2827,11 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	else if (getPowerMode() == PowerMode::MAX_LOW_POWER)
 	{
 		Serial.println("PowerMode::MAX_LOW_POWER");
+#ifdef ADAFRUIT_FEATHER_M0
 		if (_emotiBitWiFi.isOff())
 		{
 			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
-#ifdef ADAFRUIT_FEATHER_M0
 		WiFi.maxLowPowerMode();
 #endif
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
