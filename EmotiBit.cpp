@@ -4,7 +4,9 @@
 
 EmotiBit* myEmotiBit = nullptr;
 void(*onInterruptCallback)(void);
-
+#ifdef ARDUINO_FEATHER_ESP32
+TaskHandle_t EmotiBitDataAcquisition;
+#endif
 EmotiBit::EmotiBit() 
 {
 	
@@ -816,6 +818,20 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		attachToInterruptTC3(&ReadSensors, this);
 		Serial.println("Starting interrupts");
 		startTimer(BASE_SAMPLING_FREQ);
+#elif defined ARDUINO_FEATHER_ESP32
+		attachEmotiBit(this);// assign pointer to global vairable
+		// assigning readSensors to second core
+		xTaskCreatePinnedToCore(
+			ReadSensors,   /* Task function. */
+			"EmotiBitDataAcquisition",     /* name of task. */
+			10000,       /* Stack size of task */
+			NULL,        /* parameter of the task */
+			3,           /* priority of the task */
+			&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
+			0);          /* pin task to core 0 */
+		delay(500);
+		//attachToCore(&ReadSensors, this);
+		Serial.println("Assigning reading sensors to core 0"); 
 #endif
 	}
 
@@ -838,7 +854,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		Serial.println("TestingMode::CHRONIC");
 	}
-
+#ifdef ARDUINO_FEATHER_ESP32
+	Serial.print("The main loop is executing on core: "); Serial.println(xPortGetCoreID());
+#endif
 	if (_debugMode) 
 	{
 		Serial.println("**********************************************************");
@@ -1072,6 +1090,9 @@ uint8_t EmotiBit::update()
 		firstprint = false;
 		timeSincePrint = millis();
 	}*/
+	delay(10);
+	static uint32_t updateLoopCounter = 0;
+	Serial.print("Update()->"); Serial.println(updateLoopCounter++);
 	static uint16_t serialPrevAvailable = Serial.available();
 	if (Serial.available() > serialPrevAvailable)
 	{
@@ -2428,7 +2449,6 @@ void EmotiBit::readSensors()
 	Serial.println("readSensors()");
 #endif // DEBUG
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, HIGH);
-	
 	uint32_t readSensorsBegin = micros();
 	
 	// Write to OTP once edaCorrection class is at the right state. 
@@ -2455,7 +2475,6 @@ void EmotiBit::readSensors()
 		}
 		batteryCounter++;
 	}
-	
 	if (dummyIsrWithDelay)
 	{
 		// Generate dummy data to test ISR without I2C
@@ -3392,12 +3411,32 @@ void attachToInterruptTC3(void(*readFunction)(void), EmotiBit* e)
 	attachEmotiBit(e);
 	onInterruptCallback = readFunction;
 }
+#endif
 
+#ifdef ARDUINO_FEATHER_ESP32
+
+//void attachToCore(void(*readFunction)(void), EmotiBit*e)
+//{
+//	attachEmotiBit(e);
+//	// assigning readSensors to second core
+//	xTaskCreatePinnedToCore(
+//		*readFunction,   /* Task function. */
+//		"EmotiBitDataAcquisition",     /* name of task. */
+//		10000,       /* Stack size of task */
+//		NULL,        /* parameter of the task */
+//		1,           /* priority of the task */
+//		&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
+//		0);          /* pin task to core 0 */
+//	delay(500);
+//}
+
+#endif
 void attachEmotiBit(EmotiBit*e)
 {
 	myEmotiBit = e;
 }
 
+#ifdef ADAFRUIT_FEATHER_M0
 void ReadSensors()
 {
 	if (myEmotiBit != nullptr)
@@ -3405,5 +3444,28 @@ void ReadSensors()
 		myEmotiBit->readSensors();
 
 	}
+}
+#elif defined ARDUINO_FEATHER_ESP32
+void ReadSensors(void *pvParameters)
+{
+	//uint32_t timeSinceLastCall = millis();
+	uint32_t counter = 0;
+	Serial.print("The data acquisition is executing on core: "); Serial.println(xPortGetCoreID());
+	while (1) // the function assigned to the second core should never return
+	{
+		Serial.print("ReadSensors() -> "); Serial.println(counter++);
+		delay(3);
+		if (myEmotiBit != nullptr)
+		{
+			//Serial.println("EmotiBit is NOT nullptr");
+			myEmotiBit->readSensors();
+
+		}
+		else
+		{
+			//Serial.println("EmotiBit is nullptr");
+		}
+	}
+
 }
 #endif

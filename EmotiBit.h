@@ -304,12 +304,12 @@ public:
 
 	struct AcquireData {
 		bool eda = true;
-		bool tempHumidity = true;
-		bool thermopile = true;
-		bool imu = true;
-		bool ppg = true;
+		bool tempHumidity = false;
+		bool thermopile = false;
+		bool imu = false;
+		bool ppg = false;
 		bool debug = false;
-		bool battery = true;
+		bool battery = false;
 	} acquireData;
 
 	struct ChipBegun {
@@ -530,6 +530,10 @@ private:
 
 void attachEmotiBit(EmotiBit*e = nullptr);
 void attachToInterruptTC3(void(*readFunction)(void), EmotiBit*e = nullptr);
+void attachToCore(void(*readFunction)(void), EmotiBit*e = nullptr);
+#ifdef ADAFRUIT_FEATHER_M0
 void ReadSensors();
-
+#elif defined ARDUINO_FEATHER_ESP32
+void ReadSensors(void* pvParameters);
+#endif
 #endif
