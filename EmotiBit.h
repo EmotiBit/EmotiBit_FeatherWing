@@ -529,11 +529,11 @@ private:
 };
 
 void attachEmotiBit(EmotiBit*e = nullptr);
-void attachToInterruptTC3(void(*readFunction)(void), EmotiBit*e = nullptr);
-void attachToCore(void(*readFunction)(void), EmotiBit*e = nullptr);
 #ifdef ADAFRUIT_FEATHER_M0
+void attachToInterruptTC3(void(*readFunction)(void), EmotiBit*e = nullptr);
 void ReadSensors();
 #elif defined ARDUINO_FEATHER_ESP32
+void attachToCore(void(*readFunction)(void*), EmotiBit*e = nullptr);
 void ReadSensors(void* pvParameters);
 #endif
 #endif

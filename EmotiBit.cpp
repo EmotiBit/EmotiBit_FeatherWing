@@ -819,19 +819,20 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println("Starting interrupts");
 		startTimer(BASE_SAMPLING_FREQ);
 #elif defined ARDUINO_FEATHER_ESP32
-		attachEmotiBit(this);// assign pointer to global vairable
-		// assigning readSensors to second core
-		xTaskCreatePinnedToCore(
-			ReadSensors,   /* Task function. */
-			"EmotiBitDataAcquisition",     /* name of task. */
-			10000,       /* Stack size of task */
-			NULL,        /* parameter of the task */
-			3,           /* priority of the task */
-			&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
-			0);          /* pin task to core 0 */
-		delay(500);
-		//attachToCore(&ReadSensors, this);
-		Serial.println("Assigning reading sensors to core 0"); 
+		attachToCore(&ReadSensors, this);
+		//attachEmotiBit(this);// assign pointer to global vairable
+		//// assigning readSensors to second core
+		//xTaskCreatePinnedToCore(
+		//	ReadSensors,   /* Task function. */
+		//	"EmotiBitDataAcquisition",     /* name of task. */
+		//	10000,       /* Stack size of task */
+		//	NULL,        /* parameter of the task */
+		//	3,           /* priority of the task */
+		//	&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
+		//	0);          /* pin task to core 0 */
+		//delay(500);
+		////attachToCore(&ReadSensors, this);
+		Serial.println("Assigned reading sensors to core 0"); 
 #endif
 	}
 
@@ -3415,20 +3416,20 @@ void attachToInterruptTC3(void(*readFunction)(void), EmotiBit* e)
 
 #ifdef ARDUINO_FEATHER_ESP32
 
-//void attachToCore(void(*readFunction)(void), EmotiBit*e)
-//{
-//	attachEmotiBit(e);
-//	// assigning readSensors to second core
-//	xTaskCreatePinnedToCore(
-//		*readFunction,   /* Task function. */
-//		"EmotiBitDataAcquisition",     /* name of task. */
-//		10000,       /* Stack size of task */
-//		NULL,        /* parameter of the task */
-//		1,           /* priority of the task */
-//		&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
-//		0);          /* pin task to core 0 */
-//	delay(500);
-//}
+void attachToCore(void(*readFunction)(void*), EmotiBit*e)
+{
+	attachEmotiBit(e);
+	// assigning readSensors to second core
+	xTaskCreatePinnedToCore(
+		*readFunction,   /* Task function. */
+		"EmotiBitDataAcquisition",     /* name of task. */
+		10000,       /* Stack size of task */
+		NULL,        /* parameter of the task */
+		1,           /* priority of the task */
+		&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
+		0);          /* pin task to core 0 */
+	delay(500);
+}
 
 #endif
 void attachEmotiBit(EmotiBit*e)
