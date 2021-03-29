@@ -820,18 +820,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		startTimer(BASE_SAMPLING_FREQ);
 #elif defined ARDUINO_FEATHER_ESP32
 		attachToCore(&ReadSensors, this);
-		//attachEmotiBit(this);// assign pointer to global vairable
-		//// assigning readSensors to second core
-		//xTaskCreatePinnedToCore(
-		//	ReadSensors,   /* Task function. */
-		//	"EmotiBitDataAcquisition",     /* name of task. */
-		//	10000,       /* Stack size of task */
-		//	NULL,        /* parameter of the task */
-		//	3,           /* priority of the task */
-		//	&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
-		//	0);          /* pin task to core 0 */
-		//delay(500);
-		////attachToCore(&ReadSensors, this);
 		Serial.println("Assigned reading sensors to core 0"); 
 #endif
 	}
@@ -1091,7 +1079,7 @@ uint8_t EmotiBit::update()
 		firstprint = false;
 		timeSincePrint = millis();
 	}*/
-	delay(10);
+	delay(8);
 	static uint32_t updateLoopCounter = 0;
 	Serial.print("Update()->"); Serial.println(updateLoopCounter++);
 	static uint16_t serialPrevAvailable = Serial.available();
@@ -1386,9 +1374,9 @@ int8_t EmotiBit::updatePPGData() {
 #ifdef DEBUG
 	Serial.println("updatePPGData()");
 #endif // DEBUG
-
 	int8_t status = 0;
 	uint16_t numsamples = ppgSensor.check();
+	Serial.println("updatePPGData()");
 
 	while (ppgSensor.available()) {
 		status = status | pushData(EmotiBit::DataType::PPG_INFRARED, ppgSensor.getFIFOIR());
@@ -1404,6 +1392,7 @@ int8_t EmotiBit::updateTempHumidityData() {
 #ifdef DEBUG
 	Serial.println("updateTempHumidityData()");
 #endif // DEBUG
+	Serial.println("updateTempHumidityData()");
 	_EmotiBit_i2c->setClock(100000);
 	int8_t status = 0;
 	if (tempHumiditySensor.getStatus() == Si7013::STATUS_IDLE) {
@@ -1519,6 +1508,7 @@ int8_t EmotiBit::updateIMUData() {
 #ifdef DEBUG
 		Serial.println("updateIMUData()");
 #endif // DEBUG
+	Serial.println("updateIMUData()");
 	static uint32_t timestamp;
 	// ToDo: Add status return
 	//static int8_t status;

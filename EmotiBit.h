@@ -304,12 +304,12 @@ public:
 
 	struct AcquireData {
 		bool eda = true;
-		bool tempHumidity = false;
-		bool thermopile = false;
-		bool imu = false;
+		bool tempHumidity = true;
+		bool thermopile = true;
+		bool imu = true;
 		bool ppg = false;
 		bool debug = false;
-		bool battery = false;
+		bool battery = true;
 	} acquireData;
 
 	struct ChipBegun {
