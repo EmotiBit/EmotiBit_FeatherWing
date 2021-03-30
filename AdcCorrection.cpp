@@ -48,6 +48,7 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uin
 		}
 		else
 		{
+			// flash has not been updated.
 			atwincAdcMetaDataCorruptionTest = AdcCorrection::Status::FAILURE;
 		}
 		if (atwincAdcDataCorruptionTest == AdcCorrection::Status::FAILURE || atwincAdcMetaDataCorruptionTest == AdcCorrection::Status::FAILURE)
@@ -606,7 +607,7 @@ AdcCorrection::Status AdcCorrection::writeAtwincFlash()
 		Serial.print("Unable to write metadata SPI sector\r\n");
 		return AdcCorrection::Status::FAILURE;;
 	}
-	// ToDo: add a return success
+	return AdcCorrection::Status::SUCCESS;
 }
 
 AdcCorrection::Status AdcCorrection::readAtwincFlash(size_t readMemLoc, uint16_t readSize, uint8_t* data)
@@ -640,6 +641,7 @@ AdcCorrection::Status AdcCorrection::readAtwincFlash(size_t readMemLoc, uint16_t
 			Serial.print(i); Serial.print(":"); Serial.print(data[i]); Serial.print("\t");
 		}
 #endif
+		return AdcCorrection::Status::SUCCESS;
 	}
 }
 
@@ -660,15 +662,15 @@ bool AdcCorrection::calcCorrectionValues()
 			// ADC-Low value measured and stored in At-Winc data array
 			uint8_t AdcLowMem[2];  // Adc Low Value - [MSB] [LSB]
 			// Position of the ADC low and high points in the AtWinc Data Array. For RigVer=0 or RigVer=1, Data stored = [ADC-Low, ADC-Mid, ADC-High]
-			uint8_t adcLowPos = 0, adcHighPos = 2; // version dependent
+			uint8_t adcLowPos = 0, adcHighPos = 2; // version dependent. ToDo: place it inside a if(version) conditional.
 			AdcLowMem[0] = atwincDataArray[adcLowPos * BYTES_PER_ADC_DATA_POINT + dataArrayAdcMsbOffset]; // ADC Low point MSB
 			AdcLowMem[1] = atwincDataArray[adcLowPos * BYTES_PER_ADC_DATA_POINT + dataArrayAdcLsbOffset];  // ADC Low point LSB
 			AdcHighMem[0] = atwincDataArray[adcHighPos * BYTES_PER_ADC_DATA_POINT + dataArrayAdcMsbOffset];  // ADC High point MSB
 			AdcHighMem[1] = atwincDataArray[adcHighPos * BYTES_PER_ADC_DATA_POINT + dataArrayAdcLsbOffset];  // ADC High point LSB
 			uint16_t adcHighMeasured = int8Toint16(AdcHighMem[0], AdcHighMem[1]); // ( MSB, LSB)
 			uint16_t adcLowMeasured = int8Toint16(AdcLowMem[0], AdcLowMem[1]); // (MSB, LSB)
-			float adcLowIdeal = (((float)adcCorrectionRig.N[0] / (float)adcCorrectionRig.D[0]) * 4095.f);
-			float adcHighIdeal = (((float)adcCorrectionRig.N[2] / (float)adcCorrectionRig.D[2]) * 4095.f);
+			float adcLowIdeal = (((float)adcCorrectionRig.N[0] / (float)adcCorrectionRig.D[0]) * 4095.f);  // ToDo: make the ADC resolution a constant.
+			float adcHighIdeal = (((float)adcCorrectionRig.N[2] / (float)adcCorrectionRig.D[2]) * 4095.f);  // ToDo: make the ADC resolution a constant.
 #ifdef ADC_CORRECTION_VERBOSE
 			Serial.print("\nADC high(Ideal):"); Serial.println(adcHighIdeal);
 			Serial.print("ADC high(Measured):"); Serial.println(adcHighMeasured);
@@ -694,9 +696,9 @@ bool AdcCorrection::calcCorrectionValues()
 #endif
 			if (offsetCorr < 0)
 			{
-				offsetCorr = 4095 + offsetCorr + 1;
+				offsetCorr = 4095 + offsetCorr + 1; // ToDo: make the ADC resolution a constant
 			}
-			rawGainCorr = (2048.f / slope);
+			rawGainCorr = (2048.f / slope);  // ToDo: make the ADC resolution a constant
 #ifdef ADC_CORRECTION_VERBOSE
 			Serial.print("gain correction before Rounding: ");
 			Serial.println(rawGainCorr);

@@ -91,7 +91,6 @@ void EmotiBit::bmm150ReadTrimRegisters()
 
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
-	//EmotiBitUtilities::printFreeRAM("Begining of setup", 1);
 	EmotiBitVersionController emotiBitVersionController;
 	bool status = true;
 	if (_EmotiBit_i2c != nullptr)
@@ -106,7 +105,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.print("setting clock to");
 	Serial.print(i2cRate);
 	_EmotiBit_i2c->setClock(i2cRate);
-	Serial.print("...setting PIO_SERCOM");
+	Serial.println("...setting PIO_SERCOM");
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
 	_version = emotiBitVersionController.detectEmotiBitVersion(_EmotiBit_i2c);
@@ -230,7 +229,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			hibernate(false);// hiberante with setup incomplete
 		}
 	}
-	//EmotiBitUtilities::printFreeRAM("Reserved Memory for out data packets", 1);
 	uint32_t now = millis();
 	while (!Serial.available() && millis() - now < 2000)
 	{
@@ -336,52 +334,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = &dataClipping;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DEBUG] = &debugBuffer;
 
-
-	/*
-#if defined(ADAFRUIT_FEATHER_M0)
-	_batteryReadPin = A7;
-	_adcBits = 12;
-	adcRes = pow(2, _adcBits) -1;	// adc bit resolution
-	if (_version == EmotiBitVersionController::EmotiBitVersion::V01B || _version == EmotiBitVersionController::EmotiBitVersion::V01C)
-	{
-		_hibernatePin = 5; // gpio pin assigned to the mosfet
-		buttonPin = 13;
-		_edlPin = A3;
-		_edrPin = A4;
-		_sdCardChipSelectPin = 6;
-	}
-	else if (_version == EmotiBitVersionController::EmotiBitVersion::V02H || _version == EmotiBitVersionController::EmotiBitVersion::V03B)
-	{
-		_hibernatePin = 6; // gpio pin assigned to the mosfet
-		buttonPin = 12;
-		_edlPin = A4;
-		_edrPin = A3;
-		_sdCardChipSelectPin = 19;
-		edrAmplification = 100.f / 3.3f;
-		edaFeedbackAmpR = 5070000.f; // empirically derived average edaFeedbackAmpR in Ohms (theoretical 4990000.f)
-		vRef1 = 0.426f; // empirically derived minimum voltage divider value [theoretical 15/(15 + 100)]
-		vRef2 = 1.634591173; // empirically derived average voltage divider value [theoretical _vcc * (100.f / (100.f + 100.f))]
-	}
-	else if (_version == EmotiBitVersionController::EmotiBitVersion::V02B)
-	{
-		_hibernatePin = 6; // gpio pin assigned to the mosfet
-		buttonPin = 12;
-		_edlPin = A4;
-		_edrPin = A3;
-		_sdCardChipSelectPin = 19;
-		edrAmplification = 100.f / 1.2f;
-		edaFeedbackAmpR = 4990000.f;; // edaFeedbackAmpR in Ohms
-	}
-#elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
-	if (_version == EmotiBitVersionController::EmotiBitVersion::V01B || _version == EmotiBitVersionController::EmotiBitVersion::V01C)
-	{
-		_hibernatePin = 27;//gpio pin assigned ot the mosfet
-		buttonPin = 16;
-		_gsrLowPin = A3;
-		_gsrHighPin = A4;
-	}
-#endif
-*/
 	// Print board-specific settings
 	Serial.println("\nHW version-specific settings:");
 	Serial.print("buttonPin = "); Serial.println(buttonPin);
@@ -714,7 +666,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	*/
 	setupSdCard();
 	led.setLED(uint8_t(EmotiBit::Led::RED), true);
-	//EmotiBitUtilities::printFreeRAM("Sd card init", 1);
 	//WiFi Setup;
 	Serial.println("\nSetting up WiFi");
 #if defined(ADAFRUIT_FEATHER_M0)
@@ -725,7 +676,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 
 	setPowerMode(PowerMode::NORMAL_POWER);
-	//EmotiBitUtilities::printFreeRAM("WiFi Init", 1);
 	typeTags[(uint8_t)EmotiBit::DataType::EDA] = EmotiBitPacket::TypeTag::EDA;
 	typeTags[(uint8_t)EmotiBit::DataType::EDL] = EmotiBitPacket::TypeTag::EDL;
 	typeTags[(uint8_t)EmotiBit::DataType::EDR] = EmotiBitPacket::TypeTag::EDR;
@@ -1097,14 +1047,6 @@ void EmotiBit::updateButtonPress()
 
 uint8_t EmotiBit::update()
 {
-	/*static uint32_t timeSincePrint = millis();
-	static bool firstprint = true;
-	if (firstprint || millis() - timeSincePrint > 2000)
-	{
-		EmotiBitUtilities::printFreeRAM("In Update", 1, 0);
-		firstprint = false;
-		timeSincePrint = millis();
-	}*/
 	static uint16_t serialPrevAvailable = Serial.available();
 	if (Serial.available() > serialPrevAvailable)
 	{
@@ -1187,6 +1129,8 @@ uint8_t EmotiBit::update()
 			}
 		}
 	}
+
+
 	// Handle data buffer reading and sending
 	static uint32_t dataSendTimer = millis();
 	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
@@ -1328,12 +1272,14 @@ int8_t EmotiBit::updateEDAData()
 		if (testingMode == TestingMode::ISR_CORRECTION_UPDATE || testingMode == TestingMode::ISR_CORRECTION_TEST)
 		{
 			// transmit raw
-			edlTx = edlRaw; edrTx = edrRaw;
+			edlTx = edlRaw; 
+			edrTx = edrRaw;
 		}
 		else
 		{
 			// transmit converted to volts
-			edlTx = edlTemp; edrTx = edrTemp;
+			edlTx = edlTemp; 
+			edrTx = edrTemp;
 		}
 
 		// send raw EDL values
@@ -1352,13 +1298,6 @@ int8_t EmotiBit::updateEDAData()
 		if (edaCrossoverFilterFreq > 0)// use only is a valid crossover freq is assigned
 		{
 			static DigitalFilter filterEda(DigitalFilter::FilterType::IIR_LOWPASS, (_samplingRates.eda / _samplesAveraged.eda), edaCrossoverFilterFreq);
-			//if (_edlDigFilteredVal < 0)
-			//{
-			//	// initialize filter
-			//	_edlDigFilteredVal = edlTemp;
-			//}
-			//_edlDigFilteredVal = edlTemp * (1. - _edlDigFiltAlpha) + _edlDigFilteredVal * _edlDigFiltAlpha;
-			//edlTemp = _edlDigFilteredVal;
 			if (_enableDigitalFilter.eda)
 			{
 				edlTemp = filterEda.filter(edlTemp);
@@ -1623,9 +1562,9 @@ int8_t EmotiBit::updateIMUData() {
 
 			Serial.println("getMotion9");
 		}
-		static DigitalFilter filterMx(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.magnetometer,1);
-		static DigitalFilter filterMy(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.magnetometer, 1);
-		static DigitalFilter filterMz(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.magnetometer, 1);
+		static DigitalFilter filterMx(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.magnetometer,2);
+		static DigitalFilter filterMy(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.magnetometer, 2);
+		static DigitalFilter filterMz(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.magnetometer, 2);
 
 		// ToDo: Utilize IMU 1024 buffer to help mitigate buffer overruns
 
@@ -1981,6 +1920,7 @@ int8_t EmotiBit::readBatteryPercent() {
 	// https://www.richtek.com/Design%20Support/Technical%20Document/AN024
 	float bv = readBatteryVoltage();
 	int8_t result;
+	// ToDo: move teh filter to updateBatteryPercentData 
 	static DigitalFilter filterBatt(DigitalFilter::FilterType::IIR_LOWPASS, ((BASE_SAMPLING_FREQ)/(BATTERY_SAMPLING_DIV))/(_samplesAveraged.battery), 0.01);
 	if (bv > 4.15f) {
 		result = 100;
@@ -2722,6 +2662,7 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	if (_EmotiBit_i2c != nullptr)
 	{
 		delete(_EmotiBit_i2c);
+		_EmotiBit_i2c = nullptr;
 	}
 	
 	// If version is known, avoid setting Hibernate pin as INPUT till emotibit is powered OFF

@@ -12,7 +12,6 @@
 #include <SparkFun_MLX90632_Arduino_Library.h>
 #include "DoubleBufferFloat.h"
 #include <ArduinoJson.h>
-//#include <SdFat.h>
 #include "wiring_private.h"
 #include "EmotiBitWiFi.h"
 #include <SPI.h>
@@ -23,8 +22,6 @@
 #include "EdaCorrection.h"
 #include "EmotiBitVersionController.h"
 #include "DigitalFilter.h"
-//#include "EmotiBitUtilities.h"
-//#include <Adafruit_SleepyDog.h>
 
 
 class EmotiBit {
@@ -40,7 +37,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.76";
+	String firmware_version = "1.2.77";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 

@@ -67,7 +67,6 @@ Bootup
 #include "Arduino.h"
 #include <WiFi101.h>
 #include "spi_flash/include/spi_flash.h"
-//#include <FlashStorage.h>
 #include "SAMD_AnalogCorrection.h"
 #include "wiring_private.h"
 
@@ -79,8 +78,8 @@ Bootup
 class AdcCorrection
 {
 private:
-	uint16_t _gainCorr; //drop these. the global variable has the values needed
-	uint16_t _offsetCorr; //drop these. the global variable has the values needed
+	uint16_t _gainCorr; 
+	uint16_t _offsetCorr; 
 	float _measuredAdcInIsr = 0;
 	//int8_t _isrOffsetCorr = 0;
 	bool _isAtwincDownloadMode = 0;
@@ -100,6 +99,7 @@ public:
 	const size_t METADATA_LOC_NUM_ADC = 0;
 	const size_t METADATA_LOC_RIG_VERSION = 1;
 	const size_t METADATA_LOC_DATA_FORMAT = 2;
+    //ToDo: add METADATA_LOC_RIG_BOARD_ID
 
 	struct AdcCorrectionValues {
 		bool valid = false;

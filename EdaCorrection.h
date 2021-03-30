@@ -58,12 +58,7 @@ NORMAL
 
 class EdaCorrection
 {
-private:
-	bool _approvedToWriteOtp = false;
-	bool _responseRecorded = false;
-	uint8_t FLOAT_PRECISION = 7;
-	uint8_t _emotiBitVersion;
-	bool powerCycled = true;
+
 public:
 	class OtpMemoryMap_V0 {
 	public:
@@ -140,9 +135,6 @@ public:
 		char inByte[4];// buffer to store the float in BYTE form
 	}otpData;
 
-private:
-	Mode _mode = EdaCorrection::Mode::NORMAL;
-
 public:
 	// enum to asynchronously track the progress.
 	// the progress variable will be tracked in emotibit.update and the ISR to perform various functions sequentially in a non-blocking manner.
@@ -158,6 +150,13 @@ public:
 
 	Progress progress = EdaCorrection::Progress::BEGIN;
 
+private:
+	Mode _mode = EdaCorrection::Mode::NORMAL;
+	bool _approvedToWriteOtp = false;
+	bool _responseRecorded = false;
+	uint8_t FLOAT_PRECISION = 7;
+	uint8_t _emotiBitVersion;
+	bool powerCycled = true;
 public:
 
 	bool begin(uint8_t emotiBitVersion);

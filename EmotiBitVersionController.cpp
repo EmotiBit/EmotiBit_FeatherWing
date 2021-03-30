@@ -151,22 +151,16 @@ bool EmotiBitVersionController::_initMappingMathConstants(EmotiBitVersionControl
 	if (version == EmotiBitVersion::V02H || version == EmotiBitVersion::V03B)
 	{
 		_assignedMathConstants[(int)MathConstants::EDR_AMPLIFICATION] = 100.f / 3.3f;
-		_assignedMathConstants[(int)MathConstants::VREF1] = 0.426f; // empirically derived minimum voltage divider value [theoretical 15/(15 + 100)]
+		// The Vref1 value being used is the empirical mean of Vref1 measured in emotibits during testing.
+		_assignedMathConstants[(int)MathConstants::VREF1] = 0.426f; // empirically derived minimum voltage divider value [theoretical 15/(15 + 100)]. 
+		// The Vref2 value being used is the empirical mean of Vref2 measured in emotibits during testing.
 		_assignedMathConstants[(int)MathConstants::VREF2] = 1.634591173; // empirically derived average voltage divider value [theoretical _vcc * (100.f / (100.f + 100.f))]
 		_assignedMathConstants[(int)MathConstants::EDA_FEEDBACK_R] = 5070000.f; // empirically derived average edaFeedbackAmpR in Ohms (theoretical 4990000.f)
 		_assignedMathConstants[(int)MathConstants::EDA_SERIES_RESISTOR] = 0;
 		_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ] = 1.f / (2.f * PI * 200000.f * 0.0000047f);
 		
 	}
-	else if (version == EmotiBitVersion::V02B)
-	{
-		_assignedMathConstants[(int)MathConstants::EDR_AMPLIFICATION] = 100.f / 1.2f;
-		_assignedMathConstants[(int)MathConstants::VREF1] = _INVALID_CONSTANT_FOR_VERSION;
-		_assignedMathConstants[(int)MathConstants::VREF2] = _INVALID_CONSTANT_FOR_VERSION;
-		_assignedMathConstants[(int)MathConstants::EDA_FEEDBACK_R] = 4990000.f;
-		_assignedMathConstants[(int)MathConstants::EDA_SERIES_RESISTOR] = _INVALID_CONSTANT_FOR_VERSION;
-		_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ] = _INVALID_CONSTANT_FOR_VERSION;
-	}
+
 	return true;
 #endif
 }
@@ -191,12 +185,7 @@ bool EmotiBitVersionController::_initMappingSystemConstants(EmotiBitVersionContr
 		_assignedSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT] = 6;
 		_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE] = INPUT_PULLDOWN;
 	}
-	else if (version == EmotiBitVersion::V02B)
-	{
-		_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL] = HIGH;
-		_assignedSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT] = _INVALID_CONSTANT_FOR_VERSION;
-		_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE] = INPUT;
-	}
+
 	return true;
 #endif
 }
