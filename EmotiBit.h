@@ -12,15 +12,16 @@
 #include <SparkFun_MLX90632_Arduino_Library.h>
 #include "DoubleBufferFloat.h"
 #include <ArduinoJson.h>
-#include <SdFat.h>
 #include "wiring_private.h"
 #include "EmotiBitWiFi.h"
 #include <SPI.h>
 #include <SdFat.h>
 #include <ArduinoJson.h>
 #include <ArduinoLowPower.h>
-
-//#include <Adafruit_SleepyDog.h>
+#include "AdcCorrection.h"
+#include "EdaCorrection.h"
+#include "EmotiBitVersionController.h"
+#include "DigitalFilter.h"
 
 
 class EmotiBit {
@@ -31,10 +32,12 @@ public:
 		NONE,
 		CHRONIC,
 		ACUTE,
+		ISR_CORRECTION_UPDATE,
+		ISR_CORRECTION_TEST,
 		length
 	};
 
-	String firmware_version = "1.1.0";
+	String firmware_version = "1.2.77";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -45,14 +48,6 @@ public:
 
 	enum class SensorTimer {
 		MANUAL
-	};
-
-	enum class Version {
-		V01B,
-		V01C,
-		V02F,
-		V02H,
-		V02B
 	};
 
 	//struct IMUSettings {
@@ -112,6 +107,13 @@ public:
 		uint8_t gyr_bwp = BMI160_DLPF_MODE_NORM;
 		uint8_t gyr_us = BMI160_DLPF_MODE_NORM;
 		uint8_t mag_odr = BMI160MagRate::BMI160_MAG_RATE_25HZ;
+	};
+	
+	struct EnableDigitalFilter {
+		bool mx = true;
+		bool my = true;
+		bool mz = true;
+		bool eda = true;
 	};
 
 	struct SamplingRates {
@@ -218,6 +220,10 @@ public:
 	MAX30105 ppgSensor;
 	NCP5623 led;
 	MLX90632 thermopile;
+	EdaCorrection *edaCorrection = nullptr;
+
+	int _emotiBitSystemConstants[(int)SystemConstants::COUNT];
+
 	float edrAmplification;
 	float vRef1; // Reference voltage of first voltage divider(15/100)
 	float vRef2; // Reference voltage from second voltage divider(100/100)
@@ -337,12 +343,14 @@ public:
 	bool _sendTestData = false;
 	float _edlDigFiltAlpha = 0;
 	float _edlDigFilteredVal = -1;
+	float _edaSeriesResistance = 0;
+	float _isrOffsetCorr = 0;
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 
-	void setupSdCard();
+	bool setupSdCard();
 	void updateButtonPress();
-	void hibernate();
+	void hibernate(bool i2cSetupComplete = true);
 	void startTimer(int frequencyHz);
 	void setTimerFrequency(int frequencyHz);
 	//void TC3_Handler();
@@ -412,12 +420,13 @@ public:
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
 	void processDebugInputs(String &debugPackets, uint16_t &packetNumber);
 	String getHardwareVersion();
+	int detectEmotiBitVersion();
 
 	// ----------- END ino refactoring ---------------
 
 	
   EmotiBit();
-  uint8_t setup(Version version = Version::V02H, size_t bufferCapacity = 64);   /**< Setup all the sensors */
+  uint8_t setup(size_t bufferCapacity = 64);   /**< Setup all the sensors */
 	uint8_t update();
   void setAnalogEnablePin(uint8_t i); /**< Power on/off the analog circuitry */
   int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
@@ -457,6 +466,7 @@ private:
 
 	SensorTimer _sensorTimer = SensorTimer::MANUAL;
 	SamplingRates _samplingRates;
+	EnableDigitalFilter _enableDigitalFilter;
 	SamplesAveraged _samplesAveraged;
 	uint8_t _batteryReadPin;
 	uint8_t _edlPin;
@@ -465,7 +475,8 @@ private:
 	uint8_t _adcBits;
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)
 	float _gyroRange; // supported values: 125, 250, 500, 1000, 2000 (degrees/second)
-	Version _version;
+	//Version _version;
+	EmotiBitVersionController::EmotiBitVersion _version;
 	uint8_t _imuFifoFrameLen = 0; // in bytes
 	const uint8_t _maxImuFifoFrameLen = 40; // in bytes
 	uint8_t _imuBuffer[40];
