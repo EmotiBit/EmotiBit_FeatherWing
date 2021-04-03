@@ -17,8 +17,10 @@
 #include "EmotiBitWiFi.h"
 #include <SPI.h>
 #include <ArduinoJson.h>
+#ifdef ARDUINO_FEATHER_ESP32
+#include <SD.h>
+#elif defined ADAFRUIT_FEATHER_M0
 #include <SdFat.h>
-#ifdef ADAFRUIT_FEATHER_M0
 #include <ArduinoLowPower.h>
 #endif
 #include "AdcCorrection.h"
@@ -307,7 +309,7 @@ public:
 		bool tempHumidity = true;
 		bool thermopile = true;
 		bool imu = true;
-		bool ppg = false;
+		bool ppg = true;
 		bool debug = false;
 		bool battery = true;
 	} acquireData;
@@ -326,7 +328,11 @@ public:
 	bool _newDataAvailable[(uint8_t)EmotiBit::DataType::length];
 	uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
 	bool sendData[(uint8_t)EmotiBit::DataType::length];
+#ifdef ADAFRUIT_FEATHER_M0
 	SdFat SD;
+#elif defined ARDUINO_FEATHER_ESP32
+	// SD is already defined.
+#endif
 	volatile uint8_t battLevel = 100;
 	volatile uint8_t battIndicationSeq = 0;
 	volatile uint16_t BattLedDuration = 65535;
@@ -338,7 +344,12 @@ public:
 	//String _outSdPackets;		// Packts that will be written to SD card (if recording) but not sent over wireless
 	//String _inControlPackets;	// Control packets recieved over wireless
 	String _sdCardFilename = "datalog.csv";
+	// ToDo: unecessary #define. add / while passing the argument to function
+#ifdef ADAFRUIT_FEATHER_M0
 	const char *_configFilename = "config.txt"; 
+#elif defined ARDUINO_FEATHER_ESP32
+	const char *_configFilename = "/config.txt"; 
+#endif
 	File _dataFile;
 	volatile bool _sdWrite;
 	PowerMode _powerMode;

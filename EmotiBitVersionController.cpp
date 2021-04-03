@@ -417,22 +417,25 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 
 bool EmotiBitVersionController::detectSdCard()
 {
-	SdFat sd;
-	Serial.print("\nInitializing SD card...");
 
+	Serial.print("\nInitializing SD card...");
 	// code snippet taken from CardInfo exmaple from the SdFat library in Arduino. Tested with version 2.0.4
 	// we'll use the initialization code from the utility libraries
 	// since we're just testing if the card is working!
 #if defined (ARDUINO_FEATHER_ESP32)
-	if (!sd.cardBegin(SdSpiConfig(SD_CARD_CHIP_SEL_PIN, DEDICATED_SPI, SD_SCK_MHZ(50))))
+	//if (!sd.cardBegin(SdSpiConfig(SD_CARD_CHIP_SEL_PIN, DEDICATED_SPI, SD_SCK_MHZ(50))))
+	//if(!SD.begin(SD_CARD_CHIP_SEL_PIN))
 #elif defined (ADAFRUIT_FEATHER_M0)
-	if(!sd.begin(SD_CARD_CHIP_SEL_PIN))
+	SdFat SD;
 #endif
+	if(!SD.begin(SD_CARD_CHIP_SEL_PIN))
 	{
+		SD.end();
 		return false;
 	}
 	else 
 	{
+		SD.end();
 		Serial.println("Wiring is correct and a card is present.");
 		return true;
 	}

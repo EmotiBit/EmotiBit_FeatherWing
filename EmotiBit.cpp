@@ -672,15 +672,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 #endif
 #ifdef ADAFRUIT_FEATHER_M0
 	WiFi.lowPowerMode();
-#elif defined ARDUINO_FEATHER_ESP32
-	//Serial.println("Updating wifi credentials (hardcoded)");
-	_emotiBitWiFi.addCredential("openbci-mesh2.4g", "brains12345");
-	_emotiBitWiFi.addCredential("Net-work-2.4G", "YouShallNotPass");
-	/*WiFi.begin("Net-work-2.4G", "YouShallNotPass");
-	while (WiFi.status() != WL_CONNECTED) {
-		delay(500);
-		Serial.println("Connecting to WiFi..");
-	}*/
 #endif
 	_emotiBitWiFi.begin();
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
@@ -857,7 +848,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 bool EmotiBit::setupSdCard()
 {
-#ifdef ADAFRUIT_FEATHER_M0
 	Serial.print("\nInitializing SD card...");
 	// see if the card is present and can be initialized:
 	bool success = false;
@@ -884,7 +874,26 @@ bool EmotiBit::setupSdCard()
 		return false;
 	}
 	Serial.println("card initialized.");
+#ifdef ADAFRUIT_FEATHER_M0
 	SD.ls(LS_R);
+#elif defined ARDUINO_FEATHER_ESP32
+	Serial.println("ESP::: Reading SD-Card");
+	File dir;
+	dir = SD.open("/");
+	// taken from SD examples: listFiles
+	while (true) 
+	{
+		File entry = dir.openNextFile();
+		if (!entry) {
+			// no more files
+			break;
+		}
+		if (!entry.isDirectory()) {
+			Serial.println(entry.name());
+		}
+		entry.close();
+	}
+#endif
 	Serial.print(F("\nLoading configuration file: "));
 	Serial.println(_configFilename);
 	if (!loadConfigFile(_configFilename)) {
@@ -897,7 +906,6 @@ bool EmotiBit::setupSdCard()
 	}
 	return true;
 
-#endif
 }
 
 bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) {
@@ -952,6 +960,9 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 }
 
 void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber) {
+
+	//Serial.println("parseIncomingControlPackets()");
+	//delay(500);
 	static String packet;
 	static EmotiBitPacket::Header header;
 	int16_t dataStartChar = 0;
@@ -963,6 +974,7 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 		{
 			if (header.typeTag.equals(EmotiBitPacket::TypeTag::RECORD_BEGIN)) 
 			{
+				Serial.println("RECORD BEGIN RECEIVED");
 #ifdef ADAFRUIT_FEATHER_M0
 				stopTimer();	// stop the data sampling timer
 #endif
@@ -980,7 +992,11 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 				// Try to open the data file to be sure we can write
 				_sdCardFilename = datetimeString + ".csv";
 				uint32_t start_timeOpenFile = millis();
+#ifdef ADAFRUIT_FEATHER_M0
 				_dataFile = SD.open(_sdCardFilename, O_CREAT | O_WRITE | O_AT_END);
+#elif defined ARDUINO_FEATHER_ESP32
+				_dataFile = SD.open(_sdCardFilename, FILE_WRITE);
+#endif
 				if (_dataFile) {
 					_sdWrite = true;
 					Serial.print("** Recording Begin: ");
@@ -1010,6 +1026,7 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_LOW_POWER)) {
 				setPowerMode(EmotiBit::PowerMode::LOW_POWER);
+				Serial.println(":::::::::::::::LOW POWER MODE:::::::::::");
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_MAX_LOW_POWER)) {
 				setPowerMode(EmotiBit::PowerMode::MAX_LOW_POWER);
@@ -1079,9 +1096,9 @@ uint8_t EmotiBit::update()
 		firstprint = false;
 		timeSincePrint = millis();
 	}*/
-	delay(8);
+	delay(100);
 	static uint32_t updateLoopCounter = 0;
-	Serial.print("Update()->"); Serial.println(updateLoopCounter++);
+	//Serial.print("Update()->"); Serial.println(updateLoopCounter++);
 	static uint16_t serialPrevAvailable = Serial.available();
 	if (Serial.available() > serialPrevAvailable)
 	{
@@ -1376,12 +1393,12 @@ int8_t EmotiBit::updatePPGData() {
 #endif // DEBUG
 	int8_t status = 0;
 	uint16_t numsamples = ppgSensor.check();
-	Serial.println("updatePPGData()");
 
 	while (ppgSensor.available()) {
-		status = status | pushData(EmotiBit::DataType::PPG_INFRARED, ppgSensor.getFIFOIR());
-		status = status | pushData(EmotiBit::DataType::PPG_RED, ppgSensor.getFIFORed());
-		status = status | pushData(EmotiBit::DataType::PPG_GREEN, ppgSensor.getFIFOGreen());
+		uint32_t timestamp = millis();
+		status = status | pushData(EmotiBit::DataType::PPG_INFRARED, ppgSensor.getFIFOIR(), &timestamp);
+		status = status | pushData(EmotiBit::DataType::PPG_RED, ppgSensor.getFIFORed(), &timestamp);
+		status = status | pushData(EmotiBit::DataType::PPG_GREEN, ppgSensor.getFIFOGreen(), &timestamp);
 		ppgSensor.nextSample();
 		//available--;
 	}
@@ -1392,7 +1409,6 @@ int8_t EmotiBit::updateTempHumidityData() {
 #ifdef DEBUG
 	Serial.println("updateTempHumidityData()");
 #endif // DEBUG
-	Serial.println("updateTempHumidityData()");
 	_EmotiBit_i2c->setClock(100000);
 	int8_t status = 0;
 	if (tempHumiditySensor.getStatus() == Si7013::STATUS_IDLE) {
@@ -1508,7 +1524,7 @@ int8_t EmotiBit::updateIMUData() {
 #ifdef DEBUG
 		Serial.println("updateIMUData()");
 #endif // DEBUG
-	Serial.println("updateIMUData()");
+	//Serial.println("updateIMUData()");
 	static uint32_t timestamp;
 	// ToDo: Add status return
 	//static int8_t status;
@@ -2785,11 +2801,13 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 			}
 
 			static uint32_t syncTimer = millis();
+#ifdef ADAFRUIT_FEATHER_M0
 			if (millis() - syncTimer > targetFileSyncDelay)
 			{
 				syncTimer = millis();
 				_dataFile.sync();
 			}
+#endif
 		}
 		else {
 			Serial.print("Data file didn't open properly: ");
@@ -3415,7 +3433,7 @@ void attachToCore(void(*readFunction)(void*), EmotiBit*e)
 		"EmotiBitDataAcquisition",     /* name of task. */
 		10000,       /* Stack size of task */
 		NULL,        /* parameter of the task */
-		1,           /* priority of the task */
+		10,           /* priority of the task */
 		&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
 		0);          /* pin task to core 0 */
 	delay(500);
@@ -3444,8 +3462,8 @@ void ReadSensors(void *pvParameters)
 	Serial.print("The data acquisition is executing on core: "); Serial.println(xPortGetCoreID());
 	while (1) // the function assigned to the second core should never return
 	{
-		Serial.print("ReadSensors() -> "); Serial.println(counter++);
-		delay(3);
+		//Serial.print("ReadSensors() -> "); Serial.println(counter++);
+		delay(10);
 		if (myEmotiBit != nullptr)
 		{
 			//Serial.println("EmotiBit is NOT nullptr");
