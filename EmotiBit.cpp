@@ -578,6 +578,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	pinMode(_edrPin, INPUT);
 	//samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
 	analogReadResolution(_adcBits);
+	Serial.println("Configuring EDA Calibrations...");
+	// ToDo:Added hardcoded values for ESP+V3-53
+	vRef1 = 0.3157704175;
+	vRef2 = 1.56243023874;
+	edaFeedbackAmpR = 5076586.99069;
 #ifdef ADAFRUIT_FEATHER_M0
 	Serial.println("Configuring ADC Corrections...");
 	// If the correction data does not exist on the SAMD flash
@@ -600,7 +605,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); 
 		Serial.print("\toffset correction:"); Serial.println(adcCorrectionValues._offsetCorrection);
 	}
-#endif
 	Serial.println("Configuring EDA Calibrations...");
 	
 	// If Eda Correction mode was not initialized
@@ -616,6 +620,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		Serial.println("In EDA Calibration mode");
 	}
+#endif
 
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 
@@ -3468,7 +3473,7 @@ void ReadSensors(void *pvParameters)
 	while (1) // the function assigned to the second core should never return
 	{
 		//Serial.print("ReadSensors() -> "); Serial.println(counter++);
-		delay(10);
+		delay(3);
 		if (myEmotiBit != nullptr)
 		{
 			//Serial.println("EmotiBit is NOT nullptr");
