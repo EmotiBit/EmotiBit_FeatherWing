@@ -980,7 +980,7 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 #endif
 				String datetimeString = packet.substring(dataStartChar, packet.length());
 				// Write the configuration info to json file
-				String infoFilename = datetimeString + "_info.json";
+				String infoFilename = "/" + datetimeString + "_info.json";
 				_dataFile = SD.open(infoFilename, FILE_WRITE);
 				if (_dataFile) {
 					if (!printConfigInfo(_dataFile, datetimeString)) {
@@ -988,9 +988,13 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 					}
 					_dataFile.close();
 				}
+				else
+				{
+					Serial.println("Failed to open INFO file for writing");
+				}
 				Serial.println("Creating new file to write data");
 				// Try to open the data file to be sure we can write
-				_sdCardFilename = datetimeString + ".csv";
+				_sdCardFilename = "/" + datetimeString + ".csv";
 				uint32_t start_timeOpenFile = millis();
 #ifdef ADAFRUIT_FEATHER_M0
 				_dataFile = SD.open(_sdCardFilename, O_CREAT | O_WRITE | O_AT_END);
@@ -1005,7 +1009,7 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 					// ToDo: need to communicate back to Visualizer if we were able to open a file
 				}
 				else {
-					Serial.println("Failed to open data file for writing");
+					Serial.println("Failed to open DATA file for writing");
 				}
 				if (!_sendTestData)
 				{
@@ -1524,7 +1528,6 @@ int8_t EmotiBit::updateIMUData() {
 #ifdef DEBUG
 		Serial.println("updateIMUData()");
 #endif // DEBUG
-	//Serial.println("updateIMUData()");
 	static uint32_t timestamp;
 	// ToDo: Add status return
 	//static int8_t status;
@@ -1603,7 +1606,9 @@ int8_t EmotiBit::updateIMUData() {
 		pushData(EmotiBit::DataType::ACCELEROMETER_X, convertRawAcc(ax), &timestamp);
 		pushData(EmotiBit::DataType::ACCELEROMETER_Y, convertRawAcc(ay), &timestamp);
 		pushData(EmotiBit::DataType::ACCELEROMETER_Z, convertRawAcc(az), &timestamp);
-
+		//Serial.print("Ax:"); Serial.print(convertRawAcc(ax));
+		//Serial.print("\tAy:"); Serial.print(convertRawAcc(ay));
+		//Serial.print("\tAz:"); Serial.println(convertRawAcc(az));
 		checkIMUClipping(EmotiBit::DataType::GYROSCOPE_X, gx, timestamp);
 		checkIMUClipping(EmotiBit::DataType::GYROSCOPE_Y, gy, timestamp);
 		checkIMUClipping(EmotiBit::DataType::GYROSCOPE_Z, gz, timestamp);
