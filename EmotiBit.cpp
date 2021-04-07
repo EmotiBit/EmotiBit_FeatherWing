@@ -579,7 +579,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	//samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
 	analogReadResolution(_adcBits);
 	Serial.println("Configuring EDA Calibrations...");
-	// ToDo:Added hardcoded values for ESP+V3-53
+	// ToDo: Change this when using with different emotibit.Added hardcoded values for ESP+V3-53
 	vRef1 = 0.3157704175;
 	vRef2 = 1.56243023874;
 	edaFeedbackAmpR = 5076586.99069;
@@ -2670,13 +2670,13 @@ int EmotiBit::freeMemory() {
 // NEW Hibernate
 void EmotiBit::hibernate(bool i2cSetupComplete) {
 	Serial.println("hibernate()");
-	Serial.println("Stopping timer...");
-#ifdef ADAFRUIT_FEATHER_M0
-	stopTimer();
-#endif
 
+#ifdef ADAFRUIT_FEATHER_M0
+	Serial.println("Stopping timer...");
+	stopTimer();
 	// Delay to ensure the timer has finished
 	delay((1000 * 5) / BASE_SAMPLING_FREQ);
+#endif
 	// if i2c sensor setup has been completed
 	if (i2cSetupComplete)
 	{
@@ -2725,6 +2725,14 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	digitalWrite(_hibernatePin, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL]);
 	delay(100);
 	pinMode(_hibernatePin, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE]);	//deepSleep();
+#ifdef ARDUINO_FEATHER_ESP32
+	Serial.println("deleting task on Core 0. Stopping data acquisition.");
+	vTaskDelete(EmotiBitDataAcquisition);
+	// Have to assign NULL to the task handle. check out https://github.com/espressif/esp-idf/issues/5010
+	EmotiBitDataAcquisition = NULL;
+	Serial.println("deleting task on Core 1");
+	vTaskDelete(NULL);
+#endif
 #ifdef ADAFRUIT_FEATHER_M0
 	Serial.println("Entering deep sleep...");
 	LowPower.deepSleep();
