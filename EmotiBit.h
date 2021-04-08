@@ -19,6 +19,9 @@
 #include <ArduinoJson.h>
 #ifdef ARDUINO_FEATHER_ESP32
 #include <SD.h>
+#include "driver/adc.h"
+#include <esp_wifi.h>
+#include <esp_bt.h>
 #elif defined ADAFRUIT_FEATHER_M0
 #include <SdFat.h>
 #include <ArduinoLowPower.h>
@@ -42,7 +45,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.60";
+	String firmware_version = "1.2.61";
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = false;
 

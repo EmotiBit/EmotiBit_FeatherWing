@@ -2726,6 +2726,21 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	delay(100);
 	pinMode(_hibernatePin, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE]);	//deepSleep();
 #ifdef ARDUINO_FEATHER_ESP32
+	// See link  for more infor: https://savjee.be/2019/12/esp32-tips-to-increase-battery-life/
+	Serial.println("Going to sleep...");
+	WiFi.disconnect(true);
+	WiFi.mode(WIFI_OFF);
+	btStop();
+
+	adc_power_off();
+	esp_wifi_stop();
+	esp_bt_controller_disable();
+
+	// Configure the timer to wake us up!
+	esp_sleep_enable_timer_wakeup(100 * 60L * 1000000L); // sleep for 100m mins
+
+	// Go to sleep! Zzzz
+	esp_deep_sleep_start();
 	Serial.println("deleting task on Core 0. Stopping data acquisition.");
 	vTaskDelete(EmotiBitDataAcquisition);
 	// Have to assign NULL to the task handle. check out https://github.com/espressif/esp-idf/issues/5010
@@ -2848,11 +2863,11 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	if (getPowerMode() == PowerMode::NORMAL_POWER)
 	{
 		Serial.println("PowerMode::NORMAL_POWER");
-#ifdef ADAFRUIT_FEATHER_M0
 		if (_emotiBitWiFi.isOff())
 		{
 			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
+#ifdef ADAFRUIT_FEATHER_M0
 		WiFi.lowPowerMode();
 #endif
 
@@ -2861,11 +2876,11 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	else if (getPowerMode() == PowerMode::LOW_POWER)
 	{
 		Serial.println("PowerMode::LOW_POWER");
-#ifdef ADAFRUIT_FEATHER_M0
 		if (_emotiBitWiFi.isOff())
 		{
 			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
+#ifdef ADAFRUIT_FEATHER_M0
 		WiFi.lowPowerMode();
 #endif
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
@@ -2873,11 +2888,11 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	else if (getPowerMode() == PowerMode::MAX_LOW_POWER)
 	{
 		Serial.println("PowerMode::MAX_LOW_POWER");
-#ifdef ADAFRUIT_FEATHER_M0
 		if (_emotiBitWiFi.isOff())
 		{
 			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
+#ifdef ADAFRUIT_FEATHER_M0
 		WiFi.maxLowPowerMode();
 #endif
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
