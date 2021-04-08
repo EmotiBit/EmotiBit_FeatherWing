@@ -93,6 +93,10 @@ void EmotiBit::bmm150ReadTrimRegisters()
 
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
+	// ToDo: Do an analysis on how much disabling the BT saves power
+#ifdef ARDUINO_FEATHER_ESP32
+	esp_bt_controller_disable();
+#endif
 	EmotiBitVersionController emotiBitVersionController;
 	//EmotiBitUtilities::printFreeRAM("Begining of setup", 1);
 	Serial.print("I2C data pin:"); Serial.println(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN);
@@ -2901,6 +2905,7 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	{
 		Serial.println("PowerMode::WIRELESS_OFF");
 		_emotiBitWiFi.end();
+		esp_wifi_stop();
 	}
 	else if (getPowerMode() == PowerMode::HIBERNATE)
 	{
