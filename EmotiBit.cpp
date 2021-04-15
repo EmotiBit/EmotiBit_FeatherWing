@@ -865,7 +865,11 @@ bool EmotiBit::setupSdCard()
 		Serial.print(i);
 		Serial.print(",");
 		// begin function initializes SPI at MAX speed by deafult. check /src/SpiDriver/SdSpiDriver.h for details on the constructor
+#ifdef ADAFRUIT_FEATHER_M0
 		if (SD.begin(_sdCardChipSelectPin))
+#elif defined ARDUINO_FEATHER_ESP32
+		if (SD.begin(_sdCardChipSelectPin,SPI,50000000))
+#endif
 		{
 			success = true;
 			break;
