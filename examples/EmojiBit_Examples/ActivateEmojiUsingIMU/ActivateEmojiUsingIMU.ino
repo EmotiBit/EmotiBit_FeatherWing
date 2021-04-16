@@ -15,7 +15,7 @@ const size_t dataSize = EmotiBit::MAX_DATA_BUFFER_SIZE;
 float data[dataSize];
 
 // Initializing Charlieplex wing
-EmojiBit matrix = EmojiBit();
+EmojiBit emojibit = EmojiBit();
 
 void onShortButtonPress()
 {
@@ -49,7 +49,7 @@ void setup()
 	emotibit.attachShortButtonPress(&onShortButtonPress);
 	emotibit.attachLongButtonPress(&onLongButtonPress);
 	
-	if (!matrix.begin()) {
+	if (!emojibit.begin()) {
 		Serial.println("IS31 not found");
 		while (1);
 	}
@@ -79,11 +79,11 @@ void loop()
 				{
 					//matrix.clear();
 					// Check out the ;ist of EMojis in EmojiTemplates.h
-					matrix.drawEmoji(EMOJI::HEART, 1);
+					emojibit.drawEmoji(EMOJI::HEART, 1);
 				}
 				else
 				{
-					matrix.clear();
+					emojibit.clear();
 				}
 			}
 		}
