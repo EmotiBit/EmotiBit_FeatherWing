@@ -27,5 +27,5 @@ void EmojiBit::drawEmoji(uint8_t emojiTemplate, uint8_t orientation, uint8_t int
 		xPos = 0;
 		yPos = 4; // Hardcoded shift to bring the 8x8 emoji to the center to the 15x7 charliePlex Wing
 	}
-	drawBitmap(xPos, yPos, emoji_bitmaps[emojiTemplate], width, height, intensity);
+	drawBitmap(xPos, yPos, emojiBitmaps[emojiTemplate], width, height, intensity);
 }

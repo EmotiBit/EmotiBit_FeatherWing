@@ -1,5 +1,6 @@
+// bitmaps for emoji stored in the program memory
 static const uint8_t PROGMEM
-emoji_bitmaps[][8] =
+emojiBitmaps[][8] =
 {   // Bitmaps taken from Adafruit Adafruit_IS31FL3731_Library gfx Demo example
 	// Smiley face
   { B00111100,
@@ -40,6 +41,7 @@ emoji_bitmaps[][8] =
 	}
 };
 
+// Update this enum when new templates are added to the emojiBitmaps
 enum EMOJI
 {
 	SMILE,

@@ -1,3 +1,9 @@
+/*
+This example demonstrates the use of the IMU data captured using the EmotiBit to display Emoji on the charlie plex wing.
+The charlieplex wing is stacked on the Emotibit using stacking headers.
+*/
+
+
 #include "EmotiBit.h"
 #include "EmojiBit.h"
 
@@ -69,7 +75,7 @@ void loop()
 			{
 				// Note that dataAvailable can be larger than dataSize
 				Serial.println(data[i]);
-				if (data[i] <= -0.9) // an example value to determine which orientation triggers the Emoji
+				if (data[i] <= -0.9) // choose a threshold to activate display
 				{
 					//matrix.clear();
 					// Check out the ;ist of EMojis in EmojiTemplates.h
