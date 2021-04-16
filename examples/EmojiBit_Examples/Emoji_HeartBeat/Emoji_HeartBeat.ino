@@ -1,12 +1,22 @@
+/*
+This example demonstrates use of PPG data from EmotiBit to light up heart emoji on the 
+attached charliplex wing.
+Working principle:
+1. The wavelength signal is filter using a low pass filter of chosen frequency and this 
+filtered signal is used as a hreshold to light up the attached charlieplex.
+*/
 #include "EmotiBit.h"
-
+#include "EmojiBit.h"
 #define SerialUSB SERIAL_PORT_USBVIRTUAL // Required to work in Visual Micro / Visual Studio IDE
 const uint32_t SERIAL_BAUD = 2000000; //115200
 
 EmotiBit emotibit;
 const size_t dataSize = EmotiBit::MAX_DATA_BUFFER_SIZE;
 float data[dataSize];
-DigitalFilter filter_lp2(DigitalFilter::FilterType::IIR_LOWPASS, 25, 0.75);
+DigitalFilter filter_lp2(DigitalFilter::FilterType::IIR_LOWPASS, 25, 0.075);
+
+// Initializing Charlieplex wing
+EmojiBit matrix = EmojiBit();
 
 void onShortButtonPress()
 {
@@ -35,13 +45,17 @@ void setup()
 	delay(2000);	// short delay to allow user to connect to serial, if desired
 
 	emotibit.setup();
-	Wire.begin();
 	// Attach callback functions
 	emotibit.attachShortButtonPress(&onShortButtonPress);
 	emotibit.attachLongButtonPress(&onLongButtonPress);
 	Serial.println("##############################");
 	Serial.println("# Hearbeat on sleeve Example #");
 	Serial.println("##############################");
+	if (!matrix.begin()) {
+		Serial.println("IS31 not found");
+		while (1);
+	}
+	Serial.println("IS31 Found!");
 }
 
 void loop()
@@ -67,11 +81,12 @@ void loop()
 				if (data[i] > threshold)
 				{
 					// light up heart emoji
-					
+					matrix.drawEmoji(EMOJI::HEART, 1);
 				}
 				else
 				{
 					// clear heart emoji
+					matrix.clear();
 				}
 			}
 		}
