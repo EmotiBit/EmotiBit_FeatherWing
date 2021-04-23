@@ -21,4 +21,3 @@ This example can be used to display your heart beat on a charlieplex feather win
 
 `Note: we have noticed that we get reletively good PPG signals when measuring data from the finger tips.`
 
-
