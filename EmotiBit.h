@@ -22,7 +22,7 @@
 #include "EdaCorrection.h"
 #include "EmotiBitVersionController.h"
 #include "DigitalFilter.h"
-
+#include "EmotiBitFactoryTest.h"
 
 class EmotiBit {
   
@@ -34,10 +34,11 @@ public:
 		ACUTE,
 		ISR_CORRECTION_UPDATE,
 		ISR_CORRECTION_TEST,
+		FACTORY_TEST,
 		length
 	};
 
-	String firmware_version = "1.2.77";
+	String firmware_version = "1.2.78";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
