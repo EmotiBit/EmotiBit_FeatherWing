@@ -1196,7 +1196,12 @@ void EmotiBit::updateButtonPress()
 		{
 			Serial.print("onLongPress: ");
 			Serial.println(millis() - buttonPressedTimer);
-			// ToDo: Send BL packet
+			createPacket(EmotiBitPacket::TypeTag::BUTTON_PRESS_LONG, _outDataPacketCounter++, "", 0);
+			_outDataPackets += "\n";
+			if (testingMode == FACTORY_TEST)
+			{
+				void EmotiBitFactoryTest::sendMessage(EmotiBitPacket::TypeTag::BUTTON_PRESS_LONG, "");
+			}
 			(onLongPressCallback());
 		}
 	}
@@ -1208,7 +1213,12 @@ void EmotiBit::updateButtonPress()
 			{
 				Serial.print("onShortPress: ");
 				Serial.println(millis() - buttonPressedTimer);
-				// ToDo: Send BS packet
+				createPacket(EmotiBitPacket::TypeTag::BUTTON_PRESS_SHORT, _outDataPacketCounter++, "", 0);
+				_outDataPackets += "\n";
+				if (testingMode == FACTORY_TEST)
+				{
+					void EmotiBitFactoryTest::sendMessage(EmotiBitPacket::TypeTag::BUTTON_PRESS_SHORT, "");
+				}
 				(onShortPressCallback());
 			}
 		}
