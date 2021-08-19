@@ -417,6 +417,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		led.setLED(uint8_t(EmotiBit::Led::RED), false);
 		led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 		led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+		led.send();
 		chipBegun.NCP5623 = true;
 		if (testingMode == TestingMode::FACTORY_TEST)
 		{
@@ -758,6 +759,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+	led.send();
 
 
 	// setup sampling rates
@@ -808,6 +810,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SD_CARD, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 		led.setLED(uint8_t(EmotiBit::Led::RED), true);
+		led.send();
 	}
 	else
 	{
@@ -822,6 +825,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	WiFi.lowPowerMode();
 	_emotiBitWiFi.begin();
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+	led.send();
 
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
@@ -955,6 +959,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 	delay(ledOffdelay);
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+	led.send();
 
 	if (!_sendTestData)
 	{
@@ -2726,51 +2731,55 @@ void EmotiBit::readSensors()
 			{
 				ledCounter = 0;
 
-				if (buttonPressed)
+				if (testingMode != FACTORY_TEST)
 				{
-					// Turn on the LEDs when the button is pressed
-					led.setLED(uint8_t(EmotiBit::Led::RED), true);
-					led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-					led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-				}
-				else
-				{
-
-					// WiFi connected status LED
-					if (_emotiBitWiFi.isConnected())
+					if (buttonPressed)
 					{
+						// Turn on the LEDs when the button is pressed
+						led.setLED(uint8_t(EmotiBit::Led::RED), true);
 						led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-					}
-					else
-					{
-						led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
-					}
-
-					// Battery LED
-					if (battIndicationSeq)
-					{
 						led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 					}
 					else
 					{
-						led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-					}
 
-					// Recording status LED
-					if (_sdWrite)
-					{
-						static uint32_t recordBlinkDuration = millis();
-						if (millis() - recordBlinkDuration >= 500)
+						// WiFi connected status LED
+						if (_emotiBitWiFi.isConnected())
 						{
-							led.setLED(uint8_t(EmotiBit::Led::RED), !led.getLED(uint8_t(EmotiBit::Led::RED)));
-							recordBlinkDuration = millis();
+							led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+						}
+						else
+						{
+							led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+						}
+
+						// Battery LED
+						if (battIndicationSeq)
+						{
+							led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+						}
+						else
+						{
+							led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+						}
+
+						// Recording status LED
+						if (_sdWrite)
+						{
+							static uint32_t recordBlinkDuration = millis();
+							if (millis() - recordBlinkDuration >= 500)
+							{
+								led.setLED(uint8_t(EmotiBit::Led::RED), !led.getLED(uint8_t(EmotiBit::Led::RED)));
+								recordBlinkDuration = millis();
+							}
+						}
+						else if (!_sdWrite && led.getLED(uint8_t(EmotiBit::Led::RED)) == true)
+						{
+							led.setLED(uint8_t(EmotiBit::Led::RED), false);
 						}
 					}
-					else if (!_sdWrite && led.getLED(uint8_t(EmotiBit::Led::RED)) == true)
-					{
-						led.setLED(uint8_t(EmotiBit::Led::RED), false);
-					}
 				}
+				led.send();
 			}
 			ledCounter++;
 		}
@@ -2816,6 +2825,7 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 		led.setLED(uint8_t(EmotiBit::Led::RED), true);
 		led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 		led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+		led.send();
 		chipBegun.MAX30101 = false;
 		chipBegun.BMM150 = false;
 		chipBegun.BMI160 = false;
@@ -3476,32 +3486,31 @@ void processFactoryTestMessages()
 		String msgTypeTag = msg.substring(0, 1);
 		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_ON))
 		{
-			//leds.setLED(EmotiBit::Led::RED, true);
+			led.setLED(EmotiBit::Led::RED, true);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_OFF))
 		{
-			//leds.setLED(EmotiBit::Led::RED, false);
+			led.setLED(EmotiBit::Led::RED, false);
 		}
 		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_ON))
 		{
-			//leds.setLED(EmotiBit::Led::BLUE, true);
+			led.setLED(EmotiBit::Led::BLUE, true);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_OFF))
 		{
-			//leds.setLED(EmotiBit::Led::BLUE, false);
+			led.setLED(EmotiBit::Led::BLUE, false);
 		}
 		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_ON))
 		{
-			//leds.setLED(EmotiBit::Led::YELLOW, true);
+			led.setLED(EmotiBit::Led::YELLOW, true);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_OFF))
 		{
-			//leds.setLED(EmotiBit::Led::YELLOW, false);
+			led.setLED(EmotiBit::Led::YELLOW, false);
 		}
 		else if (msgTypeTag.equals(EmotiBitPacket::TypeTag::MODE_HIBERNATE))
 		{
 			emotibit.hibernate();
-			//leds.setLED(EmotiBit::Led::YELLOW, false);
 		}
 	}
 }
