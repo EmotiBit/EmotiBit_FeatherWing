@@ -420,6 +420,7 @@ public:
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
 	void processDebugInputs(String &debugPackets, uint16_t &packetNumber);
+	void processFactoryTestMessages()
 	String getHardwareVersion();
 	int detectEmotiBitVersion();
 

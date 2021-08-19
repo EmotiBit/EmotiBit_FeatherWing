@@ -1239,12 +1239,16 @@ uint8_t EmotiBit::update()
 			writeSerialData(_serialData);
 		}
 	}
+	else if (testingMode == TestingMode::FACTORY_TEST && edaCorrection == nullptr)
+	{
+		processFactoryTestMessages();
+	}
 	else
 	{
 		// if not in debug mode, or Eda Correction UPDATE mode, always clear the input serial buffer
 		if (edaCorrection == nullptr)
 		{
-			while (Serial.available())
+			while (Serial.available() > 0)
 			{
 				Serial.read();
 			}
@@ -3460,6 +3464,44 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			_enableDigitalFilter.my = false;
 			_enableDigitalFilter.mz = false;
 			_enableDigitalFilter.eda = false;
+		}
+	}
+}
+
+void processFactoryTestMessages() 
+{
+	if (Serial.available() > 0 && Serial.read() == EmotiBitFactoryTest::MSG_START_CHAR)
+	{
+		String msg = Serial.readBytesUntil(EmotiBitFactoryTest::MSG_TERM_CHAR);
+		String msgTypeTag = msg.substring(0, 1);
+		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_ON))
+		{
+			//leds.setLED(EmotiBit::Led::RED, true);
+		}
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_OFF))
+		{
+			//leds.setLED(EmotiBit::Led::RED, false);
+		}
+		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_ON))
+		{
+			//leds.setLED(EmotiBit::Led::BLUE, true);
+		}
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_OFF))
+		{
+			//leds.setLED(EmotiBit::Led::BLUE, false);
+		}
+		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_ON))
+		{
+			//leds.setLED(EmotiBit::Led::YELLOW, true);
+		}
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_OFF))
+		{
+			//leds.setLED(EmotiBit::Led::YELLOW, false);
+		}
+		else if (msgTypeTag.equals(EmotiBitPacket::TypeTag::MODE_HIBERNATE))
+		{
+			emotibit.hibernate();
+			//leds.setLED(EmotiBit::Led::YELLOW, false);
 		}
 	}
 }
