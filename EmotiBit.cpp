@@ -1200,7 +1200,7 @@ void EmotiBit::updateButtonPress()
 			_outDataPackets += "\n";
 			if (testingMode == TestingMode::FACTORY_TEST)
 			{
-				EmotiBitFactoryTest::sendMessage(EmotiBitPacket::TypeTag::BUTTON_PRESS_LONG, "");
+				EmotiBitFactoryTest::sendMessage(EmotiBitPacket::TypeTag::BUTTON_PRESS_LONG);
 			}
 			(onLongPressCallback());
 		}
@@ -1217,7 +1217,7 @@ void EmotiBit::updateButtonPress()
 				_outDataPackets += "\n";
 				if (testingMode == TestingMode::FACTORY_TEST)
 				{
-					EmotiBitFactoryTest::sendMessage(EmotiBitPacket::TypeTag::BUTTON_PRESS_SHORT, "");
+					EmotiBitFactoryTest::sendMessage(EmotiBitPacket::TypeTag::BUTTON_PRESS_SHORT);
 				}
 				(onShortPressCallback());
 			}
