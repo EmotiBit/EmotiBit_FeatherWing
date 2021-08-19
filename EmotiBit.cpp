@@ -1196,11 +1196,11 @@ void EmotiBit::updateButtonPress()
 		{
 			Serial.print("onLongPress: ");
 			Serial.println(millis() - buttonPressedTimer);
-			createPacket(EmotiBitPacket::TypeTag::BUTTON_PRESS_LONG, _outDataPacketCounter++, "", 0);
+			EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::BUTTON_PRESS_LONG, _outDataPacketCounter++, "", 0);
 			_outDataPackets += "\n";
-			if (testingMode == FACTORY_TEST)
+			if (testingMode == TestingMode::FACTORY_TEST)
 			{
-				void EmotiBitFactoryTest::sendMessage(EmotiBitPacket::TypeTag::BUTTON_PRESS_LONG, "");
+				EmotiBitFactoryTest::sendMessage(EmotiBitPacket::TypeTag::BUTTON_PRESS_LONG, "");
 			}
 			(onLongPressCallback());
 		}
@@ -1213,11 +1213,11 @@ void EmotiBit::updateButtonPress()
 			{
 				Serial.print("onShortPress: ");
 				Serial.println(millis() - buttonPressedTimer);
-				createPacket(EmotiBitPacket::TypeTag::BUTTON_PRESS_SHORT, _outDataPacketCounter++, "", 0);
+				EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::BUTTON_PRESS_SHORT, _outDataPacketCounter++, "", 0);
 				_outDataPackets += "\n";
-				if (testingMode == FACTORY_TEST)
+				if (testingMode == TestingMode::FACTORY_TEST)
 				{
-					void EmotiBitFactoryTest::sendMessage(EmotiBitPacket::TypeTag::BUTTON_PRESS_SHORT, "");
+					EmotiBitFactoryTest::sendMessage(EmotiBitPacket::TypeTag::BUTTON_PRESS_SHORT, "");
 				}
 				(onShortPressCallback());
 			}
@@ -2741,7 +2741,7 @@ void EmotiBit::readSensors()
 			{
 				ledCounter = 0;
 
-				if (testingMode != FACTORY_TEST)
+				if (testingMode != TestingMode::FACTORY_TEST)
 				{
 					if (buttonPressed)
 					{
@@ -3488,39 +3488,41 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 	}
 }
 
-void processFactoryTestMessages() 
+void EmotiBit::processFactoryTestMessages() 
 {
 	if (Serial.available() > 0 && Serial.read() == EmotiBitFactoryTest::MSG_START_CHAR)
 	{
-		String msg = Serial.readBytesUntil(EmotiBitFactoryTest::MSG_TERM_CHAR);
-		String msgTypeTag = msg.substring(0, 1);
+		Serial.print("FactoryTestMessage: ");
+		String msg = Serial.readStringUntil(EmotiBitFactoryTest::MSG_TERM_CHAR);
+		String msgTypeTag = msg.substring(0, 2);
+		Serial.println(msgTypeTag);
 		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_ON))
 		{
-			led.setLED(EmotiBit::Led::RED, true);
+			led.setLED((uint8_t)EmotiBit::Led::RED, true);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_OFF))
 		{
-			led.setLED(EmotiBit::Led::RED, false);
+			led.setLED((uint8_t)EmotiBit::Led::RED, false);
 		}
 		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_ON))
 		{
-			led.setLED(EmotiBit::Led::BLUE, true);
+			led.setLED((uint8_t)EmotiBit::Led::BLUE, true);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_OFF))
 		{
-			led.setLED(EmotiBit::Led::BLUE, false);
+			led.setLED((uint8_t)EmotiBit::Led::BLUE, false);
 		}
 		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_ON))
 		{
-			led.setLED(EmotiBit::Led::YELLOW, true);
+			led.setLED((uint8_t)EmotiBit::Led::YELLOW, true);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_OFF))
 		{
-			led.setLED(EmotiBit::Led::YELLOW, false);
+			led.setLED((uint8_t)EmotiBit::Led::YELLOW, false);
 		}
 		else if (msgTypeTag.equals(EmotiBitPacket::TypeTag::MODE_HIBERNATE))
 		{
-			emotibit.hibernate();
+			hibernate();
 		}
 	}
 }
