@@ -23,6 +23,7 @@
 #include "EmotiBitVersionController.h"
 #include "DigitalFilter.h"
 #include "EmotiBitFactoryTest.h"
+#include "EmotiBitEda.h"
 
 class EmotiBit {
   
@@ -222,6 +223,7 @@ public:
 	NCP5623 led;
 	MLX90632 thermopile;
 	EdaCorrection *edaCorrection = nullptr;
+	EmotiBitEda emotiBitEda;
 
 	int _emotiBitSystemConstants[(int)SystemConstants::COUNT];
 

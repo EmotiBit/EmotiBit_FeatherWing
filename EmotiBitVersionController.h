@@ -73,7 +73,8 @@ public:
 		V02B = 2,
 		V02F = 3,
 		V02H = 4,
-		V03B = 5
+		V03B = 5,
+		V04A = 6
 	};
 	// For detecting EmotiBit Version
 public:
