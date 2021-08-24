@@ -108,7 +108,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.println("...setting PIO_SERCOM");
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
-	_version = emotiBitVersionController.detectEmotiBitVersion(_EmotiBit_i2c);
+	_version = emotiBitVersionController.detectEmotiBitVersion(_EmotiBit_i2c, deviceAddress.EEPROM_FLASH_34AA02);
 	// If version is unknown
 	if (_version == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
 	{
@@ -137,7 +137,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println("Download v0.6.0 for Alpha boards");
 		hibernate(false);
 	}
-
 	String fwVersionModifier = "";
 	if (testingMode == TestingMode::ACUTE)
 	{
