@@ -282,7 +282,40 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 	_versionEst = EmotiBitVersion::UNKNOWN;
 	_otpEmotiBitVersion = -1;
 	// V02B, V02H and V03B all have pin 6 as hibernate, and this code supports only those versions
-	pinMode(HIBERNATE_PIN, OUTPUT);
+	pinMode(HIBERNATE_PIN, INPUT);
+	if (digitalRead(HIBERNATE_PIN) == HIGH)
+	{
+		_versionEst = EmotiBitVersion::V02H;
+		pinMode(HIBERNATE_PIN, OUTPUT);
+		digitalWrite(HIBERNATE_PIN, LOW);
+		delay(50);
+		Serial.println("Version estimate: V02");
+	}
+	else
+	{
+		_versionEst = EmotiBitVersion::V03B;
+		pinMode(HIBERNATE_PIN, OUTPUT); 
+		digitalWrite(HIBERNATE_PIN, HIGH);
+		delay(50);
+		// check if flash module is present on the I2c line. This confirms EmotiBit V4+
+		if (flashMemoryI2cAddress != 255)
+		{
+			EmotiBit_i2c->beginTransmission(flashMemoryI2cAddress);
+			if (EmotiBit_i2c->endTransmission() == 0) // flash module detected
+			{
+				_versionEst = EmotiBitVersion::V04A;
+				Serial.println("Version estimate: V04");
+				// ToDo: in the future, we will also be reading the flash to get the EmotiBit version stored there
+				versionDetectionComplete = true;
+				return _versionEst;
+			}
+			else
+			{
+				Serial.println("Version estimate: V03");
+			}
+		}
+	}
+	/*
 	bool status;
 	Serial.println("--------------------------- DETECTING EMOTIBIT VERSION --------------------------");
 	Serial.println("Making hibernate LOW");
@@ -305,18 +338,8 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 		if (status)
 		{
 			_versionEst = EmotiBitVersion::V03B;
-			// check if flash module is present on the I2c line. This confirms EmotiBit V4+
-			if (flashMemoryI2cAddress != 255)
-			{
-				EmotiBit_i2c->beginTransmission(flashMemoryI2cAddress);
-				if (EmotiBit_i2c->endTransmission() == 0) // flash module detected
-				{
-					_versionEst = EmotiBitVersion::V04A;
-					// ToDo: in the future, we will also be reading the flash to get the EmotiBit version stored there
-					versionDetectionComplete = true;
-					return _versionEst;
-				}
-			}
+			
+			
 		}
 		else
 		{
@@ -328,22 +351,8 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 			return _versionEst;
 		}
 	}
-	Serial.print("Estimated version of the emotibit is:"); Serial.println(getHardwareVersion(_versionEst));
-	Serial.println();
-	Serial.print("Powering emotibit according to the estimate. ");
-	if (_versionEst == EmotiBitVersion::V02H)
-	{
-		digitalWrite(HIBERNATE_PIN, LOW);
-		Serial.println("made hibernate LOW");
-	}
-	else if (_versionEst == EmotiBitVersion::V03B)
-	{
-		digitalWrite(HIBERNATE_PIN, HIGH);
-		Serial.println("made hibernate HIGH");
-	}
-	// Activating power-supply.
-	delay(100);
-	status = true;
+	*/
+	bool status = true;
 	// Setup Temperature / Humidity Sensor
 	Serial.println("\n\nReading Temperature / Humidity Sensor OTP for EmotiBit version");
 	// moved the macro definition from EdaCorrection to EmotiBitVersionController
@@ -407,26 +416,6 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 	}
 }
 
-
-bool EmotiBitVersionController::detectSdCard()
-{
-	SdFat sd;
-	Serial.print("\nInitializing SD card...");
-
-	// code snippet taken from CardInfo exmaple from the SdFat library in Arduino. Tested with version 2.0.4
-	// we'll use the initialization code from the utility libraries
-	// since we're just testing if the card is working!
-	//if (!sd.cardBegin(SdSpiConfig(SD_CARD_CHIP_SEL_PIN, DEDICATED_SPI, SD_SCK_MHZ(50))))
-	if(!sd.begin(SD_CARD_CHIP_SEL_PIN))
-	{
-		return false;
-	}
-	else 
-	{
-		Serial.println("Wiring is correct and a card is present.");
-		return true;
-	}
-}
 int EmotiBitVersionController::readEmotiBitVersionFromSi7013()
 {
 	uint8_t emotibitVersion = 0;

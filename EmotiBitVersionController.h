@@ -138,7 +138,6 @@ public:
 	// member functions to perform version detection
 public:
 	EmotiBitVersion detectEmotiBitVersion(TwoWire* EmotiBit_i2c, uint8_t flashMemoryI2cAddress = 255);
-	bool detectSdCard();
 	int readEmotiBitVersionFromSi7013();
 
 public:
