@@ -223,7 +223,7 @@ public:
 	NCP5623 led;
 	MLX90632 thermopile;
 	EdaCorrection *edaCorrection = nullptr;
-	EmotiBitEda emotiBitEda;
+	EmotiBitEda emotibitEda;
 
 	int _emotiBitSystemConstants[(int)SystemConstants::COUNT];
 

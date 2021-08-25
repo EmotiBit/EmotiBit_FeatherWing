@@ -27,6 +27,7 @@
 */
 /**************************************************************************/
 
+#include "EmotiBitEda.h"
 
 /**************************************************************************/
 /*!
@@ -38,7 +39,7 @@
     @return true if successful, otherwise false
 */
 /**************************************************************************/
-bool EmotiBitEda::Setup(EmotiBitVersionController::EmotiBitVersion version, TwoWire* emotibit_i2c)
+bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, TwoWire* emotibit_i2c)
 {
 	// ToDo: add sampling rate inputs
 	

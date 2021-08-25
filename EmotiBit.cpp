@@ -1406,7 +1406,9 @@ int8_t EmotiBit::updateEDAData()
 
 	// ToDo: migrate this code to live in EmotiBitEda.updateData();
 
+	int8_t status = 0;
 	static float edaTemp;	// Electrodermal Activity in Volts
+	static bool edlClipped = false;
 	
 	if (_version > EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
@@ -1442,12 +1444,11 @@ int8_t EmotiBit::updateEDAData()
 	{
 		// Reads EDA data from SAMD21 ADC
 
-		int8_t status = 0;
+		
 		static float edlTemp;	// Electrodermal Level in Volts
 		static float edrTemp;	// Electrodermal Response in Volts
 		static float sclTemp;	// Skin Conductance Level in uSeimens
 		static float scrTemp;	// Skin Conductance Response in uSeimens
-		static bool edlClipped = false;
 		static bool edrClipped = false;
 
 		// ToDo: Optimize calculations for EDA

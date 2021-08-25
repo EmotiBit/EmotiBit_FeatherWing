@@ -17,7 +17,7 @@
 #define _EMOTIBIT_EDA_H_
 
 
-#include EmotiBitVersionController.h
+#include "EmotiBitVersionController.h"
 #include "Adafruit_ADS1X15.h"
 
 
