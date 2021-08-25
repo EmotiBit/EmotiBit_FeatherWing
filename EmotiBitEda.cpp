@@ -47,7 +47,7 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, TwoW
 	{	
 		ads.setDataRate(RATE_ADS1115_475SPS);	// set to 475Hz to allow for 300Hz oversampling
 		ads.setGain(GAIN_TWO);        // 2x gain   +/- 2.048V  1 bit = 1mV      0.0625mV
-		return ads.begin(0x48, emotibit_i2c);
+		return ads.begin(0x48, emotibit_i2c, false); // callBegin -> false. the i2c wire has already been init in setup
 	}
 	else
 	{

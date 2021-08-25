@@ -747,21 +747,27 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		}
 	}
 	Serial.println("Configuring EDA Calibrations...");
-	// If Eda Correction mode was not initialized
-	if (edaCorrection == nullptr)
+	if ((int)_version > (int)EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
-		edaCorrection = new EdaCorrection;
-		edaCorrection->getEdaCalibrationValues(&tempHumiditySensor, vRef1, vRef2, edaFeedbackAmpR);
-		// ToDo: V4- get slope and intercept instead of the voltag values
-		// delete after the OTP has been read for calibration
-		delete edaCorrection;
-		edaCorrection = nullptr;
+		// read calirbation data from the flash
 	}
 	else
 	{
-		Serial.println("In EDA Calibration mode");
+		// If Eda Correction mode was not initialized
+		if (edaCorrection == nullptr)
+		{
+			edaCorrection = new EdaCorrection;
+			edaCorrection->getEdaCalibrationValues(&tempHumiditySensor, vRef1, vRef2, edaFeedbackAmpR);
+			// ToDo: V4- get slope and intercept instead of the voltag values
+			// delete after the OTP has been read for calibration
+			delete edaCorrection;
+			edaCorrection = nullptr;
+		}
+		else
+		{
+			Serial.println("In EDA Calibration mode");
+		}
 	}
-
 
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 	led.send();
