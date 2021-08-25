@@ -77,6 +77,7 @@ public:
 	//};
 	struct DeviceAddress {
 		uint8_t MLX = 0x3A;
+		uint8_t EEPROM_FLASH_34AA02 = 0x50; // 7 bit address
 	};
 	struct BMM150TrimData {
 		int8_t dig_x1;

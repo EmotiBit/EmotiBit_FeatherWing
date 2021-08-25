@@ -65,7 +65,7 @@ class EmotiBitVersionController
 
 public:
 	// !!! The following ORDER of the enum class holding the Version numbers SHOULD NOT BE ALTERED.
-	// New versions shold be ADDED to the end of this list 
+	// New versions should be ADDED to the end of this list 
 	enum class EmotiBitVersion {
 		UNKNOWN = -1,
 		V01B = 0,
@@ -137,8 +137,7 @@ public:
 
 	// member functions to perform version detection
 public:
-	EmotiBitVersion detectEmotiBitVersion(TwoWire* EmotiBit_i2c);
-	bool detectSdCard();
+	EmotiBitVersion detectEmotiBitVersion(TwoWire* EmotiBit_i2c, uint8_t flashMemoryI2cAddress = 255);
 	int readEmotiBitVersionFromSi7013();
 
 public:
