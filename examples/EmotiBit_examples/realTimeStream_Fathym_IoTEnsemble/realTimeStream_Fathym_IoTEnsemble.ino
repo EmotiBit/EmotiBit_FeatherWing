@@ -90,19 +90,6 @@ void loop()
 	//Serial.println("emotibit.update()");
 	emotibit.update();
 
-	// {
-	// 	"SensorMetadata": {
-	// 		"_": {
-	// 			"PropertyName": {number 0-1.0},
-	// 			...
-	// 		},
-	// 		"{SensorReadingPropertyName}": {
-	// 			"PropertyName": {number 0-1.0},
-	// 			...
-	// 		}
-	// 	},
-	// }
-		
 	// allocate the memory for the document
 	const size_t CAPACITY = JSON_OBJECT_SIZE(1);
 	StaticJsonDocument<CAPACITY> doc;
