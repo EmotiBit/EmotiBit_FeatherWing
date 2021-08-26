@@ -2,6 +2,9 @@
 #include <Adafruit_GFX.h>
 #include "Adafruit_LEDBackpack.h"
 #include "Esp32MQTTClient.h"
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+
 
 Adafruit_7segment matrix = Adafruit_7segment();
 
@@ -11,8 +14,15 @@ const uint32_t SERIAL_BAUD = 2000000; //115200
 EmotiBit emotibit;
 const size_t dataSize = EmotiBit::MAX_DATA_BUFFER_SIZE;
 float data[dataSize];
+
+//	Fathym Cloud Connect
 char fathymConnectionString[] = "";
 char fathymDeviceID[] = "";
+char fathymReadings[][] = {};
+static bool hasIoTHub = false;
+static int readingsInterval = 5000;
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP);
 
 void onShortButtonPress()
 {
@@ -45,6 +55,10 @@ void setup()
 	emotibit.setup(EmotiBit::Version::V02H);
 	// emotibit.setup();
 
+	//	Connecting to time server for timestamping
+	timeClient.begin();
+	timeClient.update();
+
 	if (!loadConfigFile(_configFilename)) {
 		Serial.println("SD card configuration file parsing failed.");
 		Serial.println("Create a file 'config.txt' with the following JSON:");
@@ -53,6 +67,17 @@ void setup()
 			hibernate();
 		}
 	}
+
+	if (!Esp32MQTTClient_Init((const uint8_t*)fathymConnectionString, true))
+	{​​​​​​​​
+		hasIoTHub = false;
+
+		Serial.println("Initializing IoT hub failed.");
+
+		return;
+	}​​​​​​​​
+
+	hasIoTHub = true;
 
 	// Attach callback functions
 	emotibit.attachShortButtonPress(&onShortButtonPress);
@@ -64,9 +89,74 @@ void loop()
 	//Serial.println("emotibit.update()");
 	emotibit.update();
 
-	// TODO: Grab desired data types from config (someday)
-	
-	//	TODO:  Read all datatypes
+	// {
+	// 	"SensorMetadata": {
+	// 		"_": {
+	// 			"PropertyName": {number 0-1.0},
+	// 			...
+	// 		},
+	// 		"{SensorReadingPropertyName}": {
+	// 			"PropertyName": {number 0-1.0},
+	// 			...
+	// 		}
+	// 	},
+	// }
+		
+	// allocate the memory for the document
+	const size_t CAPACITY = JSON_OBJECT_SIZE(1);
+	StaticJsonDocument<CAPACITY> doc;
+
+	// create an object
+	JsonObject payload = doc.to<JsonObject>();
+
+	payload["DeviceID"] = fathymDeviceID;
+
+	payload["DeviceType"] = "emotibit";
+
+	payload["Version"] = "1";
+
+	// object["Timestamp"] = timeClient.getFormattedDate();
+
+	JsonObject payloadDeviceData = payload.createNestedObject("DeviceData");
+
+	payloadDeviceData["EpochTime"] = timeclient.getEpochTime();
+
+	payloadDeviceData["Timestamp"] = timeclient.getFormattedDate();
+
+	JsonObject payloadSensorReadings = payload.createNestedObject("SensorReadings");
+
+	for (char typeTag[] : fathymReadings) {
+		uint8_t dataType;
+
+		switch (typeTag) {
+			case 'AX':
+				dataType = EmotiBit::DataType::ACCELEROMETER_X;
+				break;
+				
+			case 'AY':
+				dataType = EmotiBit::DataType::ACCELEROMETER_Y;
+				break;
+				
+			case 'AZ':
+				dataType = EmotiBit::DataType::ACCELEROMETER_Z;
+				break;
+				
+			case 'TH':
+				dataType = EmotiBit::DataType::THERMOPILE;
+				break;
+				
+			case 'PI':
+				dataType = EmotiBit::DataType::PPG_INFRARED;
+				break;
+				
+			case 'PR':
+				dataType = EmotiBit::DataType::PPG_RED;
+				break;
+				
+			case 'PG':
+				dataType = EmotiBit::DataType::PPG_GREEN;
+				break;
+		}
 
 	//
 	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::EDA] = &eda;
@@ -93,39 +183,37 @@ void loop()
 	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = &dataClipping;
 	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DEBUG] = &debugBuffer;
 
-
-	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::THERMOPILE, &data[0], dataSize);
-	if (dataAvailable > 0)
-	{
-		// Print temperature on the 7 segment display!
-		static float smoothData = -1;
-		float smoother = 0.95f;
-		for (size_t i = 0; i < dataAvailable && i < dataSize; i++)
-		{
-			if (smoothData < 0 )
-			{
-				// handle initial condition
-				smoothData = data[i];
-			}
-			else
-			{
-				smoothData = smoothData * smoother + data[i] * (1 - smoother);
-			}
-		}
+		size_t dataAvailable = emotibit.readData(dataType, &data[0], dataSize);
 		
-		//	TODO:  Send data to IoT Ensemble
-
-		// print the data to view in the serial plotter
-		bool printData = false;
-		if (printData)
+		if (dataAvailable > 0)
 		{
-			for (size_t i = 0; i < dataAvailable && i < dataSize; i++)
+			payloadSensorReadings[typeTag] = data;
+
+			// print the data to view in the serial plotter
+			bool printData = false;
+			if (printData)
 			{
-				// Note that dataAvailable can be larger than dataSize
-				Serial.println(data[i]);
+				for (size_t i = 0; i < dataAvailable && i < dataSize; i++)
+				{
+					// Note that dataAvailable can be larger than dataSize
+					Serial.println(data[i]);
+				}
 			}
 		}
 	}
+	
+	char messagePayload[];
+
+	// serialize the payload for sending
+	serializeJson(doc, messagePayload);
+
+	Serial.println(messagePayload);
+
+	EVENT_INSTANCE* message = Esp32MQTTClient_Event_Generate(messagePayload, MESSAGE);
+
+	Esp32MQTTClient_SendEventInstance(message);
+
+	delay(readingsInterval);
 }
 
 // Loads the configuration from a file
@@ -159,7 +247,11 @@ bool loadConfigFile(const String &filename) {
 
 	fathymConnectionString = root["Fathym"]["ConnectionString"] | "";
 	
-	fathymDeviceID = root["Fathym"]["ConnectionString"] | "";
+	fathymDeviceID = root["Fathym"]["DeviceID"] | "";
+
+	fathymReadings = root["Fathym"]["Readings"] | "";
+
+	readingsInterval = root["Fathym"]["ReadingsInterval"] | 5000;
 
 	//strlcpy(config.hostname,                   // <- destination
 	//	root["hostname"] | "example.com",  // <- source
@@ -183,7 +275,7 @@ static void SendConfirmationCallback(IOTHUB_CLIENT_CONFIRMATION_RESULT result)
 static void MessageCallback(const char* payLoad, int size)
 {
 	Serial.println("Message callback:");
-	
+
 	Serial.println(payLoad);
 }
 
@@ -204,6 +296,7 @@ static void DeviceTwinCallback(DEVICE_TWIN_UPDATE_STATE updateState, const unsig
 
 	free(temp);
 }
+
 static int DeviceMethodCallback(const char *methodName, const unsigned char *payload, int size, unsigned char **response, int *response_size)
 {
 	LogInfo("Try to invoke method %s", methodName);
