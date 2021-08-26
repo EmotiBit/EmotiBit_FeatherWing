@@ -4,7 +4,7 @@
 #include "Esp32MQTTClient.h"
 #include <NTPClient.h>
 #include <WiFiUdp.h>
-
+#include <algorithm>
 
 Adafruit_7segment matrix = Adafruit_7segment();
 
@@ -23,6 +23,7 @@ static bool hasIoTHub = false;
 static int readingsInterval = 5000;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
+char metadataTypeTags[] = { "BV", "BP", "DO", "DC", "DB" };
 
 void onShortButtonPress()
 {
@@ -125,69 +126,25 @@ void loop()
 
 	JsonObject payloadSensorReadings = payload.createNestedObject("SensorReadings");
 
+	JsonObject payloadSensorMetadata = payload.createNestedObject("SensorMetadata");
+
+	JsonObject payloadSensorMetadataRoot = payloadSensorMetadata.createNestedObject("_");
+
 	for (char typeTag[] : fathymReadings) {
-		uint8_t dataType;
-
-		switch (typeTag) {
-			case 'AX':
-				dataType = EmotiBit::DataType::ACCELEROMETER_X;
-				break;
-				
-			case 'AY':
-				dataType = EmotiBit::DataType::ACCELEROMETER_Y;
-				break;
-				
-			case 'AZ':
-				dataType = EmotiBit::DataType::ACCELEROMETER_Z;
-				break;
-				
-			case 'TH':
-				dataType = EmotiBit::DataType::THERMOPILE;
-				break;
-				
-			case 'PI':
-				dataType = EmotiBit::DataType::PPG_INFRARED;
-				break;
-				
-			case 'PR':
-				dataType = EmotiBit::DataType::PPG_RED;
-				break;
-				
-			case 'PG':
-				dataType = EmotiBit::DataType::PPG_GREEN;
-				break;
-		}
-
-	//
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::EDA] = &eda;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::EDL] = &edl;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::EDR] = &edr;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::PPG_INFRARED] = &ppgInfrared;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::PPG_RED] = &ppgRed;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::PPG_GREEN] = &ppgGreen;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = &temp0;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE] = &therm0;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = &humidity0;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = &accelX;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Y] = &accelY;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Z] = &accelZ;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::GYROSCOPE_X] = &gyroX;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::GYROSCOPE_Y] = &gyroY;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::GYROSCOPE_Z] = &gyroZ;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::MAGNETOMETER_X] = &magX;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Y] = &magY;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Z] = &magZ;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::BATTERY_VOLTAGE] = &batteryVoltage;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::BATTERY_PERCENT] = &batteryPercent;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = &dataOverflow;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = &dataClipping;
-	// dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DEBUG] = &debugBuffer;
+		uint8_t dataType = loadDataTypeFromTypeTag(typeTag);
 
 		size_t dataAvailable = emotibit.readData(dataType, &data[0], dataSize);
 		
 		if (dataAvailable > 0)
 		{
-			payloadSensorReadings[typeTag] = data;
+			if (!contains(metadataTypeTags, typeTag))
+			{
+				payloadSensorReadings[typeTag] = data;
+			}
+			else
+			{
+				payloadSensorMetadataRoot[typeTag] = data;
+			}
 
 			// print the data to view in the serial plotter
 			bool printData = false;
@@ -264,71 +221,106 @@ bool loadConfigFile(const String &filename) {
 	return true;
 }
 
-static void SendConfirmationCallback(IOTHUB_CLIENT_CONFIRMATION_RESULT result)
-{
-	if (result == IOTHUB_CLIENT_CONFIRMATION_OK)
-	{
-		Serial.println("Send Confirmation Callback finished.");
+uint8_t loadDataTypeFromTypeTag(char typeTag[]) {
+	uint8_t dataType;
+
+	switch (typeTag) {
+		case "AX":
+			dataType = EmotiBit::DataType::ACCELEROMETER_X;
+			break;
+			
+		case "AY":
+			dataType = EmotiBit::DataType::ACCELEROMETER_Y;
+			break;
+			
+		case "AZ":
+			dataType = EmotiBit::DataType::ACCELEROMETER_Z;
+			break;
+			
+		case "GX":
+			dataType = EmotiBit::DataType::GYROSCOPE_X;
+			break;
+			
+		case "GY":
+			dataType = EmotiBit::DataType::GYROSCOPE_Y;
+			break;
+			
+		case "GZ":
+			dataType = EmotiBit::DataType::GYROSCOPE_Z;
+			break;
+			
+		case "MX":
+			dataType = EmotiBit::DataType::MAGNETOMETER_X;
+			break;
+			
+		case "MY":
+			dataType = EmotiBit::DataType::MAGNETOMETER_Y;
+			break;
+			
+		case "MZ":
+			dataType = EmotiBit::DataType::MAGNETOMETER_Z;
+			break;
+			
+		case "EA":
+			dataType = EmotiBit::DataType::EDA;
+			break;
+			
+		case "EL":
+			dataType = EmotiBit::DataType::EDL;
+			break;
+			
+		case "ER":
+			dataType = EmotiBit::DataType::EDR;
+			break;
+			
+		case "H0":
+			dataType = EmotiBit::DataType::HUMIDITY_0;
+			break;
+			
+		case "T0":
+			dataType = EmotiBit::DataType::TEMPERATURE_0;
+			break;
+			
+		case "TH":
+			dataType = EmotiBit::DataType::THERMOPILE;
+			break;
+			
+		case "PI":
+			dataType = EmotiBit::DataType::PPG_INFRARED;
+			break;
+			
+		case "PR":
+			dataType = EmotiBit::DataType::PPG_RED;
+			break;
+			
+		case "PG":
+			dataType = EmotiBit::DataType::PPG_GREEN;
+			break;
+			
+		case "BV":
+			dataType = EmotiBit::DataType::BATTERY_VOLTAGE;
+			break;
+			
+		case "BP":
+			dataType = EmotiBit::DataType::BATTERY_PERCENT;
+			break;
+			
+		case "DO":
+			dataType = EmotiBit::DataType::DATA_OVERFLOW;
+			break;
+			
+		case "DC":
+			dataType = EmotiBit::DataType::DATA_CLIPPING;
+			break;
+			
+		case "DB":
+			dataType = EmotiBit::DataType::DEBUG;
+			break;
 	}
+
+	return dataType;
 }
 
-static void MessageCallback(const char* payLoad, int size)
-{
-	Serial.println("Message callback:");
-
-	Serial.println(payLoad);
-}
-
-static void DeviceTwinCallback(DEVICE_TWIN_UPDATE_STATE updateState, const unsigned char *payLoad, int size)
-{
-	char *temp = (char *)malloc(size + 1);
-	if (temp == NULL)
-	{
-		return;
-	}
-
-	memcpy(temp, payLoad, size);
-
-	temp[size] = '\0';
-
-	// Display Twin message.
-	Serial.println(temp);
-
-	free(temp);
-}
-
-static int DeviceMethodCallback(const char *methodName, const unsigned char *payload, int size, unsigned char **response, int *response_size)
-{
-	LogInfo("Try to invoke method %s", methodName);
-
-	const char *responseMessage = "\"Successfully invoke device method\"";
-
-	int result = 200;
-
-	if (strcmp(methodName, "start") == 0)
-	{
-		LogInfo("Start sending temperature and humidity data");
-
-		messageSending = true;
-	}
-	else if (strcmp(methodName, "stop") == 0)
-	{
-		LogInfo("Stop sending temperature and humidity data");
-		
-		messageSending = false;
-	}
-	else
-	{
-		LogInfo("No method %s found", methodName);
-
-		responseMessage = "\"No method found\"";
-
-		result = 404;
-	}
-
-	*response_size = strlen(responseMessage) + 1;
-
-	*response = (unsigned char *)strdup(responseMessage);
-
-	return result;
-}
+bool contains(C&& c, T e) { 
+    return std::find(std::begin(c), std::end(c), e) != std::end(c);
+};
