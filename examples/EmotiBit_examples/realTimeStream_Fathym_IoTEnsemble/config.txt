@@ -1,1 +1,1 @@
-{"WifiCredentials": [{"ssid": "SSSS", "password" : "PPPP"}],"Fathym":{"ConnectionString": "xxx"}}
+{"WifiCredentials": [{"ssid": "SSSS", "password" : "PPPP"}],"Fathym":{"ConnectionString": "xxx", "DeviceID": "yyy"}}
