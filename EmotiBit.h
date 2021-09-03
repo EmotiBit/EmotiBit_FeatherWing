@@ -23,6 +23,7 @@
 #include "EmotiBitVersionController.h"
 #include "DigitalFilter.h"
 #include "EmotiBitFactoryTest.h"
+#include "EmotiBitEda.h"
 
 class EmotiBit {
   
@@ -38,7 +39,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.78";
+	String firmware_version = "1.2.79";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
@@ -76,6 +77,7 @@ public:
 	//};
 	struct DeviceAddress {
 		uint8_t MLX = 0x3A;
+		uint8_t EEPROM_FLASH_34AA02 = 0x50; // 7 bit address
 	};
 	struct BMM150TrimData {
 		int8_t dig_x1;
@@ -222,6 +224,7 @@ public:
 	NCP5623 led;
 	MLX90632 thermopile;
 	EdaCorrection *edaCorrection = nullptr;
+	EmotiBitEda emotibitEda;
 
 	int _emotiBitSystemConstants[(int)SystemConstants::COUNT];
 
