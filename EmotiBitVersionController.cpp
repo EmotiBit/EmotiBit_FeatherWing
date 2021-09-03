@@ -3,15 +3,8 @@
 
 const char* EmotiBitVersionController::getHardwareVersion(EmotiBitVersion version)
 {
-	if (version == EmotiBitVersion::V02H) 
-	{
-		return "V02h";
-	}
-	else if (version == EmotiBitVersion::V03B)
-	{
-		return "V03b";
-	}
-	else if (version == EmotiBitVersion::V01B)
+
+	if (version == EmotiBitVersion::V01B)
 	{
 		return "V01b";
 	}
@@ -27,6 +20,18 @@ const char* EmotiBitVersionController::getHardwareVersion(EmotiBitVersion versio
 	{
 		return "V02f";
 	}
+	else if (version == EmotiBitVersion::V02H)
+	{
+		return "V02h";
+	}
+	else if (version == EmotiBitVersion::V03B)
+	{
+		return "V03b";
+	}
+	else if (version == EmotiBitVersion::V04A)
+	{
+		return "V04a";
+	}
 }
 
 bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiBitVersion version)
@@ -38,12 +43,16 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 	_assignedPin[(int)EmotiBitPinName::SPI_MOSI] = 23;
 	_assignedPin[(int)EmotiBitPinName::SPI_MISO] = 22;
 
-	if (version == EmotiBitVersion::V02B || version == EmotiBitVersion::V02H || version == EmotiBitVersion::V03B)
+	if (version == EmotiBitVersion::V02B || version == EmotiBitVersion::V02H || version == EmotiBitVersion::V03B || version == EmotiBitVersion::V04A)
 	{
 		_assignedPin[(int)EmotiBitPinName::HIBERNATE] = 6;
 		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 12;
-		_assignedPin[(int)EmotiBitPinName::EDL] = A4;
-		_assignedPin[(int)EmotiBitPinName::EDR] = A3;
+		// Dont assign EDR or EDL pins for V4
+		if (version != EmotiBitVersion::V04A)
+		{
+			_assignedPin[(int)EmotiBitPinName::EDL] = A4;
+			_assignedPin[(int)EmotiBitPinName::EDR] = A3;
+		}
 		_assignedPin[(int)EmotiBitPinName::SD_CARD_CHIP_SELECT] = 19;
 		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_I2C_CLOCK] = 13;
 		_assignedPin[(int)EmotiBitPinName::EMOTIBTI_I2C_DATA] = 11;
@@ -148,7 +157,11 @@ bool EmotiBitVersionController::_initMappingMathConstants(EmotiBitVersionControl
 	_assignedMathConstants[(int)MathConstants::ADC_BITS] = 12;
 	_assignedMathConstants[(int)MathConstants::ADC_MAX_VALUE] = pow(2, _assignedMathConstants[(int)MathConstants::ADC_BITS]) - 1;;
 	
-	if (version == EmotiBitVersion::V02H || version == EmotiBitVersion::V03B)
+	if (version == EmotiBitVersion::V04A)
+	{
+		_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ] = 1.f / (2.f * PI * 200000.f * 0.0000047f);
+	}
+	else if (version == EmotiBitVersion::V02H || version == EmotiBitVersion::V03B)
 	{
 		_assignedMathConstants[(int)MathConstants::EDR_AMPLIFICATION] = 100.f / 3.3f;
 		// The Vref1 value being used is the empirical mean of Vref1 measured in emotibits during testing.
@@ -179,7 +192,7 @@ bool EmotiBitVersionController::_initMappingSystemConstants(EmotiBitVersionContr
 		_assignedSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT] = 26;
 		_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE] = INPUT;
 	}
-	else if (version == EmotiBitVersion::V03B)
+	else if (version == EmotiBitVersion::V03B || version == EmotiBitVersion::V04A)
 	{
 		_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL] = LOW;
 		_assignedSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT] = 6;
@@ -264,14 +277,47 @@ bool EmotiBitVersionController::setSystemConstantForTesting(SystemConstants cons
 	//ToDo: write the function to assign test values to the constants 
 }
 
-EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmotiBitVersion(TwoWire* EmotiBit_i2c)
+EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmotiBitVersion(TwoWire* EmotiBit_i2c, uint8_t flashMemoryI2cAddress)
 {
 	_versionEst = EmotiBitVersion::UNKNOWN;
 	_otpEmotiBitVersion = -1;
 	// V02B, V02H and V03B all have pin 6 as hibernate, and this code supports only those versions
-	pinMode(HIBERNATE_PIN, OUTPUT);
+	pinMode(HIBERNATE_PIN, INPUT);
+	if (digitalRead(HIBERNATE_PIN) == HIGH)
+	{
+		_versionEst = EmotiBitVersion::V02H;
+		pinMode(HIBERNATE_PIN, OUTPUT);
+		digitalWrite(HIBERNATE_PIN, LOW);
+		delay(50);
+		Serial.println("Version estimate: V02");
+	}
+	else
+	{
+		_versionEst = EmotiBitVersion::V03B;
+		pinMode(HIBERNATE_PIN, OUTPUT); 
+		digitalWrite(HIBERNATE_PIN, HIGH);
+		delay(50);
+		// check if flash module is present on the I2c line. This confirms EmotiBit V4+
+		if (flashMemoryI2cAddress != 255)
+		{
+			EmotiBit_i2c->beginTransmission(flashMemoryI2cAddress);
+			if (EmotiBit_i2c->endTransmission() == 0) // flash module detected
+			{
+				_versionEst = EmotiBitVersion::V04A;
+				Serial.println("Version estimate: V04");
+				// ToDo: in the future, we will also be reading the flash to get the EmotiBit version stored there
+				versionDetectionComplete = true;
+				return _versionEst;
+			}
+			else
+			{
+				Serial.println("Version estimate: V03");
+			}
+		}
+	}
+	/*
 	bool status;
-	Serial.println("****************************** DETECTING EMOTIBIT VERSION ************************************");
+	Serial.println("--------------------------- DETECTING EMOTIBIT VERSION --------------------------");
 	Serial.println("Making hibernate LOW");
 	digitalWrite(HIBERNATE_PIN, LOW);
 	// Try Setting up SD Card
@@ -292,6 +338,8 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 		if (status)
 		{
 			_versionEst = EmotiBitVersion::V03B;
+			
+			
 		}
 		else
 		{
@@ -303,22 +351,8 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 			return _versionEst;
 		}
 	}
-	Serial.print("Estimated version of the emotibit is:"); Serial.println(getHardwareVersion(_versionEst));
-	Serial.println();
-	Serial.print("Powering emotibit according to the estimate. ");
-	if (_versionEst == EmotiBitVersion::V02H)
-	{
-		digitalWrite(HIBERNATE_PIN, LOW);
-		Serial.println("made hibernate LOW");
-	}
-	else if (_versionEst == EmotiBitVersion::V03B)
-	{
-		digitalWrite(HIBERNATE_PIN, HIGH);
-		Serial.println("made hibernate HIGH");
-	}
-	// Activating power-supply.
-	delay(100);
-	status = true;
+	*/
+	bool status = true;
 	// Setup Temperature / Humidity Sensor
 	Serial.println("\n\nReading Temperature / Humidity Sensor OTP for EmotiBit version");
 	// moved the macro definition from EdaCorrection to EmotiBitVersionController
@@ -356,7 +390,7 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 	{
 		Serial.println("OTP has not yet been updated");
 		Serial.print("using the Estimated emotibit version detected from power up sequence: "); Serial.println(getHardwareVersion((EmotiBitVersion)_versionEst));
-		Serial.println("************************** END DETECTING EMOTIBIT VERSION ************************************");
+		Serial.println("-------------------------- END DETECTING EMOTIBIT VERSION --------------------------------");
 		versionDetectionComplete = true;
 		return _versionEst;
 	}
@@ -369,7 +403,7 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 			Serial.println(getHardwareVersion((EmotiBitVersion)_otpEmotiBitVersion));
 			//Serial.println(emotibitVersion);
 			Serial.println("######################");
-			Serial.println("************************** END DETECTING EMOTIBIT VERSION ************************************");
+			Serial.println("-------------------------- END DETECTING EMOTIBIT VERSION --------------------------------");
 			versionDetectionComplete = true;
 			return (EmotiBitVersionController::EmotiBitVersion)_otpEmotiBitVersion;
 		}
@@ -382,26 +416,6 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 	}
 }
 
-
-bool EmotiBitVersionController::detectSdCard()
-{
-	SdFat sd;
-	Serial.print("\nInitializing SD card...");
-
-	// code snippet taken from CardInfo exmaple from the SdFat library in Arduino. Tested with version 2.0.4
-	// we'll use the initialization code from the utility libraries
-	// since we're just testing if the card is working!
-	//if (!sd.cardBegin(SdSpiConfig(SD_CARD_CHIP_SEL_PIN, DEDICATED_SPI, SD_SCK_MHZ(50))))
-	if(!sd.begin(SD_CARD_CHIP_SEL_PIN))
-	{
-		return false;
-	}
-	else 
-	{
-		Serial.println("Wiring is correct and a card is present.");
-		return true;
-	}
-}
 int EmotiBitVersionController::readEmotiBitVersionFromSi7013()
 {
 	uint8_t emotibitVersion = 0;
