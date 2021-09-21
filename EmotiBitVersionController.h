@@ -77,6 +77,13 @@ public:
 		V04A = 6
 	};
 	// For detecting EmotiBit Version
+
+	enum class EmotiBitSku {
+		INVALID = -1,
+		EM = 0,
+		MD = 1,
+		length
+	}emotibitSku;
 public:
 #if defined(ADAFRUIT_FEATHER_M0) 
 	static const int HIBERNATE_PIN = 6;
@@ -142,5 +149,8 @@ public:
 
 public:
 	static const char* getHardwareVersion(EmotiBitVersion version);
+	static const char* getEmotiBitSku(EmotiBitSku sku);
+	static int getVersionFromBarcode(const char* barcode);
+	static char* getSkuFromBarcode(const char* barcode);
 };
 #endif

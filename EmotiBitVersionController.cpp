@@ -422,3 +422,49 @@ int EmotiBitVersionController::readEmotiBitVersionFromSi7013()
 	emotibitVersion = (uint8_t)_tempHumiditySensor.readRegister8(EMOTIBIT_VERSION_ADDR_SI7013_OTP, true);
 	return emotibitVersion;
 }
+
+// returns the version from barcode string "SKU-VERSION-NUMBER"
+int EmotiBitVersionController::getVersionFromBarcode(const char* barcode)
+{
+	char* temp;
+	char bcode[12];
+	strcpy(bcode, barcode);
+	char* version;
+	temp = strtok(bcode, "-"); // returns the sku
+	version = strtok(NULL, "-"); // return the version
+	// if barcode has V4
+	if (strcmp(version, "V4") == 0)
+	{
+		return (int)EmotiBitVersionController::EmotiBitVersion::V04A;
+	}
+	// if barcode has V3
+	else if (strcmp(version, "V3") == 0)
+	{
+		return (int)EmotiBitVersionController::EmotiBitVersion::V03B;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+// returns the SKU as a char array
+const char* EmotiBitVersionController::getEmotiBitSku(EmotiBitSku sku)
+{
+	if (sku == EmotiBitSku::EM)
+		return "EM";
+	else if (sku == EmotiBitSku::MD)
+		return "MD";
+}
+
+// returns the sku from barcode string "SKU-VERSION-NUMBER"
+char* EmotiBitVersionController::getSkuFromBarcode(const char* barcode)
+{
+	char bcode[12];
+	strcpy(bcode, barcode);
+	char* sku;
+	sku = strtok(bcode, "-");
+	Serial.print("The Sku extracted from barcode is:");
+	Serial.println(sku);
+	return sku;
+}
