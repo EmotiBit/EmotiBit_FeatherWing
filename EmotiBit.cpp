@@ -106,21 +106,21 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			Serial.println("Entered FACTORY TEST MODE");
 			// send ACK to the computer
 			Serial.print("A");
-		}
-		bool barcodeReceived = false;
-		while (Serial.available() || !barcodeReceived)
-		{
-			char input;
-			input = Serial.read();
-			if (input == '*')
+			bool barcodeReceived = false;
+			while (Serial.available() || !barcodeReceived)
 			{
-				barcode = Serial.readStringUntil('*');
-				barcodeReceived = true;
+				char input;
+				input = Serial.read();
+				if (input == '*')
+				{
+					barcode = Serial.readStringUntil('*');
+					barcodeReceived = true;
+				}
 			}
-		}
-		while (Serial.available())
-		{
-			Serial.read();
+			while (Serial.available())
+			{
+				Serial.read();
+			}
 		}
 	}
 	EmotiBitVersionController emotiBitVersionController;
@@ -135,7 +135,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::I2C_COMM_INIT, EmotiBitFactoryTest::TypeTag::TEST_PASS);
-	}// ToDo: detect is i2c init fails
+	}
+	// ToDo: detect if i2c init fails
 	Serial.println("I2C interface initialized");
 	uint32_t i2cRate = 100000;
 	_EmotiBit_i2c->setClock(i2cRate);
@@ -172,26 +173,10 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println("Download v0.6.0 for Alpha boards");
 		hibernate(false);
 	}
-
-	
-	// if barcode version is >= V4
-	if (EmotiBitVersionController::getVersionFromBarcode(barcode.c_str()) >= (int)EmotiBitVersionController::EmotiBitVersion::V04A)
-	{
-		// Pass  is FW version estimate is >= barcode version
-		if ((int)_version >= EmotiBitVersionController::getVersionFromBarcode(barcode.c_str()))// extract version from barcode
-		{
-			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::VERSION_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
-		}
-		else
-		{
-			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::VERSION_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-		}
-	}
-	// if barcode version is < V4
-	else
+	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		// Pass only if FW version estimate is exactly = barcode version
-		if ((int)_version == EmotiBitVersionController::getVersionFromBarcode(barcode.c_str()))// extract version from barcode
+		if ((int)_version == EmotiBitFactoryTest::getVersionFromBarcode(barcode))// extract version from barcode
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::VERSION_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 		}
@@ -714,7 +699,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		// compare estimate SKU with barcode SKU
-		if (strcmp(EmotiBitVersionController::getSkuFromBarcode(barcode.c_str()), EmotiBitVersionController::getEmotiBitSku(emotiBitVersionController.emotibitSku)) == 0)
+		if (EmotiBitFactoryTest::getSkuFromBarcode(barcode).equals(EmotiBitVersionController::getEmotiBitSku(emotiBitVersionController.emotibitSku)))
 		{
 			Serial.println("SKU is a match");
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);

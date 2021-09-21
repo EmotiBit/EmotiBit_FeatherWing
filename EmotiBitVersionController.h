@@ -150,7 +150,5 @@ public:
 public:
 	static const char* getHardwareVersion(EmotiBitVersion version);
 	static const char* getEmotiBitSku(EmotiBitSku sku);
-	static int getVersionFromBarcode(const char* barcode);
-	static char* getSkuFromBarcode(const char* barcode);
 };
 #endif
