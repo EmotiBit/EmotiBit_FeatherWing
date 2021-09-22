@@ -6,31 +6,31 @@ const char* EmotiBitVersionController::getHardwareVersion(EmotiBitVersion versio
 
 	if (version == EmotiBitVersion::V01B)
 	{
-		return "V01b";
+		return "V01b\0";
 	}
 	else if (version == EmotiBitVersion::V01C)
 	{
-		return "V01c";
+		return "V01c\0";
 	}
 	else if (version == EmotiBitVersion::V02B)
 	{
-		return "V02b";
+		return "V02b\0";
 	}
 	else if (version == EmotiBitVersion::V02F)
 	{
-		return "V02f";
+		return "V02f\0";
 	}
 	else if (version == EmotiBitVersion::V02H)
 	{
-		return "V02h";
+		return "V02h\0";
 	}
 	else if (version == EmotiBitVersion::V03B)
 	{
-		return "V03b";
+		return "V03b\0";
 	}
 	else if (version == EmotiBitVersion::V04A)
 	{
-		return "V04a";
+		return "V04a\0";
 	}
 }
 
