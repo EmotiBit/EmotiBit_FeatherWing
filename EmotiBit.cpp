@@ -182,7 +182,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		// Pass only if FW version estimate is exactly = barcode version
-		if ((int)_version == barcode.emotibitVersion)// extract version from barcode
+		if(EmotiBitFactoryTest::validateVersionEstimate(barcode.emotibitVersion, String(EmotiBitVersionController::getHardwareVersion(_version))))
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::VERSION_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 		}
@@ -226,7 +226,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, firmware_version.c_str());
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_VERSION, EmotiBitVersionController::getHardwareVersion(_version));
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_NUMBER, barcode.code.c_str());
+		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_NUMBER, barcode.emotibitNumber.c_str());
 	}
 	//Serial.println("All Serial inputs must be used with **No Line Ending** option from the serial monitor");
 
