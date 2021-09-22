@@ -92,7 +92,7 @@ void EmotiBit::bmm150ReadTrimRegisters()
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
 	uint32_t now = millis();
-	String barcode;
+	Barcode barcode;
 	while (!Serial.available() && millis() - now < 2000)
 	{
 	}
@@ -113,10 +113,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				input = Serial.read();
 				if (input == '*')
 				{
-					barcode = Serial.readStringUntil('*');
+					barcode.code = Serial.readStringUntil('*');
 					barcodeReceived = true;
 				}
 			}
+			// parse the barcode
+			EmotiBitFactoryTest::parseBarcode(&barcode);
 			while (Serial.available())
 			{
 				Serial.read();
@@ -176,7 +178,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		// Pass only if FW version estimate is exactly = barcode version
-		if ((int)_version == EmotiBitFactoryTest::getVersionFromBarcode(barcode))// extract version from barcode
+		if ((int)_version == barcode.emotibitVersion)// extract version from barcode
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::VERSION_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 		}
@@ -220,7 +222,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, firmware_version.c_str());
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_VERSION, EmotiBitVersionController::getHardwareVersion(_version));
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_NUMBER, barcode.c_str());
+		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_NUMBER, barcode.code.c_str());
 	}
 	//Serial.println("All Serial inputs must be used with **No Line Ending** option from the serial monitor");
 
@@ -699,7 +701,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		// compare estimate SKU with barcode SKU
-		if (EmotiBitFactoryTest::getSkuFromBarcode(barcode).equals(EmotiBitVersionController::getEmotiBitSku(emotiBitVersionController.emotibitSku)))
+		if (barcode.sku.equals(EmotiBitVersionController::getEmotiBitSku(emotiBitVersionController.emotibitSku)))
 		{
 			Serial.println("SKU is a match");
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
