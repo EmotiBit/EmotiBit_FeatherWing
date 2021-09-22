@@ -422,12 +422,3 @@ int EmotiBitVersionController::readEmotiBitVersionFromSi7013()
 	emotibitVersion = (uint8_t)_tempHumiditySensor.readRegister8(EMOTIBIT_VERSION_ADDR_SI7013_OTP, true);
 	return emotibitVersion;
 }
-
-// returns the SKU as a char array
-const char* EmotiBitVersionController::getEmotiBitSku(EmotiBitSku sku)
-{
-	if (sku == EmotiBitSku::EM)
-		return "EM\0";
-	else if (sku == EmotiBitSku::MD)
-		return "MD\0";
-}

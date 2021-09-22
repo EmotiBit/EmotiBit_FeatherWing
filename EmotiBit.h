@@ -24,6 +24,7 @@
 #include "DigitalFilter.h"
 #include "EmotiBitFactoryTest.h"
 #include "EmotiBitEda.h"
+#include "EmotiBitVariants.h"
 
 class EmotiBit {
   
@@ -39,7 +40,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.82";
+	String firmware_version = "1.2.83";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 

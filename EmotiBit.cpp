@@ -119,12 +119,14 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			}
 			// parse the barcode
 			EmotiBitFactoryTest::parseBarcode(&barcode);
+			// remove any other char in the buffer before proceeding
 			while (Serial.available())
 			{
 				Serial.read();
 			}
 		}
 	}
+	EmotiBitVariants::EmotiBitSkuType emotibitSku;
 	EmotiBitVersionController emotiBitVersionController;
 	String factoryTestSerialOutput;
 	factoryTestSerialOutput.reserve(150);
@@ -676,7 +678,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (status)
 	{
 		// estimate SKU is MD
-		emotiBitVersionController.emotibitSku = EmotiBitVersionController::EmotiBitSku::MD;
+		emotibitSku = EmotiBitVariants::EmotiBitSkuType::MD;
 		thermopile.setMeasurementRate(thermopileFs);
 		thermopile.setMode(thermopileMode);
 		uint8_t thermMode = thermopile.getMode();
@@ -697,27 +699,38 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	else
 	{
 		// set SKU as EM
-		emotiBitVersionController.emotibitSku = EmotiBitVersionController::EmotiBitSku::EM;
+		emotibitSku = EmotiBitVariants::EmotiBitSkuType::EM;
 		//hibernate(false);
 	}
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
-		// compare estimate SKU with barcode SKU
-		if (barcode.sku.equals(EmotiBitVersionController::getEmotiBitSku(emotiBitVersionController.emotibitSku)))
+		// if barcode is MD
+		if (barcode.sku.equals(EmotiBitVariants::EmotiBitSkuTags[(int)EmotiBitVariants::EmotiBitSkuType::MD]))
 		{
-			Serial.println("SKU is a match");
-			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
-			if (emotiBitVersionController.emotibitSku == EmotiBitVersionController::EmotiBitSku::MD)
+			// is FW estimate is MD
+			if (emotibitSku == EmotiBitVariants::EmotiBitSkuType::MD)
+			{
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+			}
+			else
+			{
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+			}
 		}
+		// if barcode is EM
 		else
 		{
-			Serial.println("SKU is a mis-match");
-			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-			if(emotiBitVersionController.emotibitSku == EmotiBitVersionController::EmotiBitSku::EM)
-				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-			else if (emotiBitVersionController.emotibitSku == EmotiBitVersionController::EmotiBitSku::MD)
+			if (emotibitSku == EmotiBitVariants::EmotiBitSkuType::MD)
+			{
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+			}
+			else
+			{
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+			}
 		}
 	}
 	Serial.println(" ... Completed");
