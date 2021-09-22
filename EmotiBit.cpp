@@ -126,7 +126,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		}
 	}
 	EmotiBitVersionController emotiBitVersionController;
-	char factoryTestSerialOutput[150] = "***";
+	String factoryTestSerialOutput;
+	factoryTestSerialOutput.reserve(150);
+	factoryTestSerialOutput += EmotiBitFactoryTest::MSG_START_CHAR;
 	bool status = true;
 	if (_EmotiBit_i2c != nullptr)
 	{
