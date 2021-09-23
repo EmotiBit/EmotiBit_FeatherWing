@@ -100,12 +100,18 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		char input;
 		input = Serial.read();
-		if (input == 'F')
+		if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
 		{
 			testingMode = TestingMode::FACTORY_TEST;
-			Serial.println("Entered FACTORY TEST MODE");
+			String ackString;
+			ackString += EmotiBitFactoryTest::MSG_START_CHAR;
+			EmotiBitFactoryTest::updateOutputString(ackString, EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, firmware_version.c_str());
+			ackString = ackString.substring(0, ackString.length() - 1);
+			ackString += EmotiBitFactoryTest::MSG_TERM_CHAR;
+			Serial.print(ackString);
+			
+			Serial.println("\nEntered FACTORY TEST MODE");
 			// send ACK to the computer
-			Serial.print("A");
 			bool barcodeReceived = false;
 			while (Serial.available() || !barcodeReceived)
 			{
