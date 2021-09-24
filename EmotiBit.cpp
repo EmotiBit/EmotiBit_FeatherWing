@@ -158,25 +158,28 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	// If version is unknown
 	if (_version == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
 	{
-		Serial.println("initialization failed.");
-		Serial.println("Things to check:");
-		Serial.println("* is a card inserted?");
-		Serial.println("* is your wiring correct?");
-		Serial.println("Version not detected. stopping execution.");
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SD_CARD, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-		Serial.println(factoryTestSerialOutput);
-		emotiBitVersionController.initConstantMapping(EmotiBitVersionController::EmotiBitVersion::V03B);// Assume the version is V03B to set Hibernate level as Required
-		_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
-		hibernate(false);// hibenrate with setup incomplete
+		if (testingMode == TestingMode::FACTORY_TEST)
+		{
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::VERSION_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+		}
+		else
+		{
+			Serial.println("Version not detected by EmotiBit");
+			_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
+			hibernate(false);
+		}
 	}
 	// If Si-7013 was not detected, hibernate with the estimated version
 	else if (!emotiBitVersionController.versionDetectionComplete && (_version == EmotiBitVersionController::EmotiBitVersion::V02H || _version == EmotiBitVersionController::EmotiBitVersion::V03B))
 	{
-		Serial.println("Si-7013 not found on EmotiBit. Check I2C wiring.");
-		// Assigning constant so that we can use the System Constant::HIBERNATE_LEVEL in hibernate()
-		emotiBitVersionController.initConstantMapping(_version);
-		_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
-		hibernate(false);//hibernate with setup incomplete
+		if (testingMode != TestingMode::FACTORY_TEST)
+		{
+			Serial.println("Si-7013 not found on EmotiBit. Check I2C wiring.");
+			// Assigning constant so that we can use the System Constant::HIBERNATE_LEVEL in hibernate()
+			emotiBitVersionController.initConstantMapping(_version);
+			_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
+			hibernate(false);//hibernate with setup incomplete
+		}
 	}
 
 	if (_version == EmotiBitVersionController::EmotiBitVersion::V01B || _version == EmotiBitVersionController::EmotiBitVersion::V01C)
@@ -453,7 +456,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		if (testingMode == TestingMode::FACTORY_TEST)
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::LED_CONTROLLER, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-			Serial.println(factoryTestSerialOutput);
+		}
+		else
+		{
 			hibernate(false);
 		}
 	}
@@ -466,17 +471,15 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		if (testingMode == TestingMode::FACTORY_TEST)
 		{
 			// FAIL
-		}
-		Serial.println("MAX30101 was not found. Please check wiring/power. ");
-		_EmotiBit_i2c->flush();
-		_EmotiBit_i2c->endTransmission();
-		_EmotiBit_i2c->clearWriteError();
-		_EmotiBit_i2c->end();
-		static uint32_t hibernateTimer = millis();
-		if (millis() - hibernateTimer > 2000)
-		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::PPG_SENSOR, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-			Serial.println(factoryTestSerialOutput);
+		}
+		else
+		{
+			Serial.println("MAX30101 was not found. Please check wiring/power. ");
+			_EmotiBit_i2c->flush();
+			_EmotiBit_i2c->endTransmission();
+			_EmotiBit_i2c->clearWriteError();
+			_EmotiBit_i2c->end();
 			hibernate(false);
 		}
 	}
@@ -618,9 +621,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		{
 			// Add FAIL
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ACCEL_GYRO, EmotiBitFactoryTest::TypeTag::TEST_FAIL);		
-			Serial.println(factoryTestSerialOutput);
 		}
-		hibernate(false);
+		else
+		{
+			hibernate(false);
+		}
 	}
 	
 	Serial.println(" ... Completed");
@@ -670,9 +675,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			{
 				// Add fail
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::TEMP_SENSOR, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-				Serial.println(factoryTestSerialOutput);
 			}
-			hibernate(false);
+			else
+			{
+				hibernate(false);
+			}
 		}
 		Serial.println(" ... Completed");
 	}
@@ -754,7 +761,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		else
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-			Serial.println(factoryTestSerialOutput);
 		}
 	}
 	else
@@ -867,15 +873,23 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	status = setupSdCard();
 	if (status)
 	{
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SD_CARD, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+		if (testingMode == TestingMode::FACTORY_TEST)
+		{
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SD_CARD, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+		}
 		led.setLED(uint8_t(EmotiBit::Led::RED), true);
 		led.send();
 	}
 	else
 	{
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SD_CARD, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-		Serial.println(factoryTestSerialOutput);
-		hibernate(true);
+		if (testingMode == TestingMode::FACTORY_TEST)
+		{
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SD_CARD, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+		}
+		else
+		{
+			hibernate(true);
+		}
 	}
 	//WiFi Setup;
 	Serial.print("\nSetting up WiFi\n");
