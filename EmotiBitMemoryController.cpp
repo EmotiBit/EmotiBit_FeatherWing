@@ -152,7 +152,7 @@ uint8_t EmotiBitMemoryController::loadMemoryMap()
 	}
 }
 
-uint8_t EmotiBitMemoryController::readFromMemory(DataType datatype, uint8_t* data)
+uint8_t EmotiBitMemoryController::readFromMemory(DataType datatype, uint8_t** data)
 {
 	if (_version == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
@@ -163,7 +163,8 @@ uint8_t EmotiBitMemoryController::readFromMemory(DataType datatype, uint8_t* dat
 				uint8_t *eepromData = new uint8_t[map[(uint8_t)datatype].size];
 				if (_version == EmotiBitVersionController::EmotiBitVersion::V04A)
 				{
-					emotibitEeprom.read(map[(uint8_t)datatype].address, data, map[(uint8_t)datatype].size);
+					emotibitEeprom.read(map[(uint8_t)datatype].address, eepromData, map[(uint8_t)datatype].size);
+					*data = eepromData;
 					return 0;
 				}
 			}
@@ -175,6 +176,35 @@ uint8_t EmotiBitMemoryController::readFromMemory(DataType datatype, uint8_t* dat
 		else
 		{
 			return (uint8_t)Error::MEMORY_NOT_UPDATED;
+		}
+	}
+	else if ((int)_version < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
+	{
+		if (datatype == DataType::VARIANT_INFO)
+		{
+			uint8_t* otpData = new uint8_t;
+			*otpData = si7013.readRegister8(Si7013OtpMemoryMap::EMOTIBIT_VERSION_ADDR, true);
+			*data = otpData;
+			return 0; // success
+		}
+		else if (datatype == DataType::EDA)
+		{
+			uint8_t* otpData = new uint8_t[Si7013OtpMemoryMap::EDA_DATA_SIZE];
+			uint8_t *index;
+			index = otpData;
+			for (uint8_t addr = Si7013OtpMemoryMap::EDA_DATA_BASE_ADDR; addr <= Si7013OtpMemoryMap::EDA_DATA_END_ADDR; addr++)
+			{
+				 *index = si7013.readRegister8(addr, true);
+				 Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
+				 index++;
+			}
+			Serial.print("Location pointed by new func call: 0x"); Serial.println((uint32_t)otpData,HEX);
+			*data = otpData;
+			return 0; // success
+		}
+		else
+		{
+			return (uint8_t)Error::FAILURE;
 		}
 	}
 }

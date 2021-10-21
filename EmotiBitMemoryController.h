@@ -12,8 +12,8 @@ public:
 	EmotiBitVersionController::EmotiBitVersion _version;
 	struct ConstEepromAddr
 	{
-		static const size_t NUM_MAP_SEGMENTS;
-		static const size_t MEMORY_MAP_BASE;
+		static const size_t NUM_MAP_SEGMENTS = 0;
+		static const size_t MEMORY_MAP_BASE = 1;
 	};
 	
 	enum class DataType
@@ -28,10 +28,12 @@ public:
 		uint32_t size = 0;
 	}map[(uint8_t)DataType::length];
 
-	struct Si7013OtpmemoryMap
+	struct Si7013OtpMemoryMap
 	{
-		static const uint8_t BEGIN_ADDRESS;
-		static const uint8_t SIZE;
+		static const uint8_t EDA_DATA_BASE_ADDR = 0x82;
+		static const uint8_t EDA_DATA_END_ADDR = 0xB3;
+		static const uint8_t EMOTIBIT_VERSION_ADDR = 0xB7;
+		static const uint8_t EDA_DATA_SIZE = 50; // 50 bytes of OTP
 	};
 
 	struct EmotiBitEepromSettings
@@ -83,8 +85,7 @@ public:
 
 	uint8_t loadMemoryMap();
 
-	uint8_t readFromMemory(DataType datatype, uint8_t* data = nullptr);
-
+	uint8_t readFromMemory(DataType datatype, uint8_t** data = nullptr);
 };
 
 #endif
