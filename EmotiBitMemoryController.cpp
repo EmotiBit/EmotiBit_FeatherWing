@@ -1,5 +1,7 @@
 #include "EmotiBitMemoryController.h"
 
+//#define DEBUG_SERIAL
+
 bool EmotiBitMemoryController::init(TwoWire &emotibit_i2c, EmotiBitVersionController::EmotiBitVersion version)
 {
 	_version = version;
@@ -18,7 +20,7 @@ bool EmotiBitMemoryController::init(TwoWire &emotibit_i2c, EmotiBitVersionContro
 			return false;
 		}
 	}
-	else if ((int)_version <= (int)EmotiBitVersionController::EmotiBitVersion::V04A)
+	else if ((int)_version < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
 		if (si7013.setup(emotibit_i2c))
 		{
@@ -152,7 +154,7 @@ uint8_t EmotiBitMemoryController::loadMemoryMap()
 	}
 }
 
-uint8_t EmotiBitMemoryController::readFromMemory(DataType datatype, uint8_t** data)
+uint8_t EmotiBitMemoryController::readFromMemory(DataType datatype, uint8_t* &data)
 {
 	if (_version == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
@@ -164,7 +166,7 @@ uint8_t EmotiBitMemoryController::readFromMemory(DataType datatype, uint8_t** da
 				if (_version == EmotiBitVersionController::EmotiBitVersion::V04A)
 				{
 					emotibitEeprom.read(map[(uint8_t)datatype].address, eepromData, map[(uint8_t)datatype].size);
-					*data = eepromData;
+					data = eepromData;
 					return 0;
 				}
 			}
@@ -184,22 +186,31 @@ uint8_t EmotiBitMemoryController::readFromMemory(DataType datatype, uint8_t** da
 		{
 			uint8_t* otpData = new uint8_t;
 			*otpData = si7013.readRegister8(Si7013OtpMemoryMap::EMOTIBIT_VERSION_ADDR, true);
-			*data = otpData;
+			data = otpData;
 			return 0; // success
 		}
 		else if (datatype == DataType::EDA)
 		{
-			uint8_t* otpData = new uint8_t[Si7013OtpMemoryMap::EDA_DATA_SIZE];
+			uint8_t* otpData = new uint8_t[Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE];
 			uint8_t *index;
 			index = otpData;
-			for (uint8_t addr = Si7013OtpMemoryMap::EDA_DATA_BASE_ADDR; addr <= Si7013OtpMemoryMap::EDA_DATA_END_ADDR; addr++)
+			for (uint8_t addr = Si7013OtpMemoryMap::EDL_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDL_DATA_START_ADDR + Si7013OtpMemoryMap::EDL_DATA_SIZE; addr++)
 			{
 				 *index = si7013.readRegister8(addr, true);
+#ifdef DEBUG_SERIAL
 				 Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
+#endif
 				 index++;
 			}
-			Serial.print("Location pointed by new func call: 0x"); Serial.println((uint32_t)otpData,HEX);
-			*data = otpData;
+			for (uint8_t addr = Si7013OtpMemoryMap::EDR_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDR_DATA_START_ADDR + Si7013OtpMemoryMap::EDR_DATA_SIZE; addr++)
+			{
+				*index = si7013.readRegister8(addr, true);
+#ifdef DEBUG_SERIAL
+				Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
+#endif
+				index++;
+			}
+			data = otpData;
 			return 0; // success
 		}
 		else

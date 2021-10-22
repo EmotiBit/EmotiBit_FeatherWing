@@ -30,10 +30,11 @@ public:
 
 	struct Si7013OtpMemoryMap
 	{
-		static const uint8_t EDA_DATA_BASE_ADDR = 0x82;
-		static const uint8_t EDA_DATA_END_ADDR = 0xB3;
+		static const uint8_t EDL_DATA_START_ADDR = 0x82;
+		static const uint8_t EDL_DATA_SIZE = 20; // 5 floats
+		static const uint8_t EDR_DATA_START_ADDR = 0xB0;
+		static const uint8_t EDR_DATA_SIZE = 4;  // 1 float
 		static const uint8_t EMOTIBIT_VERSION_ADDR = 0xB7;
-		static const uint8_t EDA_DATA_SIZE = 50; // 50 bytes of OTP
 	};
 
 	struct EmotiBitEepromSettings
@@ -85,7 +86,7 @@ public:
 
 	uint8_t loadMemoryMap();
 
-	uint8_t readFromMemory(DataType datatype, uint8_t** data = nullptr);
+	uint8_t readFromMemory(DataType datatype, uint8_t* &data);
 };
 
 #endif
