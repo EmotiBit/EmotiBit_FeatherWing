@@ -38,6 +38,7 @@ void setup()
 	Serial.println("EmotiBit powered up");
 	EmotiBitMemoryController emotibitMemoryController;
 	emotibitMemoryController.init(emotibit_i2c, version);
+	emotibitMemoryController.setHwVersion(version);
 
 	// reading the EmotiBit version
 	uint8_t* versionOnOtp = nullptr;

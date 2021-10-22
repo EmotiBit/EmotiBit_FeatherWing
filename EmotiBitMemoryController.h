@@ -9,7 +9,7 @@
 class EmotiBitMemoryController
 {
 public:
-	EmotiBitVersionController::EmotiBitVersion _version;
+	EmotiBitVersionController::EmotiBitVersion _hwVersion = EmotiBitVersionController::EmotiBitVersion::UNKNOWN;
 	struct ConstEepromAddr
 	{
 		static const size_t NUM_MAP_SEGMENTS = 0;
@@ -61,7 +61,8 @@ public:
 		FAILURE,
 		MEMORY_NOT_UPDATED,
 		OUT_OF_BOUNDS_ACCESS,
-		I2C_WRITE_ERROR
+		I2C_WRITE_ERROR,
+		HARDWARE_VERSION_UNKNOWN
 	}writeResult;
 
 	enum class MemoryControllerStatus
@@ -74,11 +75,15 @@ public:
 	uint8_t _numMapSegments = 0;
 	ExternalEEPROM emotibitEeprom;
 	Si7013 si7013;
+	
+	
 	bool init(TwoWire &emotiBit_i2c, EmotiBitVersionController::EmotiBitVersion version);
 
-	uint8_t requestToWrite(DataType datatype, uint8_t version, size_t size = 0, uint8_t* data = nullptr, bool syncWrite = false);
+	void setHwVersion(EmotiBitVersionController::EmotiBitVersion version);
 
-	void updateBuffer(DataType datatype, uint8_t version, size_t size = 0, uint8_t* data = nullptr);
+	uint8_t requestToWrite(DataType datatype, uint8_t datatypeVersion, size_t size = 0, uint8_t* data = nullptr, bool syncWrite = false);
+
+	void updateBuffer(DataType datatype, uint8_t datatypeVersion, size_t size = 0, uint8_t* data = nullptr);
 
 	void updateMemoryMap(DataType datatype, size_t size);
 
