@@ -12,7 +12,7 @@ public:
 	EmotiBitVersionController::EmotiBitVersion _hwVersion = EmotiBitVersionController::EmotiBitVersion::UNKNOWN;
 	struct ConstEepromAddr
 	{
-		static const size_t NUM_MAP_SEGMENTS = 0;
+		static const size_t NUM_MAP_ENTRIES = 0;
 		static const size_t MEMORY_MAP_BASE = 1;
 	};
 	
@@ -72,7 +72,7 @@ public:
 	}status;
 
 	size_t _nextAvailableAddress = ConstEepromAddr::MEMORY_MAP_BASE + (sizeof(EepromMemoryMap)*(int)DataType::length);
-	uint8_t _numMapSegments = 0;
+	uint8_t _numMapEntries = (uint8_t)DataType::length;
 	ExternalEEPROM emotibitEeprom;
 	Si7013 si7013;
 	
@@ -89,7 +89,7 @@ public:
 
 	uint8_t writeToEeprom();
 
-	uint8_t loadMemoryMap();
+	uint8_t loadMemoryMap(DataType datatype);
 
 	uint8_t readFromMemory(DataType datatype, uint8_t* &data);
 };

@@ -122,10 +122,13 @@ uint8_t EmotiBitMemoryController::writeToEeprom()
 		// detect if we have something to write
 		if (_buffer.data != nullptr && _buffer.dataLength > 0)
 		{
-			_numMapSegments++;
 			uint8_t i2cWriteStatus = 0;
-			emotibitEeprom.write(ConstEepromAddr::NUM_MAP_SEGMENTS, _numMapSegments);
-
+			// write numMapEntries if not written already
+			uint8_t numEmtriesInEeprom = emotibitEeprom.read(ConstEepromAddr::NUM_MAP_ENTRIES);
+			if (numEmtriesInEeprom == 255 || _numMapEntries > numEmtriesInEeprom) // write only if not written or if writing more datatypes
+			{
+				emotibitEeprom.write(ConstEepromAddr::NUM_MAP_ENTRIES, _numMapEntries);
+			}
 			// write the updated Map
 			size_t offsetMapAddress;
 			offsetMapAddress = ConstEepromAddr::MEMORY_MAP_BASE + (int)_buffer.datatype * sizeof(EepromMemoryMap);
@@ -135,6 +138,7 @@ uint8_t EmotiBitMemoryController::writeToEeprom()
 
 			// write the buffer data
 			emotibitEeprom.write(map[(int)_buffer.datatype].address, _buffer.data, _buffer.dataLength);
+			// Write the datatype version
 			emotibitEeprom.write(map[(int)_buffer.datatype].address+_buffer.dataLength, _buffer.dataTypeVersion);
 		}
 		_buffer.clear();
@@ -146,31 +150,29 @@ uint8_t EmotiBitMemoryController::writeToEeprom()
 	}
 }
 
-uint8_t EmotiBitMemoryController::loadMemoryMap()
+uint8_t EmotiBitMemoryController::loadMemoryMap(DataType datatype)
 {
-	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
+	_numMapEntries = emotibitEeprom.read(ConstEepromAddr::NUM_MAP_ENTRIES);
+	if (_numMapEntries == 255)
 	{
-		_numMapSegments = emotibitEeprom.read(ConstEepromAddr::NUM_MAP_SEGMENTS);
-		if (_numMapSegments == 255)
-		{
-			// EEPROM not written
-			return (uint8_t)Error::MEMORY_NOT_UPDATED;
-		}
+		// EEPROM not written
+		return (uint8_t)Error::MEMORY_NOT_UPDATED;
+	}
+	if ((uint8_t)datatype < _numMapEntries)
+	{
 		EepromMemoryMap *mapPtr;
-		uint8_t *mapData = new uint8_t[sizeof(EepromMemoryMap)*_numMapSegments];
-		emotibitEeprom.read(ConstEepromAddr::MEMORY_MAP_BASE, mapData, sizeof(EepromMemoryMap)*_numMapSegments);
-		mapPtr = (EepromMemoryMap*)mapData;
-		for (uint8_t i = 0; i < _numMapSegments; i++)
-		{
-			map[i].address = mapPtr->address;
-			map[i].size = mapPtr->size;
-			mapPtr++;
-		}
+		uint8_t *eepromMapData = new uint8_t[sizeof(EepromMemoryMap)];
+		size_t offsetreadAddr = ConstEepromAddr::MEMORY_MAP_BASE + ((uint8_t)datatype * sizeof(EepromMemoryMap));
+		emotibitEeprom.read(offsetreadAddr, eepromMapData, sizeof(EepromMemoryMap));
+		mapPtr = (EepromMemoryMap*)eepromMapData;
+		map[(uint8_t)datatype].address = mapPtr->address;
+		map[(uint8_t)datatype].size = mapPtr->size;
 		return 0;
 	}
-	else if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
+	else
 	{
-		return (uint8_t)Error::HARDWARE_VERSION_UNKNOWN;
+		// specific data type not updated
+		return (uint8_t)Error::MEMORY_NOT_UPDATED;
 	}
 }
 
@@ -178,26 +180,36 @@ uint8_t EmotiBitMemoryController::readFromMemory(DataType datatype, uint8_t* &da
 {
 	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
-		if (map[(uint8_t)datatype].size != 0)
+		// Load the correct memory-map from EEPROM
+		uint8_t mapLoadStatus;
+		mapLoadStatus = loadMemoryMap(datatype);
+		if (mapLoadStatus != 0)
 		{
-			if (datatype != DataType::length)
+			return mapLoadStatus;
+		}
+		else
+		{
+			if (map[(uint8_t)datatype].size != 0)
 			{
-				uint8_t *eepromData = new uint8_t[map[(uint8_t)datatype].size];
-				if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
+				if (datatype != DataType::length)
 				{
-					emotibitEeprom.read(map[(uint8_t)datatype].address, eepromData, map[(uint8_t)datatype].size);
-					data = eepromData;
-					return 0;
+					uint8_t *eepromData = new uint8_t[map[(uint8_t)datatype].size];
+					if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
+					{
+						emotibitEeprom.read(map[(uint8_t)datatype].address, eepromData, map[(uint8_t)datatype].size);
+						data = eepromData;
+						return 0;
+					}
+				}
+				else
+				{
+					return (uint8_t)Error::OUT_OF_BOUNDS_ACCESS;
 				}
 			}
 			else
 			{
-				return (uint8_t)Error::OUT_OF_BOUNDS_ACCESS;
+				return (uint8_t)Error::MEMORY_NOT_UPDATED;
 			}
-		}
-		else
-		{
-			return (uint8_t)Error::MEMORY_NOT_UPDATED;
 		}
 	}
 	else if ((int)_hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
