@@ -6,6 +6,10 @@
 #include "SparkFun_External_EEPROM.h"
 
 #define EMOTIBIT_EEPROM_I2C_ADDRESS 0x50
+
+//#define DEBUG_SERIAL
+#define TEST_SYNC_RW 
+
 class EmotiBitMemoryController
 {
 public:
@@ -43,18 +47,6 @@ public:
 		size_t pageSizeBytes;
 	}emotibitEepromSettings;
 
-	struct Buffer
-	{
-		uint8_t* data = nullptr;
-		size_t dataLength = 0;
-		uint8_t dataTypeVersion = 0;
-		DataType datatype;
-
-		void clear();
-	}_buffer;
-
-	
-	
 	enum class Error
 	{
 		SUCCESS = 0,
@@ -63,12 +55,25 @@ public:
 		OUT_OF_BOUNDS_ACCESS,
 		I2C_WRITE_ERROR,
 		HARDWARE_VERSION_UNKNOWN
-	}writeResult;
+	};
+
+	struct Buffer
+	{
+		uint8_t* data = nullptr;
+		size_t dataLength = 0;
+		uint8_t dataTypeVersion = 0;
+		DataType datatype = DataType::length;
+		Error result = Error::SUCCESS;
+
+		void clear();
+	}_writeBuffer, _readBuffer;
 
 	enum class MemoryControllerStatus
 	{
 		IDLE,
-		BUSY
+		BUSY_READING,
+		BUSY_WRITING,
+		READ_BUFFER_FULL
 	}memoryControllerStatus;
 
 	size_t _nextAvailableAddress = ConstEepromAddr::MEMORY_MAP_BASE + (sizeof(EepromMemoryMap)*(int)DataType::length);
@@ -89,9 +94,11 @@ public:
 
 	uint8_t writeToEeprom();
 
+	uint8_t requestToRead(DataType datatype, uint8_t* &data, uint8_t &dataSize, bool syncRead = false);
+
 	uint8_t loadMemoryMap(DataType datatype);
 
-	uint8_t readFromMemory(DataType datatype, uint8_t* &data);
+	uint8_t readFromStorage();
 };
 
 #endif

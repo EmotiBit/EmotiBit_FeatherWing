@@ -1,6 +1,5 @@
 #include "EmotiBitMemoryController.h"
 
-//#define DEBUG_SERIAL
 
 bool EmotiBitMemoryController::init(TwoWire &emotibit_i2c, EmotiBitVersionController::EmotiBitVersion version)
 {
@@ -12,6 +11,7 @@ bool EmotiBitMemoryController::init(TwoWire &emotibit_i2c, EmotiBitVersionContro
 			emotibitEepromSettings.pageSizeBytes = 16; // in bytes
 			emotibitEeprom.setMemorySize(emotibitEepromSettings.capacityBytes);
 			emotibitEeprom.setPageSize(emotibitEepromSettings.pageSizeBytes);
+			memoryControllerStatus = MemoryControllerStatus::IDLE;
 			return true;
 		}
 		else // Flash module failed to init. check i2c
@@ -23,6 +23,7 @@ bool EmotiBitMemoryController::init(TwoWire &emotibit_i2c, EmotiBitVersionContro
 	{
 		if (si7013.setup(emotibit_i2c))
 		{
+			memoryControllerStatus = MemoryControllerStatus::IDLE;
 			return true;
 		}
 		else // could not comm. with IC. check i2c line
@@ -72,11 +73,15 @@ uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t data
 		{
 			if (syncWrite)
 			{
-				memoryControllerStatus = MemoryControllerStatus::BUSY;
+				memoryControllerStatus = MemoryControllerStatus::BUSY_WRITING;
 				// ToDo: plan to make it asynchronous
 				// wait till data is written in the ISR
-				while (memoryControllerStatus == MemoryControllerStatus::BUSY);
-				return (uint8_t)writeResult;  // returns SUCCESS if write complete
+#ifdef TEST_SYNC_RW
+				writeToEeprom();
+#else
+				while (memoryControllerStatus == MemoryControllerStatus::BUSY_WRITING);
+#endif  // TEST_SYNC_RW
+				return (uint8_t)_writeBuffer.result;  // returns SUCCESS if write complete
 			}
 			else
 			{
@@ -93,11 +98,11 @@ uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t data
 void EmotiBitMemoryController::updateBuffer(DataType datatype, uint8_t datatypeVersion, size_t size, uint8_t* data)
 {
 	updateMemoryMap(datatype, size + 1); // the version information requires an additoinal byte
-	_buffer.datatype = datatype;
-	_buffer.dataTypeVersion = datatypeVersion;
-	_buffer.dataLength = size;
+	_writeBuffer.datatype = datatype;
+	_writeBuffer.dataTypeVersion = datatypeVersion;
+	_writeBuffer.dataLength = size;
 	// update in the end bacause ISR can hit anytime
-	_buffer.data = data;
+	_writeBuffer.data = data;
 }
 
 void EmotiBitMemoryController::Buffer::clear()
@@ -106,6 +111,7 @@ void EmotiBitMemoryController::Buffer::clear()
 	dataLength = 0;
 	dataTypeVersion = 0;
 	datatype = DataType::length;
+	result = Error::SUCCESS;
 }
 
 void EmotiBitMemoryController::updateMemoryMap(DataType datatype, size_t size)
@@ -120,7 +126,7 @@ uint8_t EmotiBitMemoryController::writeToEeprom()
 	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
 		// detect if we have something to write
-		if (_buffer.data != nullptr && _buffer.dataLength > 0)
+		if (_writeBuffer.data != nullptr && _writeBuffer.dataLength > 0)
 		{
 			// ToDo: store the return value from i2c writes, afteer driver is updated
 			uint8_t i2cWriteStatus = 0;
@@ -132,20 +138,20 @@ uint8_t EmotiBitMemoryController::writeToEeprom()
 			}
 			// write the updated Map
 			size_t offsetMapAddress;
-			offsetMapAddress = ConstEepromAddr::MEMORY_MAP_BASE + (int)_buffer.datatype * sizeof(EepromMemoryMap);
+			offsetMapAddress = ConstEepromAddr::MEMORY_MAP_BASE + (int)_writeBuffer.datatype * sizeof(EepromMemoryMap);
 			uint8_t* mapData;
-			mapData = (uint8_t*)(map + ((int)_buffer.datatype)*sizeof(EepromMemoryMap));
-			emotibitEeprom.write(offsetMapAddress, mapData, sizeof(   EepromMemoryMap));
+			mapData = (uint8_t*)(map + ((int)_writeBuffer.datatype));
+			emotibitEeprom.write(offsetMapAddress, mapData, sizeof(EepromMemoryMap));
 
 			// write the buffer data
-			emotibitEeprom.write(map[(int)_buffer.datatype].address, _buffer.data, _buffer.dataLength);
+			emotibitEeprom.write(map[(int)_writeBuffer.datatype].address, _writeBuffer.data, _writeBuffer.dataLength);
 			// Write the datatype version
-			emotibitEeprom.write(map[(int)_buffer.datatype].address+_buffer.dataLength, _buffer.dataTypeVersion);
+			emotibitEeprom.write(map[(int)_writeBuffer.datatype].address+_writeBuffer.dataLength, _writeBuffer.dataTypeVersion);
 			
 			// clear the buffer after data has been written
-			_buffer.clear();
+			_writeBuffer.clear();
 			memoryControllerStatus = MemoryControllerStatus::IDLE;
-			writeResult = Error::SUCCESS;
+			_writeBuffer.result = Error::SUCCESS;
 			return 0;
 		}
 	}
@@ -153,6 +159,66 @@ uint8_t EmotiBitMemoryController::writeToEeprom()
 	{
 		return (uint8_t)Error::HARDWARE_VERSION_UNKNOWN;
 	}
+}
+
+
+uint8_t EmotiBitMemoryController::requestToRead(DataType datatype, uint8_t* &data, uint8_t &dataSize, bool syncRead)
+{
+	if (memoryControllerStatus == MemoryControllerStatus::IDLE)
+	{
+		if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
+		{
+			_readBuffer.datatype = datatype;
+			if (syncRead)
+			{
+				memoryControllerStatus = MemoryControllerStatus::BUSY_READING;
+#ifdef TEST_SYNC_RW
+				readFromStorage();
+#else
+				while (memoryControllerStatus != MemoryControllerStatus::READ_BUFFER_FULL);
+#endif // TEST_SYNC_RW
+				if (_readBuffer.result == Error::SUCCESS)
+				{
+					data = _readBuffer.data;
+					dataSize = _readBuffer.dataLength;
+					memoryControllerStatus = MemoryControllerStatus::IDLE;
+					_readBuffer.clear();
+					return 0;
+				}
+				else
+				{
+					return (uint8_t)_readBuffer.result;
+				}
+			}
+			else
+			{
+				memoryControllerStatus = MemoryControllerStatus::BUSY_READING;
+				return 0;
+			}
+		}
+		else if ((int)_hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
+		{
+			_readBuffer.datatype = datatype;
+			uint8_t readStatus;
+			readStatus = readFromStorage();
+			if (readStatus == 0)
+			{
+				data = _readBuffer.data;
+				dataSize = _readBuffer.dataLength;
+				_readBuffer.clear();
+				return readStatus;
+			}
+		}
+		else
+		{
+			return (uint8_t)Error::HARDWARE_VERSION_UNKNOWN;
+		}
+	}
+	else
+	{
+		return (uint8_t)Error::FAILURE;
+	}
+
 }
 
 uint8_t EmotiBitMemoryController::loadMemoryMap(DataType datatype)
@@ -181,79 +247,87 @@ uint8_t EmotiBitMemoryController::loadMemoryMap(DataType datatype)
 	}
 }
 
-uint8_t EmotiBitMemoryController::readFromMemory(DataType datatype, uint8_t* &data)
+uint8_t EmotiBitMemoryController::readFromStorage()
 {
-	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
+	if (_readBuffer.datatype != DataType::length)
 	{
-		// Load the correct memory-map from EEPROM
-		uint8_t mapLoadStatus;
-		mapLoadStatus = loadMemoryMap(datatype);
-		if (mapLoadStatus != 0)
+		if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 		{
-			return mapLoadStatus;
-		}
-		else
-		{
-			if (map[(uint8_t)datatype].size != 0 && map[(uint8_t)datatype].size != 255)
+			// Load the correct memory-map from EEPROM
+			uint8_t mapLoadStatus;
+			mapLoadStatus = loadMemoryMap(_readBuffer.datatype);
+			if (mapLoadStatus != 0)
 			{
-				if (datatype != DataType::length)
+				_readBuffer.result = Error::MEMORY_NOT_UPDATED;
+				return mapLoadStatus;
+			}
+			else
+			{
+				if (map[(uint8_t)_readBuffer.datatype].size != 0 && map[(uint8_t)_readBuffer.datatype].size != 255)
 				{
-					uint8_t *eepromData = new uint8_t[map[(uint8_t)datatype].size];
-					emotibitEeprom.read(map[(uint8_t)datatype].address, eepromData, map[(uint8_t)datatype].size);
-					data = eepromData;
+					uint8_t *eepromData = new uint8_t[map[(uint8_t)_readBuffer.datatype].size];
+					emotibitEeprom.read(map[(uint8_t)_readBuffer.datatype].address, eepromData, map[(uint8_t)_readBuffer.datatype].size);
+					_readBuffer.data = eepromData;
+					_readBuffer.dataLength = map[(uint8_t)_readBuffer.datatype].size;
+
+					// resetting dataType
+					_readBuffer.datatype = DataType::length;
+					_readBuffer.result = Error::SUCCESS;
+					memoryControllerStatus = MemoryControllerStatus::READ_BUFFER_FULL;
 					return 0;
 				}
 				else
 				{
-					return (uint8_t)Error::OUT_OF_BOUNDS_ACCESS;
+					_readBuffer.result = Error::MEMORY_NOT_UPDATED;
+					return (uint8_t)Error::MEMORY_NOT_UPDATED;
 				}
+			}
+		}
+		else if ((int)_hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
+		{
+			if (_readBuffer.datatype == DataType::VARIANT_INFO)
+			{
+				uint8_t* otpData = new uint8_t;
+				*otpData = si7013.readRegister8(Si7013OtpMemoryMap::EMOTIBIT_VERSION_ADDR, true);
+				_readBuffer.data = otpData;
+				_readBuffer.dataLength = 1;
+				_readBuffer.result = Error::SUCCESS;
+				return 0; // success
+			}
+			else if (_readBuffer.datatype == DataType::EDA)
+			{
+				uint8_t* otpData = new uint8_t[Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE];
+				uint8_t *index;
+				index = otpData;
+				for (uint8_t addr = Si7013OtpMemoryMap::EDL_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDL_DATA_START_ADDR + Si7013OtpMemoryMap::EDL_DATA_SIZE; addr++)
+				{
+					*index = si7013.readRegister8(addr, true);
+#ifdef DEBUG_SERIAL
+					Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
+#endif
+					index++;
+				}
+				for (uint8_t addr = Si7013OtpMemoryMap::EDR_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDR_DATA_START_ADDR + Si7013OtpMemoryMap::EDR_DATA_SIZE; addr++)
+				{
+					*index = si7013.readRegister8(addr, true);
+#ifdef DEBUG_SERIAL
+					Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
+#endif
+					index++;
+				}
+				_readBuffer.data = otpData;
+				_readBuffer.dataLength = Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE;
+				_readBuffer.result = Error::SUCCESS;
+				return 0; // success
 			}
 			else
 			{
-				return (uint8_t)Error::MEMORY_NOT_UPDATED;
+				return (uint8_t)Error::FAILURE;
 			}
 		}
-	}
-	else if ((int)_hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
-	{
-		if (datatype == DataType::VARIANT_INFO)
+		else if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
 		{
-			uint8_t* otpData = new uint8_t;
-			*otpData = si7013.readRegister8(Si7013OtpMemoryMap::EMOTIBIT_VERSION_ADDR, true);
-			data = otpData;
-			return 0; // success
+			return (uint8_t)Error::HARDWARE_VERSION_UNKNOWN;
 		}
-		else if (datatype == DataType::EDA)
-		{
-			uint8_t* otpData = new uint8_t[Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE];
-			uint8_t *index;
-			index = otpData;
-			for (uint8_t addr = Si7013OtpMemoryMap::EDL_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDL_DATA_START_ADDR + Si7013OtpMemoryMap::EDL_DATA_SIZE; addr++)
-			{
-				 *index = si7013.readRegister8(addr, true);
-#ifdef DEBUG_SERIAL
-				 Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
-#endif
-				 index++;
-			}
-			for (uint8_t addr = Si7013OtpMemoryMap::EDR_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDR_DATA_START_ADDR + Si7013OtpMemoryMap::EDR_DATA_SIZE; addr++)
-			{
-				*index = si7013.readRegister8(addr, true);
-#ifdef DEBUG_SERIAL
-				Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
-#endif
-				index++;
-			}
-			data = otpData;
-			return 0; // success
-		}
-		else
-		{
-			return (uint8_t)Error::FAILURE;
-		}
-	}
-	else if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
-	{
-		return (uint8_t)Error::HARDWARE_VERSION_UNKNOWN;
 	}
 }

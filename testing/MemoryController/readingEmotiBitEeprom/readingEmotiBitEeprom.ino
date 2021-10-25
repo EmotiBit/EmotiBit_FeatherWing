@@ -1,7 +1,19 @@
+/*
+  Author: Nitin Nair(nitin@emotibit.com)
+
+  This example can be used to test Read/Write functionality of the EEPROM 23AA02 on EMotiBit V04.
+
+  - Usage
+    - Uncomment the #define TEST_SYNC_RW to read/Write in async mode in this example.
+	- The MemoryController class has been designed to work with an ISR. defining TEST_SYNC_RW enables testing without the ISR
+
+ */
+
 #include <Wire.h>
 #include "wiring_private.h"
 #include "EmotiBitVersionController.h"
 #include "EmotiBitMemoryController.h"
+
 
 struct SampleData
 {
@@ -11,7 +23,8 @@ struct SampleData
 }sampleData;
 
 void printData(SampleData* sampleData);
-
+EmotiBitMemoryController emotibitMemoryController;
+void readFromEeprom(EmotiBitMemoryController::DataType datatype);
 void setup()
 {
 	Serial.begin(115200);
@@ -30,7 +43,7 @@ void setup()
 
 	Serial.println("Test for Reading EmotiBit EEPROM using memory controller");
 	EmotiBitVersionController emotibitVersionController;
-	EmotiBitMemoryController emotibitMemoryController;
+	
 
 	EmotiBitVersionController::EmotiBitVersion hwVersion;
 	hwVersion = emotibitVersionController.detectEmotiBitVersion(&emotibit_i2c, 0x50);
@@ -43,7 +56,13 @@ void setup()
 	SampleData* sampData;
 	sampData = &sampleData;
 	uint8_t status;
-	status = emotibitMemoryController.requestToWrite(EmotiBitMemoryController::DataType::VARIANT_INFO, 0, sizeof(SampleData),(uint8_t*)sampData);
+	uint8_t dataFormatVersion = 0;
+	// Writing into the Variant info space
+	status = emotibitMemoryController.requestToWrite(EmotiBitMemoryController::DataType::VARIANT_INFO, dataFormatVersion, sizeof(SampleData),(uint8_t*)sampData);
+
+	// writing into the EDA data space
+	status = emotibitMemoryController.requestToWrite(EmotiBitMemoryController::DataType::EDA, dataFormatVersion+1, sizeof(SampleData), (uint8_t*)sampData, true);  // synchronous write
+
 	if (status != 0)
 	{
 		Serial.println("Something went wrong");
@@ -53,13 +72,37 @@ void setup()
 		Serial.println("EEPROM updated wiith contents");
 	}
 
-	Serial.println("Reading from EEPROM");
+	Serial.println("Reading VARIANT_INFO from EEPROM");
 	delay(1000);
+	readFromEeprom(EmotiBitMemoryController::DataType::VARIANT_INFO);
 
-	sampData = nullptr;
+	Serial.println("Reading EDA data from EEPROM");
+	delay(1000);
+	readFromEeprom(EmotiBitMemoryController::DataType::EDA);
+
+
+
+	Serial.println("Reached end of code");
+}
+
+void readFromEeprom(EmotiBitMemoryController::DataType datatype)
+{
+	SampleData* sampData = nullptr;
 	uint8_t* eepromData = nullptr;
-	emotibitMemoryController.readFromMemory(EmotiBitMemoryController::DataType::VARIANT_INFO, eepromData);
+	uint8_t size = 0;
+	uint8_t status;
+	status = emotibitMemoryController.requestToRead(datatype, eepromData, size, true);
+	if (status == 0)
+	{
+		Serial.println("read successfull");
+	}
+	else
+	{
+		Serial.print("Read Error: "); Serial.println(status);
+	}
 
+
+	Serial.print("Data size read from EEPROM: "); Serial.println(size);
 	sampData = (SampleData*)eepromData;
 	printData(sampData);
 
@@ -67,9 +110,7 @@ void setup()
 	delete[] eepromData;
 	eepromData = nullptr;
 	sampData = nullptr;
-	Serial.println("Reached end of code");
 }
-
 
 void printData(SampleData* sampleData)
 {
