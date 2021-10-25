@@ -4,7 +4,7 @@
   This example can be used to test Read/Write functionality of the EEPROM 23AA02 on EMotiBit V04.
 
   - Usage
-    - Uncomment the #define TEST_SYNC_RW to read/Write in async mode in this example.
+    - Uncomment the #define TEST_SYNC_RW in EmotiBitMemoryController.h to read/Write in async mode in this example.
 	- The MemoryController class has been designed to work with an ISR. defining TEST_SYNC_RW enables testing without the ISR
 
  */
