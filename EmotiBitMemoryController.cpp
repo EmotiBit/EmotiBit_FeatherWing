@@ -63,19 +63,19 @@ uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t data
 
 		if (datatype == DataType::VARIANT_INFO)
 		{
-			uint8_t status;
+			uint8_t writeStatus;
 			// write the updated buffer to flash
-			status = writeToEeprom();
-			return status;
+			writeStatus = writeToEeprom();
+			return writeStatus;
 		}
 		else
 		{
 			if (syncWrite)
 			{
-				status = MemoryControllerStatus::BUSY;
+				memoryControllerStatus = MemoryControllerStatus::BUSY;
 				// ToDo: plan to make it asynchronous
 				// wait till data is written in the ISR
-				while (status == MemoryControllerStatus::BUSY);
+				while (memoryControllerStatus == MemoryControllerStatus::BUSY);
 				return (uint8_t)writeResult;  // returns SUCCESS if write complete
 			}
 			else
@@ -122,6 +122,7 @@ uint8_t EmotiBitMemoryController::writeToEeprom()
 		// detect if we have something to write
 		if (_buffer.data != nullptr && _buffer.dataLength > 0)
 		{
+			// ToDo: store the return value from i2c writes, afteer driver is updated
 			uint8_t i2cWriteStatus = 0;
 			// write numMapEntries if not written already
 			uint8_t numEmtriesInEeprom = emotibitEeprom.read(ConstEepromAddr::NUM_MAP_ENTRIES);
@@ -140,9 +141,13 @@ uint8_t EmotiBitMemoryController::writeToEeprom()
 			emotibitEeprom.write(map[(int)_buffer.datatype].address, _buffer.data, _buffer.dataLength);
 			// Write the datatype version
 			emotibitEeprom.write(map[(int)_buffer.datatype].address+_buffer.dataLength, _buffer.dataTypeVersion);
+			
+			// clear the buffer after data has been written
+			_buffer.clear();
+			memoryControllerStatus = MemoryControllerStatus::IDLE;
+			writeResult = Error::SUCCESS;
+			return 0;
 		}
-		_buffer.clear();
-		return 0;
 	}
 	else if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
 	{
@@ -189,17 +194,14 @@ uint8_t EmotiBitMemoryController::readFromMemory(DataType datatype, uint8_t* &da
 		}
 		else
 		{
-			if (map[(uint8_t)datatype].size != 0)
+			if (map[(uint8_t)datatype].size != 0 && map[(uint8_t)datatype].size != 255)
 			{
 				if (datatype != DataType::length)
 				{
 					uint8_t *eepromData = new uint8_t[map[(uint8_t)datatype].size];
-					if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
-					{
-						emotibitEeprom.read(map[(uint8_t)datatype].address, eepromData, map[(uint8_t)datatype].size);
-						data = eepromData;
-						return 0;
-					}
+					emotibitEeprom.read(map[(uint8_t)datatype].address, eepromData, map[(uint8_t)datatype].size);
+					data = eepromData;
+					return 0;
 				}
 				else
 				{

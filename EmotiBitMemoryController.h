@@ -69,7 +69,7 @@ public:
 	{
 		IDLE,
 		BUSY
-	}status;
+	}memoryControllerStatus;
 
 	size_t _nextAvailableAddress = ConstEepromAddr::MEMORY_MAP_BASE + (sizeof(EepromMemoryMap)*(int)DataType::length);
 	uint8_t _numMapEntries = (uint8_t)DataType::length;
