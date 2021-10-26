@@ -8,7 +8,6 @@
 #define EMOTIBIT_EEPROM_I2C_ADDRESS 0x50
 
 //#define DEBUG_SERIAL
-#define TEST_SYNC_RW 
 
 class EmotiBitMemoryController
 {
@@ -86,7 +85,7 @@ public:
 
 	void setHwVersion(EmotiBitVersionController::EmotiBitVersion version);
 
-	uint8_t requestToWrite(DataType datatype, uint8_t datatypeVersion, size_t size = 0, uint8_t* data = nullptr, bool syncWrite = false);
+	uint8_t requestToWrite(DataType datatype, uint8_t datatypeVersion, size_t size = 0, uint8_t* data = nullptr, bool performImmediateWrite = false);
 
 	void updateBuffer(DataType datatype, uint8_t datatypeVersion, size_t size = 0, uint8_t* data = nullptr);
 
@@ -94,7 +93,7 @@ public:
 
 	uint8_t writeToEeprom();
 
-	uint8_t requestToRead(DataType datatype, uint8_t* &data, uint8_t &dataSize, bool syncRead = false);
+	uint8_t requestToRead(DataType datatype, uint8_t* &data, uint8_t &dataSize, bool performImmediateRead = false);
 
 	uint8_t loadMemoryMap(DataType datatype);
 

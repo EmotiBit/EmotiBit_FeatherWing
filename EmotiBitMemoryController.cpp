@@ -42,7 +42,7 @@ void EmotiBitMemoryController::setHwVersion(EmotiBitVersionController::EmotiBitV
 	_hwVersion = hwVersion;
 }
 
-uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t datatypeVersion, size_t size, uint8_t *data, bool syncWrite)
+uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t datatypeVersion, size_t size, uint8_t *data, bool performImmediateWrite)
 {
 	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
@@ -62,31 +62,18 @@ uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t data
 			return (uint8_t)Error::FAILURE;
 		}
 
-		if (datatype == DataType::VARIANT_INFO)
+		if (performImmediateWrite)
 		{
-			uint8_t writeStatus;
-			// write the updated buffer to flash
-			writeStatus = writeToEeprom();
-			return writeStatus;
+			// ToDo: plan to make it asynchronous
+			// wait till data is written in the ISR
+			writeToEeprom();
+			return (uint8_t)_writeBuffer.result;  // returns SUCCESS if write complete
 		}
 		else
 		{
-			if (syncWrite)
-			{
-				memoryControllerStatus = MemoryControllerStatus::BUSY_WRITING;
-				// ToDo: plan to make it asynchronous
-				// wait till data is written in the ISR
-#ifdef TEST_SYNC_RW
-				writeToEeprom();
-#else
-				while (memoryControllerStatus == MemoryControllerStatus::BUSY_WRITING);
-#endif  // TEST_SYNC_RW
-				return (uint8_t)_writeBuffer.result;  // returns SUCCESS if write complete
-			}
-			else
-			{
-				return 0; // no error
-			}
+			memoryControllerStatus = MemoryControllerStatus::BUSY_WRITING;
+			while (memoryControllerStatus == MemoryControllerStatus::BUSY_WRITING);
+			return (uint8_t)_writeBuffer.result;
 		}
 	}
 	else if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
@@ -132,7 +119,7 @@ uint8_t EmotiBitMemoryController::writeToEeprom()
 			uint8_t i2cWriteStatus = 0;
 			// write numMapEntries if not written already
 			uint8_t numEmtriesInEeprom = emotibitEeprom.read(ConstEepromAddr::NUM_MAP_ENTRIES);
-			if (numEmtriesInEeprom == 255 || _numMapEntries > numEmtriesInEeprom) // write only if not written or if writing more datatypes
+			if (_numMapEntries != numEmtriesInEeprom) // write only if not written or if writing more datatypes
 			{
 				emotibitEeprom.write(ConstEepromAddr::NUM_MAP_ENTRIES, _numMapEntries);
 			}
@@ -162,22 +149,18 @@ uint8_t EmotiBitMemoryController::writeToEeprom()
 }
 
 
-uint8_t EmotiBitMemoryController::requestToRead(DataType datatype, uint8_t* &data, uint8_t &dataSize, bool syncRead)
+uint8_t EmotiBitMemoryController::requestToRead(DataType datatype, uint8_t* &data, uint8_t &dataSize, bool performImmediateRead)
 {
 	if (memoryControllerStatus == MemoryControllerStatus::IDLE)
 	{
 		if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 		{
 			_readBuffer.datatype = datatype;
-			if (syncRead)
+			if (performImmediateRead)
 			{
 				memoryControllerStatus = MemoryControllerStatus::BUSY_READING;
-#ifdef TEST_SYNC_RW
 				readFromStorage();
-#else
-				while (memoryControllerStatus != MemoryControllerStatus::READ_BUFFER_FULL);
-#endif // TEST_SYNC_RW
-				if (_readBuffer.result == Error::SUCCESS)
+				if (_readBuffer.result == Error::SUCCESS && memoryControllerStatus == MemoryControllerStatus::READ_BUFFER_FULL)
 				{
 					data = _readBuffer.data;
 					dataSize = _readBuffer.dataLength;
@@ -193,6 +176,11 @@ uint8_t EmotiBitMemoryController::requestToRead(DataType datatype, uint8_t* &dat
 			else
 			{
 				memoryControllerStatus = MemoryControllerStatus::BUSY_READING;
+				while (memoryControllerStatus != MemoryControllerStatus::READ_BUFFER_FULL);
+				data = _readBuffer.data;
+				dataSize = _readBuffer.dataLength;
+				memoryControllerStatus = MemoryControllerStatus::IDLE;
+				_readBuffer.clear();
 				return 0;
 			}
 		}
@@ -218,7 +206,6 @@ uint8_t EmotiBitMemoryController::requestToRead(DataType datatype, uint8_t* &dat
 	{
 		return (uint8_t)Error::FAILURE;
 	}
-
 }
 
 uint8_t EmotiBitMemoryController::loadMemoryMap(DataType datatype)

@@ -4,8 +4,8 @@
   This example can be used to test Read/Write functionality of the EEPROM 23AA02 on EMotiBit V04.
 
   - Usage
-    - Uncomment the #define TEST_SYNC_RW in EmotiBitMemoryController.h to read/Write in async mode in this example.
-	- The MemoryController class has been designed to work with an ISR. defining TEST_SYNC_RW enables testing without the ISR
+   - Call the functions requestToRead() and requestToWrite() to perform NVM read/write
+   - the bool perfornImmediateRead/performImmediateWrite should be set to true to access memory outside the ISR
 
  */
 
@@ -24,7 +24,7 @@ struct SampleData
 
 void printData(SampleData* sampleData);
 EmotiBitMemoryController emotibitMemoryController;
-void readFromEeprom(EmotiBitMemoryController::DataType datatype);
+void readFromStorage(EmotiBitMemoryController::DataType datatype);
 void setup()
 {
 	Serial.begin(115200);
@@ -58,7 +58,7 @@ void setup()
 	uint8_t status;
 	uint8_t dataFormatVersion = 0;
 	// Writing into the Variant info space
-	status = emotibitMemoryController.requestToWrite(EmotiBitMemoryController::DataType::VARIANT_INFO, dataFormatVersion, sizeof(SampleData),(uint8_t*)sampData);
+	status = emotibitMemoryController.requestToWrite(EmotiBitMemoryController::DataType::VARIANT_INFO, dataFormatVersion, sizeof(SampleData),(uint8_t*)sampData, true);
 
 	// writing into the EDA data space
 	status = emotibitMemoryController.requestToWrite(EmotiBitMemoryController::DataType::EDA, dataFormatVersion+1, sizeof(SampleData), (uint8_t*)sampData, true);  // synchronous write
@@ -74,18 +74,18 @@ void setup()
 
 	Serial.println("Reading VARIANT_INFO from EEPROM");
 	delay(1000);
-	readFromEeprom(EmotiBitMemoryController::DataType::VARIANT_INFO);
+	readFromStorage(EmotiBitMemoryController::DataType::VARIANT_INFO);
 
 	Serial.println("Reading EDA data from EEPROM");
 	delay(1000);
-	readFromEeprom(EmotiBitMemoryController::DataType::EDA);
+	readFromStorage(EmotiBitMemoryController::DataType::EDA);
 
 
 
 	Serial.println("Reached end of code");
 }
 
-void readFromEeprom(EmotiBitMemoryController::DataType datatype)
+void readFromStorage(EmotiBitMemoryController::DataType datatype)
 {
 	SampleData* sampData = nullptr;
 	uint8_t* eepromData = nullptr;
