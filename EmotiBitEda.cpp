@@ -29,31 +29,72 @@
 
 #include "EmotiBitEda.h"
 
-/**************************************************************************/
-/*!
-    @brief  Sets EmotiBit to read EDA data
-
-    @param version of EmotiBit
-    @param emotibit_i2c I2C bus
-
-    @return true if successful, otherwise false
-*/
-/**************************************************************************/
-bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, TwoWire* emotibit_i2c)
+bool EmotiBitEDA::setup(EmotiBitVersionController::EmotiBitVersion version, float samplingRate, 
+	const DoubleBufferFloat* edaBuffer, const DoubleBufferFloat* edlBuffer, const DoubleBufferFloat* edrBuffer,
+	const TwoWire* emotibitI2c, const BufferFloat* edlOversampBuffer, const BufferFloat* edrOversampBuffer);
 {
-	// ToDo: add sampling rate inputs
-	
-	if (version == EmotiBitVersionController::EmotiBitVersion::V04A)
+	_emotibitVersion = version;
+	_constants.samplingRate = samplingRate;
+
+	// ToDo: Calculate digFiltAlpha
+
+	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 	{	
+		_edaBuffer = edaBuffer;
+		_edlBuffer = edlBuffer;
+		_edrBuffer = edrBuffer;
+		_edlOversampBuffer = edlOversampBuffer;
+		_edlOversampBuffer = edrOversampBuffer;
+
+		_constants.adcBits = 16;
+
+		// NOTE: if these values are changed in code, we should add parameters to _info.json
 		ads.setDataRate(RATE_ADS1115_475SPS);	// set to 475Hz to allow for 300Hz oversampling
 		ads.setGain(GAIN_TWO);        // 2x gain   +/- 2.048V  1 bit = 1mV      0.0625mV
+
 		return ads.begin(0x48, emotibit_i2c, false); // callBegin -> false. the i2c wire has already been init in setup
+	}
+	else if (_emotibitVersion <= EmotiBitVersionController::EmotiBitVersion::V03B)
+	{
+		_edaBuffer = edaBuffer;
+		_edlBuffer = edlBuffer;
+		_edrBuffer = edrBuffer;
+		_edlOversampBuffer = edlOversampBuffer;
+		_edlOversampBuffer = edrOversampBuffer;
+
+		_constants.adcBits = 12;
+		_constants_v2_v3.adcRes = 2 ^ _constants.adcBits;
+		
+		return true;
+	}
+
+	return false;
+}
+
+
+bool EmotiBitEDA::storeCalibration(MemoryController * memoryController, String &calibrationRawValues, bool asyncRW)
+{
+	if (_emotiBitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
+	{
+
 	}
 	else
 	{
-		// ToDo: Handle other EmotiBit versions
-		return true;
+		// Storing calibration data on V02/V03 HW requires firmware v1.2.86 
+		return false;
 	}
-	return false;
+
+	struct CalibrationPair
+	{
+		float res;
+		float adcVal;
+	};
+
+	static const unsigned int nCalibVals_V2 = 5;
+	struct ECalibrationRawValues_V2
+	{
+		unsigned int nVals = nCalibVals_V2;
+		CalibrationPair vals[nCalibVals_V2];
+	};
 }
 
