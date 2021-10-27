@@ -58,10 +58,12 @@ void setup()
 	uint8_t status;
 	uint8_t dataFormatVersion = 0;
 	// Writing into the Variant info space
-	status = emotibitMemoryController.requestToWrite(EmotiBitMemoryController::DataType::VARIANT_INFO, dataFormatVersion, sizeof(SampleData),(uint8_t*)sampData, true);
+	status = emotibitMemoryController.stageToWrite(EmotiBitMemoryController::DataType::VARIANT_INFO, dataFormatVersion, sizeof(SampleData),(uint8_t*)sampData, false);
+	status = emotibitMemoryController.writeToStorage();
 
 	// writing into the EDA data space
-	status = emotibitMemoryController.requestToWrite(EmotiBitMemoryController::DataType::EDA, dataFormatVersion+1, sizeof(SampleData), (uint8_t*)sampData, true);  // synchronous write
+	status = emotibitMemoryController.stageToWrite(EmotiBitMemoryController::DataType::EDA, dataFormatVersion+1, sizeof(SampleData), (uint8_t*)sampData, false);  // synchronous write
+	status = emotibitMemoryController.writeToStorage();
 
 	if (status != 0)
 	{

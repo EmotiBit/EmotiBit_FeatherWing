@@ -42,7 +42,7 @@ void EmotiBitMemoryController::setHwVersion(EmotiBitVersionController::EmotiBitV
 	_hwVersion = hwVersion;
 }
 
-uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t datatypeVersion, size_t dataSize, uint8_t* data, bool waitForWrite)
+uint8_t EmotiBitMemoryController::stageToWrite(DataType datatype, uint8_t datatypeVersion, size_t dataSize, uint8_t* data, bool waitForWrite)
 {
 	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
@@ -66,11 +66,6 @@ uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t data
 		{
 			// ToDo: plan to make it asynchronous
 			// wait till data is written in the ISR
-			writeToEeprom();
-			return (uint8_t)_writeBuffer.result;  // returns SUCCESS if write complete
-		}
-		else
-		{
 			state = State::BUSY_WRITING;
 			while (state == State::BUSY_WRITING);
 			return (uint8_t)_writeBuffer.result;
@@ -108,7 +103,7 @@ void EmotiBitMemoryController::updateMemoryMap(DataType datatype, size_t size)
 	_nextAvailableAddress += size;
 }
 
-uint8_t EmotiBitMemoryController::writeToEeprom()
+uint8_t EmotiBitMemoryController::writeToStorage()
 {
 	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
