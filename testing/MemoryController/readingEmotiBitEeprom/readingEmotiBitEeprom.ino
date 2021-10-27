@@ -89,9 +89,10 @@ void readFromStorage(EmotiBitMemoryController::DataType datatype)
 {
 	SampleData* sampData = nullptr;
 	uint8_t* eepromData = nullptr;
-	uint8_t size = 0;
+	size_t size = 0;
 	uint8_t status;
-	status = emotibitMemoryController.requestToRead(datatype, eepromData, size, true);
+	uint8_t dataVersion;
+	status = emotibitMemoryController.requestToRead(datatype, dataVersion, size, eepromData, true);
 	if (status == 0)
 	{
 		Serial.println("read successfull");
@@ -103,6 +104,7 @@ void readFromStorage(EmotiBitMemoryController::DataType datatype)
 
 
 	Serial.print("Data size read from EEPROM: "); Serial.println(size);
+	Serial.print("Data version read from EEPROM: "); Serial.println(dataVersion);
 	sampData = (SampleData*)eepromData;
 	printData(sampData);
 

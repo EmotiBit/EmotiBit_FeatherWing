@@ -11,7 +11,7 @@ bool EmotiBitMemoryController::init(TwoWire &emotibit_i2c, EmotiBitVersionContro
 			emotibitEepromSettings.pageSizeBytes = 16; // in bytes
 			emotibitEeprom.setMemorySize(emotibitEepromSettings.capacityBytes);
 			emotibitEeprom.setPageSize(emotibitEepromSettings.pageSizeBytes);
-			memoryControllerStatus = MemoryControllerStatus::IDLE;
+			state = State::IDLE;
 			return true;
 		}
 		else // Flash module failed to init. check i2c
@@ -23,7 +23,7 @@ bool EmotiBitMemoryController::init(TwoWire &emotibit_i2c, EmotiBitVersionContro
 	{
 		if (si7013.setup(emotibit_i2c))
 		{
-			memoryControllerStatus = MemoryControllerStatus::IDLE;
+			state = State::IDLE;
 			return true;
 		}
 		else // could not comm. with IC. check i2c line
@@ -42,7 +42,7 @@ void EmotiBitMemoryController::setHwVersion(EmotiBitVersionController::EmotiBitV
 	_hwVersion = hwVersion;
 }
 
-uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t datatypeVersion, size_t size, uint8_t *data, bool performImmediateWrite)
+uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t datatypeVersion, size_t dataSize, uint8_t* data, bool waitForWrite)
 {
 	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
@@ -50,19 +50,19 @@ uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t data
 		{
 			if (datatype != DataType::length)
 			{
-				updateBuffer(datatype, datatypeVersion, size, data);
+				updateBuffer(datatype, datatypeVersion, dataSize, data);
 			}
 			else
 			{
-				return (uint8_t)Error::OUT_OF_BOUNDS_ACCESS;
+				return (uint8_t)Status::OUT_OF_BOUNDS_ACCESS;
 			}
 		}
 		else
 		{
-			return (uint8_t)Error::FAILURE;
+			return (uint8_t)Status::FAILURE;
 		}
 
-		if (performImmediateWrite)
+		if (waitForWrite)
 		{
 			// ToDo: plan to make it asynchronous
 			// wait till data is written in the ISR
@@ -71,14 +71,14 @@ uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t data
 		}
 		else
 		{
-			memoryControllerStatus = MemoryControllerStatus::BUSY_WRITING;
-			while (memoryControllerStatus == MemoryControllerStatus::BUSY_WRITING);
+			state = State::BUSY_WRITING;
+			while (state == State::BUSY_WRITING);
 			return (uint8_t)_writeBuffer.result;
 		}
 	}
 	else if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
 	{
-		return (uint8_t)Error::HARDWARE_VERSION_UNKNOWN;
+		return (uint8_t)Status::HARDWARE_VERSION_UNKNOWN;
 	}
 }
 
@@ -98,7 +98,7 @@ void EmotiBitMemoryController::Buffer::clear()
 	dataLength = 0;
 	dataTypeVersion = 0;
 	datatype = DataType::length;
-	result = Error::SUCCESS;
+	result = Status::SUCCESS;
 }
 
 void EmotiBitMemoryController::updateMemoryMap(DataType datatype, size_t size)
@@ -137,34 +137,35 @@ uint8_t EmotiBitMemoryController::writeToEeprom()
 			
 			// clear the buffer after data has been written
 			_writeBuffer.clear();
-			memoryControllerStatus = MemoryControllerStatus::IDLE;
-			_writeBuffer.result = Error::SUCCESS;
+			state = State::IDLE;
+			_writeBuffer.result = Status::SUCCESS;
 			return 0;
 		}
 	}
 	else if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
 	{
-		return (uint8_t)Error::HARDWARE_VERSION_UNKNOWN;
+		return (uint8_t)Status::HARDWARE_VERSION_UNKNOWN;
 	}
 }
 
 
-uint8_t EmotiBitMemoryController::requestToRead(DataType datatype, uint8_t* &data, uint8_t &dataSize, bool performImmediateRead)
+uint8_t EmotiBitMemoryController::requestToRead(DataType datatype, uint8_t &datatypeVersion, size_t &dataSize, uint8_t* &data, bool waitForRead)
 {
-	if (memoryControllerStatus == MemoryControllerStatus::IDLE)
+	if (state == State::IDLE)
 	{
 		if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 		{
 			_readBuffer.datatype = datatype;
-			if (performImmediateRead)
+			if (waitForRead)
 			{
-				memoryControllerStatus = MemoryControllerStatus::BUSY_READING;
+				state = State::BUSY_READING;
 				readFromStorage();
-				if (_readBuffer.result == Error::SUCCESS && memoryControllerStatus == MemoryControllerStatus::READ_BUFFER_FULL)
+				if (_readBuffer.result == Status::SUCCESS && state == State::READ_BUFFER_FULL)
 				{
 					data = _readBuffer.data;
-					dataSize = _readBuffer.dataLength;
-					memoryControllerStatus = MemoryControllerStatus::IDLE;
+					dataSize = _readBuffer.dataLength - 1;
+					datatypeVersion = *(data + dataSize);
+					state = State::IDLE;
 					_readBuffer.clear();
 					return 0;
 				}
@@ -175,11 +176,12 @@ uint8_t EmotiBitMemoryController::requestToRead(DataType datatype, uint8_t* &dat
 			}
 			else
 			{
-				memoryControllerStatus = MemoryControllerStatus::BUSY_READING;
-				while (memoryControllerStatus != MemoryControllerStatus::READ_BUFFER_FULL);
+				state = State::BUSY_READING;
+				while (state != State::READ_BUFFER_FULL);
 				data = _readBuffer.data;
 				dataSize = _readBuffer.dataLength;
-				memoryControllerStatus = MemoryControllerStatus::IDLE;
+				datatypeVersion = *(data + dataSize);
+				state = State::IDLE;
 				_readBuffer.clear();
 				return 0;
 			}
@@ -199,12 +201,12 @@ uint8_t EmotiBitMemoryController::requestToRead(DataType datatype, uint8_t* &dat
 		}
 		else
 		{
-			return (uint8_t)Error::HARDWARE_VERSION_UNKNOWN;
+			return (uint8_t)Status::HARDWARE_VERSION_UNKNOWN;
 		}
 	}
 	else
 	{
-		return (uint8_t)Error::FAILURE;
+		return (uint8_t)Status::FAILURE;
 	}
 }
 
@@ -214,7 +216,7 @@ uint8_t EmotiBitMemoryController::loadMemoryMap(DataType datatype)
 	if (_numMapEntries == 255)
 	{
 		// EEPROM not written
-		return (uint8_t)Error::MEMORY_NOT_UPDATED;
+		return (uint8_t)Status::MEMORY_NOT_UPDATED;
 	}
 	if ((uint8_t)datatype < _numMapEntries)
 	{
@@ -230,7 +232,7 @@ uint8_t EmotiBitMemoryController::loadMemoryMap(DataType datatype)
 	else
 	{
 		// specific data type not updated
-		return (uint8_t)Error::MEMORY_NOT_UPDATED;
+		return (uint8_t)Status::MEMORY_NOT_UPDATED;
 	}
 }
 
@@ -245,7 +247,7 @@ uint8_t EmotiBitMemoryController::readFromStorage()
 			mapLoadStatus = loadMemoryMap(_readBuffer.datatype);
 			if (mapLoadStatus != 0)
 			{
-				_readBuffer.result = Error::MEMORY_NOT_UPDATED;
+				_readBuffer.result = Status::MEMORY_NOT_UPDATED;
 				return mapLoadStatus;
 			}
 			else
@@ -259,14 +261,14 @@ uint8_t EmotiBitMemoryController::readFromStorage()
 
 					// resetting dataType
 					_readBuffer.datatype = DataType::length;
-					_readBuffer.result = Error::SUCCESS;
-					memoryControllerStatus = MemoryControllerStatus::READ_BUFFER_FULL;
+					_readBuffer.result = Status::SUCCESS;
+					state = State::READ_BUFFER_FULL;
 					return 0;
 				}
 				else
 				{
-					_readBuffer.result = Error::MEMORY_NOT_UPDATED;
-					return (uint8_t)Error::MEMORY_NOT_UPDATED;
+					_readBuffer.result = Status::MEMORY_NOT_UPDATED;
+					return (uint8_t)Status::MEMORY_NOT_UPDATED;
 				}
 			}
 		}
@@ -278,7 +280,7 @@ uint8_t EmotiBitMemoryController::readFromStorage()
 				*otpData = si7013.readRegister8(Si7013OtpMemoryMap::EMOTIBIT_VERSION_ADDR, true);
 				_readBuffer.data = otpData;
 				_readBuffer.dataLength = 1;
-				_readBuffer.result = Error::SUCCESS;
+				_readBuffer.result = Status::SUCCESS;
 				return 0; // success
 			}
 			else if (_readBuffer.datatype == DataType::EDA)
@@ -304,17 +306,17 @@ uint8_t EmotiBitMemoryController::readFromStorage()
 				}
 				_readBuffer.data = otpData;
 				_readBuffer.dataLength = Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE;
-				_readBuffer.result = Error::SUCCESS;
+				_readBuffer.result = Status::SUCCESS;
 				return 0; // success
 			}
 			else
 			{
-				return (uint8_t)Error::FAILURE;
+				return (uint8_t)Status::FAILURE;
 			}
 		}
 		else if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
 		{
-			return (uint8_t)Error::HARDWARE_VERSION_UNKNOWN;
+			return (uint8_t)Status::HARDWARE_VERSION_UNKNOWN;
 		}
 	}
 }

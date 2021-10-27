@@ -46,7 +46,7 @@ public:
 		size_t pageSizeBytes;
 	}emotibitEepromSettings;
 
-	enum class Error
+	enum class Status
 	{
 		SUCCESS = 0,
 		FAILURE,
@@ -62,18 +62,18 @@ public:
 		size_t dataLength = 0;
 		uint8_t dataTypeVersion = 0;
 		DataType datatype = DataType::length;
-		Error result = Error::SUCCESS;
+		Status result = Status::SUCCESS;
 
 		void clear();
 	}_writeBuffer, _readBuffer;
 
-	enum class MemoryControllerStatus
+	enum class State
 	{
 		IDLE,
 		BUSY_READING,
 		BUSY_WRITING,
 		READ_BUFFER_FULL
-	}memoryControllerStatus;
+	}state;
 
 	size_t _nextAvailableAddress = ConstEepromAddr::MEMORY_MAP_BASE + (sizeof(EepromMemoryMap)*(int)DataType::length);
 	uint8_t _numMapEntries = (uint8_t)DataType::length;
@@ -85,7 +85,7 @@ public:
 
 	void setHwVersion(EmotiBitVersionController::EmotiBitVersion version);
 
-	uint8_t requestToWrite(DataType datatype, uint8_t datatypeVersion, size_t size = 0, uint8_t* data = nullptr, bool performImmediateWrite = false);
+	uint8_t requestToWrite(DataType datatype, uint8_t datatypeVersion, size_t dataSize = 0, uint8_t* data = nullptr, bool waitForWrite = false);
 
 	void updateBuffer(DataType datatype, uint8_t datatypeVersion, size_t size = 0, uint8_t* data = nullptr);
 
@@ -93,7 +93,7 @@ public:
 
 	uint8_t writeToEeprom();
 
-	uint8_t requestToRead(DataType datatype, uint8_t* &data, uint8_t &dataSize, bool performImmediateRead = false);
+	uint8_t requestToRead(DataType datatype, uint8_t &datatypeVersion, size_t &dataSize , uint8_t* &data, bool waitForRead = false);
 
 	uint8_t loadMemoryMap(DataType datatype);
 
