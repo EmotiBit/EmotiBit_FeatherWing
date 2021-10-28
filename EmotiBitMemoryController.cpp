@@ -42,7 +42,7 @@ void EmotiBitMemoryController::setHwVersion(EmotiBitVersionController::EmotiBitV
 	_hwVersion = hwVersion;
 }
 
-uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t datatypeVersion, size_t dataSize, uint8_t* data, bool waitForWrite)
+uint8_t EmotiBitMemoryController::stageToWrite(DataType datatype, uint8_t datatypeVersion, size_t dataSize, uint8_t* data, bool callWriteToStorage)
 {
 	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
@@ -62,11 +62,11 @@ uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t data
 			return (uint8_t)Status::FAILURE;
 		}
 
-		if (waitForWrite)
+		if (callWriteToStorage)
 		{
 			// ToDo: plan to make it asynchronous
 			// wait till data is written in the ISR
-			writeToEeprom();
+			writeToStorage();
 			return (uint8_t)_writeBuffer.result;  // returns SUCCESS if write complete
 		}
 		else
@@ -82,12 +82,12 @@ uint8_t EmotiBitMemoryController::requestToWrite(DataType datatype, uint8_t data
 	}
 }
 
-void EmotiBitMemoryController::updateBuffer(DataType datatype, uint8_t datatypeVersion, size_t size, uint8_t* data)
+void EmotiBitMemoryController::updateBuffer(DataType datatype, uint8_t datatypeVersion, size_t dataSize, uint8_t* data)
 {
-	updateMemoryMap(datatype, size + 1); // the version information requires an additoinal byte
+	updateMemoryMap(datatype, dataSize + 1); // the version information requires an additoinal byte
 	_writeBuffer.datatype = datatype;
 	_writeBuffer.dataTypeVersion = datatypeVersion;
-	_writeBuffer.dataLength = size;
+	_writeBuffer.dataSize = dataSize;
 	// update in the end bacause ISR can hit anytime
 	_writeBuffer.data = data;
 }
@@ -95,7 +95,7 @@ void EmotiBitMemoryController::updateBuffer(DataType datatype, uint8_t datatypeV
 void EmotiBitMemoryController::Buffer::clear()
 {
 	data = nullptr;
-	dataLength = 0;
+	dataSize = 0;
 	dataTypeVersion = 0;
 	datatype = DataType::length;
 	result = Status::SUCCESS;
@@ -108,12 +108,12 @@ void EmotiBitMemoryController::updateMemoryMap(DataType datatype, size_t size)
 	_nextAvailableAddress += size;
 }
 
-uint8_t EmotiBitMemoryController::writeToEeprom()
+uint8_t EmotiBitMemoryController::writeToStorage()
 {
 	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
 		// detect if we have something to write
-		if (_writeBuffer.data != nullptr && _writeBuffer.dataLength > 0)
+		if (_writeBuffer.data != nullptr && _writeBuffer.dataSize > 0)
 		{
 			// ToDo: store the return value from i2c writes, afteer driver is updated
 			uint8_t i2cWriteStatus = 0;
@@ -131,9 +131,9 @@ uint8_t EmotiBitMemoryController::writeToEeprom()
 			emotibitEeprom.write(offsetMapAddress, mapData, sizeof(EepromMemoryMap));
 
 			// write the buffer data
-			emotibitEeprom.write(map[(int)_writeBuffer.datatype].address, _writeBuffer.data, _writeBuffer.dataLength);
+			emotibitEeprom.write(map[(int)_writeBuffer.datatype].address, _writeBuffer.data, _writeBuffer.dataSize);
 			// Write the datatype version
-			emotibitEeprom.write(map[(int)_writeBuffer.datatype].address+_writeBuffer.dataLength, _writeBuffer.dataTypeVersion);
+			emotibitEeprom.write(map[(int)_writeBuffer.datatype].address+_writeBuffer.dataSize, _writeBuffer.dataTypeVersion);
 			
 			// clear the buffer after data has been written
 			_writeBuffer.clear();
@@ -149,21 +149,21 @@ uint8_t EmotiBitMemoryController::writeToEeprom()
 }
 
 
-uint8_t EmotiBitMemoryController::requestToRead(DataType datatype, uint8_t &datatypeVersion, size_t &dataSize, uint8_t* &data, bool waitForRead)
+uint8_t EmotiBitMemoryController::stageToRead(DataType datatype, uint8_t &datatypeVersion, size_t &dataSize, uint8_t* &data, bool callReadFromStorage)
 {
 	if (state == State::IDLE)
 	{
 		if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 		{
 			_readBuffer.datatype = datatype;
-			if (waitForRead)
+			if (callReadFromStorage)
 			{
 				state = State::BUSY_READING;
 				readFromStorage();
 				if (_readBuffer.result == Status::SUCCESS && state == State::READ_BUFFER_FULL)
 				{
 					data = _readBuffer.data;
-					dataSize = _readBuffer.dataLength - 1;
+					dataSize = _readBuffer.dataSize - 1;
 					datatypeVersion = *(data + dataSize);
 					state = State::IDLE;
 					_readBuffer.clear();
@@ -179,7 +179,7 @@ uint8_t EmotiBitMemoryController::requestToRead(DataType datatype, uint8_t &data
 				state = State::BUSY_READING;
 				while (state != State::READ_BUFFER_FULL);
 				data = _readBuffer.data;
-				dataSize = _readBuffer.dataLength;
+				dataSize = _readBuffer.dataSize - 1;
 				datatypeVersion = *(data + dataSize);
 				state = State::IDLE;
 				_readBuffer.clear();
@@ -194,7 +194,7 @@ uint8_t EmotiBitMemoryController::requestToRead(DataType datatype, uint8_t &data
 			if (readStatus == 0)
 			{
 				data = _readBuffer.data;
-				dataSize = _readBuffer.dataLength;
+				dataSize = _readBuffer.dataSize;
 				_readBuffer.clear();
 				return readStatus;
 			}
@@ -257,7 +257,7 @@ uint8_t EmotiBitMemoryController::readFromStorage()
 					uint8_t *eepromData = new uint8_t[map[(uint8_t)_readBuffer.datatype].size];
 					emotibitEeprom.read(map[(uint8_t)_readBuffer.datatype].address, eepromData, map[(uint8_t)_readBuffer.datatype].size);
 					_readBuffer.data = eepromData;
-					_readBuffer.dataLength = map[(uint8_t)_readBuffer.datatype].size;
+					_readBuffer.dataSize = map[(uint8_t)_readBuffer.datatype].size;
 
 					// resetting dataType
 					_readBuffer.datatype = DataType::length;
@@ -279,7 +279,7 @@ uint8_t EmotiBitMemoryController::readFromStorage()
 				uint8_t* otpData = new uint8_t;
 				*otpData = si7013.readRegister8(Si7013OtpMemoryMap::EMOTIBIT_VERSION_ADDR, true);
 				_readBuffer.data = otpData;
-				_readBuffer.dataLength = 1;
+				_readBuffer.dataSize = 1;
 				_readBuffer.result = Status::SUCCESS;
 				return 0; // success
 			}
@@ -305,7 +305,7 @@ uint8_t EmotiBitMemoryController::readFromStorage()
 					index++;
 				}
 				_readBuffer.data = otpData;
-				_readBuffer.dataLength = Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE;
+				_readBuffer.dataSize = Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE;
 				_readBuffer.result = Status::SUCCESS;
 				return 0; // success
 			}

@@ -59,7 +59,7 @@ public:
 	struct Buffer
 	{
 		uint8_t* data = nullptr;
-		size_t dataLength = 0;
+		size_t dataSize = 0;
 		uint8_t dataTypeVersion = 0;
 		DataType datatype = DataType::length;
 		Status result = Status::SUCCESS;
@@ -85,15 +85,15 @@ public:
 
 	void setHwVersion(EmotiBitVersionController::EmotiBitVersion version);
 
-	uint8_t requestToWrite(DataType datatype, uint8_t datatypeVersion, size_t dataSize = 0, uint8_t* data = nullptr, bool waitForWrite = false);
+	uint8_t stageToWrite(DataType datatype, uint8_t datatypeVersion, size_t dataSize = 0, uint8_t* data = nullptr, bool callWriteToStorage = false);
 
-	void updateBuffer(DataType datatype, uint8_t datatypeVersion, size_t size = 0, uint8_t* data = nullptr);
+	void updateBuffer(DataType datatype, uint8_t datatypeVersion, size_t dataSize = 0, uint8_t* data = nullptr);
 
 	void updateMemoryMap(DataType datatype, size_t size);
 
-	uint8_t writeToEeprom();
+	uint8_t writeToStorage();
 
-	uint8_t requestToRead(DataType datatype, uint8_t &datatypeVersion, size_t &dataSize , uint8_t* &data, bool waitForRead = false);
+	uint8_t stageToRead(DataType datatype, uint8_t &datatypeVersion, size_t &dataSize , uint8_t* &data, bool callReadFromStorage = false);
 
 	uint8_t loadMemoryMap(DataType datatype);
 

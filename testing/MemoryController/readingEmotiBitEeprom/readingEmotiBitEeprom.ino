@@ -58,10 +58,10 @@ void setup()
 	uint8_t status;
 	uint8_t dataFormatVersion = 0;
 	// Writing into the Variant info space
-	status = emotibitMemoryController.requestToWrite(EmotiBitMemoryController::DataType::VARIANT_INFO, dataFormatVersion, sizeof(SampleData),(uint8_t*)sampData, true);
+	status = emotibitMemoryController.stageToWrite(EmotiBitMemoryController::DataType::VARIANT_INFO, dataFormatVersion, sizeof(SampleData),(uint8_t*)sampData, true);
 
 	// writing into the EDA data space
-	status = emotibitMemoryController.requestToWrite(EmotiBitMemoryController::DataType::EDA, dataFormatVersion+1, sizeof(SampleData), (uint8_t*)sampData, true);  // synchronous write
+	status = emotibitMemoryController.stageToWrite(EmotiBitMemoryController::DataType::EDA, dataFormatVersion+1, sizeof(SampleData), (uint8_t*)sampData, true);  // synchronous write
 
 	if (status != 0)
 	{
@@ -92,7 +92,7 @@ void readFromStorage(EmotiBitMemoryController::DataType datatype)
 	size_t size = 0;
 	uint8_t status;
 	uint8_t dataVersion;
-	status = emotibitMemoryController.requestToRead(datatype, dataVersion, size, eepromData, true);
+	status = emotibitMemoryController.stageToRead(datatype, dataVersion, size, eepromData, true);
 	if (status == 0)
 	{
 		Serial.println("read successfull");
