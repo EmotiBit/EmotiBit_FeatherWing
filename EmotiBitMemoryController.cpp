@@ -86,7 +86,7 @@ void EmotiBitMemoryController::updateBuffer(DataType datatype, uint8_t datatypeV
 {
 	updateMemoryMap(datatype, dataSize + 1); // the version information requires an additoinal byte
 	_writeBuffer.datatype = datatype;
-	_writeBuffer.dataTypeVersion = datatypeVersion;
+	_writeBuffer.datatypeVersion = datatypeVersion;
 	_writeBuffer.dataSize = dataSize;
 	// update in the end bacause ISR can hit anytime
 	_writeBuffer.data = data;
@@ -96,7 +96,7 @@ void EmotiBitMemoryController::Buffer::clear()
 {
 	data = nullptr;
 	dataSize = 0;
-	dataTypeVersion = 0;
+	datatypeVersion = 0;
 	datatype = DataType::length;
 	result = Status::SUCCESS;
 }
@@ -133,7 +133,7 @@ uint8_t EmotiBitMemoryController::writeToStorage()
 			// write the buffer data
 			emotibitEeprom.write(map[(int)_writeBuffer.datatype].address, _writeBuffer.data, _writeBuffer.dataSize);
 			// Write the datatype version
-			emotibitEeprom.write(map[(int)_writeBuffer.datatype].address+_writeBuffer.dataSize, _writeBuffer.dataTypeVersion);
+			emotibitEeprom.write(map[(int)_writeBuffer.datatype].address+_writeBuffer.dataSize, _writeBuffer.datatypeVersion);
 			
 			// clear the buffer after data has been written
 			_writeBuffer.clear();

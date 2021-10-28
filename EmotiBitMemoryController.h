@@ -60,7 +60,7 @@ public:
 	{
 		uint8_t* data = nullptr;
 		uint32_t dataSize = 0;
-		uint8_t dataTypeVersion = 0;
+		uint8_t datatypeVersion = 0;
 		DataType datatype = DataType::length;
 		Status result = Status::SUCCESS;
 
