@@ -148,6 +148,10 @@ uint8_t EmotiBitMemoryController::writeToStorage()
 	}
 }
 
+uint8_t EmotiBitMemoryController::validateWrite(DataType datatype)
+{
+
+}
 
 uint8_t EmotiBitMemoryController::stageToRead(DataType datatype, uint8_t &datatypeVersion, uint32_t &dataSize, uint8_t* &data, bool callReadFromStorage)
 {

@@ -93,6 +93,8 @@ public:
 
 	uint8_t writeToStorage();
 
+	uint8_t validateWrite(DataType datatype);
+
 	uint8_t stageToRead(DataType datatype, uint8_t &datatypeVersion, uint32_t &dataSize , uint8_t* &data, bool callReadFromStorage = false);
 
 	uint8_t loadMemoryMap(DataType datatype);
