@@ -89,7 +89,7 @@ void readFromStorage(EmotiBitMemoryController::DataType datatype)
 {
 	SampleData* sampData = nullptr;
 	uint8_t* eepromData = nullptr;
-	size_t size = 0;
+	uint32_t size = 0;
 	uint8_t status;
 	uint8_t dataVersion;
 	status = emotibitMemoryController.stageToRead(datatype, dataVersion, size, eepromData, true);

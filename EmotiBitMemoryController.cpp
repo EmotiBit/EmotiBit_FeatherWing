@@ -42,7 +42,7 @@ void EmotiBitMemoryController::setHwVersion(EmotiBitVersionController::EmotiBitV
 	_hwVersion = hwVersion;
 }
 
-uint8_t EmotiBitMemoryController::stageToWrite(DataType datatype, uint8_t datatypeVersion, size_t dataSize, uint8_t* data, bool callWriteToStorage)
+uint8_t EmotiBitMemoryController::stageToWrite(DataType datatype, uint8_t datatypeVersion, uint32_t dataSize, uint8_t* data, bool callWriteToStorage)
 {
 	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
@@ -82,7 +82,7 @@ uint8_t EmotiBitMemoryController::stageToWrite(DataType datatype, uint8_t dataty
 	}
 }
 
-void EmotiBitMemoryController::updateBuffer(DataType datatype, uint8_t datatypeVersion, size_t dataSize, uint8_t* data)
+void EmotiBitMemoryController::updateBuffer(DataType datatype, uint8_t datatypeVersion, uint32_t dataSize, uint8_t* data)
 {
 	updateMemoryMap(datatype, dataSize + 1); // the version information requires an additoinal byte
 	_writeBuffer.datatype = datatype;
@@ -101,11 +101,11 @@ void EmotiBitMemoryController::Buffer::clear()
 	result = Status::SUCCESS;
 }
 
-void EmotiBitMemoryController::updateMemoryMap(DataType datatype, size_t size)
+void EmotiBitMemoryController::updateMemoryMap(DataType datatype, uint32_t dataSize)
 {
 	map[(uint8_t)datatype].address = _nextAvailableAddress;
-	map[(uint8_t)datatype].size = size;
-	_nextAvailableAddress += size;
+	map[(uint8_t)datatype].dataSize = dataSize;
+	_nextAvailableAddress += dataSize;
 }
 
 uint8_t EmotiBitMemoryController::writeToStorage()
@@ -149,7 +149,7 @@ uint8_t EmotiBitMemoryController::writeToStorage()
 }
 
 
-uint8_t EmotiBitMemoryController::stageToRead(DataType datatype, uint8_t &datatypeVersion, size_t &dataSize, uint8_t* &data, bool callReadFromStorage)
+uint8_t EmotiBitMemoryController::stageToRead(DataType datatype, uint8_t &datatypeVersion, uint32_t &dataSize, uint8_t* &data, bool callReadFromStorage)
 {
 	if (state == State::IDLE)
 	{
@@ -226,7 +226,7 @@ uint8_t EmotiBitMemoryController::loadMemoryMap(DataType datatype)
 		emotibitEeprom.read(offsetreadAddr, eepromMapData, sizeof(EepromMemoryMap));
 		mapPtr = (EepromMemoryMap*)eepromMapData;
 		map[(uint8_t)datatype].address = mapPtr->address;
-		map[(uint8_t)datatype].size = mapPtr->size;
+		map[(uint8_t)datatype].dataSize = mapPtr->dataSize;
 		return 0;
 	}
 	else
@@ -252,12 +252,12 @@ uint8_t EmotiBitMemoryController::readFromStorage()
 			}
 			else
 			{
-				if (map[(uint8_t)_readBuffer.datatype].size != 0 && map[(uint8_t)_readBuffer.datatype].size != 255)
+				if (map[(uint8_t)_readBuffer.datatype].dataSize != 0 && map[(uint8_t)_readBuffer.datatype].dataSize != 255)
 				{
-					uint8_t *eepromData = new uint8_t[map[(uint8_t)_readBuffer.datatype].size];
-					emotibitEeprom.read(map[(uint8_t)_readBuffer.datatype].address, eepromData, map[(uint8_t)_readBuffer.datatype].size);
+					uint8_t *eepromData = new uint8_t[map[(uint8_t)_readBuffer.datatype].dataSize];
+					emotibitEeprom.read(map[(uint8_t)_readBuffer.datatype].address, eepromData, map[(uint8_t)_readBuffer.datatype].dataSize);
 					_readBuffer.data = eepromData;
-					_readBuffer.dataSize = map[(uint8_t)_readBuffer.datatype].size;
+					_readBuffer.dataSize = map[(uint8_t)_readBuffer.datatype].dataSize;
 
 					// resetting dataType
 					_readBuffer.datatype = DataType::length;
