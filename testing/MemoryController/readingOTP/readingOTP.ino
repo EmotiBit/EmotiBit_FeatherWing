@@ -42,15 +42,19 @@ void setup()
 
 	// reading the EmotiBit version
 	uint8_t* versionOnOtp = nullptr;
-	uint8_t size;
-	emotibitMemoryController.requestToRead(EmotiBitMemoryController::DataType::VARIANT_INFO, versionOnOtp, size);
+	uint32_t size;
+	uint8_t dataFormatversion;
+	emotibitMemoryController.stageToRead(EmotiBitMemoryController::DataType::VARIANT_INFO, dataFormatversion, size, versionOnOtp);
 	Serial.print("Version on OTP:"); Serial.println(*versionOnOtp);
+	Serial.print("DataForamtVersion :"); Serial.println(dataFormatversion);
+
 	delete versionOnOtp;
 	
 	// reading EDA data
 	uint8_t* otpByteArray = nullptr;
-	emotibitMemoryController.requestToRead(EmotiBitMemoryController::DataType::EDA, otpByteArray, size);
+	emotibitMemoryController.stageToRead(EmotiBitMemoryController::DataType::EDA, dataFormatversion, size, otpByteArray);
 	uint8_t *index;
+	Serial.print("DataForamtVersion :"); Serial.println(dataFormatversion);
 	Serial.print("Byte array: ");
 	index = otpByteArray;
 	for (int i = 0; i < EmotiBitMemoryController::Si7013OtpMemoryMap::EDL_DATA_SIZE + EmotiBitMemoryController::Si7013OtpMemoryMap::EDR_DATA_SIZE; i++)

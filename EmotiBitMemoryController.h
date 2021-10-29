@@ -38,6 +38,7 @@ public:
 		static const uint8_t EDR_DATA_START_ADDR = 0xB0;
 		static const uint8_t EDR_DATA_SIZE = 4;  // 1 float
 		static const uint8_t EMOTIBIT_VERSION_ADDR = 0xB7;
+		static const uint8_t DATATYPE_VERSION_ADDR = 0xB6;
 	};
 
 	struct EmotiBitEepromSettings
@@ -54,7 +55,7 @@ public:
 		OUT_OF_BOUNDS_ACCESS,
 		I2C_WRITE_ERROR,
 		HARDWARE_VERSION_UNKNOWN
-	};
+	}_writeResult, _readResult;
 
 	struct Buffer
 	{
@@ -62,7 +63,6 @@ public:
 		uint32_t dataSize = 0;
 		uint8_t datatypeVersion = 0;
 		DataType datatype = DataType::length;
-		Status result = Status::SUCCESS;
 
 		void clear();
 	}_writeBuffer, _readBuffer;
@@ -85,15 +85,13 @@ public:
 
 	void setHwVersion(EmotiBitVersionController::EmotiBitVersion version);
 
-	uint8_t stageToWrite(DataType datatype, uint8_t datatypeVersion, uint32_t dataSize = 0, uint8_t* data = nullptr, bool callWriteToStorage = false);
+	uint8_t stageToWrite(DataType datatype, uint8_t datatypeVersion, uint32_t dataSize = 0, uint8_t* data = nullptr, bool callWriteToStorage = false, bool enableValidateWrite = true);
 
 	void updateBuffer(DataType datatype, uint8_t datatypeVersion, uint32_t dataSize = 0, uint8_t* data = nullptr);
 
 	void updateMemoryMap(DataType datatype, uint32_t dataSize);
 
 	uint8_t writeToStorage();
-
-	uint8_t validateWrite(DataType datatype);
 
 	uint8_t stageToRead(DataType datatype, uint8_t &datatypeVersion, uint32_t &dataSize , uint8_t* &data, bool callReadFromStorage = false);
 
