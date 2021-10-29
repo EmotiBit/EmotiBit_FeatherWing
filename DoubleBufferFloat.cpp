@@ -81,6 +81,13 @@ size_t DoubleBufferFloat::getData(float ** data, uint32_t * timestamp, bool swap
 //	_buffer2->autoResize = b;
 //}
 
+size_t DoubleBufferFloat::size(BufferSelector b)
+{
+	if (_getBuffer(b) == nullptr) return 0;
+	else return _getBuffer(b)->size();
+}
+
+
 size_t DoubleBufferFloat::inSize() {
 	if (_inputBuffer != nullptr) {
 		_inputBuffer->size();
@@ -91,6 +98,12 @@ size_t DoubleBufferFloat::outSize() {
 	if (_outputBuffer != nullptr) {
 		_outputBuffer->size();
 	}
+}
+
+size_t DoubleBufferFloat::capacity(BufferSelector b)
+{
+	if (_getBuffer(b) == nullptr) return 0;
+	else return _getBuffer(b)->capacity();
 }
 
 size_t DoubleBufferFloat::inCapacity() {
@@ -115,4 +128,34 @@ void DoubleBufferFloat::resize(size_t capacity) {
 	_buffer2 = new BufferFloat(capacity);
 	_inputBuffer = _buffer1;
 	_outputBuffer = _buffer2;
+}
+
+BufferFloat* DoubleBufferFloat::_getBuffer(BufferSelector b)
+{
+	if (b == BufferSelector:IN)
+	{
+		return _inputBuffer;
+	}
+	else
+	{
+		return _outputBuffer;
+	}
+}
+
+size_t DoubleBufferFloat::getOverflowCount(BufferSelector b)
+{
+	if (_getBuffer(b) == nullptr) return 0;
+	else return _getBuffer(b)->getOverflowCount();
+}
+
+size_t DoubleBufferFloat::getClippedCount(BufferSelector b)
+{
+	if (_getBuffer(b) == nullptr) return 0;
+	else return _getBuffer(b)->getClippedCount();
+}
+
+bool incrClippedCount(BufferSelector b, unsigned int n = 1)
+{
+	if (_getBuffer(b) == nullptr) return 0;
+	else return _getBuffer(b)->incrClippedCount(n);
 }

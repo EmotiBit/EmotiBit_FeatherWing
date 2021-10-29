@@ -45,7 +45,15 @@ uint8_t BufferFloat::push_back(float f, uint32_t * dataTimestamp) {
 		//else {
 		//	return ERROR_BUFFER_OVERFLOW;
 		//}
-		return ERROR_BUFFER_OVERFLOW;
+		if (_nOverflow < SIZE_MAX)
+		{
+			_nOverflow++;
+			return ERROR_BUFFER_OVERFLOW;
+		}
+		else
+		{
+			return ERROR_BUFFER_OVERFLOW + SIZE_MAX_EXCEEDED;
+		}
 	}
 	else {
 		if (dataTimestamp == nullptr) {
@@ -66,6 +74,8 @@ void BufferFloat::clear() {
 #endif // DEBUG
 	_size = 0;
 	timestamp = 0;
+	_nOverflow = 0;
+	_nClipped = 0; 
 }
 
 size_t BufferFloat::size() {
@@ -74,4 +84,27 @@ size_t BufferFloat::size() {
 
 size_t BufferFloat::capacity() {
 	return _capacity;
+}
+
+size_t BufferFloat::getOverflowCount()
+{
+	return _nOverflow;
+}
+
+size_t BufferFloat::getClippedCount()
+{
+	return _nClipped;
+}
+
+uint8_t BufferFloat::incrClippedCount(unsigned int n = 1)
+{
+	if (_nOverflow + n < SIZE_MAX)
+	{
+		_nClipped += n;
+		return SUCCESS;
+	}
+	else
+	{
+		return SIZE_MAX_EXCEEDED;
+	}
 }

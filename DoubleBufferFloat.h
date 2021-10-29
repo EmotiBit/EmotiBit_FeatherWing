@@ -3,16 +3,13 @@
 #include "BufferFloat.h"
 
 class DoubleBufferFloat {
-private:
-	BufferFloat* _buffer1;
-	BufferFloat* _buffer2;
-	BufferFloat* _inputBuffer;
-	BufferFloat* _outputBuffer;
-	bool _isPushing = false;
-	bool _isGetting = false;
 public:
 
-
+	enum class BufferSelector
+	{
+		IN,
+		OUT
+	};
 
 	DoubleBufferFloat(size_t capacity = 32);
 	//DoubleBufferFloat(const DoubleBufferFloat &doubleBuffer);
@@ -21,10 +18,27 @@ public:
 	uint8_t push_back(float f, uint32_t * timestamp = nullptr);
 	size_t getData(float ** data, uint32_t * timestamp = nullptr, bool swapBuffers = true);				// Swaps the input and output buffers
 	//void setAutoResize(bool b);
-	size_t inSize();
-	size_t outSize();
-	size_t inCapacity();
-	size_t outCapacity();
+	size_t size(BufferSelector b);
+	size_t inSize();	// deprecated, use size(BufferSelector b)
+	size_t outSize();	// deprecated, use size(BufferSelector b)
+	size_t capacity(BufferSelector b);
+	size_t inCapacity();	// deprecated, use capacity(BufferSelector b)
+	size_t outCapacity();	// deprecated, use capacity(BufferSelector b)
+
 	void resize(size_t capacity);
+
+	size_t getOverflowCount(BufferSelector b);
+	size_t getClippedCount(BufferSelector b);
+	uint8_t incrClippedCount(BufferSelector b, unsigned int n = 1);
+
+private:
+	BufferFloat* _buffer1;
+	BufferFloat* _buffer2;
+	BufferFloat* _inputBuffer;
+	BufferFloat* _outputBuffer;
+	bool _isPushing = false;
+	bool _isGetting = false;
+
+	BufferFloat* _getBuffer(BufferSelector b);
 };
 
