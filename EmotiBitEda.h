@@ -18,7 +18,9 @@
 
 
 #include "EmotiBitVersionController.h"
+#include <Wire.h>
 #include "Adafruit_ADS1X15.h"
+
 
 
 class EmotiBitEda
@@ -31,38 +33,14 @@ private:
 	DoubleBufferFloat* _edrBuffer = nullptr;
 	BufferFloat* _edlOversampBuffer = nullptr;
 	BufferFloat* _edlOversampBuffer = nullptr;
-	bool isCalibrated = false;
+	bool isCalibrated = false;ve
 	
 public:
-
-	struct CalibrationRawValues_V1
-	{
-		float edl0R;
-		float edl10K;
-		float edl100K;
-		float edl1M;
-		float edl10M;
-		float edr;
-	};
-
-	struct CalibrationPair
-	{
-		float res;
-		float adcVal;
-	};
-
-	static const unsigned int nCalibVals_V2 = 5;
-	struct ECalibrationRawValues_V2
-	{
-		unsigned int nVals = nCalibVals_V2;
-		CalibrationPair vals[nCalibVals_V2];
-	};
-	 
+		 
 	// EDA constants shared by different EmotiBit versions
 	struct Constants
 	{
 		float edaSeriesResistance = 0;	//Ohms
-		float feedbackAmpR = 5000000; // Ohms
 		float samplingRate = 15.0;	// Hz
 		uint8_t adcBits;	// Bit resolution of ADC, e.g. 12, 16
 		bool enableDigitalFilter = false;
@@ -75,6 +53,7 @@ public:
 		float edrAmplification = 30;	// Hardware amplification at EDR stage
 		float vRef1 = 15.0 / 100.0;	// Volts
 		float vRef2 = 2.65;	// Volts
+		float feedbackAmpR = 5000000; // Ohms
 		float crossoverFilterFreq = 1.f / (2.f * PI * 200000.f * 0.0000047f);	// Hz
 		int adcRes;	// 2^adcBits
 		uint8_t edlPin = A4;	// ADC pin to read for EDL
@@ -85,13 +64,12 @@ public:
 	{
 		float edaTransformSlope;
 		float edaTransformIntercept;
-	} _constants_v2_v3;
+	} _constants_v4_plus;
 	
 	Adafruit_ADS1115 _ads;
 
 	/*!
 			@brief  Sets up EmotiBit to read EDA data
-
 			@param version of EmotiBit
 			@param sampling rate (determines filtering and info.json params)
 			@param DoubleBuffer for collecting eda data
@@ -129,13 +107,15 @@ public:
 		@brief Loads & calculates EDA calibration from the on-board storage
 		@return true if successful, otherwise false
 	*/
-	bool loadCalibration(MemoryController * memoryController, bool asyncRW = false);
+	bool stageCalibLoad(MemoryController * memoryController, bool waitForRead = false);
 
 	/*!
 		@brief Stores calibration values using on-board storage
 		@return true if successful, otherwise false
 	*/
-	bool storeCalibration(MemoryController * memoryController, String &calibrationRawValues, bool asyncRW);
+	bool stageCalibStorage(MemoryController * memoryController, String &calibrationRawValues, bool waitForWrite);
+
+	
 };
 
 #endif
