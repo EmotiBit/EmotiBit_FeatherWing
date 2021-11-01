@@ -17,7 +17,8 @@ public:
 	~DoubleBufferFloat();
 	uint8_t push_back(float f, uint32_t * timestamp = nullptr);
 	size_t getData(float ** data, uint32_t * timestamp = nullptr, bool swapBuffers = true);				// Swaps the input and output buffers
-	//void setAutoResize(bool b);
+	
+																																																//void setAutoResize(bool b);
 	size_t size(BufferSelector b);
 	size_t inSize();	// deprecated, use size(BufferSelector b)
 	size_t outSize();	// deprecated, use size(BufferSelector b)
@@ -28,8 +29,11 @@ public:
 	void resize(size_t capacity);
 
 	size_t getOverflowCount(BufferSelector b);
+	uint8_t incrOverflowCount(BufferSelector b, unsigned int n = 1);
 	size_t getClippedCount(BufferSelector b);
 	uint8_t incrClippedCount(BufferSelector b, unsigned int n = 1);
+
+	uint8_t downsample(BufferFloat* b);
 
 private:
 	BufferFloat* _buffer1;

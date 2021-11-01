@@ -45,15 +45,8 @@ uint8_t BufferFloat::push_back(float f, uint32_t * dataTimestamp) {
 		//else {
 		//	return ERROR_BUFFER_OVERFLOW;
 		//}
-		if (_nOverflow < SIZE_MAX)
-		{
-			_nOverflow++;
-			return ERROR_BUFFER_OVERFLOW;
-		}
-		else
-		{
-			return ERROR_BUFFER_OVERFLOW + SIZE_MAX_EXCEEDED;
-		}
+
+		return ERROR_BUFFER_OVERFLOW | incrOverflowCount();
 	}
 	else {
 		if (dataTimestamp == nullptr) {
@@ -86,9 +79,29 @@ size_t BufferFloat::capacity() {
 	return _capacity;
 }
 
+bool BufferFloat::isFull()
+{
+	if (_size >= _capacity) return true;
+	else return false;
+}
+
 size_t BufferFloat::getOverflowCount()
 {
 	return _nOverflow;
+}
+
+uint8_t BufferFloat::incrOverflowCount(unsigned int n = 1)
+{
+	if (_nOverflow + n <= SIZE_MAX)
+	{
+		_nOverflow += n;
+		return SUCCESS;
+	}
+	else
+	{
+		_nOverflow = SIZE_MAX;
+		return ERROR_SIZE_MAX_EXCEEDED;
+	}
 }
 
 size_t BufferFloat::getClippedCount()
@@ -98,13 +111,23 @@ size_t BufferFloat::getClippedCount()
 
 uint8_t BufferFloat::incrClippedCount(unsigned int n = 1)
 {
-	if (_nOverflow + n < SIZE_MAX)
+	if (_nClipped + n <= SIZE_MAX)
 	{
 		_nClipped += n;
 		return SUCCESS;
 	}
 	else
 	{
-		return SIZE_MAX_EXCEEDED;
+		_nClipped = SIZE_MAX;
+		return ERROR_SIZE_MAX_EXCEEDED;
 	}
+}
+
+float BufferFloat::average() {
+	float f = 0;
+	for (int i = 0; i < size(); i++) {
+		f += data[i];
+	}
+	f /= size();
+	return f;
 }

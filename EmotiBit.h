@@ -521,8 +521,8 @@ private:
 	// Single buffered arrays must only be accessed from ISR functions, not in the main loop
 	// ToDo: add assignment for dynamic allocation;
 	// 	**** WARNING **** THIS MUST MATCH THE SAMPLING DIVS ETC
-	BufferFloat edlBuffer = BufferFloat(24);
-	BufferFloat edrBuffer = BufferFloat(24);	
+	BufferFloat edlBuffer = BufferFloat(20);
+	BufferFloat edrBuffer = BufferFloat(20);	
 	BufferFloat temperatureBuffer = BufferFloat(4);	
 	BufferFloat humidityBuffer = BufferFloat(4);
 	BufferFloat batteryVoltageBuffer = BufferFloat(8);

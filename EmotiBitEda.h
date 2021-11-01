@@ -32,8 +32,8 @@ private:
 	DoubleBufferFloat* _edlBuffer = nullptr;
 	DoubleBufferFloat* _edrBuffer = nullptr;
 	BufferFloat* _edlOversampBuffer = nullptr;
-	BufferFloat* _edlOversampBuffer = nullptr;
-	bool isCalibrated = false;ve
+	BufferFloat* _edrOversampBuffer = nullptr;
+	bool isCalibrated = false;
 	
 public:
 		 
@@ -58,6 +58,7 @@ public:
 		int adcRes;	// 2^adcBits
 		uint8_t edlPin = A4;	// ADC pin to read for EDL
 		uint8_t edrPin = A3;	// ADC pin to read for EDR
+		float isrOffsetCorr = 0;	// Correction for ADC value changes when ISR running
 	} _constants_v2_v3;
 
 	struct Constants_V4_plus
@@ -89,7 +90,7 @@ public:
 		@brief  ISR fn to read ADC values for EDA and stores the raw data in buffers passed during setup
 		@return true if successful, otherwise false
 	*/
-	bool readData();
+	uint8_t readData();
 
 	/*!
 		@brief  Main loop fn to process raw ADC units into meaningful units (uSiemens, Volts, etc)

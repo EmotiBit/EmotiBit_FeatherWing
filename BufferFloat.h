@@ -28,7 +28,8 @@ public:
 	static const uint8_t ERROR_BUFFER_OVERFLOW = 1;
 	static const uint8_t PUSH_WHILE_GETTING = 2;
 	static const uint8_t GET_WHILE_PUSHING = 4;
-	static const uint8_t SIZE_MAX_EXCEEDED = 8;
+	static const uint8_t ERROR_SIZE_MAX_EXCEEDED = 8;
+	static const uint8_t ERROR_PTR_NULL = 16;
 
 	BufferFloat(size_t capacity = 16);
 	~BufferFloat();
@@ -37,7 +38,10 @@ public:
 	void clear();
 	size_t size();
 	size_t capacity();
+	bool isFull();
 	size_t getOverflowCount();
+	uint8_t incrOverflowCount(unsigned int n = 1);
 	size_t getClippedCount();
 	uint8_t incrClippedCount(unsigned int n = 1);
+	float average();
 };

@@ -137,213 +137,201 @@ bool EmotiBitEDA::stageCalibLoad(MemoryController * memoryController, bool waitF
 	return true;
 }
 
-bool EmotiBitEDA::readData()
+uint8_t EmotiBitEDA::readData()
 {
 #ifdef DEBUG
 		Serial.println("EmotiBitEDA::readData()");
 #endif // DEBUG
-		static float edaTemp;
+	
+	int8_t status = 0;
+	static float edlTemp;	// Electrodermal Activity 
+	static float edrTemp;	// Electrodermal Activity 
 
-		if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
+
+	if (_version >= EmotiBitVersionController::EmotiBitVersion::V04A)
+	{
+		// Reads EDA data from ADS1113
+		if (_ads.conversionComplete())
 		{
-			// Reads EDA data from ADS1113
-			if (emotibitEda.ads.conversionComplete())
+			edlTemp = _ads.getLastConversionResults();
+			_ads.startADC_Differential_0_1();
+
+			// ToDo: consider how to utilize edl & edr buffers for different EmotiBit versions to minimize RAM footprint & code clarity
+			status = status | _edlOversampBuffer->push_back(edlTemp);
+
+			// Check for clipping
+			// ToDo: assess correct levels more carefully
+			static const int16_t clipMinV4 = -32700;
+			static const int16_t clipMaxV4 = 32700;
+			if (edlTemp < clipMinV4 && edlTemp > clipMaxV4)
 			{
-				edaTemp = emotibitEda.ads.getLastConversionResults();
-				emotibitEda.ads.startADC_Differential_0_1();
-
-				// ToDo: remove oversampling and utilize delta-sigma ADC for averaging
-				_edlOversampBuffer->push_back(edaTemp);
-			}
-			if (edlBuffer.size() == _samplesAveraged.eda)
-			{
-
-			}
-
-			// ToDo: handle clipping
-
-		}
-
-		int8_t status = 0;
-		static float edaTemp;	// Electrodermal Activity in Volts
-		static bool edlClipped = false;
-
-		if (_version > EmotiBitVersionController::EmotiBitVersion::V03B)
-		{
-			// Reads EDA data from ADS1113
-			if (emotibitEda.ads.conversionComplete())
-			{
-				edaTemp = emotibitEda.ads.getLastConversionResults();
-				emotibitEda.ads.startADC_Differential_0_1();
-				// ToDo: Add clipping checks
-
-				// ToDo: consider how to utilize edl & edr buffers for different EmotiBit versions to minimize RAM footprint & code clarity
-				edlBuffer.push_back(edaTemp);
-			}
-			if (edlBuffer.size() == _samplesAveraged.eda)
-			{
-				// Perform data averaging
-				edaTemp = average(edlBuffer);
-
-				// ToDo: Add conversion from ADC units to uSiemens conditional on isCalibrated
-
-				// Add to data double buffer
-				status = status | pushData(EmotiBit::DataType::EDA, edaTemp, &edlBuffer.timestamp);
-				if (edlClipped) {
-					pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDA, &edlBuffer.timestamp);
-				}
-
-				// Clear the averaging buffers
-				edlBuffer.clear();
-				edlClipped = false;
-			}
-		}
-		else
-		{
-			// Reads EDA data from SAMD21 ADC
-
-
-			static float edlTemp;	// Electrodermal Level in Volts
-			static float edrTemp;	// Electrodermal Response in Volts
-			static float sclTemp;	// Skin Conductance Level in uSeimens
-			static float scrTemp;	// Skin Conductance Response in uSeimens
-			static bool edrClipped = false;
-
-			// ToDo: Optimize calculations for EDA
-
-			// Check EDL and EDR voltages for saturation
-			edlTemp = analogRead(_edlPin);
-			edrTemp = analogRead(_edrPin);
-
-			// Correct for offset correction only when not in ISR_CORRECTION_UPDATE
-			if (testingMode != TestingMode::ISR_CORRECTION_UPDATE)
-			{
-				edlTemp = edlTemp - _isrOffsetCorr;
-				edrTemp = edrTemp - _isrOffsetCorr;
-			}
-
-			// Add data to buffer for sample averaging (oversampling)
-			edlBuffer.push_back(edlTemp);
-			edrBuffer.push_back(edrTemp);
-
-			// ToDo: move adc clipping limits to setup()
-			static const int adcClippingLowerLim = 20;
-			static const int adcClippingUpperLim = adcRes - 20;
-
-			// Check for data clipping
-			if (edlTemp < adcClippingLowerLim || edlTemp > adcClippingUpperLim)
-			{
-				edlClipped = true;
-				status = status | (int8_t)Error::DATA_CLIPPING;
-			}
-			// Check for data clipping
-			if (edrTemp < adcClippingLowerLim || edrTemp > adcClippingUpperLim)
-			{
-				edrClipped = true;
-				status = status | (int8_t)Error::DATA_CLIPPING;
-			}
-
-			if (edlBuffer.size() == _samplesAveraged.eda) {
-				// Perform data averaging
-				edlTemp = average(edlBuffer);
-				edrTemp = average(edrBuffer);
-
-				if (testingMode == TestingMode::ISR_CORRECTION_UPDATE || testingMode == TestingMode::ISR_CORRECTION_TEST)
-				{
-					// Transmit raw ADC values
-				}
-				else
-				{
-					// transmit converted to volts
-					// Perform data conversion
-					edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
-					edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
-				}
-
-				// send raw EDL values
-				pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
-				if (edlClipped) {
-					pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDL, &edlBuffer.timestamp);
-				}
-
-				pushData(EmotiBit::DataType::EDR, edrTemp, &edrBuffer.timestamp);
-				if (edrClipped) {
-					pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
-				}
-
-
-				// EDL Digital Filter
-				if (edaCrossoverFilterFreq > 0)// use only is a valid crossover freq is assigned
-				{
-					static DigitalFilter filterEda(DigitalFilter::FilterType::IIR_LOWPASS, (_samplingRates.eda / _samplesAveraged.eda), edaCrossoverFilterFreq);
-					if (_enableDigitalFilter.eda)
-					{
-						edlTemp = filterEda.filter(edlTemp);
-					}
-				}
-				// Link to diff amp biasing: https://ocw.mit.edu/courses/media-arts-and-sciences/mas-836-sensor-technologies-for-interactive-environments-spring-2011/readings/MITMAS_836S11_read02_bias.pdf
-				edaTemp = (edrTemp - vRef2) / edrAmplification;	// Remove VGND bias and amplification from EDR measurement
-				edaTemp = edaTemp + edlTemp;                     // Add EDR to EDL in Volts
-
-				//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
-
-				if (edaTemp - vRef1 < 0.000086f)
-				{
-					edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
-				}
-				else
-				{
-					edaTemp = vRef1 / ((edaFeedbackAmpR * (edaTemp - vRef1)) - (_edaSeriesResistance * vRef1));
-				}
-
-				edaTemp = edaTemp * 1000000.f; // Convert to uSiemens
-
-
-				// Add to data double buffer
-				status = status | pushData(EmotiBit::DataType::EDA, edaTemp, &edrBuffer.timestamp);
-				if (edlClipped || edrClipped) {
-					pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDA, &edrBuffer.timestamp);
-				}
-
-				// Clear the averaging buffers
-				edlBuffer.clear();
-				edrBuffer.clear();
-				edlClipped = false;
-				edrClipped = false;
+				status = status | _edlOversampBuffer->incrClippedCount();
 			}
 		}
 
-		// ToDo: Consider moving calculation into getData
+		// Check if ready for downsampling
+		if (_edlOversampBuffer->isFull()) 
+		{
+			// Note: data is saved in _edlBuffer to make factory test calibration easy
+			// ToDo: Consider refactoring to use _edaBuffer
+			status = status | _edlBuffer.downsample(_edlOversampBuffer);
+			_edlOversampBuffer->clear();
+		}
+	}
+	else
+	{
+		// Reads EDA data from SAMD21 ADC
 
-		// EDA -> Iskin
-		//tempEda = edaLow + (edaHigh / edaHPAmplification);
-		//tempEda = (1.f - tempEda / _adcRes) * _vcc / _edaVDivR; // Iskin calculation
-		////tempEda = tempEda * _edaVDivR / (_adcRes - _edaVDivR); // Rskin calculation
-		//if (eda.push_back(tempEda) == BufferFloat::ERROR_BUFFER_OVERFLOW) {
-		//	status = (int8_t)Error::BUFFER_OVERFLOW;
-		//}
+		// Check EDL and EDR voltages for saturation
+		edlTemp = analogRead(_edlPin);
+		edrTemp = analogRead(_edrPin);
 
-		////// EDL, EDR -> Rskin
-		//tempEda = edaLow;
-		////tempEda = tempEda * _edaVDivR / (_adcRes - _edaVDivR); // Rskin calculation
-		//tempEda = tempEda * _vcc / _adcRes;
-		//if (edl.push_back(tempEda) == BufferFloat::ERROR_BUFFER_OVERFLOW) {
-		//	status = (int8_t)Error::BUFFER_OVERFLOW;
-		//}
-		//tempEda = edaHigh;
-		////tempEda = tempEda * _edaVDivR / (_adcRes - _edaVDivR); // Rskin calculation
-		//tempEda = tempEda * _vcc / _adcRes;
-		//if (edr.push_back(tempEda) == BufferFloat::ERROR_BUFFER_OVERFLOW) {
-		//	status = (int8_t)Error::BUFFER_OVERFLOW;
-		//}
+		status = status | _edlOversampBuffer->push_back(edlTemp);
+		status = status | _edrOversampBuffer->push_back(edrTemp);
 
-		return status;
+		// Check for clipping
+		static const int16_t clipMinV3 = 10;
+		static const int16_t clipMaxV3 = Constants_V2_V3.adcRes - 20;
+		if (edlTemp < clipMinV3 && edlTemp > clipMaxV3)
+		{
+			status = status | _edlOversampBuffer->incrClippedCount();
+		}
+		if (edrTemp < clipMinV3 && edrTemp > clipMaxV3)
+		{
+			status = status | _edrOversampBuffer->incrClippedCount();
+		}
+
+		// Check if ready for downsampling
+		if (_edlOversampBuffer->isFull())
+		{
+			status = status | _edlBuffer->downsample(_edlOversampBuffer);
+			_edlOversampBuffer->clear();
+		}
+		if (_edrOversampBuffer->isFull())
+		{
+			status = status | _edrBuffer->downsample(_edrOversampBuffer);
+			_edrOversampBuffer->clear();
+		}
+	}
+
+	return status;
 }
 
 
 bool EmotiBitEDA::processData()
 {
+	if (_version >= EmotiBitVersionController::EmotiBitVersion::V04A)
+	{
+		size_t n;
+		float * edlData;
+		uint32_t timestamp;
+		n = _edlBuffer->getData(&edlData, &timestamp, true);
+		for (size_t i = 0; i < n; i++)
+		{
+			_edaBuffer.push_back(edlData[i] * _constants_v4_plus.edaTransformSlope + _constants_v4_plus.edaTransformIntercept, &timestamp);
+			
+			// Transfer clipped counts
+			_edaBuffer.incrClippedCount(DoubleBuffer::BufferSelector::IN, 
+				_edlBuffer.getClippedCount(DoubleBuffer::BufferSelector::OUT)
+			);
 
+			// Transfer overflow counts
+			_edaBuffer.incrOverflowCount(DoubleBuffer::BufferSelector::IN,
+				_edlBuffer.getOverflowCount(DoubleBuffer::BufferSelector::OUT)
+			);
+
+			// Swap EDA buffer
+			_edaBuffer.swap();
+		}
+	}
+	else
+	{
+		size_t n, edlN, edrN;
+		float * edlData, edrData;
+		uint32_t edlTs, edrTs;
+		static float edlTemp, edrTemp, edaTemp;
+
+		// Swap EDL and EDR buffers with minimal delay
+		_edlBuffer->swap();
+		_edrBuffer->swap();
+
+		// Get pointers to the data buffers
+		edlN = _edlBuffer->getData(&edlData, &edlTs, false);
+		edrN = _edrBuffer->getData(&edrData, &edrTs, false);
+		if (edlN != edrN)
+		{
+			Serial.println("WARNING: EDL and EDR buffers different sizes");
+			// ToDo: Consider how to manage buffer size differences
+			// One fix option is to switch to ring buffers instead of double buffers
+		}
+
+		// Loop through the data buffers and perform calculations
+		n = min(edlN, edrN);
+		for (size_t i = 0; i < n; i++)
+		{
+			edlTemp = edlData[i];
+			edrTemp = edrData[i];
+
+			// Correction for ADC value changes when ISR running
+			edlTemp -= _constants_v2_v3.isrOffsetCorr;
+			edrTemp -= _constants_v2_v3.isrOffsetCorr;
+
+			// Perform data conversion
+			// Convert ADC to Volts
+			edlData[i] = edlTemp * _constants_v2_v3.vcc / _constants_v2_v3.adcRes;
+			edrData[i] = edrTemp * _constants_v2_v3.vcc / _constants_v2_v3.adcRes;
+
+			// EDL Digital Filter to remove noise
+			if (_constants_v2_v3.edaCrossoverFilterFreq > 0)// use only is a valid crossover freq is assigned
+			{
+				static DigitalFilter filterEda(DigitalFilter::FilterType::IIR_LOWPASS, _constants.samplingRate, _constants_v2_v3.edaCrossoverFilterFreq);
+				if (_constants.enableDigitalFilter.eda)
+				{
+					edlTemp = filterEda.filter(edlTemp);
+				}
+			}
+
+			// Link to diff amp biasing: https://ocw.mit.edu/courses/media-arts-and-sciences/mas-836-sensor-technologies-for-interactive-environments-spring-2011/readings/MITMAS_836S11_read02_bias.pdf
+			edaTemp = (edrTemp - _constants_v2_v3.vRef2) / _constants_v2_v3.edrAmplification;	// Remove VGND bias and amplification from EDR measurement
+			edaTemp = edaTemp + edlTemp;                     // Add EDR to EDL in Volts
+
+			if (edaTemp - _constants_v2_v3.vRef1 < 0.000086f)
+			{
+				edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
+			}
+			else
+			{
+				edaTemp = _constants_v2_v3.vRef1 / 
+					((_constants_v2_v3.edaFeedbackAmpR * (edaTemp - _constants_v2_v3.vRef1)) 
+						- (_constants.edaSeriesResistance * _constants_v2_v3.vRef1)
+					);
+			}
+
+			edaTemp = edaTemp * 1000000.f; // Convert to uSiemens
+
+			// Push calculated EDA value
+			_edaBuffer.push_back(edaTemp, &edrTs);
+
+			// Transfer clipped counts
+			_edaBuffer.incrClippedCount(DoubleBuffer::BufferSelector::IN,
+				max(
+					_edlBuffer.getClippedCount(DoubleBuffer::BufferSelector::OUT),
+					_edrBuffer.getClippedCount(DoubleBuffer::BufferSelector::OUT)
+				)
+			);
+
+			// Transfer overflow counts
+			_edaBuffer.incrOverflowCount(DoubleBuffer::BufferSelector::IN,
+				max(
+					_edlBuffer.getOverflowCount(DoubleBuffer::BufferSelector::OUT),
+					_edrBuffer.getOverflowCount(DoubleBuffer::BufferSelector::OUT)
+				)
+			);
+
+			// Swap EDA buffer
+			_edaBuffer.swap();
+		}
+	}
 }
 
 bool EmotiBitEDA::writeInfoJson(File * jsonFile)
