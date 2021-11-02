@@ -18,6 +18,7 @@
 
 
 #include "EmotiBitVersionController.h"
+#include <ArduinoJson.h>
 #include <Wire.h>
 #include "Adafruit_ADS1X15.h"
 
@@ -102,7 +103,7 @@ public:
 		@brief Writes EDA portion of _info.json file with relevant parameters
 		@return true if successful, otherwise false
 	*/
-	bool writeInfoJson(File * jsonFile);
+	bool writeInfoJson(File &jsonFile);
 
 	/*!
 		@brief Loads & calculates EDA calibration from the on-board storage

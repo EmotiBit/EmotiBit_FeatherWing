@@ -2290,6 +2290,33 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 
 	file.print("["); // Doing some manual printing to chunk JSON and save RAM
 
+
+	{
+		// Write basic EmotiBit info
+		StaticJsonBuffer<bufferSize> jsonBuffer;
+		JsonObject &root = jsonBuffer.createObject();
+		const uint8_t nInfo = 1;
+		JsonObject* infos[nInfo];
+		JsonArray* typeTags[nInfo];
+		JsonObject* setups[nInfo];
+		uint8_t i = 0;
+		infos[i] = &(root.createNestedObject("info"));
+		infos[i]->set("name", "EmotiBitData");
+		infos[i]->set("type", "Multimodal");
+		infos[i]->set("source_id", source_id);
+		infos[i]->set("hardware_version", hardware_version);
+		infos[i]->set("feather_version", feather_version);
+		infos[i]->set("firmware_version", firmware_version);
+		infos[i]->set("created_at", datetimeString);
+		if (root.printTo(file) == 0) {
+#ifdef DEBUG
+			Serial.println(F("Failed to write to file"));
+#endif
+		}
+	}
+
+	file.print(","); // Doing some manual printing to chunk JSON and save RAM
+
 	{
 		// Parse the root object
 		StaticJsonBuffer<bufferSize> jsonBuffer;
@@ -2318,11 +2345,6 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("nominal_srate", _samplingRates.accelerometer);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "g");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		setups[i]->set("range", _accelerometerRange);
 		setups[i]->set("acc_bwp", imuSettings.acc_bwp);
@@ -2364,11 +2386,6 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("nominal_srate", _samplingRates.gyroscope);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "degrees/second");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		setups[i]->set("range", _gyroRange);
 		setups[i]->set("gyr_bwp", imuSettings.gyr_bwp);
@@ -2409,11 +2426,6 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("nominal_srate", _samplingRates.magnetometer);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "microhenries");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		if (root.printTo(file) == 0) {
 #ifdef DEBUG
@@ -2424,49 +2436,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
-	{
-		// EDA
-
-		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
-		const uint8_t nInfo = 1;
-		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
-		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
-		//i++;
-		infos[i]->set("name", "ElectrodermalActivity");
-		infos[i]->set("type", "ElectrodermalActivity");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("EA");
-		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", _samplingRates.eda / _samplesAveraged.eda);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "microsiemens");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("adc_bits", _adcBits);
-		setups[i]->set("voltage_reference_1", vRef1);
-		setups[i]->set("voltage_reference_2", vRef2);
-		setups[i]->set("EDA_feedback_amp_resistance", edaFeedbackAmpR);
-		setups[i]->set("EDR_amplification", edrAmplification);
-		setups[i]->set("EDL_digital_filter_alpha", _edlDigFiltAlpha);
-		setups[i]->set("EDA_crossover_filter_frequency", edaCrossoverFilterFreq);
-		setups[i]->set("samples_averaged", _samplesAveraged.eda);
-		setups[i]->set("oversampling_rate", _samplingRates.eda);		
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
-	}
+	emotibitEda.writeInfoJson(file);
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
@@ -2494,11 +2464,6 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("nominal_srate", _samplingRates.humidity / _samplesAveraged.humidity);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "Percent");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		setups[i]->set("resolution", "RESOLUTION_H11_T11");
 		setups[i]->set("samples_averaged", _samplesAveraged.humidity);
@@ -2536,14 +2501,9 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("nominal_srate", _samplingRates.temperature / _samplesAveraged.temperature);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "degrees celcius");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
 		infos[i]->set("sensor_part_number", "Si7013");
 		infos[i]->set("sensor_serial_number_a", tempHumiditySensor.sernum_a);
 		infos[i]->set("sensor_serial_number_b", tempHumiditySensor.sernum_b);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		setups[i]->set("resolution", "RESOLUTION_H11_T11");
 		setups[i]->set("samples_averaged", _samplesAveraged.temperature);
@@ -2589,11 +2549,6 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		}
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "degrees celcius");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		setups[i]->set("samples_averaged", _samplesAveraged.thermopile);
 		if (thermopileMode == MODE_CONTINUOUS)
@@ -2640,11 +2595,6 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("nominal_srate", ppgSettings.sampleRate / ppgSettings.sampleAverage);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "raw units");
-		infos[i]->set("source_id", source_id);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("feather_version", feather_version);
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("created_at", datetimeString);
 		setups[i] = &(infos[i]->createNestedObject("setup"));
 		setups[i]->set("LED_power_level", ppgSettings.ledPowerLevel);
 		setups[i]->set("samples_averaged", ppgSettings.sampleAverage);

@@ -468,7 +468,7 @@ public:
 private:
 	float average(BufferFloat &b);
 	int8_t checkIMUClipping(EmotiBit::DataType type, int16_t data, uint32_t timestamp);
-	int8_t pushData(EmotiBit::DataType type, float data, uint32_t * timestamp = nullptr);
+	int8_t pushData(EmotiBit::DataType type, float data, uint32_t * timestamp = nullptr); // Deprecated. BUFFER_OVERFLOW count built into DoubleBuffer now.
 
 	SensorTimer _sensorTimer = SensorTimer::MANUAL;
 	SamplingRates _samplingRates;
