@@ -66,6 +66,8 @@ void setup()
 	if (status != 0)
 	{
 		Serial.println("Something went wrong");
+		Serial.print("Error code: "); Serial.println(status);
+		while (1);
 	}
 	else
 	{

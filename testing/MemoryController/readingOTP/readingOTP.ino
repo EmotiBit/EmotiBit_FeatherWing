@@ -44,7 +44,7 @@ void setup()
 	uint8_t* versionOnOtp = nullptr;
 	uint32_t size;
 	uint8_t dataFormatversion;
-	emotibitMemoryController.stageToRead(EmotiBitMemoryController::DataType::VARIANT_INFO, dataFormatversion, size, versionOnOtp);
+	emotibitMemoryController.stageToRead(EmotiBitMemoryController::DataType::VARIANT_INFO, dataFormatversion, size, versionOnOtp,true);
 	Serial.print("Version on OTP:"); Serial.println(*versionOnOtp);
 	Serial.print("DataForamtVersion :"); Serial.println(dataFormatversion);
 
@@ -52,7 +52,7 @@ void setup()
 	
 	// reading EDA data
 	uint8_t* otpByteArray = nullptr;
-	emotibitMemoryController.stageToRead(EmotiBitMemoryController::DataType::EDA, dataFormatversion, size, otpByteArray);
+	emotibitMemoryController.stageToRead(EmotiBitMemoryController::DataType::EDA, dataFormatversion, size, otpByteArray, true);
 	uint8_t *index;
 	Serial.print("DataForamtVersion :"); Serial.println(dataFormatversion);
 	Serial.print("Byte array: ");
