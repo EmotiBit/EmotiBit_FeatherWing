@@ -114,9 +114,9 @@ public:
 	};
 	
 	struct EnableDigitalFilter {
-		bool mx = true;
-		bool my = true;
-		bool mz = true;
+		bool mx = false;
+		bool my = false;
+		bool mz = false;
 		bool eda = true;
 	};
 
@@ -143,7 +143,8 @@ public:
 		NONE = 0,
 		BUFFER_OVERFLOW = -1,
 		DATA_CLIPPING = -2,
-		INDEX_OUT_OF_BOUNDS = -4
+		INDEX_OUT_OF_BOUNDS = -4,
+		SENSOR_NOT_READY = -8
 	};
 
   enum class DataType{
@@ -326,8 +327,8 @@ public:
 
 	const char *typeTags[(uint8_t)EmotiBit::DataType::length];
 	bool _newDataAvailable[(uint8_t)EmotiBit::DataType::length];
-	uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
-	bool sendData[(uint8_t)EmotiBit::DataType::length];
+	uint8_t _printLen[(uint8_t)EmotiBit::DataType::length];
+	bool _sendData[(uint8_t)EmotiBit::DataType::length];
 
 	SdFat SD;
 	volatile uint8_t battLevel = 100;
@@ -374,6 +375,9 @@ public:
 	bool addPacket(EmotiBit::DataType t);
 	void parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber);
 	void readSensors();
+	void processData();
+	void sendData();
+	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented
 	void writeSerialData(EmotiBit::DataType t);
 	
 
@@ -437,7 +441,7 @@ public:
   void setAnalogEnablePin(uint8_t i); /**< Power on/off the analog circuitry */
   int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
 	int8_t updatePPGData();                /**< Read any available PPG data from the sensor FIFO into the inputBuffers */
-	int8_t updateEDAData();                /**< Take EDA reading and put into the inputBuffer */
+	//int8_t updateEDAData();                /* Deprecated. Use EmotiBitEda::readData() */
 	int8_t updateTempHumidityData();       /**< Read any available temperature and humidity data into the inputBuffers */
 	int8_t updateThermopileData();         /**< Read Thermopile data into the buffers*/
 	int8_t updateBatteryVoltageData();     /**< Take battery voltage reading and put into the inputBuffer */
@@ -536,5 +540,6 @@ private:
 void attachEmotiBit(EmotiBit*e = nullptr);
 void attachToInterruptTC3(void(*readFunction)(void), EmotiBit*e = nullptr);
 void ReadSensors();
+
 
 #endif

@@ -622,6 +622,13 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		}
 		hibernate(false);
 	}
+	if ((int)_version == (int)EmotiBitVersionController::EmotiBitVersion::V03B)
+	{
+		_enableDigitalFilter.mx = true;
+		_enableDigitalFilter.my = true;
+		_enableDigitalFilter.mz = true;
+		Serial.println("Enabling digital filtering for magnetometer");
+	}
 	
 	Serial.println(" ... Completed");
 	// ToDo: Add interrupts to accurately record timing of data capture
@@ -920,51 +927,51 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	typeTags[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = EmotiBitPacket::TypeTag::DATA_OVERFLOW;
 	typeTags[(uint8_t)EmotiBit::DataType::DEBUG] = EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG;
 
-	printLen[(uint8_t)EmotiBit::DataType::EDA] = 6;
-	printLen[(uint8_t)EmotiBit::DataType::EDL] = 6;
-	printLen[(uint8_t)EmotiBit::DataType::EDR] = 6;
-	printLen[(uint8_t)EmotiBit::DataType::PPG_INFRARED] = 0;
-	printLen[(uint8_t)EmotiBit::DataType::PPG_RED] = 0;
-	printLen[(uint8_t)EmotiBit::DataType::PPG_GREEN] = 0;
-	printLen[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = 3;
-	printLen[(uint8_t)EmotiBit::DataType::THERMOPILE] = 3;
-	printLen[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = 3;
-	printLen[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = 3;
-	printLen[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Y] = 3;
-	printLen[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Z] = 3;
-	printLen[(uint8_t)EmotiBit::DataType::GYROSCOPE_X] = 3;
-	printLen[(uint8_t)EmotiBit::DataType::GYROSCOPE_Y] = 3;
-	printLen[(uint8_t)EmotiBit::DataType::GYROSCOPE_Z] = 3;
-	printLen[(uint8_t)EmotiBit::DataType::MAGNETOMETER_X] = 0;
-	printLen[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Y] = 0;
-	printLen[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Z] = 0;
-	printLen[(uint8_t)EmotiBit::DataType::BATTERY_VOLTAGE] = 2;
-	printLen[(uint8_t)EmotiBit::DataType::BATTERY_PERCENT] = 0;
-	printLen[(uint8_t)EmotiBit::DataType::DEBUG] = 0;
+	_printLen[(uint8_t)EmotiBit::DataType::EDA] = 6;
+	_printLen[(uint8_t)EmotiBit::DataType::EDL] = 6;
+	_printLen[(uint8_t)EmotiBit::DataType::EDR] = 6;
+	_printLen[(uint8_t)EmotiBit::DataType::PPG_INFRARED] = 0;
+	_printLen[(uint8_t)EmotiBit::DataType::PPG_RED] = 0;
+	_printLen[(uint8_t)EmotiBit::DataType::PPG_GREEN] = 0;
+	_printLen[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = 3;
+	_printLen[(uint8_t)EmotiBit::DataType::THERMOPILE] = 3;
+	_printLen[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = 3;
+	_printLen[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = 3;
+	_printLen[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Y] = 3;
+	_printLen[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Z] = 3;
+	_printLen[(uint8_t)EmotiBit::DataType::GYROSCOPE_X] = 3;
+	_printLen[(uint8_t)EmotiBit::DataType::GYROSCOPE_Y] = 3;
+	_printLen[(uint8_t)EmotiBit::DataType::GYROSCOPE_Z] = 3;
+	_printLen[(uint8_t)EmotiBit::DataType::MAGNETOMETER_X] = 0;
+	_printLen[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Y] = 0;
+	_printLen[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Z] = 0;
+	_printLen[(uint8_t)EmotiBit::DataType::BATTERY_VOLTAGE] = 2;
+	_printLen[(uint8_t)EmotiBit::DataType::BATTERY_PERCENT] = 0;
+	_printLen[(uint8_t)EmotiBit::DataType::DEBUG] = 0;
 
-	sendData[(uint8_t)EmotiBit::DataType::EDA] = true;
-	sendData[(uint8_t)EmotiBit::DataType::EDL] = true;
-	sendData[(uint8_t)EmotiBit::DataType::EDR] = true;
-	sendData[(uint8_t)EmotiBit::DataType::PPG_INFRARED] = true;
-	sendData[(uint8_t)EmotiBit::DataType::PPG_RED] = true;
-	sendData[(uint8_t)EmotiBit::DataType::PPG_GREEN] = true;
-	sendData[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = true;
-	sendData[(uint8_t)EmotiBit::DataType::THERMOPILE] = true;
-	sendData[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = true;
-	sendData[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = true;
-	sendData[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Y] = true;
-	sendData[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Z] = true;
-	sendData[(uint8_t)EmotiBit::DataType::GYROSCOPE_X] = true;
-	sendData[(uint8_t)EmotiBit::DataType::GYROSCOPE_Y] = true;
-	sendData[(uint8_t)EmotiBit::DataType::GYROSCOPE_Z] = true;
-	sendData[(uint8_t)EmotiBit::DataType::MAGNETOMETER_X] = true;
-	sendData[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Y] = true;
-	sendData[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Z] = true;
-	sendData[(uint8_t)EmotiBit::DataType::BATTERY_VOLTAGE] = true;
-	sendData[(uint8_t)EmotiBit::DataType::BATTERY_PERCENT] = true;
-	sendData[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = true;
-	sendData[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = true;
-	sendData[(uint8_t)EmotiBit::DataType::DEBUG] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::EDA] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::EDL] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::EDR] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::PPG_INFRARED] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::PPG_RED] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::PPG_GREEN] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::THERMOPILE] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Y] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::ACCELEROMETER_Z] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::GYROSCOPE_X] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::GYROSCOPE_Y] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::GYROSCOPE_Z] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::MAGNETOMETER_X] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Y] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Z] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::BATTERY_VOLTAGE] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::BATTERY_PERCENT] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::DATA_CLIPPING] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::DEBUG] = true;
 
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::EDA] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::EDL] = false;
@@ -1123,15 +1130,35 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 
 		header = EmotiBitPacket::createHeader(typeTags[(uint8_t)t], timestamp, _outDataPacketCounter++, dataLen);
 		_outDataPackets += EmotiBitPacket::headerToString(header);
-		for (uint16_t i = 0; i < dataLen; i++) {
-			_outDataPackets += ",";
-			if (t == EmotiBit::DataType::DATA_CLIPPING || t == EmotiBit::DataType::DATA_OVERFLOW) {
-				// If it's a clipping/overflow type, write the data as a string rather than float
-				// ToDo: consider how to better keep track of clipping and overflows
-				_outDataPackets += typeTags[(uint8_t)data[i]];
+
+		if (t == EmotiBit::DataType::DATA_CLIPPING || t == EmotiBit::DataType::DATA_OVERFLOW) {
+			// Handle clippping and overflow as a special case
+			for (uint8_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
+			{
+				// Add all the clipping/overflow events across all the buffers to the packet
+				if (i != EmotiBit::DataType::DATA_CLIPPING && i != EmotiBit::DataType::DATA_OVERFLOW) {
+					// Skip clipping & overflow types
+					size_t count = 0;
+					if (t == EmotiBit::DataType::DATA_CLIPPING)
+					{
+						count = dataDoubleBuffers[i].getClippingCount(DoubleBufferFloat::BufferSelector::OUT)
+					}
+					if (t == EmotiBit::DataType::DATA_OVERFLOW)
+					{
+						count = dataDoubleBuffers[i].getOverflowCount(DoubleBufferFloat::BufferSelector::OUT)
+					}
+					for (size_t n = 0; n < count; n++)
+					{
+						_outDataPackets += ",";
+						_outDataPackets += typeTags[i];
+					}
+				}
 			}
-			else {
-				_outDataPackets += String(data[i], precision);
+		}
+		else {
+			for (uint16_t d = 0; d < dataLen; d++) {
+				_outDataPackets += ",";
+				_outDataPackets += String(data[d], precision);
 			}
 		}
 		_outDataPackets += "\n";
@@ -1150,15 +1177,39 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 	uint32_t timestamp;
 	size_t dataLen;
 
-	dataLen = getData(t, &data, &timestamp);
-
-	if (dataLen > 0)
+	if (t == EmotiBit::DataType::DATA_CLIPPING || t == EmotiBit::DataType::DATA_OVERFLOW) 
 	{
-		_newDataAvailable[(uint8_t)t] = true;	// set new data is available in the outputBuffer
+		// Handle clippping and overflow as a special case
+		dataLen = 0;
+		timestamp = millis();
+		for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
+		{
+			if (i != EmotiBit::DataType::DATA_CLIPPING && i != EmotiBit::DataType::DATA_OVERFLOW) 
+			{
+				// Count all the events across all the buffers to get dataLen
+				if (t == EmotiBit::DataType::DATA_CLIPPING)
+				{
+					dataLen += dataDoubleBuffers[i].getClippingCount(DoubleBufferFloat::BufferSelector::OUT);
+				}
+				else if (t == EmotiBit::DataType::DATA_OVERFLOW)
+				{
+					dataLen += dataDoubleBuffers[i].getOverflowCount(DoubleBufferFloat::BufferSelector::OUT);
+				}
+			}
+		}
+	}
+	else
+	{
+		dataLen = dataDoubleBuffers[t]->getData(&data, &timestamp, false);
+		if (dataLen > 0)
+		{
+			// ToDo: Consider moving _newDataAvailable set to processData()
+			_newDataAvailable[(uint8_t)t] = true;	// set new data is available in the outputBuffer
+		}
 	}
 
-	if (sendData[(uint8_t)t]) {
-		return addPacket(timestamp, t, data, dataLen, printLen[(uint8_t)t]);
+	if (_sendData[(uint8_t)t]) {
+		return addPacket(timestamp, t, data, dataLen, _printLen[(uint8_t)t]);
 	}
 	return false;
 }
@@ -1397,40 +1448,11 @@ uint8_t EmotiBit::update()
 		}
 		else
 		{
-			bool newData = false;
+			// Perform data calculations in main loop
+			processData();
 
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
-
-			for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
-			{
-				addPacket((EmotiBit::DataType) i);
-				if (_outDataPackets.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE)
-				{
-					// Avoid overrunning our reserve memory
-					if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
-
-					if (getPowerMode() == PowerMode::NORMAL_POWER)
-					{
-						_emotiBitWiFi.sendData(_outDataPackets);
-					}
-					writeSdCardMessage(_outDataPackets);
-					_outDataPackets = "";
-
-					if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
-				}
-			}
-			if (_outDataPackets.length() > 0)
-			{
-				if (getPowerMode() == PowerMode::NORMAL_POWER)
-				{
-					_emotiBitWiFi.sendData(_outDataPackets);
-				}
-				writeSdCardMessage(_outDataPackets);
-				_outDataPackets = "";
-			}
-
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
-
+			// Send data to SD card and over wireless
+			sendData();
 		}
 	}
 
@@ -1450,162 +1472,162 @@ uint8_t EmotiBit::update()
 	}
 }
 
-int8_t EmotiBit::updateEDAData() 
-{
-#ifdef DEBUG
-	Serial.println("updateEDAData()");
-#endif // DEBUG
-
-	// ToDo: migrate this code to live in EmotiBitEda.updateData();
-
-	int8_t status = 0;
-	static float edaTemp;	// Electrodermal Activity in Volts
-	static bool edlClipped = false;
-	
-	if (_version > EmotiBitVersionController::EmotiBitVersion::V03B)
-	{
-		// Reads EDA data from ADS1113
-		if (emotibitEda.ads.conversionComplete())
-		{
-			edaTemp = emotibitEda.ads.getLastConversionResults();
-			emotibitEda.ads.startADC_Differential_0_1();
-			// ToDo: Add clipping checks
-
-			// ToDo: consider how to utilize edl & edr buffers for different EmotiBit versions to minimize RAM footprint & code clarity
-			edlBuffer.push_back(edaTemp);
-		}
-		if (edlBuffer.size() == _samplesAveraged.eda) 
-		{
-			// Perform data averaging
-			edaTemp = average(edlBuffer);
-
-			// ToDo: Add conversion from ADC units to uSiemens conditional on isCalibrated
-
-			// Add to data double buffer
-			status = status | pushData(EmotiBit::DataType::EDA, edaTemp, &edlBuffer.timestamp);
-			if (edlClipped) {
-				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDA, &edlBuffer.timestamp);
-			}
-
-			// Clear the averaging buffers
-			edlBuffer.clear();
-			edlClipped = false;
-		}
-	}
-	else
-	{
-		// Reads EDA data from SAMD21 ADC
-
-		
-		static float edlTemp;	// Electrodermal Level in Volts
-		static float edrTemp;	// Electrodermal Response in Volts
-		static float sclTemp;	// Skin Conductance Level in uSeimens
-		static float scrTemp;	// Skin Conductance Response in uSeimens
-		static bool edrClipped = false;
-
-		// ToDo: Optimize calculations for EDA
-
-		// Check EDL and EDR voltages for saturation
-		edlTemp = analogRead(_edlPin);
-		edrTemp = analogRead(_edrPin);
-
-		// Correct for offset correction only when not in ISR_CORRECTION_UPDATE
-		if (testingMode != TestingMode::ISR_CORRECTION_UPDATE)
-		{
-			edlTemp = edlTemp - _isrOffsetCorr;
-			edrTemp = edrTemp - _isrOffsetCorr;
-		}
-
-		// Add data to buffer for sample averaging (oversampling)
-		edlBuffer.push_back(edlTemp);
-		edrBuffer.push_back(edrTemp);
-
-		// ToDo: move adc clipping limits to setup()
-		static const int adcClippingLowerLim = 20;
-		static const int adcClippingUpperLim = adcRes - 20;
-
-		// Check for data clipping
-		if (edlTemp < adcClippingLowerLim || edlTemp > adcClippingUpperLim)
-		{
-			edlClipped = true;
-			status = status | (int8_t)Error::DATA_CLIPPING;
-		}
-		// Check for data clipping
-		if (edrTemp < adcClippingLowerLim || edrTemp > adcClippingUpperLim)
-		{
-			edrClipped = true;
-			status = status | (int8_t)Error::DATA_CLIPPING;
-		}
-
-		if (edlBuffer.size() == _samplesAveraged.eda) {
-			// Perform data averaging
-			edlTemp = average(edlBuffer);
-			edrTemp = average(edrBuffer);
-
-			if (testingMode == TestingMode::ISR_CORRECTION_UPDATE || testingMode == TestingMode::ISR_CORRECTION_TEST)
-			{
-				// Transmit raw ADC values
-			}
-			else
-			{
-				// transmit converted to volts
-				// Perform data conversion
-				edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
-				edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
-			}
-
-			// send raw EDL values
-			pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
-			if (edlClipped) {
-				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDL, &edlBuffer.timestamp);
-			}
-
-			pushData(EmotiBit::DataType::EDR, edrTemp, &edrBuffer.timestamp);
-			if (edrClipped) {
-				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
-			}
-
-
-			// EDL Digital Filter
-			if (edaCrossoverFilterFreq > 0)// use only is a valid crossover freq is assigned
-			{
-				static DigitalFilter filterEda(DigitalFilter::FilterType::IIR_LOWPASS, (_samplingRates.eda / _samplesAveraged.eda), edaCrossoverFilterFreq);
-				if (_enableDigitalFilter.eda)
-				{
-					edlTemp = filterEda.filter(edlTemp);
-				}
-			}
-			// Link to diff amp biasing: https://ocw.mit.edu/courses/media-arts-and-sciences/mas-836-sensor-technologies-for-interactive-environments-spring-2011/readings/MITMAS_836S11_read02_bias.pdf
-			edaTemp = (edrTemp - vRef2) / edrAmplification;	// Remove VGND bias and amplification from EDR measurement
-			edaTemp = edaTemp + edlTemp;                     // Add EDR to EDL in Volts
-
-			//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
-
-			if (edaTemp - vRef1 < 0.000086f)
-			{
-				edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
-			}
-			else
-			{
-				edaTemp = vRef1 / ((edaFeedbackAmpR * (edaTemp - vRef1)) - (_edaSeriesResistance * vRef1));
-			}
-
-			edaTemp = edaTemp * 1000000.f; // Convert to uSiemens
-
-
-			// Add to data double buffer
-			status = status | pushData(EmotiBit::DataType::EDA, edaTemp, &edrBuffer.timestamp);
-			if (edlClipped || edrClipped) {
-				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDA, &edrBuffer.timestamp);
-			}
-
-			// Clear the averaging buffers
-			edlBuffer.clear();
-			edrBuffer.clear();
-			edlClipped = false;
-			edrClipped = false;
-		}
-	}
+//int8_t EmotiBit::updateEDAData() 
+//{
+//#ifdef DEBUG
+//	Serial.println("updateEDAData()");
+//#endif // DEBUG
+//
+//	// ToDo: migrate this code to live in EmotiBitEda.updateData();
+//
+//	int8_t status = 0;
+//	static float edaTemp;	// Electrodermal Activity in Volts
+//	static bool edlClipped = false;
+//	
+//	if (_version > EmotiBitVersionController::EmotiBitVersion::V03B)
+//	{
+//		// Reads EDA data from ADS1113
+//		if (emotibitEda.ads.conversionComplete())
+//		{
+//			edaTemp = emotibitEda.ads.getLastConversionResults();
+//			emotibitEda.ads.startADC_Differential_0_1();
+//			// ToDo: Add clipping checks
+//
+//			// ToDo: consider how to utilize edl & edr buffers for different EmotiBit versions to minimize RAM footprint & code clarity
+//			edlBuffer.push_back(edaTemp);
+//		}
+//		if (edlBuffer.size() == _samplesAveraged.eda) 
+//		{
+//			// Perform data averaging
+//			edaTemp = average(edlBuffer);
+//
+//			// ToDo: Add conversion from ADC units to uSiemens conditional on isCalibrated
+//
+//			// Add to data double buffer
+//			status = status | pushData(EmotiBit::DataType::EDA, edaTemp, &edlBuffer.timestamp);
+//			if (edlClipped) {
+//				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDA, &edlBuffer.timestamp);
+//			}
+//
+//			// Clear the averaging buffers
+//			edlBuffer.clear();
+//			edlClipped = false;
+//		}
+//	}
+//	else
+//	{
+//		// Reads EDA data from SAMD21 ADC
+//
+//		
+//		static float edlTemp;	// Electrodermal Level in Volts
+//		static float edrTemp;	// Electrodermal Response in Volts
+//		static float sclTemp;	// Skin Conductance Level in uSeimens
+//		static float scrTemp;	// Skin Conductance Response in uSeimens
+//		static bool edrClipped = false;
+//
+//		// ToDo: Optimize calculations for EDA
+//
+//		// Check EDL and EDR voltages for saturation
+//		edlTemp = analogRead(_edlPin);
+//		edrTemp = analogRead(_edrPin);
+//
+//		// Correct for offset correction only when not in ISR_CORRECTION_UPDATE
+//		if (testingMode != TestingMode::ISR_CORRECTION_UPDATE)
+//		{
+//			edlTemp = edlTemp - _isrOffsetCorr;
+//			edrTemp = edrTemp - _isrOffsetCorr;
+//		}
+//
+//		// Add data to buffer for sample averaging (oversampling)
+//		edlBuffer.push_back(edlTemp);
+//		edrBuffer.push_back(edrTemp);
+//
+//		// ToDo: move adc clipping limits to setup()
+//		static const int adcClippingLowerLim = 20;
+//		static const int adcClippingUpperLim = adcRes - 20;
+//
+//		// Check for data clipping
+//		if (edlTemp < adcClippingLowerLim || edlTemp > adcClippingUpperLim)
+//		{
+//			edlClipped = true;
+//			status = status | (int8_t)Error::DATA_CLIPPING;
+//		}
+//		// Check for data clipping
+//		if (edrTemp < adcClippingLowerLim || edrTemp > adcClippingUpperLim)
+//		{
+//			edrClipped = true;
+//			status = status | (int8_t)Error::DATA_CLIPPING;
+//		}
+//
+//		if (edlBuffer.size() == _samplesAveraged.eda) {
+//			// Perform data averaging
+//			edlTemp = average(edlBuffer);
+//			edrTemp = average(edrBuffer);
+//
+//			if (testingMode == TestingMode::ISR_CORRECTION_UPDATE || testingMode == TestingMode::ISR_CORRECTION_TEST)
+//			{
+//				// Transmit raw ADC values
+//			}
+//			else
+//			{
+//				// transmit converted to volts
+//				// Perform data conversion
+//				edlTemp = edlTemp * _vcc / adcRes;	// Convert ADC to Volts
+//				edrTemp = edrTemp * _vcc / adcRes;	// Convert ADC to Volts
+//			}
+//
+//			// send raw EDL values
+//			pushData(EmotiBit::DataType::EDL, edlTemp, &edlBuffer.timestamp);
+//			if (edlClipped) {
+//				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDL, &edlBuffer.timestamp);
+//			}
+//
+//			pushData(EmotiBit::DataType::EDR, edrTemp, &edrBuffer.timestamp);
+//			if (edrClipped) {
+//				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDR, &edrBuffer.timestamp);
+//			}
+//
+//
+//			// EDL Digital Filter
+//			if (edaCrossoverFilterFreq > 0)// use only is a valid crossover freq is assigned
+//			{
+//				static DigitalFilter filterEda(DigitalFilter::FilterType::IIR_LOWPASS, (_samplingRates.eda / _samplesAveraged.eda), edaCrossoverFilterFreq);
+//				if (_enableDigitalFilter.eda)
+//				{
+//					edlTemp = filterEda.filter(edlTemp);
+//				}
+//			}
+//			// Link to diff amp biasing: https://ocw.mit.edu/courses/media-arts-and-sciences/mas-836-sensor-technologies-for-interactive-environments-spring-2011/readings/MITMAS_836S11_read02_bias.pdf
+//			edaTemp = (edrTemp - vRef2) / edrAmplification;	// Remove VGND bias and amplification from EDR measurement
+//			edaTemp = edaTemp + edlTemp;                     // Add EDR to EDL in Volts
+//
+//			//edaTemp = (_vcc - edaTemp) / edaVDivR * 1000000.f;						// Convert EDA voltage to uSeimens
+//
+//			if (edaTemp - vRef1 < 0.000086f)
+//			{
+//				edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
+//			}
+//			else
+//			{
+//				edaTemp = vRef1 / ((edaFeedbackAmpR * (edaTemp - vRef1)) - (_edaSeriesResistance * vRef1));
+//			}
+//
+//			edaTemp = edaTemp * 1000000.f; // Convert to uSiemens
+//
+//
+//			// Add to data double buffer
+//			status = status | pushData(EmotiBit::DataType::EDA, edaTemp, &edrBuffer.timestamp);
+//			if (edlClipped || edrClipped) {
+//				pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::EDA, &edrBuffer.timestamp);
+//			}
+//
+//			// Clear the averaging buffers
+//			edlBuffer.clear();
+//			edrBuffer.clear();
+//			edlClipped = false;
+//			edrClipped = false;
+//		}
+//	}
 
 	// ToDo: Consider moving calculation into getData
 
@@ -1724,41 +1746,37 @@ int8_t EmotiBit::updateThermopileData() {
 			// First time through step mode just starts a measurement
 			MLX90632::status returnError;
 			thermopile.startRawSensorValues(returnError);
-			thermopileBegun = true;
+			if (returnError == MLX90632::status::SENSOR_SUCCESS)
+			{
+				thermopileBegun = true;
+				status = status | (int8_t)EmotiBit::Error::NONE;
+			}
 		}
 		else {
 
 			thermStatus = MLX90632::status::SENSOR_NO_NEW_DATA;
-			//while (thermStatus != MLX90632::status::SENSOR_SUCCESS)
-			//{
 			thermopile.getRawSensorValues(thermStatus, AMB, Sto); //Get the temperature of the object we're looking at in C
-			timestamp = millis();
-			//}
-			status = status | therm0AMB.push_back(AMB, &(timestamp));
-			// if DataOverflow
-			if (status & BufferFloat::ERROR_BUFFER_OVERFLOW == BufferFloat::ERROR_BUFFER_OVERFLOW) 
+			if (thermStatus != MLX90632::status::SENSOR_SUCCESS)
 			{
-				// store the buffer overflow type and time
-				dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]->push_back((uint8_t)DataType::THERMOPILE, &timestamp);
+				timestamp = millis();
+				status = status | therm0AMB.push_back(AMB, &(timestamp));
+				status = status | therm0Sto.push_back(Sto, &(timestamp));
+				thermopile.startRawSensorValues(thermStatus);
 			}
-			status = status | therm0Sto.push_back(Sto, &(timestamp));
-			thermopile.startRawSensorValues(thermStatus);
-			return (int8_t)EmotiBit::Error::BUFFER_OVERFLOW;
+			else
+			{
+				status = status | (int8_t)EmotiBit::Error::SENSOR_NOT_READY;
+			}
 		}
 	}
 	else if (thermopileMode == MODE_CONTINUOUS) {
-		// Continuouts mode reads at the set rate and returns data if ready
+		// Continuous mode reads at the set rate and returns data if ready
 		thermopile.getRawSensorValues(thermStatus, AMB, Sto);
-		timestamp = millis();
 
 		if (thermStatus == MLX90632::status::SENSOR_SUCCESS)
 		{
+			timestamp = millis();
 			status = status | therm0AMB.push_back(AMB, &(timestamp));
-			if (status & BufferFloat::ERROR_BUFFER_OVERFLOW == BufferFloat::ERROR_BUFFER_OVERFLOW)
-			{
-				// store the buffer overflow type and time
-				dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]->push_back((uint8_t)DataType::THERMOPILE, &timestamp);
-			}
 			status = status | therm0Sto.push_back(Sto, &(timestamp));
 		}
 	}
@@ -1788,7 +1806,7 @@ int8_t EmotiBit::updateIMUData() {
 			// ToDo: assess IMU buffer overflow more accurately
 			for (uint8_t j = (uint8_t)EmotiBit::DataType::ACCELEROMETER_X; j <= (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z; j++) {
 				// Note: this for loop usage relies on all IMU data types being grouped from AX to MZ
-				dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]->push_back(j, &timestamp);
+				dataDoubleBuffers[j]->incrOverflowCount(DoubleBufferFloat::BufferSelector::IN);
 				imuBufferFull = true;
 			}
 		}
@@ -1809,7 +1827,7 @@ int8_t EmotiBit::updateIMUData() {
 			bool bufferMaxed = false;
 			for (uint8_t k = (uint8_t)EmotiBit::DataType::ACCELEROMETER_X; k <= (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z; k++) {
 				// Note: this for loop usage relies on all IMU data types being grouped from AX to MZ
-				if (dataDoubleBuffers[k]->inSize() == dataDoubleBuffers[k]->inCapacity()) {
+				if (dataDoubleBuffers[k]->size(DoubleBufferFloat::BufferSelector::IN) == dataDoubleBuffers[k]->capacity(DoubleBufferFloat::BufferSelect::IN)) {
 					bufferMaxed = true;
 				}
 			}
@@ -1877,12 +1895,12 @@ int8_t EmotiBit::updateIMUData() {
 		pushData(EmotiBit::DataType::MAGNETOMETER_Y, my, &timestamp);
 		pushData(EmotiBit::DataType::MAGNETOMETER_Z, mz, &timestamp);
 		if (bmm150XYClipped) {
-			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_X, &timestamp);
-			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_Y, &timestamp);
+			dataDoubleBuffers[EmotiBit::DataType::MAGNETOMETER_X]->incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
+			dataDoubleBuffers[EmotiBit::DataType::MAGNETOMETER_Y]->incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
 			bmm150XYClipped = false;
 		}
 		if (bmm150ZHallClipped) {
-			pushData(EmotiBit::DataType::DATA_CLIPPING, (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z, &timestamp);
+			dataDoubleBuffers[EmotiBit::DataType::MAGNETOMETER_Z]->incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
 			bmm150ZHallClipped = false;
 		}
 	}
@@ -1902,7 +1920,8 @@ float EmotiBit::convertRawGyro(int16_t gRaw) {
 
 int8_t EmotiBit::checkIMUClipping(EmotiBit::DataType type, int16_t data, uint32_t timestamp) {
 	if (data == 32767 || data == -32768) {
-		pushData(EmotiBit::DataType::DATA_CLIPPING, (int)type, &timestamp);
+		//pushData(EmotiBit::DataType::DATA_CLIPPING, (int)type, &timestamp);
+		dataDoubleBuffers[type]->incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
 		return (int8_t) EmotiBit::Error::DATA_CLIPPING;
 	} 
 	else {
@@ -2039,8 +2058,11 @@ int8_t EmotiBit::pushData(EmotiBit::DataType type, float data, uint32_t * timest
 		}
 		uint8_t status = dataDoubleBuffers[(uint8_t)type]->push_back(data, timestamp);
 		if (status & BufferFloat::ERROR_BUFFER_OVERFLOW == BufferFloat::ERROR_BUFFER_OVERFLOW) {
+			// NOTE: DATA_OVERFLOW count is now stored in DoubleBufferFloat without a separate buffer
+
 			// store the buffer overflow type and time
-			dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]->push_back((uint8_t)type, timestamp);
+			//dataDoubleBuffers[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]->push_back((uint8_t)type, timestamp);
+
 			return (int8_t)EmotiBit::Error::BUFFER_OVERFLOW;
 		}
 		//else if (status & BufferFloat::PUSH_WHILE_GETTING == BufferFloat::PUSH_WHILE_GETTING) {
@@ -2056,87 +2078,118 @@ int8_t EmotiBit::pushData(EmotiBit::DataType type, float data, uint32_t * timest
 	}
 }
 
-size_t EmotiBit::getDataThermopile(float **data, uint32_t *timestamp)
+bool processThermopileData()
 {
-	size_t sizeAMB;
+		size_t sizeAMB;
 	size_t sizeSto;
+	size_t n;
 	float* dataAMB;
 	float* dataSto;
 	uint32_t* timestampSto;
-	sizeAMB = therm0AMB.getData(&dataAMB, timestamp);
-	sizeSto = therm0Sto.getData(&dataSto, timestampSto);
+	
+	// Swap buffers with minimal delay to avoid size mismatch
+	therm0AMB.swap();
+	therm0Sto.swap();
+	
+	// Get pointers to the data buffers
+	sizeAMB = therm0AMB.getData(&dataAMB, timestamp, false);
+	sizeSto = therm0Sto.getData(&dataSto, timestampSto, false);
 	if (sizeAMB != sizeSto) // interrupt hit between therm0AMB.getdata and therm0Sto.getdata
 	{
-		// sizeAMB = k
-		// SizeSto = k+s ; where s= #sampepls added per interrupt
-		for (uint8_t i = sizeAMB; i < sizeSto; i++)
-		{
-			therm0Sto.push_back(dataSto[i], timestampSto);
-		}
-		sizeSto = sizeAMB;
+		Serial.println("WARNING: therm0AMB and therm0Sto buffers different sizes");
+		// ToDo: Consider how to manage buffer size differences
+		// One fix option is to switch to ring buffers instead of double buffers
+		// Another option might be to have a global interrupt-done variable to help 
+		// time multiple swaps just after an interrupt finishes
+		
+		// Previous approach is flawed because could have memory access collision:
+		// // sizeAMB = k
+		// // SizeSto = k+s ; where s= #sampepls added per interrupt
+		// for (uint8_t i = sizeAMB; i < sizeSto; i++)
+		// {
+			// therm0Sto.push_back(dataSto[i], timestampSto);
+		// }
+		// sizeSto = sizeAMB;
+		
+		// Add overflow event(s) to account for the mismatched sizes
+		size_t mismatch = abs(((int)sizeAMB) - ((int)sizeSto));
+		therm0AMB.incrOverflowCount(DoubleBuffer::BufferSelector::OUT, mismatch);
+		therm0Sto.incrOverflowCount(DoubleBuffer::BufferSelector::OUT, mismatch);
 	}
-	else
+	n = min(sizeAMB, sizeSto);
+	for (uint8_t i = 0; i < n; i++)
 	{
-		for (uint8_t i = 0; i < sizeAMB; i++)
+		// if dummy data was stored
+		if (dataAMB[i] == -2 && dataSto[i] == -2)
 		{
-			// if dummy data was stored
-			if (dataAMB[i] == -2 && dataSto[i] == -2)
+			dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->swap();
+			return true;
+			//return dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->getData(data, timestamp);
+		}
+		float objectTemp;
+		// toggle to true to create forced nan values on the thermopile data
+		bool createNan = false;
+		if (createNan)
+		{
+			// if createNan is true generate nan values with a 0.1 probablity. This is to test the MLX90632 library functionatlity that prevents one nan to recursively create only nan values.
+			int randNum = rand() % 10 + 1;
+			if (randNum <= 1)
 			{
-				return dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->getData(data, timestamp);
-			}
-			float objectTemp;
-			// toggle to true to create forced nan values on the thermopile data
-			bool createNan = false;
-			if (createNan)
-			{
-				// if createNan is true generate nan values with a 0.1 probablity. This is to test the MLX90632 library functionatlity that prevents one nan to recursively create only nan values.
-				int randNum = rand() % 10 + 1;
-				if (randNum <= 1)
-				{
-					// getObjectTemp(-3, -3) generates nan Temp value.
-					objectTemp = thermopile.getObjectTemp(-3, -3);
-					Serial.print("AMB for nan: -2");
-					Serial.println("\t Sto for nan: -2");
-				}
-				else
-				{
-					objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
-				}
+				// getObjectTemp(-3, -3) generates nan Temp value.
+				objectTemp = thermopile.getObjectTemp(-3, -3);
+				Serial.print("AMB for nan: -2");
+				Serial.println("\t Sto for nan: -2");
 			}
 			else
 			{
 				objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
 			}
-
-			if (isnan(objectTemp))
-			{
-				static String debugPacket;
-				static String payloadAMB;
-				static String payloadSto;
-				payloadAMB = "AMB val for nan:";
-				payloadSto = "Sto val fro nan:";
-				if (createNan)
-				{
-					payloadAMB += "-2";
-					payloadSto += "-2";
-				}
-				else
-				{
-					payloadAMB += String(dataAMB[i], 4);
-					payloadSto += String(dataSto[i], 4);
-				}
-				debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, _outDataPacketCounter++, payloadAMB, 1);
-				debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, _outDataPacketCounter++, payloadSto, 1);
-				_outDataPackets += debugPacket;
-				debugPacket = "";
-				payloadAMB = "";
-				payloadSto = "";
-			}
-			pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestamp);
 		}
-		return dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->getData(data, timestamp);
+		else
+		{
+			objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
+		}
+
+		if (isnan(objectTemp))
+		{
+			static String debugPacket;
+			static String payloadAMB;
+			static String payloadSto;
+			payloadAMB = "AMB val for nan:";
+			payloadSto = "Sto val fro nan:";
+			if (createNan)
+			{
+				payloadAMB += "-2";
+				payloadSto += "-2";
+			}
+			else
+			{
+				payloadAMB += String(dataAMB[i], 4);
+				payloadSto += String(dataSto[i], 4);
+			}
+			debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, _outDataPacketCounter++, payloadAMB, 1);
+			debugPacket += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, _outDataPacketCounter++, payloadSto, 1);
+			_outDataPackets += debugPacket;
+			debugPacket = "";
+			payloadAMB = "";
+			payloadSto = "";
+		}
+		pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestamp);
 	}
-	
+	// Transfer overflow counts
+	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE].incrOverflowCount(DoubleBuffer::BufferSelector::IN,
+		max(
+			therm0AMB.getOverflowCount(DoubleBuffer::BufferSelector::OUT),
+			therm0Sto.getOverflowCount(DoubleBuffer::BufferSelector::OUT)
+		)
+	);
+	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->swap();
+}
+
+size_t EmotiBit::getDataThermopile(float **data, uint32_t *timestamp)
+{
+	processThermopileData();
+	return dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->getData(data, timestamp, false);	
 }
 
 
@@ -2153,7 +2206,7 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 		}
 		else
 		{
-			return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp);
+			return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp, false);
 		}
 	}
 	else {
@@ -2717,7 +2770,7 @@ void EmotiBit::readSensors()
 		if (acquireData.eda) {
 			static uint16_t edaCounter = timerLoopOffset.eda;
 			if (edaCounter == EDA_SAMPLING_DIV) {
-				int8_t tempStatus = updateEDAData();
+				int8_t tempStatus = emotibitEda.readData();
 				edaCounter = 0;
 			}
 			edaCounter++;
@@ -2837,6 +2890,64 @@ void EmotiBit::readSensors()
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
 }
 
+void processData()
+{
+	// Perform all derivative calculations
+	// Swap all buffers to that data is ready to send from OUT buffer
+
+	for (int16_t t = 0; t < (uint8_t)EmotiBit::DataType::length; t++)
+	{
+		if ((uint8_t)EmotiBit::DataType::EDA == t)
+		{
+			// EDA is a prototype for a controller model going forward
+			// In the future, processData() functions will be added to a linked list for iteration
+			emotibitEda.processData();
+		}
+		else if ((uint8_t)EmotiBit::DataType::THERMOPILE == t)
+		{
+			processThermopileData();
+		}
+		else
+		{
+			dataDoubleBuffers[t]->swap();
+		}
+	}
+}
+
+void sendData()
+{
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
+
+	for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
+	{
+		addPacket((EmotiBit::DataType) i);
+		if (_outDataPackets.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE)
+		{
+			// Avoid overrunning our reserve memory
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
+
+			if (getPowerMode() == PowerMode::NORMAL_POWER)
+			{
+				_emotiBitWiFi.sendData(_outDataPackets);
+			}
+			writeSdCardMessage(_outDataPackets);
+			_outDataPackets = "";
+
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
+		}
+	}
+	if (_outDataPackets.length() > 0)
+	{
+		if (getPowerMode() == PowerMode::NORMAL_POWER)
+		{
+			_emotiBitWiFi.sendData(_outDataPackets);
+		}
+		writeSdCardMessage(_outDataPackets);
+		_outDataPackets = "";
+	}
+
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
+}
 
 
 #ifdef __arm__
@@ -3077,7 +3188,7 @@ void EmotiBit::writeSerialData(EmotiBit::DataType t)
 		//Serial.print(", ");
 		//Serial.print(dataAvailable);
 		//Serial.print(", ");
-		Serial.println(String(data[i], printLen[(uint8_t)t]));
+		Serial.println(String(data[i], _printLen[(uint8_t)t]));
 	}
 }
 

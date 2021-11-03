@@ -257,11 +257,18 @@ bool EmotiBitEDA::processData()
 		// Get pointers to the data buffers
 		edlN = _edlBuffer->getData(&edlData, &edlTs, false);
 		edrN = _edrBuffer->getData(&edrData, &edrTs, false);
+
 		if (edlN != edrN)
 		{
 			Serial.println("WARNING: EDL and EDR buffers different sizes");
 			// ToDo: Consider how to manage buffer size differences
 			// One fix option is to switch to ring buffers instead of double buffers
+			// Another option might be to have a global interrupt-done variable to help time multiple swaps
+			
+			// Add overflow event(s) to account for the mismatched sizes
+			size_t mismatch = abs(((int)edlN) - ((int)edrN));
+			_edlBuffer.incrOverflowCount(DoubleBuffer::BufferSelector::OUT, mismatch);
+			_edrBuffer.incrOverflowCount(DoubleBuffer::BufferSelector::OUT, mismatch);
 		}
 
 		// Loop through the data buffers and perform calculations
@@ -330,6 +337,7 @@ bool EmotiBitEDA::processData()
 		// Swap EDA buffer
 		_edaBuffer.swap();
 	}
+	return true;
 }
 
 bool EmotiBitEDA::writeInfoJson(File &jsonFile)
