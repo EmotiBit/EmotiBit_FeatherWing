@@ -1,6 +1,6 @@
 #include <Wire.h>
 #include "wiring_private.h"
-#include "EmotiBitMemoryController.h"
+#include "EmotiBitNvmController.h"
 #include "EmotiBitVersionController.h"
 
 struct OtpData
@@ -36,15 +36,15 @@ void setup()
 	Serial.print("EmotiBit version detected: ");
 	Serial.println(EmotiBitVersionController::getHardwareVersion(version));
 	Serial.println("EmotiBit powered up");
-	EmotiBitMemoryController emotibitMemoryController;
-	emotibitMemoryController.init(emotibit_i2c, version);
-	emotibitMemoryController.setHwVersion(version);
+	EmotiBitNvmController emotiBitNvmController;
+	emotiBitNvmController.init(emotibit_i2c, version);
+	emotiBitNvmController.setHwVersion(version);
 
 	// reading the EmotiBit version
 	uint8_t* versionOnOtp = nullptr;
 	uint32_t size;
 	uint8_t dataFormatversion;
-	emotibitMemoryController.stageToRead(EmotiBitMemoryController::DataType::VARIANT_INFO, dataFormatversion, size, versionOnOtp,true);
+	emotiBitNvmController.stageToRead(EmotiBitNvmController::DataType::VARIANT_INFO, dataFormatversion, size, versionOnOtp,true);
 	Serial.print("Version on OTP:"); Serial.println(*versionOnOtp);
 	Serial.print("DataForamtVersion :"); Serial.println(dataFormatversion);
 
@@ -52,12 +52,12 @@ void setup()
 	
 	// reading EDA data
 	uint8_t* otpByteArray = nullptr;
-	emotibitMemoryController.stageToRead(EmotiBitMemoryController::DataType::EDA, dataFormatversion, size, otpByteArray, true);
+	emotiBitNvmController.stageToRead(EmotiBitNvmController::DataType::EDA, dataFormatversion, size, otpByteArray, true);
 	uint8_t *index;
 	Serial.print("DataForamtVersion :"); Serial.println(dataFormatversion);
 	Serial.print("Byte array: ");
 	index = otpByteArray;
-	for (int i = 0; i < EmotiBitMemoryController::Si7013OtpMemoryMap::EDL_DATA_SIZE + EmotiBitMemoryController::Si7013OtpMemoryMap::EDR_DATA_SIZE; i++)
+	for (int i = 0; i < EmotiBitNvmController::Si7013OtpMemoryMap::EDL_DATA_SIZE + EmotiBitNvmController::Si7013OtpMemoryMap::EDR_DATA_SIZE; i++)
 	{
 		Serial.print("\t");
 		Serial.print(*index);

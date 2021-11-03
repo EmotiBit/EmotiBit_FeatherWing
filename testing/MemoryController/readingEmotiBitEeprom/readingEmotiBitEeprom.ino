@@ -12,7 +12,7 @@
 #include <Wire.h>
 #include "wiring_private.h"
 #include "EmotiBitVersionController.h"
-#include "EmotiBitMemoryController.h"
+#include "EmotiBitNvmController.h"
 
 
 struct SampleData
@@ -23,8 +23,8 @@ struct SampleData
 }sampleData;
 
 void printData(SampleData* sampleData);
-EmotiBitMemoryController emotibitMemoryController;
-void readFromStorage(EmotiBitMemoryController::DataType datatype);
+EmotiBitNvmController emotiBitNvmController;
+void readFromStorage(EmotiBitNvmController::DataType datatype);
 void setup()
 {
 	Serial.begin(115200);
@@ -47,8 +47,8 @@ void setup()
 
 	EmotiBitVersionController::EmotiBitVersion hwVersion;
 	hwVersion = emotibitVersionController.detectEmotiBitVersion(&emotibit_i2c, 0x50);
-	emotibitMemoryController.init(emotibit_i2c, hwVersion);
-	emotibitMemoryController.setHwVersion(hwVersion);
+	emotiBitNvmController.init(emotibit_i2c, hwVersion);
+	emotiBitNvmController.setHwVersion(hwVersion);
 
 	Serial.print("Size of SampleData: "); Serial.println(sizeof(SampleData));
 	Serial.println("Writing to the EEPROM");
@@ -58,10 +58,10 @@ void setup()
 	uint8_t status;
 	uint8_t dataFormatVersion = 0;
 	// Writing into the Variant info space
-	status = emotibitMemoryController.stageToWrite(EmotiBitMemoryController::DataType::VARIANT_INFO, dataFormatVersion, sizeof(SampleData),(uint8_t*)sampData, true);
+	status = emotiBitNvmController.stageToWrite(EmotiBitNvmController::DataType::VARIANT_INFO, dataFormatVersion, sizeof(SampleData),(uint8_t*)sampData, true);
 
 	// writing into the EDA data space
-	status = emotibitMemoryController.stageToWrite(EmotiBitMemoryController::DataType::EDA, dataFormatVersion+1, sizeof(SampleData), (uint8_t*)sampData, true);  // synchronous write
+	status = emotiBitNvmController.stageToWrite(EmotiBitNvmController::DataType::EDA, dataFormatVersion+1, sizeof(SampleData), (uint8_t*)sampData, true);  // synchronous write
 
 	if (status != 0)
 	{
@@ -76,25 +76,25 @@ void setup()
 
 	Serial.println("Reading VARIANT_INFO from EEPROM");
 	delay(1000);
-	readFromStorage(EmotiBitMemoryController::DataType::VARIANT_INFO);
+	readFromStorage(EmotiBitNvmController::DataType::VARIANT_INFO);
 
 	Serial.println("Reading EDA data from EEPROM");
 	delay(1000);
-	readFromStorage(EmotiBitMemoryController::DataType::EDA);
+	readFromStorage(EmotiBitNvmController::DataType::EDA);
 
 
 
 	Serial.println("Reached end of code");
 }
 
-void readFromStorage(EmotiBitMemoryController::DataType datatype)
+void readFromStorage(EmotiBitNvmController::DataType datatype)
 {
 	SampleData* sampData = nullptr;
 	uint8_t* eepromData = nullptr;
 	uint32_t size = 0;
 	uint8_t status;
 	uint8_t dataVersion;
-	status = emotibitMemoryController.stageToRead(datatype, dataVersion, size, eepromData, true);
+	status = emotiBitNvmController.stageToRead(datatype, dataVersion, size, eepromData, true);
 	if (status == 0)
 	{
 		Serial.println("read successfull");

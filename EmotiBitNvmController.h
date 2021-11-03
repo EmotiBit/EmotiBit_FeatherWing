@@ -1,6 +1,6 @@
 /**************************************************************************/
 /*!
-	@file     EmotiBitMemoryController.h
+	@file     EmotiBitNvmController.h
 	This is a library to handle Read/Write Operations to NVM on EmotiBit.
 	EmotiBit invests time and resources providing this open source code,
 	please support EmotiBit and open-source hardware by purchasing
@@ -20,7 +20,7 @@
 
 //#define DEBUG_SERIAL
 
-class EmotiBitMemoryController
+class EmotiBitNvmController
 {
 public:
 	EmotiBitVersionController::EmotiBitVersion _hwVersion = EmotiBitVersionController::EmotiBitVersion::UNKNOWN;

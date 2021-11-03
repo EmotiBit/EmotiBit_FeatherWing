@@ -1,7 +1,7 @@
-#include "EmotiBitMemoryController.h"
+#include "EmotiBitNvmController.h"
 
 
-bool EmotiBitMemoryController::init(TwoWire &emotibit_i2c, EmotiBitVersionController::EmotiBitVersion version)
+bool EmotiBitNvmController::init(TwoWire &emotibit_i2c, EmotiBitVersionController::EmotiBitVersion version)
 {
 	if (version == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
@@ -39,12 +39,12 @@ bool EmotiBitMemoryController::init(TwoWire &emotibit_i2c, EmotiBitVersionContro
 	}
 }
 
-void EmotiBitMemoryController::setHwVersion(EmotiBitVersionController::EmotiBitVersion hwVersion)
+void EmotiBitNvmController::setHwVersion(EmotiBitVersionController::EmotiBitVersion hwVersion)
 {
 	_hwVersion = hwVersion;
 }
 
-uint8_t EmotiBitMemoryController::stageToWrite(DataType datatype, uint8_t datatypeVersion, uint32_t dataSize, uint8_t* data, bool autoSync, bool enableValidateWrite)
+uint8_t EmotiBitNvmController::stageToWrite(DataType datatype, uint8_t datatypeVersion, uint32_t dataSize, uint8_t* data, bool autoSync, bool enableValidateWrite)
 {
 	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
@@ -104,7 +104,7 @@ uint8_t EmotiBitMemoryController::stageToWrite(DataType datatype, uint8_t dataty
 	}
 }
 
-uint8_t EmotiBitMemoryController::validateWrite()
+uint8_t EmotiBitNvmController::validateWrite()
 {
 	uint8_t* data = nullptr;
 	uint8_t datatypeVersion = 0;
@@ -131,20 +131,20 @@ uint8_t EmotiBitMemoryController::validateWrite()
 }
 
 
-void EmotiBitMemoryController::Buffer::setDatatype(DataType datatype)
+void EmotiBitNvmController::Buffer::setDatatype(DataType datatype)
 {
 	this->datatype = datatype;
 }
 
 
-void EmotiBitMemoryController::Buffer::update(uint8_t datatypeVersion, uint32_t dataSize, uint8_t* data)
+void EmotiBitNvmController::Buffer::update(uint8_t datatypeVersion, uint32_t dataSize, uint8_t* data)
 {
 	this->datatypeVersion = datatypeVersion;
 	this->dataSize = dataSize;
 	this->data = data;
 }
 
-void EmotiBitMemoryController::Buffer::clear()
+void EmotiBitNvmController::Buffer::clear()
 {
 	this->data = nullptr;
 	this->dataSize = 0;
@@ -152,14 +152,14 @@ void EmotiBitMemoryController::Buffer::clear()
 	this->datatype = DataType::length;
 }
 
-void EmotiBitMemoryController::updateMemoryMap(DataType datatype, uint32_t dataSize)
+void EmotiBitNvmController::updateMemoryMap(DataType datatype, uint32_t dataSize)
 {
 	map[(uint8_t)datatype].address = _nextAvailableAddress;
 	map[(uint8_t)datatype].dataSize = dataSize;
 	_nextAvailableAddress += dataSize;
 }
 
-uint8_t EmotiBitMemoryController::writeToStorage()
+uint8_t EmotiBitNvmController::writeToStorage()
 {
 	if (writeState == State::READY_TO_WRITE)
 	{
@@ -191,7 +191,7 @@ uint8_t EmotiBitMemoryController::writeToStorage()
 }
 
 
-uint8_t EmotiBitMemoryController::stageToRead(DataType datatype, uint8_t &datatypeVersion, uint32_t &dataSize, uint8_t* &data, bool autoSync)
+uint8_t EmotiBitNvmController::stageToRead(DataType datatype, uint8_t &datatypeVersion, uint32_t &dataSize, uint8_t* &data, bool autoSync)
 {
 	if (readState == State::IDLE)
 	{
@@ -234,7 +234,7 @@ uint8_t EmotiBitMemoryController::stageToRead(DataType datatype, uint8_t &dataty
 	}
 }
 
-uint8_t EmotiBitMemoryController::loadMemoryMap(DataType datatype)
+uint8_t EmotiBitNvmController::loadMemoryMap(DataType datatype)
 {
 	_numMapEntries = emotibitEeprom.read(ConstEepromAddr::NUM_MAP_ENTRIES);
 	if (_numMapEntries == 255)
@@ -260,7 +260,7 @@ uint8_t EmotiBitMemoryController::loadMemoryMap(DataType datatype)
 	}
 }
 
-uint8_t EmotiBitMemoryController::readFromStorage()
+uint8_t EmotiBitNvmController::readFromStorage()
 {
 	if (readState == State::READY_TO_READ)
 	{
@@ -350,7 +350,7 @@ uint8_t EmotiBitMemoryController::readFromStorage()
 	}
 }
 
-void EmotiBitMemoryController::syncRW()
+void EmotiBitNvmController::syncRW()
 {
 	writeToStorage();
 
