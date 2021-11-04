@@ -744,6 +744,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	// Setup EDA
 	Serial.print("Setting up EDA...");
 	// ToDo: move version case structure and relevant variables for EDA into EmotiBitEda
+	analogReadResolution(_adcBits);
 	if ((int)_version > (int)EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
 		Serial.print("Configuring ADS ADC...");
@@ -763,7 +764,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		pinMode(_edlPin, INPUT);
 		pinMode(_edrPin, INPUT);
 		//samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
-		analogReadResolution(_adcBits);
 		//Serial.println("Configuring ADC Corrections...");
 		// If the correction data does not exist on the SAMD flash
 		if (!adcCorrectionValues.valid)
@@ -2885,6 +2885,11 @@ void EmotiBit::readSensors()
 	if (acquireData.debug) pushData(EmotiBit::DataType::DEBUG, micros() - readSensorsBegin); // Add readSensors processing duration to debugBuffer
 
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
+
+	if (testingMode == TestingMode::NVM_CONTROLLER_TEST)
+	{
+
+	}
 }
 
 
@@ -3571,6 +3576,10 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			_enableDigitalFilter.my = false;
 			_enableDigitalFilter.mz = false;
 			_enableDigitalFilter.eda = false;
+		}
+		else if (c == 'n')
+		{
+			// write a struct of data to the EEPROM
 		}
 	}
 }

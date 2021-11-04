@@ -25,6 +25,7 @@
 #include "EmotiBitFactoryTest.h"
 #include "EmotiBitEda.h"
 #include "EmotiBitVariants.h"
+#include "EmotiBitNvmController.h"
 
 class EmotiBit {
   
@@ -37,6 +38,7 @@ public:
 		ISR_CORRECTION_UPDATE,
 		ISR_CORRECTION_TEST,
 		FACTORY_TEST,
+		NVM_CONTROLLER_TEST,
 		length
 	};
 
