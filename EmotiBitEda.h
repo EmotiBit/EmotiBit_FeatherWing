@@ -76,15 +76,14 @@ public:
 
 	/*!
 			@brief  Sets up EmotiBit to read EDA data
-			@param version of EmotiBit
-			@param sampling rate (determines filtering and info.json params)
-			@param DoubleBuffer for collecting eda data
-			@param DoubleBuffer for collecting edl data
-			@param DoubleBuffer for collecting edr data
-			@param emotibit_i2c I2C bus
-			@param Buffer for collecting oversampled edl data
-			@param Buffer for collecting oversamplededr data
-
+			@param version EmotiBit version
+			@param samplingRate Nominal output sampling rate in Hz. Determines filtering and info.json params.
+			@param edaBuffer DoubleBuffer for collecting eda data
+			@param edlBuffer DoubleBuffer for collecting edl data
+			@param edrBuffer DoubleBuffer for collecting edr data
+			@param emotibitI2c EmotiBit I2C bus instance
+			@param edlOversampBuffer Buffer for collecting oversampled edl data
+			@param edrOversampBuffer Buffer for collecting oversamplededr data
 			@return true if successful, otherwise false
 	*/
 	bool setup(EmotiBitVersionController::EmotiBitVersion version, float samplingRate, 
@@ -121,7 +120,10 @@ public:
 	*/
 	bool stageCalibStorage(EmotiBitNvmController * nvmController, String &calibrationRawValues, bool autoSync = false);
 
-	
+	/*!
+		@brief Sets ISR offset correction for ADC
+	*/
+	void setAdcIsrOffsetCorr(float isrOffsetCorr);
 };
 
 #endif

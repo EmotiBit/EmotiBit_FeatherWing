@@ -230,14 +230,14 @@ public:
 
 	int _emotiBitSystemConstants[(int)SystemConstants::COUNT];
 
-	float edrAmplification;
-	float vRef1; // Reference voltage of first voltage divider(15/100)
-	float vRef2; // Reference voltage from second voltage divider(100/100)
+	//float edrAmplification;
+	//float vRef1; // Reference voltage of first voltage divider(15/100)
+	//float vRef2; // Reference voltage from second voltage divider(100/100)
 	//float rSkinAmp;
 	float adcRes;
-	float edaVDivR;
-	float edaFeedbackAmpR;
-	float edaCrossoverFilterFreq;
+	//float edaVDivR;
+	//float edaFeedbackAmpR;
+	//float edaCrossoverFilterFreq;
 	uint8_t _sdCardChipSelectPin;	// ToDo: create getter and make private
 	BMM150TrimData bmm150TrimData;
 	bool bmm150XYClipped = false;
@@ -349,8 +349,7 @@ public:
 	bool _sendTestData = false;
 	float _edlDigFiltAlpha = 0;
 	float _edlDigFilteredVal = -1;
-	float _edaSeriesResistance = 0;
-	float _isrOffsetCorr = 0;
+	float _adcIsrOffsetCorr = 0;
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 
@@ -479,8 +478,8 @@ private:
 	EnableDigitalFilter _enableDigitalFilter;
 	SamplesAveraged _samplesAveraged;
 	uint8_t _batteryReadPin;
-	uint8_t _edlPin;
-	uint8_t _edrPin;
+	//uint8_t _edlPin;
+	//uint8_t _edrPin;
 	float _vcc;
 	uint8_t _adcBits;
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)

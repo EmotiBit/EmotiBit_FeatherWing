@@ -39,13 +39,15 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 
 	// ToDo: Calculate digFiltAlpha
 
+	_edaBuffer = edaBuffer;
+	_edlBuffer = edlBuffer;
+	_edrBuffer = edrBuffer;
+	_edlOversampBuffer = edlOversampBuffer;
+	_edlOversampBuffer = edrOversampBuffer;
+
 	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 	{	
-		_edaBuffer = edaBuffer;
-		_edlBuffer = edlBuffer;
-		_edrBuffer = edrBuffer;
-		_edlOversampBuffer = edlOversampBuffer;
-		_edlOversampBuffer = edrOversampBuffer;
+		Serial.print("Configuring ADS ADC...");
 
 		_constants.adcBits = 16;
 
@@ -57,11 +59,7 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 	}
 	else if (_emotibitVersion <= EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
-		_edaBuffer = edaBuffer;
-		_edlBuffer = edlBuffer;
-		_edrBuffer = edrBuffer;
-		_edlOversampBuffer = edlOversampBuffer;
-		_edlOversampBuffer = edrOversampBuffer;
+		Serial.print("Configuring SAMD ADC...");
 
 		_constants.adcBits = 12;
 		_constants_v2_v3.adcRes = 2 ^ _constants.adcBits;
@@ -390,4 +388,10 @@ bool EmotiBitEda::writeInfoJson(File &jsonFile)
 #endif
 		}
 	}
+
+}
+
+void EmotiBitEda::setAdcIsrOffsetCorr(float isrOffsetCorr)
+{
+	_constants_v2_v3.isrOffsetCorr = isrOffsetCorr;
 }

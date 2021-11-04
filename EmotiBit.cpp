@@ -263,8 +263,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_hibernatePin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::HIBERNATE);
 	buttonPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EMOTIBIT_BUTTON);
 	//TODO: Find a better way to swap pin assignments in different modes
-	_edlPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDL);
-	_edrPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDR);
+	//_edlPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDL);
+	//_edrPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDR);
 	_sdCardChipSelectPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::SD_CARD_CHIP_SELECT);
 
 
@@ -286,11 +286,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_adcBits = emotiBitVersionController.getMathConstant(MathConstants::ADC_BITS);
 	adcRes = emotiBitVersionController.getMathConstant(MathConstants::ADC_MAX_VALUE);
 	_vcc = emotiBitVersionController.getMathConstant(MathConstants::VCC);
-	edrAmplification = emotiBitVersionController.getMathConstant(MathConstants::EDR_AMPLIFICATION);
-	edaFeedbackAmpR = emotiBitVersionController.getMathConstant(MathConstants::EDA_FEEDBACK_R);
-	vRef1 = emotiBitVersionController.getMathConstant(MathConstants::VREF1);
-	vRef2 = emotiBitVersionController.getMathConstant(MathConstants::VREF2);
-	_edaSeriesResistance = emotiBitVersionController.getMathConstant(MathConstants::EDA_SERIES_RESISTOR);
+	//edrAmplification = emotiBitVersionController.getMathConstant(MathConstants::EDR_AMPLIFICATION);
+	//edaFeedbackAmpR = emotiBitVersionController.getMathConstant(MathConstants::EDA_FEEDBACK_R);
+	//vRef1 = emotiBitVersionController.getMathConstant(MathConstants::VREF1);
+	//vRef2 = emotiBitVersionController.getMathConstant(MathConstants::VREF2);
+	//_edaSeriesResistance = emotiBitVersionController.getMathConstant(MathConstants::EDA_SERIES_RESISTOR);
 
 	if (!_outDataPackets.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
 		Serial.println("Failed to reserve memory for output");
@@ -344,31 +344,34 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				}
 			}
 		}
-		else if (input == 'I')
-		{
-			testingMode = TestingMode::ISR_CORRECTION_UPDATE;
-			_edlPin = A0;
-			Serial.println("\n\nTestingMode changed to ISR_CORRECTION_UPDATE");
-			Serial.println("Reading EDL values from pin A0. Make sure ADC correction jig is in place.");
-			delay(3000);
-		}
-		else if (input == 'O')
-		{
-			AdcCorrection adcCorrection;
-			bool retVal = false;
-			retVal = adcCorrection.updateIsrOffsetCorr();
-			if (!retVal)
-			{
-				Serial.println("Exiting correction mode without updating. Adc correction not performed or data corrupted.");
-			}
-			else
-			{
-				Serial.println("Added ISR correction to the At-Winc flash.\n Verify EDL reading in the Oscilloscope.");
-				// If the emotibit is in ISR_CORRECTION_UPDATE, then we need to cahnge the mode to use the isrOffsetCOrrection
-				testingMode = TestingMode::ISR_CORRECTION_TEST;
-				_edlPin = A0;
-			}
-		}
+		// NOTE: ISR_CORRECTION_UPDATE is out of date. Needs refactoring.
+		//else if (input == 'I')
+		//{
+		//	testingMode = TestingMode::ISR_CORRECTION_UPDATE;
+		//	_edlPin = A0;
+		//	Serial.println("\n\nTestingMode changed to ISR_CORRECTION_UPDATE");
+		//	Serial.println("Reading EDL values from pin A0. Make sure ADC correction jig is in place.");
+		//	delay(3000);
+		//}
+
+		// NOTE: AdcCorrection is out of date. Needs refactoring.
+		//else if (input == 'O')
+		//{
+		//	AdcCorrection adcCorrection;
+		//	bool retVal = false;
+		//	retVal = adcCorrection.updateIsrOffsetCorr();
+		//	if (!retVal)
+		//	{
+		//		Serial.println("Exiting correction mode without updating. Adc correction not performed or data corrupted.");
+		//	}
+		//	else
+		//	{
+		//		Serial.println("Added ISR correction to the At-Winc flash.\n Verify EDL reading in the Oscilloscope.");
+		//		// If the emotibit is in ISR_CORRECTION_UPDATE, then we need to cahnge the mode to use the isrOffsetCOrrection
+		//		testingMode = TestingMode::ISR_CORRECTION_TEST;
+		//		_edlPin = A0;
+		//	}
+		//}
 		else
 		{
 			_debugMode = true;
@@ -410,12 +413,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.print("buttonPin = "); Serial.println(buttonPin);
 		Serial.print("_batteryReadPin = "); Serial.println(_batteryReadPin);
 		Serial.print("_hibernatePin = "); Serial.println(_hibernatePin);
-		Serial.print("_edlPin = "); Serial.println(_edlPin);
-		Serial.print("_edrPin = "); Serial.println(_edrPin);
+		//Serial.print("_edlPin = "); Serial.println(_edlPin);
+		//Serial.print("_edrPin = "); Serial.println(_edrPin);
 		Serial.print("_vcc = "); Serial.println(_vcc);
 		Serial.print("adcRes = "); Serial.println(adcRes);
-		Serial.print("edaFeedbackAmpR = "); Serial.println(edaFeedbackAmpR);
-		Serial.print("edrAmplification = "); Serial.println(edrAmplification);
+		//Serial.print("edaFeedbackAmpR = "); Serial.println(edaFeedbackAmpR);
+		//Serial.print("edrAmplification = "); Serial.println(edrAmplification);
 		Serial.print("LED Driver Current Level = "); Serial.println(_emotiBitSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT]);
 	}
 	
@@ -748,85 +751,53 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	Serial.println(" ... Completed");
 
-	// Setup EDA
-	Serial.print("Setting up EDA...");
-	// ToDo: move version case structure and relevant variables for EDA into EmotiBitEda
-	if ((int)_version > (int)EmotiBitVersionController::EmotiBitVersion::V03B)
+	// ADC Correction
+	Serial.println("Checking for ADC Correction...");
+	analogReadResolution(_adcBits);
+	if (!adcCorrectionValues.valid)
 	{
-		Serial.print("Configuring ADS ADC...");
-		if (emotibitEda.setup(_version, _samplingRates.eda / _samplesAveraged.eda, &eda, &edl, &edr, _EmotiBit_i2c, &edlBuffer, &edrBuffer))
+		// Instantiate the ADC Correction class to read data from the AT-Winc flash to calculate the correction values
+		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, adcCorrectionValues._gainCorrection, adcCorrectionValues._offsetCorrection, adcCorrectionValues.valid, adcCorrectionValues._isrOffsetCorr);
+		if (adcCorrection.atwincAdcDataCorruptionTest != AdcCorrection::Status::FAILURE && adcCorrection.atwincAdcMetaDataCorruptionTest != AdcCorrection::Status::FAILURE)
 		{
-			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_PASS);
-		}
-		else
-		{
-			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-			Serial.println(factoryTestSerialOutput);
-		}
-	}
-	else
-	{
-		Serial.print("Configuring SAMD ADC...");
-		pinMode(_edlPin, INPUT);
-		pinMode(_edrPin, INPUT);
-		//samdStorageAdcValues = samdFlashStorage.read(); // reading from samd flash storage into local struct
-		analogReadResolution(_adcBits);
-		//Serial.println("Configuring ADC Corrections...");
-		// If the correction data does not exist on the SAMD flash
-		if (!adcCorrectionValues.valid)
-		{
-			// Instantiate the ADC Correction class to read data from the AT-Winc flash to calculate the correction values
-			AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, adcCorrectionValues._gainCorrection, adcCorrectionValues._offsetCorrection, adcCorrectionValues.valid, adcCorrectionValues._isrOffsetCorr);
-			if (adcCorrection.atwincAdcDataCorruptionTest != AdcCorrection::Status::FAILURE && adcCorrection.atwincAdcMetaDataCorruptionTest != AdcCorrection::Status::FAILURE)
-			{
-				//samdFlashStorage.write(samdStorageAdcValues);// Writing it to the SAMD flash storage
-				_isrOffsetCorr = adcCorrectionValues._isrOffsetCorr;
-				if (testingMode == TestingMode::ACUTE || testingMode == TestingMode::CHRONIC)
-				{
-					Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); Serial.print("\toffset correction:"); Serial.print(adcCorrectionValues._offsetCorrection);
-					Serial.print("\tisr offset Corr: "); Serial.println(_isrOffsetCorr, 6);
-					//Serial.println("Enabling the ADC with the correction values");
-				}
-				analogReadCorrection(adcCorrectionValues._offsetCorrection, adcCorrectionValues._gainCorrection);
-			}
-		}
-		// using correction values generated in AdcCorrectionMode
-		else
-		{
+			_adcIsrOffsetCorr = adcCorrectionValues._isrOffsetCorr;
+			emotibitEda.setAdcIsrOffsetCorr(_adcIsrOffsetCorr);
 			if (testingMode == TestingMode::ACUTE || testingMode == TestingMode::CHRONIC)
 			{
-				Serial.println("ADC correction already enabled in correction test mode");
-				Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection);
-				Serial.print("\toffset correction:"); Serial.println(adcCorrectionValues._offsetCorrection);
+				Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); Serial.print("\toffset correction:"); Serial.print(adcCorrectionValues._offsetCorrection);
+				Serial.print("\tisr offset Corr: "); Serial.println(_adcIsrOffsetCorr, 6);
+				//Serial.println("Enabling the ADC with the correction values");
 			}
+			analogReadCorrection(adcCorrectionValues._offsetCorrection, adcCorrectionValues._gainCorrection);
 		}
 	}
-	Serial.println("Configuring EDA Calibrations...");
-	if ((int)_version > (int)EmotiBitVersionController::EmotiBitVersion::V03B)
+	// using correction values generated in AdcCorrectionMode
+	else
 	{
-		// read calirbation data from the flash
+		if (testingMode == TestingMode::ACUTE || testingMode == TestingMode::CHRONIC)
+		{
+			Serial.println("ADC correction already enabled in correction test mode");
+			Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection);
+			Serial.print("\toffset correction:"); Serial.println(adcCorrectionValues._offsetCorrection);
+		}
+	}
+
+
+	// Setup EDA
+	Serial.print("Setting up EDA...");
+	if (emotibitEda.setup(_version, _samplingRates.eda / _samplesAveraged.eda, &eda, &edl, &edr, _EmotiBit_i2c, &edlBuffer, &edrBuffer))
+	{
+		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 	}
 	else
 	{
-		// If Eda Correction mode was not initialized
-		if (edaCorrection == nullptr)
-		{
-			edaCorrection = new EdaCorrection;
-			edaCorrection->getEdaCalibrationValues(&tempHumiditySensor, vRef1, vRef2, edaFeedbackAmpR);
-			// ToDo: V4- get slope and intercept instead of the voltag values
-			// delete after the OTP has been read for calibration
-			delete edaCorrection;
-			edaCorrection = nullptr;
-		}
-		else
-		{
-			Serial.println("In EDA Calibration mode");
-		}
+		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+		Serial.println(factoryTestSerialOutput);
 	}
 
+	// Sensor setup complete
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 	led.send();
-
 
 	// setup sampling rates
 	//Serial.println("Setting up sampling rates...");
@@ -857,7 +828,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	setSamplesAveraged(samplesAveraged);
 
 	// EDL Filter Parameters
-	edaCrossoverFilterFreq = emotiBitVersionController.getMathConstant(MathConstants::EDA_CROSSOVER_FILTER_FREQ);
+	//edaCrossoverFilterFreq = emotiBitVersionController.getMathConstant(MathConstants::EDA_CROSSOVER_FILTER_FREQ);
 	/*
 	if (edaCrossoverFilterFreq > 0)// valid assignment of constant
 	{
@@ -1410,22 +1381,23 @@ uint8_t EmotiBit::update()
 		sendModePacket(sentModePacket, _outDataPacketCounter);
 	}
 
+	// NOTE:: EdaCorrection is deprecated use EmotiBitEda
 	// function call to handle UPDATE mode in Eda Correction
-	if (edaCorrection != nullptr)
-	{
-		edaCorrection->update(&tempHumiditySensor, vRef1, vRef2, edaFeedbackAmpR);
-		// if the correction/calibration has been completed
-		if (edaCorrection->getMode() == EdaCorrection::Mode::NORMAL && edaCorrection->progress == EdaCorrection::Progress::FINISH)
-		{
-			delete edaCorrection;
-			edaCorrection = nullptr;
-			Serial.println("Deleted eda correction instance");
-			if (!edaCorrection->dummyWrite)
-			{
-				acquireData.tempHumidity = true;
-			}
-		}
-	}
+	//if (edaCorrection != nullptr)
+	//{
+	//	edaCorrection->update(&tempHumiditySensor, vRef1, vRef2, edaFeedbackAmpR);
+	//	// if the correction/calibration has been completed
+	//	if (edaCorrection->getMode() == EdaCorrection::Mode::NORMAL && edaCorrection->progress == EdaCorrection::Progress::FINISH)
+	//	{
+	//		delete edaCorrection;
+	//		edaCorrection = nullptr;
+	//		Serial.println("Deleted eda correction instance");
+	//		if (!edaCorrection->dummyWrite)
+	//		{
+	//			acquireData.tempHumidity = true;
+	//		}
+	//	}
+	//}
 
 
 	// Handle data buffer reading and sending
@@ -2710,16 +2682,17 @@ void EmotiBit::readSensors()
 	
 	uint32_t readSensorsBegin = micros();
 	
-	// Write to OTP once edaCorrection class is at the right state. 
-	if (edaCorrection != nullptr)
-	{
-		if (edaCorrection->getMode() == EdaCorrection::Mode::UPDATE)
-		{
-			_EmotiBit_i2c->setClock(100000);// change the I2C clock speed to 100000
-			edaCorrection->writeToOtp(&tempHumiditySensor);
-			_EmotiBit_i2c->setClock(400000);// change the I2C clock speed back to 400000
-		}
-	}
+	// EdaCorrection deprecated, use EmotiBitEda
+	//// Write to OTP once edaCorrection class is at the right state. 
+	//if (edaCorrection != nullptr)
+	//{
+	//	if (edaCorrection->getMode() == EdaCorrection::Mode::UPDATE)
+	//	{
+	//		_EmotiBit_i2c->setClock(100000);// change the I2C clock speed to 100000
+	//		edaCorrection->writeToOtp(&tempHumiditySensor);
+	//		_EmotiBit_i2c->setClock(400000);// change the I2C clock speed back to 400000
+	//	}
+	//}
 
 	// Battery (all analog reads must be in the ISR)
 	// TODO: use the stored/averaged Battery value instead of calling readBatteryPercent again
