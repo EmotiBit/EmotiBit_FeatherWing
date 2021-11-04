@@ -30,9 +30,9 @@
 #include "EmotiBitEda.h"
 #include "EmotiBitEdaCalibration.h"
 
-bool EmotiBitEDA::setup(EmotiBitVersionController::EmotiBitVersion version, float samplingRate, 
-	const DoubleBufferFloat* edaBuffer, const DoubleBufferFloat* edlBuffer, const DoubleBufferFloat* edrBuffer,
-	const TwoWire* emotibitI2c, const BufferFloat* edlOversampBuffer, const BufferFloat* edrOversampBuffer);
+bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, float samplingRate,
+	DoubleBufferFloat* edaBuffer, DoubleBufferFloat* edlBuffer, DoubleBufferFloat* edrBuffer,
+	TwoWire* emotibitI2c, BufferFloat* edlOversampBuffer, BufferFloat* edrOversampBuffer)
 {
 	_emotibitVersion = version;
 	_constants.samplingRate = samplingRate;
@@ -50,10 +50,10 @@ bool EmotiBitEDA::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 		_constants.adcBits = 16;
 
 		// NOTE: if these values are changed in code, we should add parameters to _info.json
-		ads.setDataRate(RATE_ADS1115_475SPS);	// set to 475Hz to allow for 300Hz oversampling
-		ads.setGain(GAIN_TWO);        // 2x gain   +/- 2.048V  1 bit = 1mV      0.0625mV
+		_ads.setDataRate(RATE_ADS1115_475SPS);	// set to 475Hz to allow for 300Hz oversampling
+		_ads.setGain(GAIN_TWO);        // 2x gain   +/- 2.048V  1 bit = 1mV      0.0625mV
 
-		return ads.begin(0x48, emotibit_i2c, false); // callBegin -> false. the i2c wire has already been init in setup
+		return _ads.begin(0x48, emotibitI2c, false); // callBegin -> false. the i2c wire has already been init in setup
 	}
 	else if (_emotibitVersion <= EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
@@ -73,18 +73,20 @@ bool EmotiBitEDA::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 }
 
 
-bool EmotiBitEDA::stageCalibStorage(MemoryController * memoryController, String &edaCalibPacket, bool waitForWrite)
+bool EmotiBitEda::stageCalibStorage(EmotiBitNvmController * nvmController, String &edaCalibPacket, bool autoSync)
 {
-	if (_emotiBitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
+	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
 		uint8_t dataVersion;
-		if (unpackCalibPacket(edaCalibPacket, dataVersion, rawVals))
+		EmotiBitEdaCalibration::RawValues_V2 rawVals;
+		if (EmotiBitEdaCalibration::unpackCalibPacket(edaCalibPacket, dataVersion, rawVals))
 		{
 			if (dataVersion == EmotiBitEdaCalibration::V2)
 			{
-				EmotiBitEdaCalibration::RawValues_V2 rawVals;
-				uint8_t status = memoryController->stageForWrite(EmotiBitMemoryController::DataType::EDA, dataVersion, sizeof(EmotiBitEdaCalibration::RawValues_V2), (uint8_t *)(&rawVals), waitForWrite);
-				if (status != MemoryController::Status::SUCCESS)
+				
+				uint8_t status = nvmController->stageToWrite(EmotiBitNvmController::DataType::EDA, dataVersion, sizeof(EmotiBitEdaCalibration::RawValues_V2), (uint8_t *)(&rawVals), autoSync);
+
+				if (status != (uint8_t)EmotiBitNvmController::Status::SUCCESS)
 				{
 					return false;
 				}
@@ -109,13 +111,12 @@ bool EmotiBitEDA::stageCalibStorage(MemoryController * memoryController, String 
 }
 
 
-bool EmotiBitEDA::stageCalibLoad(MemoryController * memoryController, bool waitForRead = false)
+bool EmotiBitEda::stageCalibLoad(EmotiBitNvmController * nvmController, bool autoSync)
 {
 	uint8_t dataVersion;
-	uint8_t dataSize;
+	uint32_t dataSize;
 	uint8_t* data;
-
-	memoryController->stageForRead(EmotiBitMemoryController::DataType::EDA, dataVersion, dataSize, data, waitForRead);
+	nvmController->stageToRead(EmotiBitNvmController::DataType::EDA, dataVersion, dataSize, data, autoSync);
 
 	if (dataVersion == EmotiBitEdaCalibration::V2)
 	{
@@ -137,10 +138,10 @@ bool EmotiBitEDA::stageCalibLoad(MemoryController * memoryController, bool waitF
 	return true;
 }
 
-uint8_t EmotiBitEDA::readData()
+uint8_t EmotiBitEda::readData()
 {
 #ifdef DEBUG
-		Serial.println("EmotiBitEDA::readData()");
+		Serial.println("EmotiBitEda::readData()");
 #endif // DEBUG
 	
 	int8_t status = 0;
@@ -148,7 +149,7 @@ uint8_t EmotiBitEDA::readData()
 	static float edrTemp;	// Electrodermal Activity 
 
 
-	if (_version >= EmotiBitVersionController::EmotiBitVersion::V04A)
+	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
 		// Reads EDA data from ADS1113
 		if (_ads.conversionComplete())
@@ -174,7 +175,7 @@ uint8_t EmotiBitEDA::readData()
 		{
 			// Note: data is saved in _edlBuffer to make factory test calibration easy
 			// ToDo: Consider refactoring to use _edaBuffer
-			status = status | _edlBuffer.downsample(_edlOversampBuffer);
+			status = status | _edlBuffer->downsample(_edlOversampBuffer);
 			_edlOversampBuffer->clear();
 		}
 	}
@@ -183,15 +184,15 @@ uint8_t EmotiBitEDA::readData()
 		// Reads EDA data from SAMD21 ADC
 
 		// Check EDL and EDR voltages for saturation
-		edlTemp = analogRead(_edlPin);
-		edrTemp = analogRead(_edrPin);
+		edlTemp = analogRead(_constants_v2_v3.edlPin);
+		edrTemp = analogRead(_constants_v2_v3.edrPin);
 
 		status = status | _edlOversampBuffer->push_back(edlTemp);
 		status = status | _edrOversampBuffer->push_back(edrTemp);
 
 		// Check for clipping
 		static const int16_t clipMinV3 = 10;
-		static const int16_t clipMaxV3 = Constants_V2_V3.adcRes - 20;
+		static const int16_t clipMaxV3 = _constants_v2_v3.adcRes - 20;
 		if (edlTemp < clipMinV3 && edlTemp > clipMaxV3)
 		{
 			status = status | _edlOversampBuffer->incrClippedCount();
@@ -218,9 +219,9 @@ uint8_t EmotiBitEDA::readData()
 }
 
 
-bool EmotiBitEDA::processData()
+bool EmotiBitEda::processData()
 {
-	if (_version >= EmotiBitVersionController::EmotiBitVersion::V04A)
+	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
 		size_t n;
 		float * edlData;
@@ -228,20 +229,20 @@ bool EmotiBitEDA::processData()
 		n = _edlBuffer->getData(&edlData, &timestamp, true);
 		for (size_t i = 0; i < n; i++)
 		{
-			_edaBuffer.push_back(edlData[i] * _constants_v4_plus.edaTransformSlope + _constants_v4_plus.edaTransformIntercept, &timestamp);
+			_edaBuffer->push_back(edlData[i] * _constants_v4_plus.edaTransformSlope + _constants_v4_plus.edaTransformIntercept, &timestamp);
 		}
 		// Transfer clipped counts
-		_edaBuffer.incrClippedCount(DoubleBuffer::BufferSelector::IN, 
-			_edlBuffer.getClippedCount(DoubleBuffer::BufferSelector::OUT)
+		_edaBuffer->incrClippedCount(DoubleBufferFloat::BufferSelector::IN, 
+			_edlBuffer->getClippedCount(DoubleBufferFloat::BufferSelector::OUT)
 		);
 
 		// Transfer overflow counts
-		_edaBuffer.incrOverflowCount(DoubleBuffer::BufferSelector::IN,
-			_edlBuffer.getOverflowCount(DoubleBuffer::BufferSelector::OUT)
+		_edaBuffer->incrOverflowCount(DoubleBufferFloat::BufferSelector::IN,
+			_edlBuffer->getOverflowCount(DoubleBufferFloat::BufferSelector::OUT)
 		);
 
 		// Swap EDA buffer
-		_edaBuffer.swap();
+		_edaBuffer->swap();
 	}
 	else
 	{
@@ -255,8 +256,8 @@ bool EmotiBitEDA::processData()
 		_edrBuffer->swap();
 
 		// Get pointers to the data buffers
-		edlN = _edlBuffer->getData(&edlData, &edlTs, false);
-		edrN = _edrBuffer->getData(&edrData, &edrTs, false);
+		edlN = _edlBuffer->getData((float **) (&edlData), &edlTs, false);
+		edrN = _edrBuffer->getData((float **) (&edrData), &edrTs, false);
 
 		if (edlN != edrN)
 		{
@@ -267,8 +268,8 @@ bool EmotiBitEDA::processData()
 			
 			// Add overflow event(s) to account for the mismatched sizes
 			size_t mismatch = abs(((int)edlN) - ((int)edrN));
-			_edlBuffer.incrOverflowCount(DoubleBuffer::BufferSelector::OUT, mismatch);
-			_edrBuffer.incrOverflowCount(DoubleBuffer::BufferSelector::OUT, mismatch);
+			_edlBuffer->incrOverflowCount(DoubleBufferFloat::BufferSelector::OUT, mismatch);
+			_edrBuffer->incrOverflowCount(DoubleBufferFloat::BufferSelector::OUT, mismatch);
 		}
 
 		// Loop through the data buffers and perform calculations
@@ -288,7 +289,7 @@ bool EmotiBitEDA::processData()
 			edrData[i] = edrTemp * _constants_v2_v3.vcc / _constants_v2_v3.adcRes;
 
 			// EDL Digital Filter to remove noise
-			if (_constants_v2_v3.edaCrossoverFilterFreq > 0)// use only is a valid crossover freq is assigned
+			if (_constants_v2_v3.crossoverFilterFreq > 0)// use only is a valid crossover freq is assigned
 			{
 				static DigitalFilter filterEda(DigitalFilter::FilterType::IIR_LOWPASS, _constants.samplingRate, _constants_v2_v3.edaCrossoverFilterFreq);
 				if (_constants.enableDigitalFilter.eda)
@@ -340,7 +341,7 @@ bool EmotiBitEDA::processData()
 	return true;
 }
 
-bool EmotiBitEDA::writeInfoJson(File &jsonFile)
+bool EmotiBitEda::writeInfoJson(File &jsonFile)
 {
 	{
 		// Parse the root object

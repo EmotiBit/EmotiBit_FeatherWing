@@ -754,7 +754,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if ((int)_version > (int)EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
 		Serial.print("Configuring ADS ADC...");
-		if (emotibitEda.setup(_version, _EmotiBit_i2c))
+		if (emotibitEda.setup(_version, _samplingRates.eda / _samplesAveraged.eda, &eda, &edl, &edr, _EmotiBit_i2c, &edlBuffer, &edrBuffer))
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 		}
@@ -1136,16 +1136,16 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 			for (uint8_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
 			{
 				// Add all the clipping/overflow events across all the buffers to the packet
-				if (i != EmotiBit::DataType::DATA_CLIPPING && i != EmotiBit::DataType::DATA_OVERFLOW) {
+				if (i != (uint8_t) EmotiBit::DataType::DATA_CLIPPING && i != (uint8_t) EmotiBit::DataType::DATA_OVERFLOW) {
 					// Skip clipping & overflow types
 					size_t count = 0;
 					if (t == EmotiBit::DataType::DATA_CLIPPING)
 					{
-						count = dataDoubleBuffers[i].getClippingCount(DoubleBufferFloat::BufferSelector::OUT)
+						count = dataDoubleBuffers[i]->getClippedCount(DoubleBufferFloat::BufferSelector::OUT);
 					}
 					if (t == EmotiBit::DataType::DATA_OVERFLOW)
 					{
-						count = dataDoubleBuffers[i].getOverflowCount(DoubleBufferFloat::BufferSelector::OUT)
+						count = dataDoubleBuffers[i]->getOverflowCount(DoubleBufferFloat::BufferSelector::OUT);
 					}
 					for (size_t n = 0; n < count; n++)
 					{
@@ -1184,23 +1184,23 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 		timestamp = millis();
 		for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
 		{
-			if (i != EmotiBit::DataType::DATA_CLIPPING && i != EmotiBit::DataType::DATA_OVERFLOW) 
+			if (i != (uint8_t)EmotiBit::DataType::DATA_CLIPPING && i != (uint8_t)EmotiBit::DataType::DATA_OVERFLOW)
 			{
 				// Count all the events across all the buffers to get dataLen
 				if (t == EmotiBit::DataType::DATA_CLIPPING)
 				{
-					dataLen += dataDoubleBuffers[i].getClippingCount(DoubleBufferFloat::BufferSelector::OUT);
+					dataLen += dataDoubleBuffers[i]->getClippedCount(DoubleBufferFloat::BufferSelector::OUT);
 				}
 				else if (t == EmotiBit::DataType::DATA_OVERFLOW)
 				{
-					dataLen += dataDoubleBuffers[i].getOverflowCount(DoubleBufferFloat::BufferSelector::OUT);
+					dataLen += dataDoubleBuffers[i]->getOverflowCount(DoubleBufferFloat::BufferSelector::OUT);
 				}
 			}
 		}
 	}
 	else
 	{
-		dataLen = dataDoubleBuffers[t]->getData(&data, &timestamp, false);
+		dataLen = dataDoubleBuffers[(uint8_t)t]->getData(&data, &timestamp, false);
 		if (dataLen > 0)
 		{
 			// ToDo: Consider moving _newDataAvailable set to processData()
@@ -1652,9 +1652,10 @@ uint8_t EmotiBit::update()
 	//if (edr.push_back(tempEda) == BufferFloat::ERROR_BUFFER_OVERFLOW) {
 	//	status = (int8_t)Error::BUFFER_OVERFLOW;
 	//}
+//
+//	return status;
+//}
 
-	return status;
-}
 int8_t EmotiBit::updatePPGData() {
 #ifdef DEBUG
 	Serial.println("updatePPGData()");
@@ -1827,7 +1828,7 @@ int8_t EmotiBit::updateIMUData() {
 			bool bufferMaxed = false;
 			for (uint8_t k = (uint8_t)EmotiBit::DataType::ACCELEROMETER_X; k <= (uint8_t)EmotiBit::DataType::MAGNETOMETER_Z; k++) {
 				// Note: this for loop usage relies on all IMU data types being grouped from AX to MZ
-				if (dataDoubleBuffers[k]->size(DoubleBufferFloat::BufferSelector::IN) == dataDoubleBuffers[k]->capacity(DoubleBufferFloat::BufferSelect::IN)) {
+				if (dataDoubleBuffers[k]->size(DoubleBufferFloat::BufferSelector::IN) == dataDoubleBuffers[k]->capacity(DoubleBufferFloat::BufferSelector::IN)) {
 					bufferMaxed = true;
 				}
 			}
@@ -1895,12 +1896,12 @@ int8_t EmotiBit::updateIMUData() {
 		pushData(EmotiBit::DataType::MAGNETOMETER_Y, my, &timestamp);
 		pushData(EmotiBit::DataType::MAGNETOMETER_Z, mz, &timestamp);
 		if (bmm150XYClipped) {
-			dataDoubleBuffers[EmotiBit::DataType::MAGNETOMETER_X]->incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
-			dataDoubleBuffers[EmotiBit::DataType::MAGNETOMETER_Y]->incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
+			dataDoubleBuffers[(uint8_t)EmotiBit::DataType::MAGNETOMETER_X]->incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
+			dataDoubleBuffers[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Y]->incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
 			bmm150XYClipped = false;
 		}
 		if (bmm150ZHallClipped) {
-			dataDoubleBuffers[EmotiBit::DataType::MAGNETOMETER_Z]->incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
+			dataDoubleBuffers[(uint8_t)EmotiBit::DataType::MAGNETOMETER_Z]->incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
 			bmm150ZHallClipped = false;
 		}
 	}
@@ -1921,7 +1922,7 @@ float EmotiBit::convertRawGyro(int16_t gRaw) {
 int8_t EmotiBit::checkIMUClipping(EmotiBit::DataType type, int16_t data, uint32_t timestamp) {
 	if (data == 32767 || data == -32768) {
 		//pushData(EmotiBit::DataType::DATA_CLIPPING, (int)type, &timestamp);
-		dataDoubleBuffers[type]->incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
+		dataDoubleBuffers[(uint8_t)type]->incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
 		return (int8_t) EmotiBit::Error::DATA_CLIPPING;
 	} 
 	else {
@@ -2078,13 +2079,14 @@ int8_t EmotiBit::pushData(EmotiBit::DataType type, float data, uint32_t * timest
 	}
 }
 
-bool processThermopileData()
+bool EmotiBit::processThermopileData()
 {
-		size_t sizeAMB;
+	size_t sizeAMB;
 	size_t sizeSto;
 	size_t n;
 	float* dataAMB;
 	float* dataSto;
+	uint32_t* timestampAmb;
 	uint32_t* timestampSto;
 	
 	// Swap buffers with minimal delay to avoid size mismatch
@@ -2092,7 +2094,7 @@ bool processThermopileData()
 	therm0Sto.swap();
 	
 	// Get pointers to the data buffers
-	sizeAMB = therm0AMB.getData(&dataAMB, timestamp, false);
+	sizeAMB = therm0AMB.getData(&dataAMB, timestampAmb, false);
 	sizeSto = therm0Sto.getData(&dataSto, timestampSto, false);
 	if (sizeAMB != sizeSto) // interrupt hit between therm0AMB.getdata and therm0Sto.getdata
 	{
@@ -2113,8 +2115,8 @@ bool processThermopileData()
 		
 		// Add overflow event(s) to account for the mismatched sizes
 		size_t mismatch = abs(((int)sizeAMB) - ((int)sizeSto));
-		therm0AMB.incrOverflowCount(DoubleBuffer::BufferSelector::OUT, mismatch);
-		therm0Sto.incrOverflowCount(DoubleBuffer::BufferSelector::OUT, mismatch);
+		therm0AMB.incrOverflowCount(DoubleBufferFloat::BufferSelector::OUT, mismatch);
+		therm0Sto.incrOverflowCount(DoubleBufferFloat::BufferSelector::OUT, mismatch);
 	}
 	n = min(sizeAMB, sizeSto);
 	for (uint8_t i = 0; i < n; i++)
@@ -2174,13 +2176,13 @@ bool processThermopileData()
 			payloadAMB = "";
 			payloadSto = "";
 		}
-		pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestamp);
+		pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestampAmb);
 	}
 	// Transfer overflow counts
-	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE].incrOverflowCount(DoubleBuffer::BufferSelector::IN,
+	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->incrOverflowCount(DoubleBufferFloat::BufferSelector::IN,
 		max(
-			therm0AMB.getOverflowCount(DoubleBuffer::BufferSelector::OUT),
-			therm0Sto.getOverflowCount(DoubleBuffer::BufferSelector::OUT)
+			therm0AMB.getOverflowCount(DoubleBufferFloat::BufferSelector::OUT),
+			therm0Sto.getOverflowCount(DoubleBufferFloat::BufferSelector::OUT)
 		)
 	);
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->swap();
@@ -2890,7 +2892,7 @@ void EmotiBit::readSensors()
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
 }
 
-void processData()
+void EmotiBit::processData()
 {
 	// Perform all derivative calculations
 	// Swap all buffers to that data is ready to send from OUT buffer
@@ -2914,7 +2916,7 @@ void processData()
 	}
 }
 
-void sendData()
+void EmotiBit::sendData()
 {
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
 

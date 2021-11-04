@@ -18,10 +18,13 @@
 
 
 #include "EmotiBitVersionController.h"
+#include "EmotiBitNvmController.h"
 #include <ArduinoJson.h>
 #include <Wire.h>
 #include "Adafruit_ADS1X15.h"
 #include <math.h> 
+#include "DoubleBufferFloat.h"
+#include "DigitalFilter.h"
 
 
 
@@ -85,8 +88,8 @@ public:
 			@return true if successful, otherwise false
 	*/
 	bool setup(EmotiBitVersionController::EmotiBitVersion version, float samplingRate, 
-		const DoubleBufferFloat* edaBuffer, const DoubleBufferFloat* edlBuffer, const DoubleBufferFloat* edrBuffer,
-		const TwoWire* emotibitI2c = nullptr, const BufferFloat* edlOversampBuffer = nullptr, const BufferFloat* edrOversampBuffer = nullptr);
+		DoubleBufferFloat* edaBuffer, DoubleBufferFloat* edlBuffer, DoubleBufferFloat* edrBuffer,
+		TwoWire* emotibitI2c = nullptr, BufferFloat* edlOversampBuffer = nullptr, BufferFloat* edrOversampBuffer = nullptr);
 	
 	/*!
 		@brief  ISR fn to read ADC values for EDA and stores the raw data in buffers passed during setup
@@ -110,13 +113,13 @@ public:
 		@brief Loads & calculates EDA calibration from the on-board storage
 		@return true if successful, otherwise false
 	*/
-	bool stageCalibLoad(MemoryController * memoryController, bool waitForRead = false);
+	bool stageCalibLoad(EmotiBitNvmController * nvmController, bool autoSync = false);
 
 	/*!
 		@brief Stores calibration values using on-board storage
 		@return true if successful, otherwise false
 	*/
-	bool stageCalibStorage(MemoryController * memoryController, String &calibrationRawValues, bool waitForWrite);
+	bool stageCalibStorage(EmotiBitNvmController * nvmController, String &calibrationRawValues, bool autoSync = false);
 
 	
 };

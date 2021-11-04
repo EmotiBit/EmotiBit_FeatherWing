@@ -158,7 +158,7 @@ void DoubleBufferFloat::resize(size_t capacity) {
 
 BufferFloat* DoubleBufferFloat::_getBuffer(BufferSelector b)
 {
-	if (b == BufferSelector:IN)
+	if (b == BufferSelector::IN)
 	{
 		return _inputBuffer;
 	}
@@ -174,7 +174,7 @@ size_t DoubleBufferFloat::getOverflowCount(BufferSelector b)
 	else return _getBuffer(b)->getOverflowCount();
 }
 
-uint8_t DoubleBufferFloat::incrOverflowCount(BufferSelector b, unsigned int n = 1)
+uint8_t DoubleBufferFloat::incrOverflowCount(BufferSelector b, unsigned int n)
 {
 	if (_getBuffer(b) == nullptr) return BufferFloat::ERROR_PTR_NULL;
 	else return _getBuffer(b)->incrOverflowCount(n);
@@ -186,7 +186,7 @@ size_t DoubleBufferFloat::getClippedCount(BufferSelector b)
 	else return _getBuffer(b)->getClippedCount();
 }
 
-uint8_t DoubleBufferFloat::incrClippedCount(BufferSelector b, unsigned int n = 1)
+uint8_t DoubleBufferFloat::incrClippedCount(BufferSelector b, unsigned int n)
 {
 	if (_getBuffer(b) == nullptr) return BufferFloat::ERROR_PTR_NULL; 
 	else return _getBuffer(b)->incrClippedCount(n);
@@ -211,6 +211,6 @@ uint8_t DoubleBufferFloat::downsample(BufferFloat* b)
 	// Check for overflow
 	if (b->getOverflowCount() > 0)
 	{
-		status = status | ERROR_BUFFER_OVERFLOW;
+		status = status | BufferFloat::ERROR_BUFFER_OVERFLOW;
 	}
 }
