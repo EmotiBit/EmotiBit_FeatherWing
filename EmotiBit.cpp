@@ -185,6 +185,13 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println("Download v0.6.0 for Alpha boards");
 		hibernate(false);
 	}
+
+	if (testingMode == TestingMode::NVM_CONTROLLER_TEST)
+	{
+		emotibitNvmController.init(*(_EmotiBit_i2c), _version);
+		emotibitNvmController.setHwVersion(_version);
+	}
+
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		// Pass only if FW version estimate is exactly = barcode version
@@ -2888,7 +2895,7 @@ void EmotiBit::readSensors()
 
 	if (testingMode == TestingMode::NVM_CONTROLLER_TEST)
 	{
-
+		emotibitNvmController.syncRW();
 	}
 }
 
@@ -3579,7 +3586,54 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		}
 		else if (c == 'n')
 		{
-			// write a struct of data to the EEPROM
+			if (_version == EmotiBitVersionController::EmotiBitVersion::V04A)
+			{
+				static const uint32_t ARRAY_SIZE = 10;
+				char cArray[ARRAY_SIZE] = { 'a','b','c','d','e','1','2','3','4','5' };
+				// write a struct of data to the EEPROM
+				Serial.println("Testing NVM Controller");
+				Serial.println("Writing to EEPROM: ");
+				for (int i = 0; i < ARRAY_SIZE; i++)
+				{
+					Serial.print(cArray[i]); Serial.print("\t");
+				}
+				uint8_t status;
+				status = emotibitNvmController.stageToWrite(EmotiBitNvmController::DataType::VARIANT_INFO, 0, ARRAY_SIZE, (uint8_t*)cArray, false, true);
+				delay(1000);
+				if (status == 0)
+				{
+					Serial.println("Write successful");
+				}
+				else
+				{
+					Serial.print("Write unsuccessful. ErrorCode: "); Serial.println(status);
+				}
+				Serial.print("Reading from EEPROM");
+				uint8_t* data = nullptr;
+				uint32_t dataSize = 0;
+				uint8_t dataVersion = 0;
+				char* cData;
+				status = emotibitNvmController.stageToRead(EmotiBitNvmController::DataType::VARIANT_INFO, dataVersion, dataSize, data);
+				cData = (char*)data;
+				if (status == 0)
+				{
+					Serial.print("Version Read: "); Serial.println(dataVersion);
+					for (int i = 0; i < dataSize; i++)
+					{
+						Serial.print(cData[i]); Serial.print("\t");
+					}
+				}
+				else
+				{
+					Serial.print("Read unsuccessful. ErrorCode: "); Serial.println(status);
+				}
+				delete[] data;
+
+			}
+			else
+			{
+				Serial.println("Cannot test NVM for this HW version.");
+			}
 		}
 	}
 }

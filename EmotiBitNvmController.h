@@ -95,7 +95,9 @@ public:
 	{
 		IDLE,
 		READY_TO_WRITE,
+		BUSY_WRITING,
 		READY_TO_READ,
+		BUSY_READING,
 		READ_BUFFER_FULL
 	}writeState, readState;
 

@@ -43,7 +43,7 @@ public:
 	};
 
 	String firmware_version = "1.2.86";
-	TestingMode testingMode = TestingMode::NONE;
+	TestingMode testingMode = TestingMode::NVM_CONTROLLER_TEST;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
 	bool _debugMode = false;
@@ -228,6 +228,7 @@ public:
 	MLX90632 thermopile;
 	EdaCorrection *edaCorrection = nullptr;
 	EmotiBitEda emotibitEda;
+	EmotiBitNvmController emotibitNvmController;
 
 	int _emotiBitSystemConstants[(int)SystemConstants::COUNT];
 
