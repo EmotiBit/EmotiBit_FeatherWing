@@ -247,7 +247,7 @@ bool EmotiBitEda::processData()
 	else
 	{
 		size_t n, edlN, edrN;
-		float * edlData, edrData;
+		float *edlData, *edrData;
 		uint32_t edlTs, edrTs;
 		static float edlTemp, edrTemp, edaTemp;
 
@@ -256,8 +256,8 @@ bool EmotiBitEda::processData()
 		_edrBuffer->swap();
 
 		// Get pointers to the data buffers
-		edlN = _edlBuffer->getData((float **) (&edlData), &edlTs, false);
-		edrN = _edrBuffer->getData((float **) (&edrData), &edrTs, false);
+		edlN = _edlBuffer->getData(&edlData, &edlTs, false);
+		edrN = _edrBuffer->getData(&edrData, &edrTs, false);
 
 		if (edlN != edrN)
 		{
@@ -274,7 +274,7 @@ bool EmotiBitEda::processData()
 
 		// Loop through the data buffers and perform calculations
 		n = min(edlN, edrN);
-		for (size_t i = 0; i < n; i++)
+		for (uint8_t i = 0; i < n; i++)
 		{
 			edlTemp = edlData[i];
 			edrTemp = edrData[i];
@@ -291,8 +291,8 @@ bool EmotiBitEda::processData()
 			// EDL Digital Filter to remove noise
 			if (_constants_v2_v3.crossoverFilterFreq > 0)// use only is a valid crossover freq is assigned
 			{
-				static DigitalFilter filterEda(DigitalFilter::FilterType::IIR_LOWPASS, _constants.samplingRate, _constants_v2_v3.edaCrossoverFilterFreq);
-				if (_constants.enableDigitalFilter.eda)
+				static DigitalFilter filterEda(DigitalFilter::FilterType::IIR_LOWPASS, _constants.samplingRate, _constants_v2_v3.crossoverFilterFreq);
+				if (_constants.enableDigitalFilter)
 				{
 					edlTemp = filterEda.filter(edlTemp);
 				}
@@ -309,7 +309,7 @@ bool EmotiBitEda::processData()
 			else
 			{
 				edaTemp = _constants_v2_v3.vRef1 / 
-					((_constants_v2_v3.edaFeedbackAmpR * (edaTemp - _constants_v2_v3.vRef1)) 
+					((_constants_v2_v3.feedbackAmpR * (edaTemp - _constants_v2_v3.vRef1))
 						- (_constants.edaSeriesResistance * _constants_v2_v3.vRef1)
 					);
 			}
@@ -317,32 +317,33 @@ bool EmotiBitEda::processData()
 			edaTemp = edaTemp * 1000000.f; // Convert to uSiemens
 
 			// Push calculated EDA value
-			_edaBuffer.push_back(edaTemp, &edrTs);
+			_edaBuffer->push_back(edaTemp, &edrTs);
 		}
 		// Transfer clipped counts
-		_edaBuffer.incrClippedCount(DoubleBuffer::BufferSelector::IN,
+		_edaBuffer->incrClippedCount(DoubleBufferFloat::BufferSelector::IN,
 			max(
-				_edlBuffer.getClippedCount(DoubleBuffer::BufferSelector::OUT),
-				_edrBuffer.getClippedCount(DoubleBuffer::BufferSelector::OUT)
+				_edlBuffer->getClippedCount(DoubleBufferFloat::BufferSelector::OUT),
+				_edrBuffer->getClippedCount(DoubleBufferFloat::BufferSelector::OUT)
 			)
 		);
 
 		// Transfer overflow counts
-		_edaBuffer.incrOverflowCount(DoubleBuffer::BufferSelector::IN,
+		_edaBuffer->incrOverflowCount(DoubleBufferFloat::BufferSelector::IN,
 			max(
-				_edlBuffer.getOverflowCount(DoubleBuffer::BufferSelector::OUT),
-				_edrBuffer.getOverflowCount(DoubleBuffer::BufferSelector::OUT)
+				_edlBuffer->getOverflowCount(DoubleBufferFloat::BufferSelector::OUT),
+				_edrBuffer->getOverflowCount(DoubleBufferFloat::BufferSelector::OUT)
 			)
 		);
 
 		// Swap EDA buffer
-		_edaBuffer.swap();
+		_edaBuffer->swap();
 	}
 	return true;
 }
 
 bool EmotiBitEda::writeInfoJson(File &jsonFile)
 {
+	const uint16_t bufferSize = 1024;
 	{
 		// Parse the root object
 		StaticJsonBuffer<bufferSize> jsonBuffer;
@@ -365,9 +366,9 @@ bool EmotiBitEda::writeInfoJson(File &jsonFile)
 		setups[i]->set("eda_series_resistance", _constants.edaSeriesResistance);
 		setups[i]->set("adc_bits", _constants.adcBits);
 		setups[i]->set("enable_digital_filter", _constants.enableDigitalFilter);
-		setups[i]->set("samples_averaged", _edlOversampBuffer.capacity());
-		setups[i]->set("oversampling_rate", _edlOversampBuffer.capacity() * _constants.samplingRate);
-		if (_version >= EmotiBitVersionController::EmotiBitVersion::V04A)
+		setups[i]->set("samples_averaged", _edlOversampBuffer->capacity());
+		setups[i]->set("oversampling_rate", _edlOversampBuffer->capacity() * _constants.samplingRate);
+		if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 		{
 			setups[i]->set("eda_transform_slope", _constants_v4_plus.edaTransformSlope);
 			setups[i]->set("eda_transform_intercept", _constants_v4_plus.edaTransformIntercept);
@@ -376,14 +377,14 @@ bool EmotiBitEda::writeInfoJson(File &jsonFile)
 		{
 			setups[i]->set("voltage_reference_1", _constants_v2_v3.vRef1);
 			setups[i]->set("voltage_reference_2", _constants_v2_v3.vRef2);
-			setups[i]->set("EDA_feedback_amp_resistance", _constants_v2_v3.edaFeedbackAmpR);
+			setups[i]->set("EDA_feedback_amp_resistance", _constants_v2_v3.feedbackAmpR);
 			setups[i]->set("EDR_amplification", _constants_v2_v3.edrAmplification);
-			setups[i]->set("EDA_crossover_filter_frequency", _constants_v2_v3.edaCrossoverFilterFreq);
+			setups[i]->set("EDA_crossover_filter_frequency", _constants_v2_v3.crossoverFilterFreq);
 			setups[i]->set("VCC", _constants_v2_v3.vcc);
 			setups[i]->set("ISR_ADC_offset_correction", _constants_v2_v3.isrOffsetCorr);
 		}
 
-		if (root.printTo(file) == 0) {
+		if (root.printTo(jsonFile) == 0) {
 #ifdef DEBUG
 			Serial.println(F("Failed to write to file"));
 #endif
