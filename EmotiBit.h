@@ -42,7 +42,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.86";
+	String firmware_version = "1.2.86-NvmController";
 	TestingMode testingMode = TestingMode::NVM_CONTROLLER_TEST;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
