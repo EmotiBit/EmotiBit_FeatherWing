@@ -43,7 +43,7 @@ public:
 	};
 
 	String firmware_version = "1.2.86-NvmController";
-	TestingMode testingMode = TestingMode::NVM_CONTROLLER_TEST;
+	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 
 	bool _debugMode = false;
@@ -116,9 +116,9 @@ public:
 	};
 	
 	struct EnableDigitalFilter {
-		bool mx = true;
-		bool my = true;
-		bool mz = true;
+		bool mx = false;
+		bool my = false;
+		bool mz = false;
 		bool eda = true;
 	};
 
@@ -145,7 +145,8 @@ public:
 		NONE = 0,
 		BUFFER_OVERFLOW = -1,
 		DATA_CLIPPING = -2,
-		INDEX_OUT_OF_BOUNDS = -4
+		INDEX_OUT_OF_BOUNDS = -4,
+		SENSOR_NOT_READY = -8
 	};
 
   enum class DataType{
@@ -232,14 +233,14 @@ public:
 
 	int _emotiBitSystemConstants[(int)SystemConstants::COUNT];
 
-	float edrAmplification;
-	float vRef1; // Reference voltage of first voltage divider(15/100)
-	float vRef2; // Reference voltage from second voltage divider(100/100)
+	//float edrAmplification;
+	//float vRef1; // Reference voltage of first voltage divider(15/100)
+	//float vRef2; // Reference voltage from second voltage divider(100/100)
 	//float rSkinAmp;
 	float adcRes;
-	float edaVDivR;
-	float edaFeedbackAmpR;
-	float edaCrossoverFilterFreq;
+	//float edaVDivR;
+	//float edaFeedbackAmpR;
+	//float edaCrossoverFilterFreq;
 	uint8_t _sdCardChipSelectPin;	// ToDo: create getter and make private
 	BMM150TrimData bmm150TrimData;
 	bool bmm150XYClipped = false;
@@ -329,8 +330,8 @@ public:
 
 	const char *typeTags[(uint8_t)EmotiBit::DataType::length];
 	bool _newDataAvailable[(uint8_t)EmotiBit::DataType::length];
-	uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
-	bool sendData[(uint8_t)EmotiBit::DataType::length];
+	uint8_t _printLen[(uint8_t)EmotiBit::DataType::length];
+	bool _sendData[(uint8_t)EmotiBit::DataType::length];
 
 	SdFat SD;
 	volatile uint8_t battLevel = 100;
@@ -351,8 +352,7 @@ public:
 	bool _sendTestData = false;
 	float _edlDigFiltAlpha = 0;
 	float _edlDigFilteredVal = -1;
-	float _edaSeriesResistance = 0;
-	float _isrOffsetCorr = 0;
+	float _adcIsrOffsetCorr = 0;
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 
@@ -377,6 +377,9 @@ public:
 	bool addPacket(EmotiBit::DataType t);
 	void parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber);
 	void readSensors();
+	void processData();
+	void sendData();
+	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented
 	void writeSerialData(EmotiBit::DataType t);
 	
 
@@ -440,7 +443,7 @@ public:
   void setAnalogEnablePin(uint8_t i); /**< Power on/off the analog circuitry */
   int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
 	int8_t updatePPGData();                /**< Read any available PPG data from the sensor FIFO into the inputBuffers */
-	int8_t updateEDAData();                /**< Take EDA reading and put into the inputBuffer */
+	//int8_t updateEDAData();                /* Deprecated. Use EmotiBitEda::readData() */
 	int8_t updateTempHumidityData();       /**< Read any available temperature and humidity data into the inputBuffers */
 	int8_t updateThermopileData();         /**< Read Thermopile data into the buffers*/
 	int8_t updateBatteryVoltageData();     /**< Take battery voltage reading and put into the inputBuffer */
@@ -471,15 +474,15 @@ public:
 private:
 	float average(BufferFloat &b);
 	int8_t checkIMUClipping(EmotiBit::DataType type, int16_t data, uint32_t timestamp);
-	int8_t pushData(EmotiBit::DataType type, float data, uint32_t * timestamp = nullptr);
+	int8_t pushData(EmotiBit::DataType type, float data, uint32_t * timestamp = nullptr); // Deprecated. BUFFER_OVERFLOW count built into DoubleBuffer now.
 
 	SensorTimer _sensorTimer = SensorTimer::MANUAL;
 	SamplingRates _samplingRates;
 	EnableDigitalFilter _enableDigitalFilter;
 	SamplesAveraged _samplesAveraged;
 	uint8_t _batteryReadPin;
-	uint8_t _edlPin;
-	uint8_t _edrPin;
+	//uint8_t _edlPin;
+	//uint8_t _edrPin;
 	float _vcc;
 	uint8_t _adcBits;
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)
@@ -524,8 +527,8 @@ private:
 	// Single buffered arrays must only be accessed from ISR functions, not in the main loop
 	// ToDo: add assignment for dynamic allocation;
 	// 	**** WARNING **** THIS MUST MATCH THE SAMPLING DIVS ETC
-	BufferFloat edlBuffer = BufferFloat(24);
-	BufferFloat edrBuffer = BufferFloat(24);	
+	BufferFloat edlBuffer = BufferFloat(20);
+	BufferFloat edrBuffer = BufferFloat(20);	
 	BufferFloat temperatureBuffer = BufferFloat(4);	
 	BufferFloat humidityBuffer = BufferFloat(4);
 	BufferFloat batteryVoltageBuffer = BufferFloat(8);
@@ -539,5 +542,6 @@ private:
 void attachEmotiBit(EmotiBit*e = nullptr);
 void attachToInterruptTC3(void(*readFunction)(void), EmotiBit*e = nullptr);
 void ReadSensors();
+
 
 #endif
