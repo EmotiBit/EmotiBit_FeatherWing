@@ -113,25 +113,34 @@ bool EmotiBitEda::stageCalibLoad(EmotiBitNvmController * nvmController, bool aut
 {
 	uint8_t dataVersion;
 	uint32_t dataSize;
-	uint8_t* data;
-	nvmController->stageToRead(EmotiBitNvmController::DataType::EDA, dataVersion, dataSize, data, autoSync);
+	uint8_t* data = nullptr;
+	uint8_t status = nvmController->stageToRead(EmotiBitNvmController::DataType::EDA, dataVersion, dataSize, data, autoSync);
+	
+	if (status != (uint8_t)EmotiBitNvmController::Status::SUCCESS) return false;
 
-	if (dataVersion == EmotiBitEdaCalibration::V2)
+	if (dataVersion == EmotiBitEdaCalibration::V2 && dataSize == sizeof(EmotiBitEdaCalibration::V2))
 	{
 		EmotiBitEdaCalibration::RawValues_V2 *rawVals = (EmotiBitEdaCalibration::RawValues_V2 *)data;
 		EmotiBitEdaCalibration::calculate(*rawVals, _constants_v4_plus.edaTransformSlope, _constants_v4_plus.edaTransformIntercept);
 	}
-	else if (dataVersion == EmotiBitEdaCalibration::V0)
+	else if (dataVersion == EmotiBitEdaCalibration::V0 && dataSize == sizeof(EmotiBitEdaCalibration::V0))
 	{
 		EmotiBitEdaCalibration::RawValues_V0 *rawVals = (EmotiBitEdaCalibration::RawValues_V0 *)data;
 		EmotiBitEdaCalibration::calculate(*rawVals, _constants_v2_v3.vRef1, _constants_v2_v3.vRef2, _constants_v2_v3.feedbackAmpR);
 	}
 	else
 	{
+		if (data != nullptr)
+		{
+			delete data;
+		}
 		return false;
 	}
 
-	delete data;
+	if (data != nullptr)
+	{
+		delete data;
+	}
 
 	return true;
 }

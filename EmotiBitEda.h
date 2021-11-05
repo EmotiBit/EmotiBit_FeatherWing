@@ -118,7 +118,7 @@ public:
 		@brief Stores calibration values using on-board storage
 		@return true if successful, otherwise false
 	*/
-	bool stageCalibStorage(EmotiBitNvmController * nvmController, String &calibrationRawValues, bool autoSync = false);
+	bool stageCalibStorage(EmotiBitNvmController * nvmController, String &edaCalibPacket, bool autoSync = false);
 
 	/*!
 		@brief Sets ISR offset correction for ADC

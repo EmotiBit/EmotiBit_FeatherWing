@@ -227,6 +227,7 @@ public:
 	MLX90632 thermopile;
 	EdaCorrection *edaCorrection = nullptr;
 	EmotiBitEda emotibitEda;
+	EmotiBitNvmController _emotibitNvmController;
 
 	int _emotiBitSystemConstants[(int)SystemConstants::COUNT];
 
@@ -306,7 +307,7 @@ public:
 	//} timerLoopOffset;	// Sets initial value of sampling counters
 
 	struct AcquireData {
-		bool eda = true;
+		bool eda = false;
 		bool tempHumidity = true;
 		bool thermopile = true;
 		bool imu = true;

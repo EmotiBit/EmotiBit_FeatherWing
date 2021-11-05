@@ -423,7 +423,17 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	
 	Serial.println("\nSensor setup:");
-	// Flash module comes here
+	Serial.print("Initializing NVM controller: ");
+	if (_emotibitNvmController.init(*_EmotiBit_i2c, _version))
+	{
+		Serial.println("success");
+	}
+	else
+	{
+		Serial.println("fail");
+	}
+	// Handle reading the version from NVM
+	_emotibitNvmController.setHwVersion(_version);
 
 	// setup LED DRIVER
 	Serial.print("Initializing NCP5623....");
@@ -794,6 +804,17 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 		Serial.println(factoryTestSerialOutput);
 	}
+	Serial.println("");
+	Serial.print("Loading EDA calibration: ");
+	if (emotibitEda.stageCalibLoad(&_emotibitNvmController, true))
+	{
+		Serial.println("success");
+	}
+	else
+	{
+		Serial.println("failed");
+	}
+
 
 	// Sensor setup complete
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
@@ -2681,8 +2702,9 @@ void EmotiBit::readSensors()
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, HIGH);
 	
 	uint32_t readSensorsBegin = micros();
-	
-	// EdaCorrection deprecated, use EmotiBitEda
+
+	_emotibitNvmController.syncRW();
+	// NOTE: EdaCorrection deprecated, use EmotiBitEda
 	//// Write to OTP once edaCorrection class is at the right state. 
 	//if (edaCorrection != nullptr)
 	//{
@@ -3646,6 +3668,10 @@ void EmotiBit::processFactoryTestMessages()
 		else if (msgTypeTag.equals(EmotiBitPacket::TypeTag::MODE_HIBERNATE))
 		{
 			hibernate();
+		}
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_VALUES))
+		{
+			emotibitEda.stageCalibStorage(&_emotibitNvmController, msg);
 		}
 	}
 }
