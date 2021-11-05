@@ -195,17 +195,19 @@ uint8_t DoubleBufferFloat::incrClippedCount(BufferSelector b, unsigned int n)
 uint8_t DoubleBufferFloat::downsample(BufferFloat* b)
 {
 	uint8_t status = 0;
+	
+	if (b == nullptr) return BufferFloat::ERROR_PTR_NULL;
 
 	// Perform data averaging
 	float f = b->average();
 
 	// Add to data double buffer
-	status = status | push_back(f, &b->timestamp);
+	status = status | push_back(f, &(b->timestamp));
 
 	// Check for clipping
 	if (b->getClippedCount() > 0)
 	{
-		status | incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
+		status = status | incrClippedCount(DoubleBufferFloat::BufferSelector::IN);
 	}
 
 	// Check for overflow
@@ -213,4 +215,5 @@ uint8_t DoubleBufferFloat::downsample(BufferFloat* b)
 	{
 		status = status | BufferFloat::ERROR_BUFFER_OVERFLOW;
 	}
+	return status;
 }
