@@ -39,6 +39,7 @@ private:
 	BufferFloat* _edlOversampBuffer = nullptr;
 	BufferFloat* _edrOversampBuffer = nullptr;
 	bool isCalibrated = false;
+	volatile bool _readFinished = false;
 	
 public:
 		 
@@ -68,8 +69,8 @@ public:
 
 	struct Constants_V4_plus
 	{
-		float edaTransformSlope;
-		float edaTransformIntercept;
+		float edaTransformSlope = 728.8406523;
+		float edaTransformIntercept = 14179797.05;
 	} _constants_v4_plus;
 	
 	Adafruit_ADS1115 _ads;
@@ -118,7 +119,7 @@ public:
 		@brief Stores calibration values using on-board storage
 		@return true if successful, otherwise false
 	*/
-	bool stageCalibStorage(EmotiBitNvmController * nvmController, String &calibrationRawValues, bool autoSync = false);
+	bool stageCalibStorage(EmotiBitNvmController * nvmController, String &edaCalibPacket, bool autoSync = false);
 
 	/*!
 		@brief Sets ISR offset correction for ADC

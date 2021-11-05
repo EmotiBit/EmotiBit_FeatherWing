@@ -430,7 +430,17 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	
 	Serial.println("\nSensor setup:");
-	// Flash module comes here
+	Serial.print("Initializing NVM controller: ");
+	if (_emotibitNvmController.init(*_EmotiBit_i2c, _version))
+	{
+		Serial.println("success");
+	}
+	else
+	{
+		Serial.println("fail");
+	}
+	// Handle reading the version from NVM
+	_emotibitNvmController.setHwVersion(_version);
 
 	// setup LED DRIVER
 	Serial.print("Initializing NCP5623....");
@@ -801,6 +811,17 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 		Serial.println(factoryTestSerialOutput);
 	}
+	Serial.println("");
+	Serial.print("Loading EDA calibration: ");
+	if (emotibitEda.stageCalibLoad(&_emotibitNvmController, true))
+	{
+		Serial.println("success");
+	}
+	else
+	{
+		Serial.println("failed");
+	}
+
 
 	// Sensor setup complete
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
@@ -1147,7 +1168,7 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 }
 
 bool EmotiBit::addPacket(EmotiBit::DataType t) {
-#ifdef DEBUG_GET_DATA
+#ifdef DEBUG_FEAT_EDA_CTRL
 	Serial.print("addPacket: ");
 	Serial.println((uint8_t)t);
 #endif // DEBUG
@@ -1171,9 +1192,20 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 				}
 				else if (t == EmotiBit::DataType::DATA_OVERFLOW)
 				{
-					dataLen += dataDoubleBuffers[i]->getOverflowCount(DoubleBufferFloat::BufferSelector::OUT);
+					size_t temp = dataDoubleBuffers[i]->getOverflowCount(DoubleBufferFloat::BufferSelector::OUT);
+#ifdef DEBUG_FEAT_EDA_CTRL
+					Serial.print(i);
+					Serial.print(": ");
+					Serial.println(temp);
+#endif
+					dataLen += temp;
 				}
 			}
+#ifdef DEBUG_FEAT_EDA_CTRL
+			Serial.print(i);
+			Serial.print(": ");
+			Serial.println(dataLen);
+#endif
 		}
 	}
 	else
@@ -1185,6 +1217,10 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 			_newDataAvailable[(uint8_t)t] = true;	// set new data is available in the outputBuffer
 		}
 	}
+
+#ifdef DEBUG_FEAT_EDA_CTRL
+	Serial.println(dataLen);
+#endif
 
 	if (_sendData[(uint8_t)t]) {
 		return addPacket(timestamp, t, data, dataLen, _printLen[(uint8_t)t]);
@@ -2688,8 +2724,9 @@ void EmotiBit::readSensors()
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, HIGH);
 	
 	uint32_t readSensorsBegin = micros();
-	
-	// EdaCorrection deprecated, use EmotiBitEda
+
+	_emotibitNvmController.syncRW();
+	// NOTE: EdaCorrection deprecated, use EmotiBitEda
 	//// Write to OTP once edaCorrection class is at the right state. 
 	//if (edaCorrection != nullptr)
 	//{
@@ -2879,6 +2916,10 @@ void EmotiBit::readSensors()
 
 void EmotiBit::processData()
 {
+#ifdef DEBUG_FEAT_EDA_CTRL
+Serial.println("EmotiBit::processData()");
+#endif // DEBUG
+
 	// Perform all derivative calculations
 	// Swap all buffers to that data is ready to send from OUT buffer
 
@@ -2903,11 +2944,23 @@ void EmotiBit::processData()
 
 void EmotiBit::sendData()
 {
+#ifdef DEBUG_FEAT_EDA_CTRL
+Serial.println("EmotiBit::sendData()");
+#endif // DEBUG
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
+#ifdef DEBUG_FEAT_EDA_CTRL
 
+	Serial.println("for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)");
+	#endif
 	for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
 	{
+#ifdef DEBUG_FEAT_EDA_CTRL
+		Serial.println(i);
+#endif
 		addPacket((EmotiBit::DataType) i);
+#ifdef DEBUG_FEAT_EDA_CTRL
+		Serial.println("addPacket() complete");
+#endif // DEBUG
 		if (_outDataPackets.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE)
 		{
 			// Avoid overrunning our reserve memory
@@ -2934,6 +2987,10 @@ void EmotiBit::sendData()
 	}
 
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
+
+#ifdef DEBUG_EDA
+	Serial.println("Exit EmotiBit::sendData()");
+#endif // DEBUG
 }
 
 
@@ -3709,6 +3766,10 @@ void EmotiBit::processFactoryTestMessages()
 		else if (msgTypeTag.equals(EmotiBitPacket::TypeTag::MODE_HIBERNATE))
 		{
 			hibernate();
+		}
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_VALUES))
+		{
+			emotibitEda.stageCalibStorage(&_emotibitNvmController, msg);
 		}
 	}
 }

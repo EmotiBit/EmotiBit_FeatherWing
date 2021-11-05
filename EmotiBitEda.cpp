@@ -43,7 +43,7 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 	_edlBuffer = edlBuffer;
 	_edrBuffer = edrBuffer;
 	_edlOversampBuffer = edlOversampBuffer;
-	_edlOversampBuffer = edrOversampBuffer;
+	_edrOversampBuffer = edrOversampBuffer;
 
 	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 	{	
@@ -113,25 +113,34 @@ bool EmotiBitEda::stageCalibLoad(EmotiBitNvmController * nvmController, bool aut
 {
 	uint8_t dataVersion;
 	uint32_t dataSize;
-	uint8_t* data;
-	nvmController->stageToRead(EmotiBitNvmController::DataType::EDA, dataVersion, dataSize, data, autoSync);
+	uint8_t* data = nullptr;
+	uint8_t status = nvmController->stageToRead(EmotiBitNvmController::DataType::EDA, dataVersion, dataSize, data, autoSync);
+	
+	if (status != (uint8_t)EmotiBitNvmController::Status::SUCCESS) return false;
 
-	if (dataVersion == EmotiBitEdaCalibration::V2)
+	if (dataVersion == EmotiBitEdaCalibration::V2 && dataSize == sizeof(EmotiBitEdaCalibration::V2))
 	{
 		EmotiBitEdaCalibration::RawValues_V2 *rawVals = (EmotiBitEdaCalibration::RawValues_V2 *)data;
 		EmotiBitEdaCalibration::calculate(*rawVals, _constants_v4_plus.edaTransformSlope, _constants_v4_plus.edaTransformIntercept);
 	}
-	else if (dataVersion == EmotiBitEdaCalibration::V0)
+	else if (dataVersion == EmotiBitEdaCalibration::V0 && dataSize == sizeof(EmotiBitEdaCalibration::V0))
 	{
 		EmotiBitEdaCalibration::RawValues_V0 *rawVals = (EmotiBitEdaCalibration::RawValues_V0 *)data;
 		EmotiBitEdaCalibration::calculate(*rawVals, _constants_v2_v3.vRef1, _constants_v2_v3.vRef2, _constants_v2_v3.feedbackAmpR);
 	}
 	else
 	{
+		if (data != nullptr)
+		{
+			delete data;
+		}
 		return false;
 	}
 
-	delete data;
+	if (data != nullptr)
+	{
+		delete data;
+	}
 
 	return true;
 }
@@ -143,8 +152,8 @@ uint8_t EmotiBitEda::readData()
 #endif // DEBUG
 	
 	int8_t status = 0;
-	static float edlTemp;	// Electrodermal Activity 
-	static float edrTemp;	// Electrodermal Activity 
+	float edlTemp;	// Electrodermal Activity 
+	float edrTemp;	// Electrodermal Activity 
 
 
 	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
@@ -160,8 +169,8 @@ uint8_t EmotiBitEda::readData()
 
 			// Check for clipping
 			// ToDo: assess correct levels more carefully
-			static const int16_t clipMinV4 = -32700;
-			static const int16_t clipMaxV4 = 32700;
+			const int16_t clipMinV4 = -32700;
+			const int16_t clipMaxV4 = 32700;
 			if (edlTemp < clipMinV4 && edlTemp > clipMaxV4)
 			{
 				status = status | _edlOversampBuffer->incrClippedCount();
@@ -189,8 +198,8 @@ uint8_t EmotiBitEda::readData()
 		status = status | _edrOversampBuffer->push_back(edrTemp);
 
 		// Check for clipping
-		static const int16_t clipMinV3 = 10;
-		static const int16_t clipMaxV3 = _constants_v2_v3.adcRes - 20;
+		const int16_t clipMinV3 = 10;
+		const int16_t clipMaxV3 = _constants_v2_v3.adcRes - 20;
 		if (edlTemp < clipMinV3 && edlTemp > clipMaxV3)
 		{
 			status = status | _edlOversampBuffer->incrClippedCount();
@@ -212,7 +221,7 @@ uint8_t EmotiBitEda::readData()
 			_edrOversampBuffer->clear();
 		}
 	}
-
+	_readFinished = true;
 	return status;
 }
 
@@ -223,11 +232,17 @@ bool EmotiBitEda::processData()
 	{
 		size_t n;
 		float * edlData;
+		float edaTemp;
 		uint32_t timestamp;
 		n = _edlBuffer->getData(&edlData, &timestamp, true);
 		for (size_t i = 0; i < n; i++)
 		{
-			_edaBuffer->push_back(edlData[i] * _constants_v4_plus.edaTransformSlope + _constants_v4_plus.edaTransformIntercept, &timestamp);
+			// ToDo: Calculate slope/intercept to avoid expensive division in loop
+			edaTemp = edlData[i] * _constants_v4_plus.edaTransformSlope + _constants_v4_plus.edaTransformIntercept;
+			edaTemp = max(1000, edaTemp);
+			edaTemp = 1000000.f / edaTemp;
+			// ToDo: Consider filtering
+			_edaBuffer->push_back(edaTemp, &timestamp);
 		}
 		// Transfer clipped counts
 		_edaBuffer->incrClippedCount(DoubleBufferFloat::BufferSelector::IN, 
@@ -247,11 +262,30 @@ bool EmotiBitEda::processData()
 		size_t n, edlN, edrN;
 		float *edlData, *edrData;
 		uint32_t edlTs, edrTs;
-		static float edlTemp, edrTemp, edaTemp;
+		float edlTemp, edrTemp, edaTemp;
 
+		// Wait for readData() to complete to avoid EDL/EDR size mismatch
+		// NOTE: this can create a main loop delay up to the oversampling rate
+		// This wouldn't be necessary with a ring buffer
+
+		uint32_t waitEnd;
+		uint32_t waitStart = micros();
+		_readFinished = false;
+		while (!_readFinished)
+		{
+			waitEnd = micros();
+			if (waitEnd - waitStart > 100000)
+			{
+				Serial.println("Timeout waiting for EmotiBitEda::_readFinished");
+				break;
+			}
+		}
+		
 		// Swap EDL and EDR buffers with minimal delay to avoid size mismatch
+		uint32_t swapStart = micros();
 		_edlBuffer->swap();
 		_edrBuffer->swap();
+		uint32_t swapEnd = micros();
 
 		// Get pointers to the data buffers
 		edlN = _edlBuffer->getData(&edlData, &edlTs, false);
@@ -259,10 +293,18 @@ bool EmotiBitEda::processData()
 
 		if (edlN != edrN)
 		{
-			Serial.println("WARNING: EDL and EDR buffers different sizes");
+			Serial.print("WARNING: EDL (");
+			Serial.print(edlN);
+			Serial.print(") and EDR (");
+			Serial.print(edrN);
+			Serial.print(") buffers different sizes. [");
+			Serial.print(waitEnd - waitStart);
+			Serial.print(", ");
+			Serial.print(swapEnd - swapStart);
+			Serial.print(" usecs]");
+			Serial.println();
 			// ToDo: Consider how to manage buffer size differences
 			// One fix option is to switch to ring buffers instead of double buffers
-			// Another option might be to have a global interrupt-done variable to help time multiple swaps
 			
 			// Add overflow event(s) to account for the mismatched sizes
 			size_t mismatch = abs(((int)edlN) - ((int)edrN));
@@ -283,8 +325,11 @@ bool EmotiBitEda::processData()
 
 			// Perform data conversion
 			// Convert ADC to Volts
-			edlData[i] = edlTemp * _constants_v2_v3.vcc / _constants_v2_v3.adcRes;
-			edrData[i] = edrTemp * _constants_v2_v3.vcc / _constants_v2_v3.adcRes;
+			edlTemp = edlTemp * _constants_v2_v3.vcc / ((float) _constants_v2_v3.adcRes);
+			edrTemp = edrTemp * _constants_v2_v3.vcc / ((float) _constants_v2_v3.adcRes);
+
+			edlData[i] = edlTemp;
+			edrData[i] = edrTemp;
 
 			// EDL Digital Filter to remove noise
 			if (_constants_v2_v3.crossoverFilterFreq > 0)// use only is a valid crossover freq is assigned

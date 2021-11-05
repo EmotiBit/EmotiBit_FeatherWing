@@ -10,6 +10,8 @@ BufferFloat::BufferFloat(size_t capacity) {
 	_capacity = capacity;
 	//data = (float*) calloc(_capacity, sizeof(float));
 	timestamp = 0;
+	_nOverflow = 0;
+	_nClipped = 0; 
 	data = new float[_capacity];
 }
 
@@ -92,7 +94,7 @@ size_t BufferFloat::getOverflowCount()
 
 uint8_t BufferFloat::incrOverflowCount(unsigned int n)
 {
-	if (_nOverflow + n <= SIZE_MAX)
+	if (_nOverflow <= SIZE_MAX - n)
 	{
 		_nOverflow += n;
 		return SUCCESS;
@@ -111,7 +113,7 @@ size_t BufferFloat::getClippedCount()
 
 uint8_t BufferFloat::incrClippedCount(unsigned int n)
 {
-	if (_nClipped + n <= SIZE_MAX)
+	if (_nClipped <= SIZE_MAX - n)
 	{
 		_nClipped += n;
 		return SUCCESS;
@@ -126,8 +128,8 @@ uint8_t BufferFloat::incrClippedCount(unsigned int n)
 float BufferFloat::average() {
 	float f = 0;
 	for (int i = 0; i < size(); i++) {
-		f += data[i];
+		f += (float) data[i];
 	}
-	f /= size();
+	f /= (float) size();
 	return f;
 }

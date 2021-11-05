@@ -1,4 +1,4 @@
-//#define DEBUG
+//#define DEBUG_FEAT_EDA_CTRL
 
 #ifndef _EMOTIBIT_H_
 #define _EMOTIBIT_H_
