@@ -94,7 +94,7 @@ size_t BufferFloat::getOverflowCount()
 
 uint8_t BufferFloat::incrOverflowCount(unsigned int n)
 {
-	if (_nOverflow + n <= SIZE_MAX)
+	if (_nOverflow <= SIZE_MAX - n)
 	{
 		_nOverflow += n;
 		return SUCCESS;
@@ -113,7 +113,7 @@ size_t BufferFloat::getClippedCount()
 
 uint8_t BufferFloat::incrClippedCount(unsigned int n)
 {
-	if (_nClipped + n <= SIZE_MAX)
+	if (_nClipped <= SIZE_MAX - n)
 	{
 		_nClipped += n;
 		return SUCCESS;
