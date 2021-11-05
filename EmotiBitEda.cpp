@@ -221,7 +221,7 @@ uint8_t EmotiBitEda::readData()
 			_edrOversampBuffer->clear();
 		}
 	}
-
+	_readFinished = true;
 	return status;
 }
 
@@ -258,6 +258,14 @@ bool EmotiBitEda::processData()
 		uint32_t edlTs, edrTs;
 		static float edlTemp, edrTemp, edaTemp;
 
+		if (_emotibitVersion <= EmotiBitVersionController::EmotiBitVersion::V03B)
+		{
+			// Wait for readData() to complete to avoid EDL/EDR size mismatch
+			// NOTE: this can create a main loop delay up to the oversampling rate
+			// This wouldn't be necessary with a ring buffer
+			_readFinished = false;
+			while (!_readFinished);
+		}
 		// Swap EDL and EDR buffers with minimal delay to avoid size mismatch
 		_edlBuffer->swap();
 		_edrBuffer->swap();
@@ -268,10 +276,14 @@ bool EmotiBitEda::processData()
 
 		if (edlN != edrN)
 		{
-			Serial.println("WARNING: EDL and EDR buffers different sizes");
+			Serial.print("WARNING: EDL (");
+			Serial.print(edlN);
+			Serial.print(") and EDR (");
+			Serial.print(edlN);
+			Serial.print(") buffers different sizes");
+			Serial.println();
 			// ToDo: Consider how to manage buffer size differences
 			// One fix option is to switch to ring buffers instead of double buffers
-			// Another option might be to have a global interrupt-done variable to help time multiple swaps
 			
 			// Add overflow event(s) to account for the mismatched sizes
 			size_t mismatch = abs(((int)edlN) - ((int)edrN));
@@ -292,8 +304,11 @@ bool EmotiBitEda::processData()
 
 			// Perform data conversion
 			// Convert ADC to Volts
-			edlData[i] = edlTemp * _constants_v2_v3.vcc / _constants_v2_v3.adcRes;
-			edrData[i] = edrTemp * _constants_v2_v3.vcc / _constants_v2_v3.adcRes;
+			edlTemp = edlTemp * _constants_v2_v3.vcc / ((float) _constants_v2_v3.adcRes);
+			edrTemp = edrTemp * _constants_v2_v3.vcc / ((float) _constants_v2_v3.adcRes);
+
+			edlData[i] = edlTemp;
+			edrData[i] = edrTemp;
 
 			// EDL Digital Filter to remove noise
 			if (_constants_v2_v3.crossoverFilterFreq > 0)// use only is a valid crossover freq is assigned
