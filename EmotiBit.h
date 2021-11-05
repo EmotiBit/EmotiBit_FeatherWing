@@ -229,7 +229,7 @@ public:
 	MLX90632 thermopile;
 	EdaCorrection *edaCorrection = nullptr;
 	EmotiBitEda emotibitEda;
-	EmotiBitNvmController emotibitNvmController;
+	EmotiBitNvmController _emotibitNvmController;
 
 	int _emotiBitSystemConstants[(int)SystemConstants::COUNT];
 

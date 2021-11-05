@@ -132,14 +132,14 @@ bool EmotiBitEda::stageCalibLoad(EmotiBitNvmController * nvmController, bool aut
 	{
 		if (data != nullptr)
 		{
-			delete data;
+			delete[] data;
 		}
 		return false;
 	}
 
 	if (data != nullptr)
 	{
-		delete data;
+		delete[] data;
 	}
 
 	return true;

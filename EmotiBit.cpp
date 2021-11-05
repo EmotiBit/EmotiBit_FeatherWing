@@ -188,8 +188,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	if (testingMode == TestingMode::NVM_CONTROLLER_TEST)
 	{
-		emotibitNvmController.init(*(_EmotiBit_i2c), _version);
-		emotibitNvmController.setHwVersion(_version);
+		_emotibitNvmController.init(*(_EmotiBit_i2c), _version);
+		_emotibitNvmController.setHwVersion(_version);
 	}
 
 	if (testingMode == TestingMode::FACTORY_TEST)
@@ -2910,7 +2910,7 @@ void EmotiBit::readSensors()
 
 	if (testingMode == TestingMode::NVM_CONTROLLER_TEST)
 	{
-		emotibitNvmController.syncRW();
+		_emotibitNvmController.syncRW();
 	}
 }
 
@@ -3691,7 +3691,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 					Serial.print(cArray[i]); Serial.print("\t");
 				}
 				uint8_t status;
-				status = emotibitNvmController.stageToWrite(EmotiBitNvmController::DataType::VARIANT_INFO, 0, ARRAY_SIZE, (uint8_t*)cArray);
+				status = _emotibitNvmController.stageToWrite(EmotiBitNvmController::DataType::VARIANT_INFO, 0, ARRAY_SIZE, (uint8_t*)cArray);
 				if (status == 0)
 				{
 					Serial.println("\nWrite successful");
@@ -3705,7 +3705,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 				uint32_t dataSize = 0;
 				uint8_t dataVersion = 0;
 				char* cData;
-				status = emotibitNvmController.stageToRead(EmotiBitNvmController::DataType::VARIANT_INFO, dataVersion, dataSize, data);
+				status = _emotibitNvmController.stageToRead(EmotiBitNvmController::DataType::VARIANT_INFO, dataVersion, dataSize, data);
 				cData = (char*)data;
 				if (status == 0)
 				{
