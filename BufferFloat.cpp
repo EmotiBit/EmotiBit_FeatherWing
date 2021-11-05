@@ -10,6 +10,8 @@ BufferFloat::BufferFloat(size_t capacity) {
 	_capacity = capacity;
 	//data = (float*) calloc(_capacity, sizeof(float));
 	timestamp = 0;
+	_nOverflow = 0;
+	_nClipped = 0; 
 	data = new float[_capacity];
 }
 

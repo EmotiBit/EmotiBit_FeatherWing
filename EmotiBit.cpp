@@ -1161,7 +1161,7 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 }
 
 bool EmotiBit::addPacket(EmotiBit::DataType t) {
-#ifdef DEBUG_GET_DATA
+#ifdef DEBUG_FEAT_EDA_CTRL
 	Serial.print("addPacket: ");
 	Serial.println((uint8_t)t);
 #endif // DEBUG
@@ -1185,9 +1185,20 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 				}
 				else if (t == EmotiBit::DataType::DATA_OVERFLOW)
 				{
-					dataLen += dataDoubleBuffers[i]->getOverflowCount(DoubleBufferFloat::BufferSelector::OUT);
+					size_t temp = dataDoubleBuffers[i]->getOverflowCount(DoubleBufferFloat::BufferSelector::OUT);
+#ifdef DEBUG_FEAT_EDA_CTRL
+					Serial.print(i);
+					Serial.print(": ");
+					Serial.println(temp);
+#endif
+					dataLen += temp;
 				}
 			}
+#ifdef DEBUG_FEAT_EDA_CTRL
+			Serial.print(i);
+			Serial.print(": ");
+			Serial.println(dataLen);
+#endif
 		}
 	}
 	else
@@ -1199,6 +1210,10 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 			_newDataAvailable[(uint8_t)t] = true;	// set new data is available in the outputBuffer
 		}
 	}
+
+#ifdef DEBUG_FEAT_EDA_CTRL
+	Serial.println(dataLen);
+#endif
 
 	if (_sendData[(uint8_t)t]) {
 		return addPacket(timestamp, t, data, dataLen, _printLen[(uint8_t)t]);
@@ -2889,6 +2904,10 @@ void EmotiBit::readSensors()
 
 void EmotiBit::processData()
 {
+#ifdef DEBUG_FEAT_EDA_CTRL
+Serial.println("EmotiBit::processData()");
+#endif // DEBUG
+
 	// Perform all derivative calculations
 	// Swap all buffers to that data is ready to send from OUT buffer
 
@@ -2913,11 +2932,23 @@ void EmotiBit::processData()
 
 void EmotiBit::sendData()
 {
+#ifdef DEBUG_FEAT_EDA_CTRL
+Serial.println("EmotiBit::sendData()");
+#endif // DEBUG
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
+#ifdef DEBUG_FEAT_EDA_CTRL
 
+	Serial.println("for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)");
+	#endif
 	for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
 	{
+#ifdef DEBUG_FEAT_EDA_CTRL
+		Serial.println(i);
+#endif
 		addPacket((EmotiBit::DataType) i);
+#ifdef DEBUG_FEAT_EDA_CTRL
+		Serial.println("addPacket() complete");
+#endif // DEBUG
 		if (_outDataPackets.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE)
 		{
 			// Avoid overrunning our reserve memory
@@ -2944,6 +2975,10 @@ void EmotiBit::sendData()
 	}
 
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
+
+#ifdef DEBUG_EDA
+	Serial.println("Exit EmotiBit::sendData()");
+#endif // DEBUG
 }
 
 

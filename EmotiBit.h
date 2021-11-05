@@ -1,4 +1,4 @@
-//#define DEBUG
+//#define DEBUG_FEAT_EDA_CTRL
 
 #ifndef _EMOTIBIT_H_
 #define _EMOTIBIT_H_
@@ -307,7 +307,7 @@ public:
 	//} timerLoopOffset;	// Sets initial value of sampling counters
 
 	struct AcquireData {
-		bool eda = false;
+		bool eda = true;
 		bool tempHumidity = true;
 		bool thermopile = true;
 		bool imu = true;
