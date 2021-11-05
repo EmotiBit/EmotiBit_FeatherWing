@@ -39,7 +39,7 @@ private:
 	BufferFloat* _edlOversampBuffer = nullptr;
 	BufferFloat* _edrOversampBuffer = nullptr;
 	bool isCalibrated = false;
-	bool _readFinished = false;
+	volatile bool _readFinished = false;
 	
 public:
 		 
