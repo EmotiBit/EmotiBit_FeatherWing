@@ -152,8 +152,8 @@ uint8_t EmotiBitEda::readData()
 #endif // DEBUG
 	
 	int8_t status = 0;
-	static float edlTemp;	// Electrodermal Activity 
-	static float edrTemp;	// Electrodermal Activity 
+	float edlTemp;	// Electrodermal Activity 
+	float edrTemp;	// Electrodermal Activity 
 
 
 	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
@@ -169,8 +169,8 @@ uint8_t EmotiBitEda::readData()
 
 			// Check for clipping
 			// ToDo: assess correct levels more carefully
-			static const int16_t clipMinV4 = -32700;
-			static const int16_t clipMaxV4 = 32700;
+			const int16_t clipMinV4 = -32700;
+			const int16_t clipMaxV4 = 32700;
 			if (edlTemp < clipMinV4 && edlTemp > clipMaxV4)
 			{
 				status = status | _edlOversampBuffer->incrClippedCount();
@@ -198,8 +198,8 @@ uint8_t EmotiBitEda::readData()
 		status = status | _edrOversampBuffer->push_back(edrTemp);
 
 		// Check for clipping
-		static const int16_t clipMinV3 = 10;
-		static const int16_t clipMaxV3 = _constants_v2_v3.adcRes - 20;
+		const int16_t clipMinV3 = 10;
+		const int16_t clipMaxV3 = _constants_v2_v3.adcRes - 20;
 		if (edlTemp < clipMinV3 && edlTemp > clipMaxV3)
 		{
 			status = status | _edlOversampBuffer->incrClippedCount();
@@ -232,11 +232,17 @@ bool EmotiBitEda::processData()
 	{
 		size_t n;
 		float * edlData;
+		float edaTemp;
 		uint32_t timestamp;
 		n = _edlBuffer->getData(&edlData, &timestamp, true);
 		for (size_t i = 0; i < n; i++)
 		{
-			_edaBuffer->push_back(edlData[i] * _constants_v4_plus.edaTransformSlope + _constants_v4_plus.edaTransformIntercept, &timestamp);
+			// ToDo: Calculate slope/intercept to avoid expensive division in loop
+			edaTemp = edlData[i] * _constants_v4_plus.edaTransformSlope + _constants_v4_plus.edaTransformIntercept;
+			edaTemp = max(1000, edaTemp);
+			edaTemp = 1000000.f / edaTemp;
+			// ToDo: Consider filtering
+			_edaBuffer->push_back(edaTemp, &timestamp);
 		}
 		// Transfer clipped counts
 		_edaBuffer->incrClippedCount(DoubleBufferFloat::BufferSelector::IN, 
@@ -256,7 +262,7 @@ bool EmotiBitEda::processData()
 		size_t n, edlN, edrN;
 		float *edlData, *edrData;
 		uint32_t edlTs, edrTs;
-		static float edlTemp, edrTemp, edaTemp;
+		float edlTemp, edrTemp, edaTemp;
 
 		// Wait for readData() to complete to avoid EDL/EDR size mismatch
 		// NOTE: this can create a main loop delay up to the oversampling rate

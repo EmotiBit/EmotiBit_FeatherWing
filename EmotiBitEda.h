@@ -69,8 +69,8 @@ public:
 
 	struct Constants_V4_plus
 	{
-		float edaTransformSlope;
-		float edaTransformIntercept;
+		float edaTransformSlope = 728.8406523;
+		float edaTransformIntercept = 14179797.05;
 	} _constants_v4_plus;
 	
 	Adafruit_ADS1115 _ads;
