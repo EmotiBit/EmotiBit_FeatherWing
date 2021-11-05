@@ -43,7 +43,7 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 	_edlBuffer = edlBuffer;
 	_edrBuffer = edrBuffer;
 	_edlOversampBuffer = edlOversampBuffer;
-	_edlOversampBuffer = edrOversampBuffer;
+	_edrOversampBuffer = edrOversampBuffer;
 
 	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 	{	
@@ -258,17 +258,28 @@ bool EmotiBitEda::processData()
 		uint32_t edlTs, edrTs;
 		static float edlTemp, edrTemp, edaTemp;
 
-		if (_emotibitVersion <= EmotiBitVersionController::EmotiBitVersion::V03B)
+		// Wait for readData() to complete to avoid EDL/EDR size mismatch
+		// NOTE: this can create a main loop delay up to the oversampling rate
+		// This wouldn't be necessary with a ring buffer
+
+		uint32_t waitEnd;
+		uint32_t waitStart = micros();
+		_readFinished = false;
+		while (!_readFinished)
 		{
-			// Wait for readData() to complete to avoid EDL/EDR size mismatch
-			// NOTE: this can create a main loop delay up to the oversampling rate
-			// This wouldn't be necessary with a ring buffer
-			_readFinished = false;
-			while (!_readFinished);
+			waitEnd = micros();
+			if (waitEnd - waitStart > 100000)
+			{
+				Serial.println("Timeout waiting for EmotiBitEda::_readFinished");
+				break;
+			}
 		}
+		
 		// Swap EDL and EDR buffers with minimal delay to avoid size mismatch
+		uint32_t swapStart = micros();
 		_edlBuffer->swap();
 		_edrBuffer->swap();
+		uint32_t swapEnd = micros();
 
 		// Get pointers to the data buffers
 		edlN = _edlBuffer->getData(&edlData, &edlTs, false);
@@ -279,8 +290,12 @@ bool EmotiBitEda::processData()
 			Serial.print("WARNING: EDL (");
 			Serial.print(edlN);
 			Serial.print(") and EDR (");
-			Serial.print(edlN);
-			Serial.print(") buffers different sizes");
+			Serial.print(edrN);
+			Serial.print(") buffers different sizes. [");
+			Serial.print(waitEnd - waitStart);
+			Serial.print(", ");
+			Serial.print(swapEnd - swapStart);
+			Serial.print(" usecs]");
 			Serial.println();
 			// ToDo: Consider how to manage buffer size differences
 			// One fix option is to switch to ring buffers instead of double buffers

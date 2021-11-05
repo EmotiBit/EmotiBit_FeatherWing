@@ -128,8 +128,8 @@ uint8_t BufferFloat::incrClippedCount(unsigned int n)
 float BufferFloat::average() {
 	float f = 0;
 	for (int i = 0; i < size(); i++) {
-		f += data[i];
+		f += (float) data[i];
 	}
-	f /= size();
+	f /= (float) size();
 	return f;
 }

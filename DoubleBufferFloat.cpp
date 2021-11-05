@@ -49,23 +49,9 @@ size_t DoubleBufferFloat::getData(float ** data, uint32_t * timestamp, bool swap
 
 	if (_outputBuffer != nullptr) 
 	{
-		if (swapBuffers && _inputBuffer != nullptr)
+		if (swapBuffers)
 		{
-			_outputBuffer->clear();
-			if (_inputBuffer == _buffer1) {
-#ifdef DEBUG
-				Serial.println("_inputBuffer == &_buffer2");
-#endif // DEBUG
-				_inputBuffer = _buffer2;
-				_outputBuffer = _buffer1;
-			}
-			else {
-#ifdef DEBUG
-				Serial.println("_inputBuffer != &_buffer1");
-#endif // DEBUG
-				_inputBuffer = _buffer1;
-				_outputBuffer = _buffer2;
-			}
+			swap();
 		}
 		(*data) = _outputBuffer->data;
 		if (timestamp != nullptr) {
@@ -78,6 +64,8 @@ size_t DoubleBufferFloat::getData(float ** data, uint32_t * timestamp, bool swap
 
 bool DoubleBufferFloat::swap()
 {
+	// ToDo: add a mutex to handle multithreaded CPUs
+	
 	if (_outputBuffer != nullptr)
 	{
 		_outputBuffer->clear();
@@ -95,7 +83,9 @@ bool DoubleBufferFloat::swap()
 			_inputBuffer = _buffer1;
 			_outputBuffer = _buffer2;
 		}
+		return true;
 	}
+	return false;
 }
 
 //void DoubleBufferFloat::setAutoResize(bool b) {
