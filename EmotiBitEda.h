@@ -13,6 +13,9 @@
     BSD license, all text here must be included in any redistribution
 */
 /**************************************************************************/
+
+#include "Arduino.h"
+
 #ifndef _EMOTIBIT_EDA_H_
 #define _EMOTIBIT_EDA_H_
 
@@ -46,8 +49,8 @@ public:
 	// EDA constants shared by different EmotiBit versions
 	struct Constants
 	{
-		float edaSeriesResistance = 0;	//Ohms
-		float samplingRate = 15.0;	// Hz
+		float edaSeriesResistance = 0.f;	//Ohms
+		float samplingRate = 15.f;	// Hz
 		uint8_t adcBits;	// Bit resolution of ADC, e.g. 12, 16
 		bool enableDigitalFilter = false;
 	} _constants;
@@ -55,16 +58,16 @@ public:
 	// V2/V3 specific EDA constants
 	struct Constants_V2_V3
 	{
-		float vcc = 3.3;	// Volts
-		float edrAmplification = 30;	// Hardware amplification at EDR stage
-		float vRef1 = 15.0 / 100.0;	// Volts
-		float vRef2 = 2.65;	// Volts
+		float vcc = 3.3f;	// Volts
+		float edrAmplification = 30.f;	// Hardware amplification at EDR stage
+		float vRef1 = 15.f / 100.f;	// Volts
+		float vRef2 = 2.65f;	// Volts
 		float feedbackAmpR = 5000000; // Ohms
 		float crossoverFilterFreq = 1.f / (2.f * PI * 200000.f * 0.0000047f);	// Hz
 		int adcRes;	// 2^adcBits
 		uint8_t edlPin = A4;	// ADC pin to read for EDL
 		uint8_t edrPin = A3;	// ADC pin to read for EDR
-		float isrOffsetCorr = 0;	// Correction for ADC value changes when ISR running
+		float isrOffsetCorr = 0.f;	// Correction for ADC value changes when ISR running
 	} _constants_v2_v3;
 
 	struct Constants_V4_plus

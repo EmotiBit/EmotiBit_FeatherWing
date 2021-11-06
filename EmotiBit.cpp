@@ -423,6 +423,32 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	
 	Serial.println("\nSensor setup:");
+	// setup sampling rates
+	EmotiBit::SamplingRates samplingRates;
+	samplingRates.accelerometer = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
+	samplingRates.gyroscope = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
+	samplingRates.magnetometer = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
+	samplingRates.eda = BASE_SAMPLING_FREQ / EDA_SAMPLING_DIV;
+	samplingRates.humidity = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
+	samplingRates.temperature = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
+	samplingRates.thermopile = (float)BASE_SAMPLING_FREQ / (float)THERMOPILE_SAMPLING_DIV;
+	setSamplingRates(samplingRates);
+	// ToDo: make target down-sampled rates more transparent
+	EmotiBit::SamplesAveraged samplesAveraged;
+	samplesAveraged.eda = samplingRates.eda / 15;
+	samplesAveraged.humidity = (float)samplingRates.humidity / 7.5f;
+	samplesAveraged.temperature = (float)samplingRates.temperature / 7.5f;
+	if (thermopileMode == MODE_CONTINUOUS)
+	{
+		samplesAveraged.thermopile = 1;
+	}
+	else
+	{
+		samplesAveraged.thermopile = (float)samplingRates.thermopile / 7.5f;
+	}
+	samplesAveraged.battery = BASE_SAMPLING_FREQ / BATTERY_SAMPLING_DIV / 1;
+	setSamplesAveraged(samplesAveraged);
+
 	Serial.print("Initializing NVM controller: ");
 	if (_emotibitNvmController.init(*_EmotiBit_i2c, _version))
 	{
@@ -794,8 +820,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 
 	// Setup EDA
-	Serial.print("Setting up EDA...");
-	if (emotibitEda.setup(_version, _samplingRates.eda / _samplesAveraged.eda, &eda, &edl, &edr, _EmotiBit_i2c, &edlBuffer, &edrBuffer))
+	Serial.println("Setting up EDA...");
+	if (emotibitEda.setup(_version, _samplingRates.eda / ((float)_samplesAveraged.eda), &eda, &edl, &edr, _EmotiBit_i2c, &edlBuffer, &edrBuffer))
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 	}
@@ -804,7 +830,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 		Serial.println(factoryTestSerialOutput);
 	}
-	Serial.println("");
 	Serial.print("Loading EDA calibration: ");
 	if (emotibitEda.stageCalibLoad(&_emotibitNvmController, true))
 	{
@@ -819,34 +844,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	// Sensor setup complete
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
 	led.send();
-
-	// setup sampling rates
-	//Serial.println("Setting up sampling rates...");
-	EmotiBit::SamplingRates samplingRates;
-	samplingRates.accelerometer = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
-	samplingRates.gyroscope = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
-	samplingRates.magnetometer = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
-	samplingRates.eda = BASE_SAMPLING_FREQ / EDA_SAMPLING_DIV;
-	samplingRates.humidity = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
-	samplingRates.temperature = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
-	samplingRates.thermopile = (float)BASE_SAMPLING_FREQ / (float)THERMOPILE_SAMPLING_DIV;
-	setSamplingRates(samplingRates);
-
-	// ToDo: make target down-sampled rates more transparent
-	EmotiBit::SamplesAveraged samplesAveraged;
-	samplesAveraged.eda = samplingRates.eda / 15;
-	samplesAveraged.humidity = (float)samplingRates.humidity / 7.5f;
-	samplesAveraged.temperature = (float)samplingRates.temperature / 7.5f;
-	if (thermopileMode == MODE_CONTINUOUS)
-	{
-		samplesAveraged.thermopile = 1;
-	}
-	else
-	{
-		samplesAveraged.thermopile = (float)samplingRates.thermopile / 7.5f;
-	}
-	samplesAveraged.battery = BASE_SAMPLING_FREQ / BATTERY_SAMPLING_DIV / 1;
-	setSamplesAveraged(samplesAveraged);
 
 	// EDL Filter Parameters
 	//edaCrossoverFilterFreq = emotiBitVersionController.getMathConstant(MathConstants::EDA_CROSSOVER_FILTER_FREQ);

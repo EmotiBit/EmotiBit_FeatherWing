@@ -45,9 +45,18 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 	_edlOversampBuffer = edlOversampBuffer;
 	_edrOversampBuffer = edrOversampBuffer;
 
+	String output = String(30);
+
+	output = "edaSeriesResistance " + String(_constants.edaSeriesResistance);
+	Serial.println(output);
+	output = "samplingRate " + String(_constants.samplingRate);
+	Serial.println(output);
+	output = "enableDigitalFilter " + String(_constants.enableDigitalFilter);
+	Serial.println(output);
+
 	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 	{	
-		Serial.print("Configuring ADS ADC...");
+		Serial.println("Configuring ADS ADC...");
 
 		_constants.adcBits = 16;
 
@@ -55,15 +64,49 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 		_ads.setDataRate(RATE_ADS1115_475SPS);	// set to 475Hz to allow for 300Hz oversampling
 		_ads.setGain(GAIN_TWO);        // 2x gain   +/- 2.048V  1 bit = 1mV      0.0625mV
 
+		output = "adcBits " + String(_constants.adcBits);
+		Serial.println(output);
+		output = "_ads.setDataRate " + String("RATE_ADS1115_475SPS");
+		Serial.println(output);
+		output = "_ads.setGain " + String("GAIN_TWO");
+		Serial.println(output);
+		output = "edaTransformSlope " + String(_constants_v4_plus.edaTransformSlope);
+		Serial.println(output);
+		output = "edaTransformIntercept " + String(_constants_v4_plus.edaTransformIntercept);
+		Serial.println(output);
+
 		return _ads.begin(0x48, emotibitI2c, false); // callBegin -> false. the i2c wire has already been init in setup
+
 	}
 	else if (_emotibitVersion <= EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
-		Serial.print("Configuring SAMD ADC...");
-
+		Serial.println("Configuring SAMD ADC...");
 		_constants.adcBits = 12;
-		_constants_v2_v3.adcRes = 2 ^ _constants.adcBits;
-		
+		_constants_v2_v3.adcRes = pow(2, _constants.adcBits);
+
+		output = "adcBits " + String(_constants.adcBits);
+		Serial.println(output);
+		output = "vcc " + String(_constants_v2_v3.vcc);
+		Serial.println(output);
+		output = "edrAmplification " + String(_constants_v2_v3.edrAmplification);
+		Serial.println(output);
+		output = "vRef1 " + String(_constants_v2_v3.vRef1);
+		Serial.println(output);
+		output = "vRef2 " + String(_constants_v2_v3.vRef2);
+		Serial.println(output);
+		output = "feedbackAmpR " + String(_constants_v2_v3.feedbackAmpR);
+		Serial.println(output);
+		output = "crossoverFilterFreq " + String(_constants_v2_v3.crossoverFilterFreq);
+		Serial.println(output);
+		output = "adcRes " + String(_constants_v2_v3.adcRes);
+		Serial.println(output);
+		output = "edlPin " + String(_constants_v2_v3.edlPin);
+		Serial.println(output);
+		output = "edrPin " + String(_constants_v2_v3.edrPin);
+		Serial.println(output);
+		output = "isrOffsetCorr " + String(_constants_v2_v3.isrOffsetCorr);
+		Serial.println(output);
+
 		return true;
 	}
 
@@ -116,8 +159,7 @@ bool EmotiBitEda::stageCalibLoad(EmotiBitNvmController * nvmController, bool aut
 	uint8_t* data = nullptr;
 	uint8_t status = nvmController->stageToRead(EmotiBitNvmController::DataType::EDA, dataVersion, dataSize, data, autoSync);
 	
-	if (status != (uint8_t)EmotiBitNvmController::Status::SUCCESS) return false;
-
+	if (status != (uint8_t)EmotiBitNvmController::Status::SUCCESS || dataSize == 0) return false;
 	if (dataVersion == EmotiBitEdaCalibration::V2 && dataSize == sizeof(EmotiBitEdaCalibration::V2))
 	{
 		EmotiBitEdaCalibration::RawValues_V2 *rawVals = (EmotiBitEdaCalibration::RawValues_V2 *)data;
@@ -132,14 +174,14 @@ bool EmotiBitEda::stageCalibLoad(EmotiBitNvmController * nvmController, bool aut
 	{
 		if (data != nullptr)
 		{
-			delete data;
+			delete[] data;
 		}
 		return false;
 	}
 
 	if (data != nullptr)
 	{
-		delete data;
+		delete[] data;
 	}
 
 	return true;
@@ -147,9 +189,7 @@ bool EmotiBitEda::stageCalibLoad(EmotiBitNvmController * nvmController, bool aut
 
 uint8_t EmotiBitEda::readData()
 {
-#ifdef DEBUG
-		Serial.println("EmotiBitEda::readData()");
-#endif // DEBUG
+	Serial.println("EmotiBitEda::readData()");
 	
 	int8_t status = 0;
 	float edlTemp;	// Electrodermal Activity 
@@ -163,7 +203,6 @@ uint8_t EmotiBitEda::readData()
 		{
 			edlTemp = _ads.getLastConversionResults();
 			_ads.startADC_Differential_0_1();
-
 			// ToDo: consider how to utilize edl & edr buffers for different EmotiBit versions to minimize RAM footprint & code clarity
 			status = status | _edlOversampBuffer->push_back(edlTemp);
 
@@ -239,7 +278,7 @@ bool EmotiBitEda::processData()
 		{
 			// ToDo: Calculate slope/intercept to avoid expensive division in loop
 			edaTemp = edlData[i] * _constants_v4_plus.edaTransformSlope + _constants_v4_plus.edaTransformIntercept;
-			edaTemp = max(1000, edaTemp);
+			edaTemp = max(1000.f , edaTemp);
 			edaTemp = 1000000.f / edaTemp;
 			// ToDo: Consider filtering
 			_edaBuffer->push_back(edaTemp, &timestamp);
@@ -328,6 +367,7 @@ bool EmotiBitEda::processData()
 			edlTemp = edlTemp * _constants_v2_v3.vcc / ((float) _constants_v2_v3.adcRes);
 			edrTemp = edrTemp * _constants_v2_v3.vcc / ((float) _constants_v2_v3.adcRes);
 
+			// In-place update buffers to Volts
 			edlData[i] = edlTemp;
 			edrData[i] = edrTemp;
 
