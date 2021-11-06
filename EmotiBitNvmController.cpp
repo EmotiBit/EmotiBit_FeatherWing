@@ -277,6 +277,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 			// Load the correct memory-map from EEPROM
 			uint8_t mapLoadStatus;
 			mapLoadStatus = loadMemoryMap(_readBuffer.datatype);
+
 			if (mapLoadStatus != 0)
 			{
 				_readResult = Status::MEMORY_NOT_UPDATED;
@@ -284,7 +285,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 			}
 			else
 			{
-				if (map[(uint8_t)_readBuffer.datatype].dataSize != 0 && map[(uint8_t)_readBuffer.datatype].dataSize != 255)
+				if (map[(uint8_t)_readBuffer.datatype].dataSize != 0 && map[(uint8_t)_readBuffer.datatype].dataSize != UINT32_MAX)  // MAX changes with datatype set in the MemoryMap
 				{
 					uint8_t *eepromData = new uint8_t[map[(uint8_t)_readBuffer.datatype].dataSize];
 					uint8_t datatypeVersion;
