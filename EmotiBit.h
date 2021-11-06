@@ -1,4 +1,6 @@
 //#define DEBUG_FEAT_EDA_CTRL
+//#define DEBUG_THERM_PROCESS
+//#define DEBUG_THERM_UPDATE
 
 #ifndef _EMOTIBIT_H_
 #define _EMOTIBIT_H_

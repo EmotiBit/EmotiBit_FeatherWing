@@ -1740,6 +1740,9 @@ int8_t EmotiBit::updateTempHumidityData() {
 
 
 int8_t EmotiBit::updateThermopileData() {
+#ifdef DEBUG_THERM_UPDATE
+	Serial.println("updateThermopileData");
+#endif
 	// Thermopile
 	int8_t status = 0;
 	uint32_t timestamp;
@@ -1759,10 +1762,14 @@ int8_t EmotiBit::updateThermopileData() {
 			}
 		}
 		else {
-
 			thermStatus = MLX90632::status::SENSOR_NO_NEW_DATA;
 			thermopile.getRawSensorValues(thermStatus, AMB, Sto); //Get the temperature of the object we're looking at in C
-			if (thermStatus != MLX90632::status::SENSOR_SUCCESS)
+#ifdef DEBUG_THERM_UPDATE
+			Serial.println("AMB " + String(AMB));
+			Serial.println("Sto " + String(Sto));
+			Serial.println("thermStatus " + String(thermStatus));
+#endif
+			if (thermStatus == MLX90632::status::SENSOR_SUCCESS)
 			{
 				timestamp = millis();
 				status = status | therm0AMB.push_back(AMB, &(timestamp));
@@ -2086,6 +2093,10 @@ int8_t EmotiBit::pushData(EmotiBit::DataType type, float data, uint32_t * timest
 
 bool EmotiBit::processThermopileData()
 {
+#ifdef DEBUG_THERM_PROCESS
+	Serial.println("EmotiBit::processThermopileData");
+#endif
+
 	size_t sizeAMB;
 	size_t sizeSto;
 	size_t n;
@@ -2101,6 +2112,11 @@ bool EmotiBit::processThermopileData()
 	// Get pointers to the data buffers
 	sizeAMB = therm0AMB.getData(&dataAMB, timestampAmb, false);
 	sizeSto = therm0Sto.getData(&dataSto, timestampSto, false);
+#ifdef DEBUG_THERM_PROCESS
+	Serial.println("sizeof(therm0AMB) " + String(sizeAMB));
+	Serial.println("sizeof(therm0Sto) " + String(sizeSto));
+#endif
+
 	if (sizeAMB != sizeSto) // interrupt hit between therm0AMB.getdata and therm0Sto.getdata
 	{
 		Serial.println("WARNING: therm0AMB and therm0Sto buffers different sizes");
@@ -2126,6 +2142,10 @@ bool EmotiBit::processThermopileData()
 	n = min(sizeAMB, sizeSto);
 	for (uint8_t i = 0; i < n; i++)
 	{
+#ifdef DEBUG_THERM_PROCESS
+		Serial.println("dataAMB " + String(dataAMB[i]));
+		Serial.println("dataSto " + String(dataSto[i]));
+#endif
 		// if dummy data was stored
 		if (dataAMB[i] == -2 && dataSto[i] == -2)
 		{
@@ -2155,6 +2175,9 @@ bool EmotiBit::processThermopileData()
 		else
 		{
 			objectTemp = thermopile.getObjectTemp(dataAMB[i], dataSto[i]);
+#ifdef DEBUG_THERM_PROCESS
+			Serial.println(objectTemp);
+#endif
 		}
 
 		if (isnan(objectTemp))

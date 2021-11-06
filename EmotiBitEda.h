@@ -72,8 +72,8 @@ public:
 
 	struct Constants_V4_plus
 	{
-		float edaTransformSlope = 728.8406523;	// empirically derived
-		float edaTransformIntercept = 14179797.05; // empirically derived
+		float edaTransformSlope = 728.8406523;	// empirically derived, see EmotiBitEdaCalibration::calculate
+		float edaTransformIntercept = 14179797.05; // empirically derived, see EmotiBitEdaCalibration::calculate
 	} _constants_v4_plus;
 	
 	Adafruit_ADS1115 _ads;
