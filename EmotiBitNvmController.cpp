@@ -68,6 +68,7 @@ uint8_t EmotiBitNvmController::stageToWrite(DataType datatype, uint8_t datatypeV
 				return (uint8_t)Status::INVALID_DATA_TO_WRITE;
 			}
 			_writeResult = Status::SUCCESS;
+			_validateWrite = enableValidateWrite;
 			if (autoSync)
 			{
 				// ToDo: plan to make it asynchronous
@@ -78,20 +79,11 @@ uint8_t EmotiBitNvmController::stageToWrite(DataType datatype, uint8_t datatypeV
 			else
 			{
 				writeState = State::READY_TO_WRITE;
-				while (writeState == State::READY_TO_WRITE);
-			}
-
-			uint8_t status;
-			if (enableValidateWrite && _writeResult == Status::SUCCESS)
-			{
-				status =  validateWrite();
-			}
-			else
-			{
-				status =  (uint8_t)_writeResult;
+				while (writeState == State::READY_TO_WRITE || writeState == State::BUSY_WRITING);
 			}
 			_writeBuffer.clear();
-			return status;
+			_validateWrite = false;
+			return (uint8_t) _writeResult;
 		}
 		else
 		{
@@ -110,13 +102,15 @@ uint8_t EmotiBitNvmController::validateWrite()
 	uint8_t datatypeVersion = 0;
 	uint32_t dataSize = 0;
 	uint8_t status;
-	stageToRead(_writeBuffer.datatype, datatypeVersion, dataSize, data, true);
+	
+	status = stageToRead(_writeBuffer.datatype, datatypeVersion, dataSize, data, true);
+	if (status != 0)
+	{
+		return status;
+	}
 
 	if (datatypeVersion != _writeBuffer.datatypeVersion || dataSize != _writeBuffer.dataSize)
 	{
-		Serial.print("datatypeVersion(NVM): "); Serial.print(datatypeVersion); Serial.print("\tdatatypeVersion(buffer): "); Serial.println(_writeBuffer.datatypeVersion);
-		Serial.print("datasize(NVM): "); Serial.print(dataSize); Serial.print("\tdatasize(buffer): "); Serial.println(_writeBuffer.dataSize);
-		
 		return (uint8_t)Status::I2C_WRITE_ERROR;
 	}
 
@@ -127,6 +121,7 @@ uint8_t EmotiBitNvmController::validateWrite()
 			return (uint8_t)Status::I2C_WRITE_ERROR;
 		}
 	}
+	delete[] data;
 	return (uint8_t)Status::SUCCESS;
 }
 
@@ -163,6 +158,7 @@ uint8_t EmotiBitNvmController::writeToStorage()
 {
 	if (writeState == State::READY_TO_WRITE)
 	{
+		writeState = State::BUSY_WRITING;
 		// ToDo: store the return value from i2c writes, afteer driver is updated
 		uint8_t i2cWriteStatus = 0;
 		// write numMapEntries if not written already
@@ -183,6 +179,17 @@ uint8_t EmotiBitNvmController::writeToStorage()
 		// Write the datatype version
 		emotibitEeprom.write(map[(int)_writeBuffer.datatype].address+_writeBuffer.dataSize, _writeBuffer.datatypeVersion);
 
+		if (_validateWrite)
+		{
+			uint8_t status;
+			status = validateWrite();
+			if (status != 0)
+			{
+				writeState = State::IDLE;
+				_writeResult = (Status)status;
+				return (uint8_t)_writeResult;
+			}
+		}
 		// clear the buffer after data has been written
 		writeState = State::IDLE;
 		_writeResult = Status::SUCCESS;
@@ -212,7 +219,7 @@ uint8_t EmotiBitNvmController::stageToRead(DataType datatype, uint8_t &datatypeV
 		else
 		{
 			readState = State::READY_TO_READ;
-			while (readState != State::READ_BUFFER_FULL);
+			while (readState != State::READ_BUFFER_FULL && readState != State::IDLE);
 		}
 		if (_readResult == Status::SUCCESS && readState == State::READ_BUFFER_FULL)
 		{
@@ -264,6 +271,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 {
 	if (readState == State::READY_TO_READ)
 	{
+		readState = State::BUSY_READING;
 		if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 		{
 			// Load the correct memory-map from EEPROM
@@ -291,6 +299,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 				}
 				else
 				{
+					readState = State::IDLE;
 					_readResult = Status::MEMORY_NOT_UPDATED;
 					return (uint8_t)_readResult;
 				}

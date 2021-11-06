@@ -27,6 +27,7 @@
 #include "EmotiBitFactoryTest.h"
 #include "EmotiBitEda.h"
 #include "EmotiBitVariants.h"
+#include "EmotiBitNvmController.h"
 
 class EmotiBit {
   
@@ -39,10 +40,11 @@ public:
 		ISR_CORRECTION_UPDATE,
 		ISR_CORRECTION_TEST,
 		FACTORY_TEST,
+		NVM_CONTROLLER_TEST,
 		length
 	};
 
-	String firmware_version = "1.2.86-feat-EmotiBitEda";
+	String firmware_version = "1.2.86-NvmController";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 

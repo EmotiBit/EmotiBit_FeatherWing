@@ -68,7 +68,7 @@ public:
 		CONTROLLER_BUSY,
 		INVALID_DATA_TO_WRITE,
 		OTHER_FAILURE
-	}_writeResult, _readResult;
+	};
 
 	struct Buffer
 	{
@@ -95,10 +95,14 @@ public:
 	{
 		IDLE,
 		READY_TO_WRITE,
+		BUSY_WRITING,
 		READY_TO_READ,
+		BUSY_READING,
 		READ_BUFFER_FULL
-	}writeState, readState;
-
+	};
+	volatile bool _validateWrite;
+	volatile State writeState, readState;
+	volatile Status _writeResult, _readResult;
 	uint32_t _nextAvailableAddress = ConstEepromAddr::MEMORY_MAP_BASE + (sizeof(EepromMemoryMap)*(int)DataType::length);
 	uint8_t _numMapEntries = (uint8_t)DataType::length;
 	ExternalEEPROM emotibitEeprom;

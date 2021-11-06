@@ -185,6 +185,13 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println("Download v0.6.0 for Alpha boards");
 		hibernate(false);
 	}
+
+	if (testingMode == TestingMode::NVM_CONTROLLER_TEST)
+	{
+		_emotibitNvmController.init(*(_EmotiBit_i2c), _version);
+		_emotibitNvmController.setHwVersion(_version);
+	}
+
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		// Pass only if FW version estimate is exactly = barcode version
@@ -2920,6 +2927,11 @@ void EmotiBit::readSensors()
 	if (acquireData.debug) pushData(EmotiBit::DataType::DEBUG, micros() - readSensorsBegin); // Add readSensors processing duration to debugBuffer
 
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
+
+	if (testingMode == TestingMode::NVM_CONTROLLER_TEST)
+	{
+		_emotibitNvmController.syncRW();
+	}
 }
 
 void EmotiBit::processData()
@@ -3684,6 +3696,57 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			_enableDigitalFilter.my = false;
 			_enableDigitalFilter.mz = false;
 			_enableDigitalFilter.eda = false;
+		}
+		else if (c == 'n')
+		{
+			if (_version == EmotiBitVersionController::EmotiBitVersion::V04A)
+			{
+				static const uint32_t ARRAY_SIZE = 10;
+				char cArray[ARRAY_SIZE] = { 'a','b','c','d','e','1','2','3','4','5' };
+				// write a struct of data to the EEPROM
+				Serial.println("Testing NVM Controller. Writing to EEPROM(Location VARIANT_INFO)");
+				Serial.println("Writing to EEPROM: ");
+				for (int i = 0; i < ARRAY_SIZE; i++)
+				{
+					Serial.print(cArray[i]); Serial.print("\t");
+				}
+				uint8_t status;
+				status = _emotibitNvmController.stageToWrite(EmotiBitNvmController::DataType::VARIANT_INFO, 0, ARRAY_SIZE, (uint8_t*)cArray);
+				if (status == 0)
+				{
+					Serial.println("\nWrite successful");
+				}
+				else
+				{
+					Serial.print("Write unsuccessful. ErrorCode: "); Serial.println(status);
+				}
+				Serial.println("Reading from EEPROM");
+				uint8_t* data = nullptr;
+				uint32_t dataSize = 0;
+				uint8_t dataVersion = 0;
+				char* cData;
+				status = _emotibitNvmController.stageToRead(EmotiBitNvmController::DataType::VARIANT_INFO, dataVersion, dataSize, data);
+				cData = (char*)data;
+				if (status == 0)
+				{
+					Serial.print("Version Read: "); Serial.println(dataVersion);
+					Serial.println("Data Read: ");
+					for (int i = 0; i < dataSize; i++)
+					{
+						Serial.print(cData[i]); Serial.print("\t");
+					}
+				}
+				else
+				{
+					Serial.print("Read unsuccessful. ErrorCode: "); Serial.println(status);
+				}
+				delete[] data;
+				Serial.println("Read Successful");
+			}
+			else
+			{
+				Serial.println("Cannot test NVM for this HW version.");
+			}
 		}
 	}
 }
