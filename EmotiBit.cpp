@@ -2122,7 +2122,7 @@ bool EmotiBit::processThermopileData()
 	while (samplingInterval - (micros() - _thermReadFinishedTime) < 500)
 	{
 		// Wait until we have at least 500 usec to do swap
-		Serial.println("WAIT");
+		//Serial.println("WAIT");
 		waitEnd = micros();
 		if (waitEnd - waitStart > 100000)
 		{
