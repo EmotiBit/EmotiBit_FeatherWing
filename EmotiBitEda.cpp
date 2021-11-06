@@ -189,8 +189,6 @@ bool EmotiBitEda::stageCalibLoad(EmotiBitNvmController * nvmController, bool aut
 
 uint8_t EmotiBitEda::readData()
 {
-	Serial.println("EmotiBitEda::readData()");
-	
 	int8_t status = 0;
 	float edlTemp;	// Electrodermal Activity 
 	float edrTemp;	// Electrodermal Activity 
