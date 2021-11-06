@@ -59,12 +59,12 @@ public:
 	struct Constants_V2_V3
 	{
 		float vcc = 3.3f;	// Volts
-		float edrAmplification = 30.f;	// Hardware amplification at EDR stage
-		float vRef1 = 15.f / 100.f;	// Volts
-		float vRef2 = 2.65f;	// Volts
-		float feedbackAmpR = 5000000; // Ohms
+		float edrAmplification = 100.f / 3.3f;	// Hardware amplification at EDR stage
+		float vRef1 = 0.426f; // Volts empirically derived minimum voltage divider value [theoretical 15/(15 + 100)]. 
+		float vRef2 = 1.634591173; // Volts empirically derived average voltage divider value [theoretical _vcc * (100.f / (100.f + 100.f))]
+		float feedbackAmpR = 5070000.f; // empirically derived average edaFeedbackAmpR in Ohms (theoretical 4990000.f)
 		float crossoverFilterFreq = 1.f / (2.f * PI * 200000.f * 0.0000047f);	// Hz
-		int adcRes;	// 2^adcBits
+		int adcRes;	// 2^adcBits-1
 		uint8_t edlPin = A4;	// ADC pin to read for EDL
 		uint8_t edrPin = A3;	// ADC pin to read for EDR
 		float isrOffsetCorr = 0.f;	// Correction for ADC value changes when ISR running
@@ -72,8 +72,8 @@ public:
 
 	struct Constants_V4_plus
 	{
-		float edaTransformSlope = 728.8406523;
-		float edaTransformIntercept = 14179797.05;
+		float edaTransformSlope = 728.8406523;	// empirically derived
+		float edaTransformIntercept = 14179797.05; // empirically derived
 	} _constants_v4_plus;
 	
 	Adafruit_ADS1115 _ads;

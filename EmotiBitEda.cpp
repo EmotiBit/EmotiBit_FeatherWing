@@ -82,7 +82,7 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 	{
 		Serial.println("Configuring SAMD ADC...");
 		_constants.adcBits = 12;
-		_constants_v2_v3.adcRes = pow(2, _constants.adcBits);
+		_constants_v2_v3.adcRes = pow(2, _constants.adcBits) - 1;
 
 		output = "adcBits " + String(_constants.adcBits);
 		Serial.println(output);
