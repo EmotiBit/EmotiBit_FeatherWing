@@ -14,12 +14,12 @@
 */
 /**************************************************************************/
 
-#include "Arduino.h"
 
 #ifndef _EMOTIBIT_EDA_H_
 #define _EMOTIBIT_EDA_H_
 
 
+#include "Arduino.h"
 #include "EmotiBitVersionController.h"
 #include "EmotiBitNvmController.h"
 #include <ArduinoJson.h>
@@ -42,8 +42,8 @@ private:
 	BufferFloat* _edlOversampBuffer = nullptr;
 	BufferFloat* _edrOversampBuffer = nullptr;
 	bool isCalibrated = false;
-	volatile bool _readFinished = false;
-	
+	volatile unsigned long int _readFinishedTime = 0;
+
 public:
 		 
 	// EDA constants shared by different EmotiBit versions

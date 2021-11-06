@@ -82,6 +82,7 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 	{
 		Serial.println("Configuring SAMD ADC...");
 		_constants.adcBits = 12;
+		analogReadResolution(_constants.adcBits);
 		_constants_v2_v3.adcRes = pow(2, _constants.adcBits) - 1;
 
 		output = "adcBits " + String(_constants.adcBits);
@@ -258,7 +259,7 @@ uint8_t EmotiBitEda::readData()
 			_edrOversampBuffer->clear();
 		}
 	}
-	_readFinished = true;
+	_readFinishedTime = micros();
 	return status;
 }
 
@@ -305,24 +306,34 @@ bool EmotiBitEda::processData()
 		// NOTE: this can create a main loop delay up to the oversampling rate
 		// This wouldn't be necessary with a ring buffer
 
-		uint32_t waitEnd;
-		uint32_t waitStart = micros();
-		_readFinished = false;
-		while (!_readFinished)
+		static const unsigned long int samplingInterval = 1000000 / (_constants.samplingRate * _edrOversampBuffer->capacity());
+
+		//Serial.print("window: " + String(samplingInterval - (micros() - _readFinishedTime)));
+		//Serial.print("[" + String(samplingInterval));
+		//Serial.print(", " + String(micros()));
+		//Serial.print(", " + String(_readFinishedTime));
+		//Serial.print("]");
+		//Serial.println("");
+		unsigned long int waitEnd;
+		unsigned long int waitStart = micros();
+		while (samplingInterval - (micros() - _readFinishedTime) < 500)
 		{
+			// Wait until we have at least 500 usec to do swap
+			//Serial.println("WAIT");
 			waitEnd = micros();
 			if (waitEnd - waitStart > 100000)
 			{
-				Serial.println("Timeout waiting for EmotiBitEda::_readFinished");
+				Serial.println("Timeout waiting for EmotiBitEda::_readFinishedTime");
 				break;
 			}
 		}
 		
 		// Swap EDL and EDR buffers with minimal delay to avoid size mismatch
-		uint32_t swapStart = micros();
+		unsigned long int swapStart = micros();
 		_edlBuffer->swap();
 		_edrBuffer->swap();
-		uint32_t swapEnd = micros();
+		unsigned long int swapEnd = micros();
+		//Serial.println("swap: " + String(swapEnd - swapStart));
 
 		// Get pointers to the data buffers
 		edlN = _edlBuffer->getData(&edlData, &edlTs, false);

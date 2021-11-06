@@ -251,6 +251,7 @@ public:
 	bool thermopileBegun = false;
 	int thermopileFs = 8; // *** NOTE *** changing this may wear out the Melexis flash
 	uint8_t thermopileMode = MODE_STEP;		// If changing to MODE_CONTINUOUS besure to adjust SAMPLING_DIV to match thermopile rate
+	volatile unsigned long int _thermReadFinishedTime;
 
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 2048;

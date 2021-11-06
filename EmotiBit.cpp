@@ -1801,6 +1801,7 @@ int8_t EmotiBit::updateThermopileData() {
 		}
 	}
 	
+	_thermReadFinishedTime = micros();
 	return status;
 }
 
@@ -2111,10 +2112,31 @@ bool EmotiBit::processThermopileData()
 	float* dataSto;
 	uint32_t* timestampAmb;
 	uint32_t* timestampSto;
+
+	static const unsigned long int samplingInterval = 1000000 / (_samplingRates.thermopile * _samplesAveraged.thermopile);
+
+	//Serial.print("window: " + String(samplingInterval - (micros() - _thermReadFinishedTime)));
+	//Serial.println("");
+	unsigned long int waitEnd;
+	unsigned long int waitStart = micros();
+	while (samplingInterval - (micros() - _thermReadFinishedTime) < 500)
+	{
+		// Wait until we have at least 500 usec to do swap
+		Serial.println("WAIT");
+		waitEnd = micros();
+		if (waitEnd - waitStart > 100000)
+		{
+			Serial.println("Timeout waiting for _thermReadFinishedTime");
+			break;
+		}
+	}
 	
 	// Swap buffers with minimal delay to avoid size mismatch
+	unsigned long int swapStart = micros();
 	therm0AMB.swap();
 	therm0Sto.swap();
+	unsigned long int swapEnd = micros();
+	//Serial.println("swap: " + String(swapEnd - swapStart));
 	
 	// Get pointers to the data buffers
 	sizeAMB = therm0AMB.getData(&dataAMB, timestampAmb, false);
