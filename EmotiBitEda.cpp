@@ -218,6 +218,7 @@ uint8_t EmotiBitEda::readData()
 		// Check if ready for downsampling
 		if (_edlOversampBuffer->isFull()) 
 		{
+			// ToDo: Consider how to have version-specific changes in oversampling: Using isFull/capacity of _edlOversampBuffer won't work
 			// Note: data is saved in _edlBuffer to make factory test calibration easy
 			// ToDo: Consider refactoring to use _edaBuffer
 			status = status | _edlBuffer->downsample(_edlOversampBuffer);
@@ -309,10 +310,6 @@ bool EmotiBitEda::processData()
 		static const unsigned long int samplingInterval = 1000000 / (_constants.samplingRate * _edrOversampBuffer->capacity());
 
 		//Serial.print("window: " + String(samplingInterval - (micros() - _readFinishedTime)));
-		//Serial.print("[" + String(samplingInterval));
-		//Serial.print(", " + String(micros()));
-		//Serial.print(", " + String(_readFinishedTime));
-		//Serial.print("]");
 		//Serial.println("");
 		unsigned long int waitEnd;
 		unsigned long int waitStart = micros();
@@ -329,10 +326,10 @@ bool EmotiBitEda::processData()
 		}
 		
 		// Swap EDL and EDR buffers with minimal delay to avoid size mismatch
-		unsigned long int swapStart = micros();
+		//unsigned long int swapStart = micros();
 		_edlBuffer->swap();
 		_edrBuffer->swap();
-		unsigned long int swapEnd = micros();
+		//unsigned long int swapEnd = micros();
 		//Serial.println("swap: " + String(swapEnd - swapStart));
 
 		// Get pointers to the data buffers
@@ -345,11 +342,12 @@ bool EmotiBitEda::processData()
 			Serial.print(edlN);
 			Serial.print(") and EDR (");
 			Serial.print(edrN);
-			Serial.print(") buffers different sizes. [");
-			Serial.print(waitEnd - waitStart);
-			Serial.print(", ");
-			Serial.print(swapEnd - swapStart);
-			Serial.print(" usecs]");
+			Serial.print(") buffers different sizes.");
+			//Serial.print(" [");
+			//Serial.print(waitEnd - waitStart);
+			//Serial.print(", ");
+			//Serial.print(swapEnd - swapStart);
+			//Serial.print(" usecs]");
 			Serial.println();
 			// ToDo: Consider how to manage buffer size differences
 			// One fix option is to switch to ring buffers instead of double buffers
