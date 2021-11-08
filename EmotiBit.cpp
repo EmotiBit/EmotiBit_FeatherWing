@@ -3782,7 +3782,7 @@ void EmotiBit::processFactoryTestMessages()
 		{
 			led.setLED((uint8_t)EmotiBit::Led::RED, false);
 		}
-		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_ON))
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_ON))
 		{
 			led.setLED((uint8_t)EmotiBit::Led::BLUE, true);
 		}
@@ -3790,7 +3790,7 @@ void EmotiBit::processFactoryTestMessages()
 		{
 			led.setLED((uint8_t)EmotiBit::Led::BLUE, false);
 		}
-		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_ON))
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_ON))
 		{
 			led.setLED((uint8_t)EmotiBit::Led::YELLOW, true);
 		}
