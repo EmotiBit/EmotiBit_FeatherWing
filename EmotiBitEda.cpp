@@ -123,33 +123,40 @@ bool EmotiBitEda::stageCalibStorage(EmotiBitNvmController * nvmController, Strin
 		EmotiBitEdaCalibration::RawValues_V2 rawVals;
 		if (EmotiBitEdaCalibration::unpackCalibPacket(edaCalibPacket, dataVersion, rawVals))
 		{
+			Serial.println("Writing calibration data:");
 			if (dataVersion == EmotiBitEdaCalibration::V2)
 			{
-				
+				//Serial.println(edaCalibPacket);
+				EmotiBitEdaCalibration::print(rawVals);
+
+				Serial.println("Staging to write...");
 				uint8_t status = nvmController->stageToWrite(EmotiBitNvmController::DataType::EDA, dataVersion, sizeof(EmotiBitEdaCalibration::RawValues_V2), (uint8_t *)(&rawVals), autoSync);
 
 				if (status != (uint8_t)EmotiBitNvmController::Status::SUCCESS)
 				{
+					Serial.println("nvmController->stageToWrite() failed: " + String(status));
 					return false;
 				}
 			}
 			else
 			{
 				// Write cases for other dataVersions
+				Serial.println("stageCalibStorage() failed: version not supported");
 				return false;
 			}
 		}
 		else
 		{
+			Serial.println("unpackCalibPacket() failed");
 			return false;
 		}
 	}
 	else
 	{
-		// Storing calibration data on V02/V03 HW requires firmware v1.2.86 
+		Serial.println("Storing calibration data on V02/V03 HW requires firmware v1.2.86");  
 		return false;
 	}
-	return true;
+
 }
 
 
@@ -164,12 +171,24 @@ bool EmotiBitEda::stageCalibLoad(EmotiBitNvmController * nvmController, bool aut
 	if (dataVersion == EmotiBitEdaCalibration::V2 && dataSize == sizeof(EmotiBitEdaCalibration::V2))
 	{
 		EmotiBitEdaCalibration::RawValues_V2 *rawVals = (EmotiBitEdaCalibration::RawValues_V2 *)data;
+		EmotiBitEdaCalibration::print(*rawVals);
 		EmotiBitEdaCalibration::calculate(*rawVals, _constants_v4_plus.edaTransformSlope, _constants_v4_plus.edaTransformIntercept);
+		Serial.print("edaTransformSlope = ");
+		Serial.println(_constants_v4_plus.edaTransformSlope);
+		Serial.print("edaTransformIntercept = ");
+		Serial.println(_constants_v4_plus.edaTransformIntercept);
 	}
 	else if (dataVersion == EmotiBitEdaCalibration::V0 && dataSize == sizeof(EmotiBitEdaCalibration::V0))
 	{
 		EmotiBitEdaCalibration::RawValues_V0 *rawVals = (EmotiBitEdaCalibration::RawValues_V0 *)data;
+		EmotiBitEdaCalibration::print(*rawVals);
 		EmotiBitEdaCalibration::calculate(*rawVals, _constants_v2_v3.vRef1, _constants_v2_v3.vRef2, _constants_v2_v3.feedbackAmpR);
+		Serial.print("vRef1 = ");
+		Serial.println(_constants_v2_v3.vRef1);
+		Serial.print("vRef2 = ");
+		Serial.println(_constants_v2_v3.vRef2);
+		Serial.print("feedbackAmpR = ");
+		Serial.println(_constants_v2_v3.feedbackAmpR);
 	}
 	else
 	{
@@ -218,6 +237,7 @@ uint8_t EmotiBitEda::readData()
 		// Check if ready for downsampling
 		if (_edlOversampBuffer->isFull()) 
 		{
+			// ToDo: Consider how to have version-specific changes in oversampling: Using isFull/capacity of _edlOversampBuffer won't work
 			// Note: data is saved in _edlBuffer to make factory test calibration easy
 			// ToDo: Consider refactoring to use _edaBuffer
 			status = status | _edlBuffer->downsample(_edlOversampBuffer);
@@ -309,10 +329,6 @@ bool EmotiBitEda::processData()
 		static const unsigned long int samplingInterval = 1000000 / (_constants.samplingRate * _edrOversampBuffer->capacity());
 
 		//Serial.print("window: " + String(samplingInterval - (micros() - _readFinishedTime)));
-		//Serial.print("[" + String(samplingInterval));
-		//Serial.print(", " + String(micros()));
-		//Serial.print(", " + String(_readFinishedTime));
-		//Serial.print("]");
 		//Serial.println("");
 		unsigned long int waitEnd;
 		unsigned long int waitStart = micros();
@@ -329,10 +345,10 @@ bool EmotiBitEda::processData()
 		}
 		
 		// Swap EDL and EDR buffers with minimal delay to avoid size mismatch
-		unsigned long int swapStart = micros();
+		//unsigned long int swapStart = micros();
 		_edlBuffer->swap();
 		_edrBuffer->swap();
-		unsigned long int swapEnd = micros();
+		//unsigned long int swapEnd = micros();
 		//Serial.println("swap: " + String(swapEnd - swapStart));
 
 		// Get pointers to the data buffers
@@ -345,11 +361,12 @@ bool EmotiBitEda::processData()
 			Serial.print(edlN);
 			Serial.print(") and EDR (");
 			Serial.print(edrN);
-			Serial.print(") buffers different sizes. [");
-			Serial.print(waitEnd - waitStart);
-			Serial.print(", ");
-			Serial.print(swapEnd - swapStart);
-			Serial.print(" usecs]");
+			Serial.print(") buffers different sizes.");
+			//Serial.print(" [");
+			//Serial.print(waitEnd - waitStart);
+			//Serial.print(", ");
+			//Serial.print(swapEnd - swapStart);
+			//Serial.print(" usecs]");
 			Serial.println();
 			// ToDo: Consider how to manage buffer size differences
 			// One fix option is to switch to ring buffers instead of double buffers

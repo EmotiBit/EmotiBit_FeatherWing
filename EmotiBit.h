@@ -1,6 +1,7 @@
 //#define DEBUG_FEAT_EDA_CTRL
 //#define DEBUG_THERM_PROCESS
 //#define DEBUG_THERM_UPDATE
+//#define DEBUG_BUFFER
 
 #ifndef _EMOTIBIT_H_
 #define _EMOTIBIT_H_
@@ -520,9 +521,13 @@ private:
 	DoubleBufferFloat magZ			 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
 	DoubleBufferFloat batteryVoltage = DoubleBufferFloat(1);
 	DoubleBufferFloat batteryPercent = DoubleBufferFloat(1);
-	DoubleBufferFloat dataOverflow	 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
-	DoubleBufferFloat dataClipping   = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat dataOverflow	 = DoubleBufferFloat(1);	// ToDo: Refactor with nullptr checks for removal
+	DoubleBufferFloat dataClipping   = DoubleBufferFloat(1);	// ToDo: Refactor with nullptr checks for removal
+#ifdef DEBUG_BUFFER
 	DoubleBufferFloat debugBuffer    = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+#else
+	DoubleBufferFloat debugBuffer = DoubleBufferFloat(1);			// ToDo: Refactor for nullptr checks
+#endif
 
 	DoubleBufferFloat * dataDoubleBuffers[(uint8_t)DataType::length];
 

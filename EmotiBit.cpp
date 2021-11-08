@@ -1361,7 +1361,12 @@ uint8_t EmotiBit::update()
 		//Serial.print(serialPrevAvailable);
 		//Serial.print(">");
 		//Serial.println(Serial.peek());
-		Serial.println("hi");
+
+		// ToDo: Add barcode
+		Serial.print("Hardware: ");
+		Serial.println(EmotiBitVersionController::getHardwareVersion(_version));
+		Serial.print("Firmware: ");
+		Serial.println(firmware_version);
 	}
 	serialPrevAvailable = Serial.available();
 
@@ -2132,10 +2137,10 @@ bool EmotiBit::processThermopileData()
 	}
 	
 	// Swap buffers with minimal delay to avoid size mismatch
-	unsigned long int swapStart = micros();
+	//unsigned long int swapStart = micros();
 	therm0AMB.swap();
 	therm0Sto.swap();
-	unsigned long int swapEnd = micros();
+	//unsigned long int swapEnd = micros();
 	//Serial.println("swap: " + String(swapEnd - swapStart));
 	
 	// Get pointers to the data buffers
@@ -2151,8 +2156,6 @@ bool EmotiBit::processThermopileData()
 		Serial.println("WARNING: therm0AMB and therm0Sto buffers different sizes");
 		// ToDo: Consider how to manage buffer size differences
 		// One fix option is to switch to ring buffers instead of double buffers
-		// Another option might be to have a global interrupt-done variable to help 
-		// time multiple swaps just after an interrupt finishes
 		
 		// Previous approach is flawed because could have memory access collision:
 		// // sizeAMB = k
@@ -2245,12 +2248,6 @@ bool EmotiBit::processThermopileData()
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->swap();
 }
 
-size_t EmotiBit::getDataThermopile(float **data, uint32_t *timestamp)
-{
-	processThermopileData();
-	return dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->getData(data, timestamp, false);	
-}
-
 
 size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 #ifdef DEBUG
@@ -2258,15 +2255,7 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 	Serial.println((uint8_t) t);
 #endif // DEBUG
 	if ((uint8_t)type < (uint8_t)EmotiBit::DataType::length) {
-		
-		if ((uint8_t)type == (uint8_t)EmotiBit::DataType::THERMOPILE)
-		{
-			return getDataThermopile(data, timestamp);
-		}
-		else
-		{
-			return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp, false);
-		}
+		return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp, false);
 	}
 	else {
 		return (int8_t)EmotiBit::Error::NONE;
@@ -3656,12 +3645,16 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		}
 		else if (c == 'D')
 		{
+#ifdef DEBUG_BUFFER
 			acquireData.debug = true;
 			payload = "acquireData.debug = ";
 			payload += acquireData.debug;
 			Serial.println(payload);
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::DEBUG;
+#else
+		Serial.print("DEBUG_BUFFER must be defined to set acquireData.debug = true");
+#endif
 		}
 		else if (c == 'b')
 		{
@@ -3789,7 +3782,7 @@ void EmotiBit::processFactoryTestMessages()
 		{
 			led.setLED((uint8_t)EmotiBit::Led::RED, false);
 		}
-		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_ON))
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_ON))
 		{
 			led.setLED((uint8_t)EmotiBit::Led::BLUE, true);
 		}
@@ -3797,7 +3790,7 @@ void EmotiBit::processFactoryTestMessages()
 		{
 			led.setLED((uint8_t)EmotiBit::Led::BLUE, false);
 		}
-		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_ON))
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_ON))
 		{
 			led.setLED((uint8_t)EmotiBit::Led::YELLOW, true);
 		}
