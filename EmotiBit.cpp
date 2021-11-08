@@ -827,20 +827,22 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 
 	// Setup EDA
-	Serial.println("Setting up EDA...");
+	Serial.println("Initializing EDA... ");
 	if (emotibitEda.setup(_version, _samplingRates.eda / ((float)_samplesAveraged.eda), &eda, &edl, &edr, _EmotiBit_i2c, &edlBuffer, &edrBuffer))
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+		Serial.println("Completed");
 	}
 	else
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 		Serial.println(factoryTestSerialOutput);
+		Serial.println("failed");
 	}
-	Serial.print("Loading EDA calibration: ");
+	Serial.print("Loading EDA calibration... ");
 	if (emotibitEda.stageCalibLoad(&_emotibitNvmController, true))
 	{
-		Serial.println("success");
+		Serial.println("Completed");
 	}
 	else
 	{

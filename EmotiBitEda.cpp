@@ -45,18 +45,24 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 	_edlOversampBuffer = edlOversampBuffer;
 	_edrOversampBuffer = edrOversampBuffer;
 
-	String output = String(30);
+	String output;
+	output.reserve(30);
 
-	output = "edaSeriesResistance " + String(_constants.edaSeriesResistance);
+	output = "edaSeriesResistance: " + String(_constants.edaSeriesResistance);
+	EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 1, output);
 	Serial.println(output);
-	output = "samplingRate " + String(_constants.samplingRate);
+	output = "samplingRate: " + String(_constants.samplingRate);
+	EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 1, output);
 	Serial.println(output);
-	output = "enableDigitalFilter " + String(_constants.enableDigitalFilter);
+	output = "enableDigitalFilter: " + String(_constants.enableDigitalFilter);
+	EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 1, output);
 	Serial.println(output);
 
 	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 	{	
-		Serial.println("Configuring ADS ADC...");
+		output = "Configuring ADS ADC... ";
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 1, output);
+		Serial.println(output);
 
 		_constants.adcBits = 16;
 
@@ -64,15 +70,20 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 		_ads.setDataRate(RATE_ADS1115_475SPS);	// set to 475Hz to allow for 300Hz oversampling
 		_ads.setGain(GAIN_TWO);        // 2x gain   +/- 2.048V  1 bit = 1mV      0.0625mV
 
-		output = "adcBits " + String(_constants.adcBits);
+		output = "adcBits: " + String(_constants.adcBits);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "_ads.setDataRate " + String("RATE_ADS1115_475SPS");
+		output = "_ads.setDataRate: " + String("RATE_ADS1115_475SPS");
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "_ads.setGain " + String("GAIN_TWO");
+		output = "_ads.setGain: " + String("GAIN_TWO");
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "edaTransformSlope " + String(_constants_v4_plus.edaTransformSlope);
+		output = "edaTransformSlope: " + String(_constants_v4_plus.edaTransformSlope);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "edaTransformIntercept " + String(_constants_v4_plus.edaTransformIntercept);
+		output = "edaTransformIntercept: " + String(_constants_v4_plus.edaTransformIntercept);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
 
 		return _ads.begin(0x48, emotibitI2c, false); // callBegin -> false. the i2c wire has already been init in setup
@@ -80,32 +91,46 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 	}
 	else if (_emotibitVersion <= EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
-		Serial.println("Configuring SAMD ADC...");
+		output = "Configuring SAMD ADC... ";
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 1, output);
+		Serial.println(output);
+
 		_constants.adcBits = 12;
 		analogReadResolution(_constants.adcBits);
 		_constants_v2_v3.adcRes = pow(2, _constants.adcBits) - 1;
 
-		output = "adcBits " + String(_constants.adcBits);
+		output = "adcBits: " + String(_constants.adcBits);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "vcc " + String(_constants_v2_v3.vcc);
+		output = "vcc: " + String(_constants_v2_v3.vcc);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "edrAmplification " + String(_constants_v2_v3.edrAmplification);
+		output = "edrAmplification: " + String(_constants_v2_v3.edrAmplification);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "vRef1 " + String(_constants_v2_v3.vRef1);
+		output = "vRef1: " + String(_constants_v2_v3.vRef1);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "vRef2 " + String(_constants_v2_v3.vRef2);
+		output = "vRef2: " + String(_constants_v2_v3.vRef2);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "feedbackAmpR " + String(_constants_v2_v3.feedbackAmpR);
+		output = "feedbackAmpR: " + String(_constants_v2_v3.feedbackAmpR);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "crossoverFilterFreq " + String(_constants_v2_v3.crossoverFilterFreq);
+		output = "crossoverFilterFreq: " + String(_constants_v2_v3.crossoverFilterFreq);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "adcRes " + String(_constants_v2_v3.adcRes);
+		output = "adcRes: " + String(_constants_v2_v3.adcRes);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "edlPin " + String(_constants_v2_v3.edlPin);
+		output = "edlPin: " + String(_constants_v2_v3.edlPin);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "edrPin " + String(_constants_v2_v3.edrPin);
+		output = "edrPin: " + String(_constants_v2_v3.edrPin);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
-		output = "isrOffsetCorr " + String(_constants_v2_v3.isrOffsetCorr);
+		output = "isrOffsetCorr: " + String(_constants_v2_v3.isrOffsetCorr);
+		EmotiBitUtils::StringIndent(EmotiBitUtils::INDENT_CHAR, 2, output);
 		Serial.println(output);
 
 		return true;

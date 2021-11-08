@@ -28,7 +28,7 @@
 #include <math.h> 
 #include "DoubleBufferFloat.h"
 #include "DigitalFilter.h"
-
+#include "EmotiBitUtils.h"
 
 
 class EmotiBitEda
