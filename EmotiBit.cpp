@@ -1361,7 +1361,12 @@ uint8_t EmotiBit::update()
 		//Serial.print(serialPrevAvailable);
 		//Serial.print(">");
 		//Serial.println(Serial.peek());
-		Serial.println("hi");
+
+		// ToDo: Add barcode
+		Serial.print("Hardware: ");
+		Serial.println(EmotiBitVersionController::getHardwareVersion(_version));
+		Serial.print("Firmware: ");
+		Serial.println(firmware_version);
 	}
 	serialPrevAvailable = Serial.available();
 

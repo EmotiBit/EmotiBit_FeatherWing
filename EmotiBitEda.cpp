@@ -123,36 +123,40 @@ bool EmotiBitEda::stageCalibStorage(EmotiBitNvmController * nvmController, Strin
 		EmotiBitEdaCalibration::RawValues_V2 rawVals;
 		if (EmotiBitEdaCalibration::unpackCalibPacket(edaCalibPacket, dataVersion, rawVals))
 		{
-			Serial.println("Writing calibration data:")
+			Serial.println("Writing calibration data:");
 			if (dataVersion == EmotiBitEdaCalibration::V2)
 			{
+				//Serial.println(edaCalibPacket);
 				EmotiBitEdaCalibration::print(rawVals);
 
+				Serial.println("Staging to write...");
 				uint8_t status = nvmController->stageToWrite(EmotiBitNvmController::DataType::EDA, dataVersion, sizeof(EmotiBitEdaCalibration::RawValues_V2), (uint8_t *)(&rawVals), autoSync);
 
 				if (status != (uint8_t)EmotiBitNvmController::Status::SUCCESS)
 				{
+					Serial.println("nvmController->stageToWrite() failed");
 					return false;
 				}
 			}
 			else
 			{
 				// Write cases for other dataVersions
-				Serial.println("Failed, version not supported")
+				Serial.println("stageCalibStorage() failed: version not supported");
 				return false;
 			}
 		}
 		else
 		{
+			Serial.println("unpackCalibPacket() failed");
 			return false;
 		}
 	}
 	else
 	{
-		// Storing calibration data on V02/V03 HW requires firmware v1.2.86 
+		Serial.println("Storing calibration data on V02/V03 HW requires firmware v1.2.86");  
 		return false;
 	}
-	return true;
+
 }
 
 
@@ -170,9 +174,9 @@ bool EmotiBitEda::stageCalibLoad(EmotiBitNvmController * nvmController, bool aut
 		EmotiBitEdaCalibration::print(*rawVals);
 		EmotiBitEdaCalibration::calculate(*rawVals, _constants_v4_plus.edaTransformSlope, _constants_v4_plus.edaTransformIntercept);
 		Serial.print("edaTransformSlope = ");
-		Serial.ln(_constants_v4_plus.edaTransformSlope);
+		Serial.println(_constants_v4_plus.edaTransformSlope);
 		Serial.print("edaTransformIntercept = ");
-		Serial.ln(_constants_v4_plus.edaTransformIntercept);
+		Serial.println(_constants_v4_plus.edaTransformIntercept);
 	}
 	else if (dataVersion == EmotiBitEdaCalibration::V0 && dataSize == sizeof(EmotiBitEdaCalibration::V0))
 	{
@@ -180,11 +184,11 @@ bool EmotiBitEda::stageCalibLoad(EmotiBitNvmController * nvmController, bool aut
 		EmotiBitEdaCalibration::print(*rawVals);
 		EmotiBitEdaCalibration::calculate(*rawVals, _constants_v2_v3.vRef1, _constants_v2_v3.vRef2, _constants_v2_v3.feedbackAmpR);
 		Serial.print("vRef1 = ");
-		Serial.ln(_constants_v2_v3.vRef1);
+		Serial.println(_constants_v2_v3.vRef1);
 		Serial.print("vRef2 = ");
-		Serial.ln(_constants_v2_v3.vRef2);
+		Serial.println(_constants_v2_v3.vRef2);
 		Serial.print("feedbackAmpR = ");
-		Serial.ln(_constants_v2_v3.feedbackAmpR);
+		Serial.println(_constants_v2_v3.feedbackAmpR);
 	}
 	else
 	{
