@@ -123,9 +123,11 @@ bool EmotiBitEda::stageCalibStorage(EmotiBitNvmController * nvmController, Strin
 		EmotiBitEdaCalibration::RawValues_V2 rawVals;
 		if (EmotiBitEdaCalibration::unpackCalibPacket(edaCalibPacket, dataVersion, rawVals))
 		{
+			Serial.println("Writing calibration data:")
 			if (dataVersion == EmotiBitEdaCalibration::V2)
 			{
-				
+				EmotiBitEdaCalibration::print(rawVals);
+
 				uint8_t status = nvmController->stageToWrite(EmotiBitNvmController::DataType::EDA, dataVersion, sizeof(EmotiBitEdaCalibration::RawValues_V2), (uint8_t *)(&rawVals), autoSync);
 
 				if (status != (uint8_t)EmotiBitNvmController::Status::SUCCESS)
@@ -136,6 +138,7 @@ bool EmotiBitEda::stageCalibStorage(EmotiBitNvmController * nvmController, Strin
 			else
 			{
 				// Write cases for other dataVersions
+				Serial.println("Failed, version not supported")
 				return false;
 			}
 		}
@@ -164,12 +167,24 @@ bool EmotiBitEda::stageCalibLoad(EmotiBitNvmController * nvmController, bool aut
 	if (dataVersion == EmotiBitEdaCalibration::V2 && dataSize == sizeof(EmotiBitEdaCalibration::V2))
 	{
 		EmotiBitEdaCalibration::RawValues_V2 *rawVals = (EmotiBitEdaCalibration::RawValues_V2 *)data;
+		EmotiBitEdaCalibration::print(*rawVals);
 		EmotiBitEdaCalibration::calculate(*rawVals, _constants_v4_plus.edaTransformSlope, _constants_v4_plus.edaTransformIntercept);
+		Serial.print("edaTransformSlope = ");
+		Serial.ln(_constants_v4_plus.edaTransformSlope);
+		Serial.print("edaTransformIntercept = ");
+		Serial.ln(_constants_v4_plus.edaTransformIntercept);
 	}
 	else if (dataVersion == EmotiBitEdaCalibration::V0 && dataSize == sizeof(EmotiBitEdaCalibration::V0))
 	{
 		EmotiBitEdaCalibration::RawValues_V0 *rawVals = (EmotiBitEdaCalibration::RawValues_V0 *)data;
+		EmotiBitEdaCalibration::print(*rawVals);
 		EmotiBitEdaCalibration::calculate(*rawVals, _constants_v2_v3.vRef1, _constants_v2_v3.vRef2, _constants_v2_v3.feedbackAmpR);
+		Serial.print("vRef1 = ");
+		Serial.ln(_constants_v2_v3.vRef1);
+		Serial.print("vRef2 = ");
+		Serial.ln(_constants_v2_v3.vRef2);
+		Serial.print("feedbackAmpR = ");
+		Serial.ln(_constants_v2_v3.feedbackAmpR);
 	}
 	else
 	{
