@@ -1,9 +1,9 @@
 #include "EmotiBitNvmController.h"
 
 
-bool EmotiBitNvmController::init(TwoWire &emotibit_i2c, EmotiBitVersionController::EmotiBitVersion version)
+bool EmotiBitNvmController::init(TwoWire &emotibit_i2c, EmotiBitVersionController::EmotiBitVersion hwVersion)
 {
-	if (version == EmotiBitVersionController::EmotiBitVersion::V04A)
+	if (hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
 		if (emotibitEeprom.begin(EMOTIBIT_EEPROM_I2C_ADDRESS, emotibit_i2c))
 		{
@@ -20,7 +20,7 @@ bool EmotiBitNvmController::init(TwoWire &emotibit_i2c, EmotiBitVersionControlle
 			return false;
 		}
 	}
-	else if ((int)version < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
+	else if ((int)hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
 		if (si7013.setup(emotibit_i2c))
 		{
@@ -243,13 +243,13 @@ uint8_t EmotiBitNvmController::stageToRead(DataType datatype, uint8_t &datatypeV
 
 uint8_t EmotiBitNvmController::loadMemoryMap(DataType datatype)
 {
-	_numMapEntries = emotibitEeprom.read(ConstEepromAddr::NUM_MAP_ENTRIES);
-	if (_numMapEntries == 255)
+	uint8_t numMapEntries = emotibitEeprom.read(ConstEepromAddr::NUM_MAP_ENTRIES);
+	if (numMapEntries == 255)
 	{
 		// EEPROM not written
 		return (uint8_t)Status::MEMORY_NOT_UPDATED;
 	}
-	if ((uint8_t)datatype < _numMapEntries)
+	if ((uint8_t)datatype < numMapEntries)
 	{
 		EepromMemoryMap *mapPtr;
 		uint8_t *eepromMapData = new uint8_t[sizeof(EepromMemoryMap)];
@@ -281,6 +281,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 			if (mapLoadStatus != 0)
 			{
 				_readResult = Status::MEMORY_NOT_UPDATED;
+				readState = State::IDLE;
 				return (uint8_t)_readResult;
 			}
 			else

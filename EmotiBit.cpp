@@ -186,12 +186,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		hibernate(false);
 	}
 
-	if (testingMode == TestingMode::NVM_CONTROLLER_TEST)
-	{
-		_emotibitNvmController.init(*(_EmotiBit_i2c), _version);
-		_emotibitNvmController.setHwVersion(_version);
-	}
-
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		// Pass only if FW version estimate is exactly = barcode version
@@ -2940,11 +2934,6 @@ void EmotiBit::readSensors()
 	if (acquireData.debug) pushData(EmotiBit::DataType::DEBUG, micros() - readSensorsBegin); // Add readSensors processing duration to debugBuffer
 
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
-
-	if (testingMode == TestingMode::NVM_CONTROLLER_TEST)
-	{
-		_emotibitNvmController.syncRW();
-	}
 }
 
 void EmotiBit::processData()
