@@ -98,7 +98,7 @@ public:
 
 	enum class State
 	{
-		IDLE,
+		IDLE = 0,
 		READY_TO_WRITE,
 		BUSY_WRITING,
 		READY_TO_READ,
