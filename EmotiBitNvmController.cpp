@@ -1,9 +1,9 @@
 #include "EmotiBitNvmController.h"
 
 
-bool EmotiBitNvmController::init(TwoWire &emotibit_i2c, EmotiBitVersionController::EmotiBitVersion version)
+bool EmotiBitNvmController::init(TwoWire &emotibit_i2c, EmotiBitVersionController::EmotiBitVersion hwVersion)
 {
-	if (version == EmotiBitVersionController::EmotiBitVersion::V04A)
+	if (hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
 		if (emotibitEeprom.begin(EMOTIBIT_EEPROM_I2C_ADDRESS, emotibit_i2c))
 		{
@@ -20,7 +20,7 @@ bool EmotiBitNvmController::init(TwoWire &emotibit_i2c, EmotiBitVersionControlle
 			return false;
 		}
 	}
-	else if ((int)version < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
+	else if ((int)hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
 		if (si7013.setup(emotibit_i2c))
 		{
