@@ -47,7 +47,7 @@ public:
 
 	String firmware_version = "1.2.86-NvmController";
 	TestingMode testingMode = TestingMode::NONE;
-	const bool DIGITAL_WRITE_DEBUG = false;
+	const bool DIGITAL_WRITE_DEBUG = true;
 
 	bool _debugMode = false;
 	bool dummyIsrWithDelay = false;
