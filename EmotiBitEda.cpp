@@ -232,6 +232,10 @@ uint8_t EmotiBitEda::readData()
 
 	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
+		// Code to debug missed conversions
+		//static uint16_t completed = 0;
+		//static uint16_t total = 0;
+
 		// Reads EDA data from ADS1113
 		if (_ads.conversionComplete())
 		{
@@ -248,12 +252,30 @@ uint8_t EmotiBitEda::readData()
 			{
 				status = status | _edlOversampBuffer->incrClippedCount();
 			}
+
+			// Code to debug missed conversions
+			//completed++;
+			//total++;
+			//if (completed == 100)
+			//{
+			//	Serial.println(": " + String(completed) + "/" + String(total));
+			//	completed = 0;
+			//	total = 0;
+			//}
+		}
+		else
+		{
+			_edlBuffer->incrOverflowCount(DoubleBufferFloat::BufferSelector::IN);	// Count an overflow event if conversion was late
+			
+			// Code to debug missed conversions
+			//total++;
+			//Serial.print(String(total) + ",");
 		}
 
 		// Check if ready for downsampling
 		if (_edlOversampBuffer->isFull()) 
 		{
-			// ToDo: Consider how to have version-specific changes in oversampling: Using isFull/capacity of _edlOversampBuffer won't work
+			// ToDo: Consider how to have version-specific changes in oversampling -- Using isFull/capacity of _edlOversampBuffer won't work
 			// Note: data is saved in _edlBuffer to make factory test calibration easy
 			// ToDo: Consider refactoring to use _edaBuffer
 			status = status | _edlBuffer->downsample(_edlOversampBuffer);

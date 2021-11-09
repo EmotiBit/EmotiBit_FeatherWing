@@ -150,8 +150,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	// ToDo: detect if i2c init fails
 	Serial.println("I2C interface initialized");
-	uint32_t i2cRate = 100000;
-	_EmotiBit_i2c->setClock(i2cRate);
+	_EmotiBit_i2c->setClock(100000);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
 	_version = emotiBitVersionController.detectEmotiBitVersion(_EmotiBit_i2c, deviceAddress.EEPROM_FLASH_34AA02);
@@ -990,6 +989,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::DEBUG] = false;
 
 	Serial.println("EmotiBit Setup complete");
+	_EmotiBit_i2c->setClock(400000);// Set clock to 400KHz except when accessing Si7013
 	EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::NULL_VAL);
 	//Serial.print("\nEmotiBit version: ");
 	//Serial.println(EmotiBitVersionController::getHardwareVersion(_version));
