@@ -989,7 +989,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::DEBUG] = false;
 
 	Serial.println("EmotiBit Setup complete");
-	_EmotiBit_i2c->setClock(400000);// Set clock to 400KHz except when accessing Si7013
+	_EmotiBit_i2c->setClock(i2cClkMain);// Set clock to 400KHz except when accessing Si7013
 	EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::NULL_VAL);
 	//Serial.print("\nEmotiBit version: ");
 	//Serial.println(EmotiBitVersionController::getHardwareVersion(_version));
@@ -1559,7 +1559,7 @@ int8_t EmotiBit::updateTempHumidityData() {
 		//}
 			
 	}
-	_EmotiBit_i2c->setClock(400000);
+	_EmotiBit_i2c->setClock(i2cClkMain);
 	return status;
 }
 
@@ -1679,8 +1679,9 @@ int8_t EmotiBit::updateIMUData() {
 				BMI160.extractMotion9(_imuBuffer, &ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz, &rh);
 			}
 			else {
-				Serial.println("UNHANDLED CASE: _imuFifoFrameLen != 20");
-				while (true);
+				Serial.print("UNHANDLED CASE: _imuFifoFrameLen != 20: ");
+				Serial.println(_imuFifoFrameLen);
+				//while (true);
 				// ToDo: Handle case when _imuFifoFrameLen < 20
 			}
 		}
@@ -2578,7 +2579,7 @@ void EmotiBit::readSensors()
 	//	{
 	//		_EmotiBit_i2c->setClock(100000);// change the I2C clock speed to 100000
 	//		edaCorrection->writeToOtp(&tempHumiditySensor);
-	//		_EmotiBit_i2c->setClock(400000);// change the I2C clock speed back to 400000
+	//		_EmotiBit_i2c->setClock(i2cClkMain);// change the I2C clock speed back to i2cClkMain
 	//	}
 	//}
 
@@ -2756,35 +2757,49 @@ void EmotiBit::readSensors()
 void EmotiBit::processData()
 {
 #ifdef DEBUG_FEAT_EDA_CTRL
-Serial.println("EmotiBit::processData()");
+	Serial.println("EmotiBit::processData()");
 #endif // DEBUG
 
 	// Perform all derivative calculations
 	// Swap all buffers to that data is ready to send from OUT buffer
 
-	for (int16_t t = 0; t < (uint8_t)EmotiBit::DataType::length; t++)
+	static bool overflowTestOn = false;
+	//static unsigned long overflowTestTimer = millis();
+	//static unsigned long overflowOnTime = 4000;
+	//if (millis() - overflowTestTimer > overflowOnTime)
+	//{
+	//	overflowTestOn = !overflowTestOn;
+	//	Serial.println("overflowTestOn = " + String(overflowTestOn));
+	//	overflowTestTimer = millis();
+	//}
+
+	if (!overflowTestOn)
 	{
-		if ((uint8_t)EmotiBit::DataType::EDA == t)
+		for (int16_t t = 0; t < (uint8_t)EmotiBit::DataType::length; t++)
 		{
-			// EDA is a prototype for a controller model going forward
-			// In the future, processData() functions will be added to a linked list for iteration
-			emotibitEda.processData();
-		}
-		else if ((uint8_t)EmotiBit::DataType::EDL == t)
-		{
-			// Do nothing, handled by EDA
-		}
-		else if ((uint8_t)EmotiBit::DataType::EDR == t)
-		{
-			// Do nothing, handled by EDA
-		}
-		else if ((uint8_t)EmotiBit::DataType::THERMOPILE == t)
-		{
-			processThermopileData();
-		}
-		else
-		{
-			dataDoubleBuffers[t]->swap();
+			if ((uint8_t)EmotiBit::DataType::EDA == t)
+			{
+				// EDA is a prototype for a controller model going forward
+				// In the future, processData() functions will be added to a linked list for iteration
+				emotibitEda.processData();
+			}
+			else if ((uint8_t)EmotiBit::DataType::EDL == t)
+			{
+				// Do nothing, handled by EDA
+			}
+			else if ((uint8_t)EmotiBit::DataType::EDR == t)
+			{
+				// Do nothing, handled by EDA
+			}
+			else if ((uint8_t)EmotiBit::DataType::THERMOPILE == t)
+			{
+				processThermopileData();
+			}
+			else
+			{
+				dataDoubleBuffers[t]->swap();
+				//Serial.print(String(t) + ",");
+			}
 		}
 	}
 }
@@ -2808,16 +2823,22 @@ Serial.println("EmotiBit::sendData()");
 #ifdef DEBUG_FEAT_EDA_CTRL
 		Serial.println("addPacket() complete");
 #endif // DEBUG
-		if (_outDataPackets.length() > OUT_MESSAGE_RESERVE_SIZE - OUT_PACKET_MAX_SIZE)
+		if (_outDataPackets.length() > OUT_PACKET_TARGET_SIZE)
 		{
 			// Avoid overrunning our reserve memory
+			if (_outDataPackets.length() > 2000)
+			{
+				Serial.println(_outDataPackets.length());
+			}
 			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
 
 			if (getPowerMode() == PowerMode::NORMAL_POWER)
 			{
 				_emotiBitWiFi.sendData(_outDataPackets);
 			}
+			//Serial.println("_emotiBitWiFi.sendData()");
 			writeSdCardMessage(_outDataPackets);
+			//Serial.println("writeSdCardMessage()");
 			_outDataPackets = "";
 
 			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
@@ -3160,23 +3181,6 @@ void EmotiBit::updateBatteryIndication()
 			battIndicationSeq = 1;
 		}
 	}
-
-
-	//// To update Battery level variable for LED indication
-	//if (battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH))
-	//	battIndicationSeq = 0;
-	//else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_MED)) {
-	//	battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_HIGH);
-	//	BattLedDuration = 1000;
-	//}
-	//else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_MED) && battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
-	//	battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_MED);
-	//	BattLedDuration = 500;
-	//}
-	//else if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW)) {
-	//	battIndicationSeq = uint8_t(EmotiBit::BattLevel::INDICATION_SEQ_LOW);
-	//	BattLedDuration = 1;
-	//}
 }
 
 void EmotiBit::appendTestData(String &dataMessage, uint16_t &packetNumber)

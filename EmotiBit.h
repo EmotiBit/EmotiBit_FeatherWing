@@ -255,11 +255,11 @@ public:
 	volatile unsigned long int _thermReadFinishedTime;
 
 	// ---------- BEGIN ino refactoring --------------
-	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 2048;
-	static const uint16_t OUT_PACKET_MAX_SIZE = 1024;
+	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 2560;
+	static const uint16_t OUT_PACKET_TARGET_SIZE = 512;
 	static const uint16_t DATA_SEND_INTERVAL = 100;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
-	static const uint16_t MAX_DATA_BUFFER_SIZE = 32;
+	static const uint16_t MAX_DATA_BUFFER_SIZE = 48;
 	static const uint16_t NORMAL_POWER_MODE_PACKET_INTERVAL = 200;
 	static const uint16_t LOW_POWER_MODE_PACKET_INTERVAL = 1000;
 	uint16_t modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
@@ -344,6 +344,7 @@ public:
 
 	EmotiBitWiFi _emotiBitWiFi; 
 	TwoWire* _EmotiBit_i2c = nullptr;
+	uint32_t i2cClkMain = 400000;
 	String _outDataPackets;		// Packets that will be sent over wireless (if enabled) and written to SD card (if recording)
 	uint16_t _outDataPacketCounter = 0;
 	//String _outSdPackets;		// Packts that will be written to SD card (if recording) but not sent over wireless

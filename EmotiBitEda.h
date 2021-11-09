@@ -34,13 +34,11 @@ class EmotiBitEda
 {
 private:
 	EmotiBitVersionController::EmotiBitVersion _emotibitVersion;	
-	uint8_t _calibRawValuesVersion = 0;
 	DoubleBufferFloat* _edaBuffer = nullptr;
 	DoubleBufferFloat* _edlBuffer = nullptr;
 	DoubleBufferFloat* _edrBuffer = nullptr;
 	BufferFloat* _edlOversampBuffer = nullptr;
 	BufferFloat* _edrOversampBuffer = nullptr;
-	bool isCalibrated = false;
 	volatile unsigned long int _readFinishedTime = 0;
 
 public:
