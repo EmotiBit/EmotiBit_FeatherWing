@@ -2770,6 +2770,14 @@ Serial.println("EmotiBit::processData()");
 			// In the future, processData() functions will be added to a linked list for iteration
 			emotibitEda.processData();
 		}
+		else if ((uint8_t)EmotiBit::DataType::EDL == t)
+		{
+			// Do nothing, handled by EDA
+		}
+		else if ((uint8_t)EmotiBit::DataType::EDR == t)
+		{
+			// Do nothing, handled by EDA
+		}
 		else if ((uint8_t)EmotiBit::DataType::THERMOPILE == t)
 		{
 			processThermopileData();

@@ -66,6 +66,13 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 		_ads.setDataRate(RATE_ADS1115_475SPS);	// set to 475Hz to allow for 300Hz oversampling
 		_ads.setGain(GAIN_TWO);        // 2x gain   +/- 2.048V  1 bit = 1mV      0.0625mV
 
+		_constants.clipMin = -26500;
+		_constants.clipMax = 26500;
+
+		output = "clipMin: " + String(_constants.clipMin);
+		Serial.println(output);
+		output = "clipMax: " + String(_constants.clipMax);
+		Serial.println(output);
 		output = "adcBits: " + String(_constants.adcBits);
 		Serial.println(output);
 		output = "_ads.setDataRate: " + String("RATE_ADS1115_475SPS");
@@ -89,6 +96,13 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 		analogReadResolution(_constants.adcBits);
 		_constants_v2_v3.adcRes = pow(2, _constants.adcBits) - 1;
 
+		_constants.clipMin = 10;
+		_constants.clipMax = _constants_v2_v3.adcRes - 20;
+
+		output = "clipMin: " + String(_constants.clipMin);
+		Serial.println(output);
+		output = "clipMax: " + String(_constants.clipMax);
+		Serial.println(output);
 		output = "adcBits: " + String(_constants.adcBits);
 		Serial.println(output);
 		output = "vcc: " + String(_constants_v2_v3.vcc);
@@ -245,10 +259,7 @@ uint8_t EmotiBitEda::readData()
 			status = status | _edlOversampBuffer->push_back(edlTemp);
 
 			// Check for clipping
-			// ToDo: assess correct levels more carefully
-			const int16_t clipMinV4 = -32700;
-			const int16_t clipMaxV4 = 32700;
-			if (edlTemp < clipMinV4 && edlTemp > clipMaxV4)
+			if (edlTemp < _constants.clipMin || edlTemp > _constants.clipMax)
 			{
 				status = status | _edlOversampBuffer->incrClippedCount();
 			}
@@ -294,13 +305,11 @@ uint8_t EmotiBitEda::readData()
 		status = status | _edrOversampBuffer->push_back(edrTemp);
 
 		// Check for clipping
-		const int16_t clipMinV3 = 10;
-		const int16_t clipMaxV3 = _constants_v2_v3.adcRes - 20;
-		if (edlTemp < clipMinV3 && edlTemp > clipMaxV3)
+		if (edlTemp < _constants.clipMin || edlTemp > _constants.clipMax)
 		{
 			status = status | _edlOversampBuffer->incrClippedCount();
 		}
-		if (edrTemp < clipMinV3 && edrTemp > clipMaxV3)
+		if (edrTemp < _constants.clipMin || edrTemp > _constants.clipMax)
 		{
 			status = status | _edrOversampBuffer->incrClippedCount();
 		}

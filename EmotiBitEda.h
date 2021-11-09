@@ -52,6 +52,8 @@ public:
 		float samplingRate = 15.f;	// Hz
 		uint8_t adcBits;	// Bit resolution of ADC, e.g. 12, 16
 		bool enableDigitalFilter = false;
+		int16_t clipMin;
+		int16_t clipMax;
 	} _constants;
 
 	// V2/V3 specific EDA constants
