@@ -2,6 +2,7 @@
 //#define DEBUG_THERM_PROCESS
 //#define DEBUG_THERM_UPDATE
 //#define DEBUG_BUFFER
+//#define TEST_OVERFLOW
 
 #ifndef _EMOTIBIT_H_
 #define _EMOTIBIT_H_

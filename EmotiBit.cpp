@@ -1141,16 +1141,32 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 					}
 					for (size_t n = 0; n < count; n++)
 					{
-						_outDataPackets += ",";
-						_outDataPackets += typeTags[i];
+						String temp = "," + String(typeTags[i]);
+						if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE)
+						{
+							_outDataPackets += temp;
+						}
+						else
+						{
+							Serial.print("ERROR: _outDataPackets exceeded OUT_MESSAGE_RESERVE_SIZE ");
+							Serial.println("[" + String(_outDataPackets.length()) + "+" + String(temp.length()) + "/" + String(OUT_MESSAGE_RESERVE_SIZE) + "]");
+						}
 					}
 				}
 			}
 		}
 		else {
 			for (uint16_t d = 0; d < dataLen; d++) {
-				_outDataPackets += ",";
-				_outDataPackets += String(data[d], precision);
+				String temp = "," + String(data[d], precision);
+				if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE)
+				{
+					_outDataPackets += temp;
+				} 
+				else
+				{
+					Serial.print("ERROR: _outDataPackets exceeded OUT_MESSAGE_RESERVE_SIZE ");
+					Serial.println("[" + String(_outDataPackets.length()) + "+" + String(temp.length()) + "/" + String(OUT_MESSAGE_RESERVE_SIZE + "]"));
+				}
 			}
 		}
 		_outDataPackets += "\n";
@@ -2764,14 +2780,16 @@ void EmotiBit::processData()
 	// Swap all buffers to that data is ready to send from OUT buffer
 
 	static bool overflowTestOn = false;
-	//static unsigned long overflowTestTimer = millis();
-	//static unsigned long overflowOnTime = 4000;
-	//if (millis() - overflowTestTimer > overflowOnTime)
-	//{
-	//	overflowTestOn = !overflowTestOn;
-	//	Serial.println("overflowTestOn = " + String(overflowTestOn));
-	//	overflowTestTimer = millis();
-	//}
+#ifdef TEST_OVERFLOW
+	static unsigned long overflowTestTimer = millis();
+	static unsigned long overflowOnTime = 6000;
+	if (millis() - overflowTestTimer > overflowOnTime)
+	{
+		overflowTestOn = !overflowTestOn;
+		Serial.println("overflowTestOn = " + String(overflowTestOn));
+		overflowTestTimer = millis();
+	}
+#endif // TEST_OVERFLOW
 
 	if (!overflowTestOn)
 	{
