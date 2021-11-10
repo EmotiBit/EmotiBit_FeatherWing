@@ -52,8 +52,6 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 	Serial.println(output);
 	output = "samplingRate: " + String(_constants.samplingRate);
 	Serial.println(output);
-	output = "enableDigitalFilter: " + String(_constants.enableDigitalFilter);
-	Serial.println(output);
 
 	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 	{	
@@ -69,6 +67,8 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 		_constants.clipMin = -26500;
 		_constants.clipMax = 26500;
 
+		output = "enableDigitalFilter: " + String(_constants.enableDigitalFilter);
+		Serial.println(output);
 		output = "clipMin: " + String(_constants.clipMin);
 		Serial.println(output);
 		output = "clipMax: " + String(_constants.clipMax);
@@ -99,6 +99,10 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 		_constants.clipMin = 10;
 		_constants.clipMax = _constants_v2_v3.adcRes - 20;
 
+		_constants.enableDigitalFilter = true;
+		
+		output = "enableDigitalFilter: " + String(_constants.enableDigitalFilter);
+		Serial.println(output);
 		output = "clipMin: " + String(_constants.clipMin);
 		Serial.println(output);
 		output = "clipMax: " + String(_constants.clipMax);
@@ -370,7 +374,7 @@ bool EmotiBitEda::processData()
 		float edlTemp, edrTemp, edaTemp;
 
 		// Wait for readData() to complete to avoid EDL/EDR size mismatch
-		// NOTE: this can create a main loop delay up to the oversampling rate
+		// NOTE: this can create a small main loop delay
 		// This wouldn't be necessary with a ring buffer
 
 		static const unsigned long int samplingInterval = 1000000 / (_constants.samplingRate * _edrOversampBuffer->capacity());

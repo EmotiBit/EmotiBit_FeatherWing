@@ -2841,13 +2841,13 @@ Serial.println("EmotiBit::sendData()");
 #ifdef DEBUG_FEAT_EDA_CTRL
 		Serial.println("addPacket() complete");
 #endif // DEBUG
-		if (_outDataPackets.length() > OUT_PACKET_TARGET_SIZE)
+		if (_outDataPackets.length() > OUT_MESSAGE_TARGET_SIZE)
 		{
 			// Avoid overrunning our reserve memory
-			if (_outDataPackets.length() > 2000)
-			{
-				Serial.println(_outDataPackets.length());
-			}
+			//if (_outDataPackets.length() > 2000)
+			//{
+			//	Serial.println(_outDataPackets.length());
+			//}
 			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
 
 			if (getPowerMode() == PowerMode::NORMAL_POWER)

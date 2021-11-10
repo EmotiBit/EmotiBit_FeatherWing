@@ -257,7 +257,7 @@ public:
 
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 2560;
-	static const uint16_t OUT_PACKET_TARGET_SIZE = 512;
+	static const uint16_t OUT_MESSAGE_TARGET_SIZE = 1024;
 	static const uint16_t DATA_SEND_INTERVAL = 100;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
 	static const uint16_t MAX_DATA_BUFFER_SIZE = 48;
