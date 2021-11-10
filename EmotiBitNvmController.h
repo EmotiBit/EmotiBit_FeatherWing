@@ -51,6 +51,7 @@ public:
 		static const uint8_t EDR_DATA_SIZE = 4;  // 1 float
 		static const uint8_t EMOTIBIT_VERSION_ADDR = 0xB7;
 		static const uint8_t DATATYPE_VERSION_ADDR = 0xB6;
+		static const uint8_t OTP_SIZE_BYTES = 54; 
 	};
 
 	struct EmotiBitEepromSettings
@@ -108,6 +109,7 @@ public:
 	volatile bool _validateWrite;
 	volatile State writeState, readState;
 	volatile Status _writeResult, _readResult;
+	volatile bool _readCompleteNvm = false;
 	uint32_t _nextAvailableAddress = ConstEepromAddr::MEMORY_MAP_BASE + (sizeof(EepromMemoryMap)*(int)DataType::length);
 	uint8_t _numMapEntries = (uint8_t)DataType::length;
 	ExternalEEPROM emotibitEeprom;
@@ -189,6 +191,10 @@ public:
 		       Necessary to call this function in ISR, if autoSync is OFF in staging R/W functions.
 	*/
 	void syncRW();
+
+	void printEepromContent();
+
+	void eraseEeprom();
 };
 
 #endif

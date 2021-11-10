@@ -47,7 +47,7 @@ public:
 	};
 
 	String firmware_version = "1.2.86-NvmController";
-	TestingMode testingMode = TestingMode::NONE;
+	TestingMode testingMode = TestingMode::ACUTE;
 	const bool DIGITAL_WRITE_DEBUG = true;
 	const bool DC_DO_V2 = true;
 

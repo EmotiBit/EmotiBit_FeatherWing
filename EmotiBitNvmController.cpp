@@ -274,63 +274,62 @@ uint8_t EmotiBitNvmController::readFromStorage()
 		readState = State::BUSY_READING;
 		if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 		{
-			// Load the correct memory-map from EEPROM
-			uint8_t mapLoadStatus;
-			mapLoadStatus = loadMemoryMap(_readBuffer.datatype);
-
-			if (mapLoadStatus != 0)
+			if (_readCompleteNvm)
 			{
-				_readResult = Status::MEMORY_NOT_UPDATED;
-				readState = State::IDLE;
-				return (uint8_t)_readResult;
+				uint8_t *eepromData = new uint8_t[emotibitEepromSettings.capacityBytes];
+				emotibitEeprom.read(0, eepromData, emotibitEepromSettings.capacityBytes-1); // driver limits read of max 255 bytes
+				eepromData[emotibitEepromSettings.capacityBytes-1] = emotibitEeprom.read(emotibitEepromSettings.capacityBytes-1); // read the last location
+				_readBuffer.data = eepromData;
+				_readBuffer.dataSize = (uint32_t)emotibitEepromSettings.capacityBytes;
+				_readCompleteNvm = false;
+				_readResult = Status::SUCCESS;
+				readState = State::READ_BUFFER_FULL;
+				return (uint8_t)Status::SUCCESS;
 			}
 			else
 			{
-				if (map[(uint8_t)_readBuffer.datatype].dataSize != 0 && map[(uint8_t)_readBuffer.datatype].dataSize != UINT32_MAX)  // MAX changes with datatype set in the MemoryMap
+				// Load the correct memory-map from EEPROM
+				uint8_t mapLoadStatus;
+				mapLoadStatus = loadMemoryMap(_readBuffer.datatype);
+
+				if (mapLoadStatus != 0)
 				{
-					uint8_t *eepromData = new uint8_t[map[(uint8_t)_readBuffer.datatype].dataSize];
-					uint8_t datatypeVersion;
-					uint32_t dataSize;
-					emotibitEeprom.read(map[(uint8_t)_readBuffer.datatype].address, eepromData, map[(uint8_t)_readBuffer.datatype].dataSize);
-					dataSize = map[(uint8_t)_readBuffer.datatype].dataSize - 1; // 1 Additional Byte is required to store version.
-					datatypeVersion = *(eepromData + dataSize);
-					_readBuffer.update(datatypeVersion, dataSize, eepromData);
-					_readResult = Status::SUCCESS;
-					readState = State::READ_BUFFER_FULL;
+					_readResult = Status::MEMORY_NOT_UPDATED;
+					readState = State::IDLE;
 					return (uint8_t)_readResult;
 				}
 				else
 				{
-					readState = State::IDLE;
-					_readResult = Status::MEMORY_NOT_UPDATED;
-					return (uint8_t)_readResult;
+					if (map[(uint8_t)_readBuffer.datatype].dataSize != 0 && map[(uint8_t)_readBuffer.datatype].dataSize != UINT32_MAX)  // MAX changes with datatype set in the MemoryMap
+					{
+						uint8_t *eepromData = new uint8_t[map[(uint8_t)_readBuffer.datatype].dataSize];
+						uint8_t datatypeVersion;
+						uint32_t dataSize;
+						emotibitEeprom.read(map[(uint8_t)_readBuffer.datatype].address, eepromData, map[(uint8_t)_readBuffer.datatype].dataSize);
+						dataSize = map[(uint8_t)_readBuffer.datatype].dataSize - 1; // 1 Additional Byte is required to store version.
+						datatypeVersion = *(eepromData + dataSize);
+						_readBuffer.update(datatypeVersion, dataSize, eepromData);
+						_readResult = Status::SUCCESS;
+						readState = State::READ_BUFFER_FULL;
+						return (uint8_t)_readResult;
+					}
+					else
+					{
+						readState = State::IDLE;
+						_readResult = Status::MEMORY_NOT_UPDATED;
+						return (uint8_t)_readResult;
+					}
 				}
 			}
 		}
 		else if ((int)_hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
 		{
-			if (_readBuffer.datatype == DataType::VARIANT_INFO)
+			if (_readCompleteNvm)
 			{
-				uint8_t* otpData = new uint8_t;
-				uint8_t datatypeVersion;
-				uint32_t dataSize;
-				*otpData = si7013.readRegister8(Si7013OtpMemoryMap::EMOTIBIT_VERSION_ADDR, true);
-				datatypeVersion = si7013.readRegister8(Si7013OtpMemoryMap::DATATYPE_VERSION_ADDR, true);
-				dataSize = 1;
-				_readBuffer.update(datatypeVersion, dataSize, otpData);
-				_readResult = Status::SUCCESS;
-				readState = State::READ_BUFFER_FULL;
-				return (uint8_t)_readResult; // success
-			}
-			else if (_readBuffer.datatype == DataType::EDA)
-			{
-				uint8_t* otpData = new uint8_t[Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE];
-				uint8_t datatypeVersion;
-				uint32_t dataSize;
-				datatypeVersion = si7013.readRegister8(Si7013OtpMemoryMap::DATATYPE_VERSION_ADDR, true);
-				uint8_t *index;
+				uint8_t* otpData = new uint8_t[Si7013OtpMemoryMap::OTP_SIZE_BYTES];
+				uint8_t* index;
 				index = otpData;
-				for (uint8_t addr = Si7013OtpMemoryMap::EDL_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDL_DATA_START_ADDR + Si7013OtpMemoryMap::EDL_DATA_SIZE; addr++)
+				for (uint8_t addr = Si7013OtpMemoryMap::EDL_DATA_START_ADDR,i=0; i<Si7013OtpMemoryMap::OTP_SIZE_BYTES; i++, addr++)
 				{
 					*index = si7013.readRegister8(addr, true);
 #ifdef DEBUG_SERIAL
@@ -338,24 +337,63 @@ uint8_t EmotiBitNvmController::readFromStorage()
 #endif
 					index++;
 				}
-				for (uint8_t addr = Si7013OtpMemoryMap::EDR_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDR_DATA_START_ADDR + Si7013OtpMemoryMap::EDR_DATA_SIZE; addr++)
-				{
-					*index = si7013.readRegister8(addr, true);
-#ifdef DEBUG_SERIAL
-					Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
-#endif
-					index++;
-				}
-				dataSize = Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE;
-				_readBuffer.update(datatypeVersion, dataSize, otpData);
+				_readBuffer.data = otpData;
+				_readBuffer.dataSize = Si7013OtpMemoryMap::OTP_SIZE_BYTES;
+				_readCompleteNvm = false;
 				_readResult = Status::SUCCESS;
 				readState = State::READ_BUFFER_FULL;
 				return (uint8_t)_readResult; // success
 			}
 			else
 			{
-				readState = State::IDLE;
-				return (uint8_t)Status::OUT_OF_BOUNDS_ACCESS;
+				if (_readBuffer.datatype == DataType::VARIANT_INFO)
+				{
+					uint8_t* otpData = new uint8_t;
+					uint8_t datatypeVersion;
+					uint32_t dataSize;
+					*otpData = si7013.readRegister8(Si7013OtpMemoryMap::EMOTIBIT_VERSION_ADDR, true);
+					datatypeVersion = si7013.readRegister8(Si7013OtpMemoryMap::DATATYPE_VERSION_ADDR, true);
+					dataSize = 1;
+					_readBuffer.update(datatypeVersion, dataSize, otpData);
+					_readResult = Status::SUCCESS;
+					readState = State::READ_BUFFER_FULL;
+					return (uint8_t)_readResult; // success
+				}
+				else if (_readBuffer.datatype == DataType::EDA)
+				{
+					uint8_t* otpData = new uint8_t[Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE];
+					uint8_t datatypeVersion;
+					uint32_t dataSize;
+					datatypeVersion = si7013.readRegister8(Si7013OtpMemoryMap::DATATYPE_VERSION_ADDR, true);
+					uint8_t *index;
+					index = otpData;
+					for (uint8_t addr = Si7013OtpMemoryMap::EDL_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDL_DATA_START_ADDR + Si7013OtpMemoryMap::EDL_DATA_SIZE; addr++)
+					{
+						*index = si7013.readRegister8(addr, true);
+#ifdef DEBUG_SERIAL
+						Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
+#endif
+						index++;
+					}
+					for (uint8_t addr = Si7013OtpMemoryMap::EDR_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDR_DATA_START_ADDR + Si7013OtpMemoryMap::EDR_DATA_SIZE; addr++)
+					{
+						*index = si7013.readRegister8(addr, true);
+#ifdef DEBUG_SERIAL
+						Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
+#endif
+						index++;
+					}
+					dataSize = Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE;
+					_readBuffer.update(datatypeVersion, dataSize, otpData);
+					_readResult = Status::SUCCESS;
+					readState = State::READ_BUFFER_FULL;
+					return (uint8_t)_readResult; // success
+				}
+				else
+				{
+					readState = State::IDLE;
+					return (uint8_t)Status::OUT_OF_BOUNDS_ACCESS;
+				}
 			}
 		}
 	}
@@ -366,4 +404,27 @@ void EmotiBitNvmController::syncRW()
 	writeToStorage();
 
 	readFromStorage();
+}
+
+void EmotiBitNvmController::printEepromContent()
+{
+	Serial.println("NVM Content:");
+	uint8_t* data = nullptr;
+	size_t dataSize = emotibitEepromSettings.capacityBytes;
+	Serial.print("size: "); Serial.println(emotibitEepromSettings.capacityBytes);
+	_readCompleteNvm = true;
+	readState = State::READY_TO_READ;
+	while (readState != State::READ_BUFFER_FULL && readState != State::IDLE);
+	data = _readBuffer.data;
+	for (int i = 0; i < dataSize; i++)
+	{
+		Serial.print("|"); Serial.print(i); Serial.print(": "); Serial.print(data[i]);
+		if ((i + 1) % 8 == 0)
+		{
+			Serial.println("|");
+		}
+	}
+	delete[] data;
+	_readBuffer.clear();
+	readState = State::IDLE;
 }
