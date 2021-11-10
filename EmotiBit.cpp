@@ -1,4 +1,5 @@
 #include "EmotiBit.h"
+#include <math.h>
 
 //FlashStorage(samdFlashStorage, SamdStorageAdcValues);
 
@@ -1990,12 +1991,13 @@ bool EmotiBit::processThermopileData()
 	uint32_t* timestampSto;
 
 	static const unsigned long int samplingInterval = 1000000 / (_samplingRates.thermopile * _samplesAveraged.thermopile);
+	static const unsigned int minSwapTime = max(500, min(samplingInterval / 10, 3500));
 
 	//Serial.print("window: " + String(samplingInterval - (micros() - _thermReadFinishedTime)));
 	//Serial.println("");
 	unsigned long int waitEnd;
 	unsigned long int waitStart = micros();
-	while (samplingInterval - (micros() - _thermReadFinishedTime) < 1000)
+	while (samplingInterval - (micros() - _thermReadFinishedTime) < minSwapTime)
 	{
 		// Wait until we have at least 500 usec to do swap
 		//Serial.println("WAIT");

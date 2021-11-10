@@ -378,12 +378,13 @@ bool EmotiBitEda::processData()
 		// This wouldn't be necessary with a ring buffer
 
 		static const unsigned long int samplingInterval = 1000000 / (_constants.samplingRate * _edrOversampBuffer->capacity());
+		static const unsigned int minSwapTime = max(500, min(samplingInterval / 10, 3500));
 
 		//Serial.print("window: " + String(samplingInterval - (micros() - _readFinishedTime)));
 		//Serial.println("");
 		unsigned long int waitEnd;
 		unsigned long int waitStart = micros();
-		while (samplingInterval - (micros() - _readFinishedTime) < 500)
+		while (samplingInterval - (micros() - _readFinishedTime) < minSwapTime)
 		{
 			// Wait until we have at least 500 usec to do swap
 			//Serial.println("WAIT");
