@@ -49,6 +49,7 @@ public:
 	String firmware_version = "1.2.86-NvmController";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = true;
+	const bool DC_DO_V2 = true;
 
 	bool _debugMode = false;
 	bool dummyIsrWithDelay = false;
@@ -256,7 +257,7 @@ public:
 	volatile unsigned long int _thermReadFinishedTime;
 
 	// ---------- BEGIN ino refactoring --------------
-	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 2560;
+	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 2048;
 	static const uint16_t OUT_MESSAGE_TARGET_SIZE = 1024;
 	static const uint16_t DATA_SEND_INTERVAL = 100;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer

@@ -1119,8 +1119,14 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 		//if (t == EmotiBit::DataType::DATA_OVERFLOW){
 		//	addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_CONNHISTORY, timestamp);  // addDebugPacket(case, timestamp) 
 		//}
+		uint8_t protocolVersion = 1;
+		if (DC_DO_V2)
+		{
+			protocolVersion = 2;
+		}
 
-		header = EmotiBitPacket::createHeader(typeTags[(uint8_t)t], timestamp, _outDataPacketCounter++, dataLen);
+
+		header = EmotiBitPacket::createHeader(typeTags[(uint8_t)t], timestamp, _outDataPacketCounter++, dataLen, protocolVersion);
 		_outDataPackets += EmotiBitPacket::headerToString(header);
 
 		if (t == EmotiBit::DataType::DATA_CLIPPING || t == EmotiBit::DataType::DATA_OVERFLOW) {
@@ -1139,17 +1145,38 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 					{
 						count = dataDoubleBuffers[i]->getOverflowCount(DoubleBufferFloat::BufferSelector::OUT);
 					}
-					for (size_t n = 0; n < count; n++)
+					if (DC_DO_V2)
 					{
-						String temp = "," + String(typeTags[i]);
-						if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE)
+						if (count > 0)
 						{
-							_outDataPackets += temp;
+							String temp = EmotiBitPacket::PAYLOAD_DELIMITER + String(typeTags[i]) + EmotiBitPacket::PAYLOAD_DELIMITER + String(count);
+							if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE - 1)
+							{
+								_outDataPackets += temp;
+							}
+							else
+							{
+								_outDataPackets += EmotiBitPacket::PAYLOAD_TRUNCATED;
+								Serial.print("ERROR: _outDataPackets exceeded OUT_MESSAGE_RESERVE_SIZE ");
+								Serial.println("[" + String(_outDataPackets.length()) + "+" + String(temp.length()) + "/" + String(OUT_MESSAGE_RESERVE_SIZE) + "]");
+							}
 						}
-						else
+					} 
+					else
+					{
+						for (size_t n = 0; n < count; n++)
 						{
-							Serial.print("ERROR: _outDataPackets exceeded OUT_MESSAGE_RESERVE_SIZE ");
-							Serial.println("[" + String(_outDataPackets.length()) + "+" + String(temp.length()) + "/" + String(OUT_MESSAGE_RESERVE_SIZE) + "]");
+							String temp = EmotiBitPacket::PAYLOAD_DELIMITER + String(typeTags[i]);
+							if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE - 1)
+							{
+								_outDataPackets += temp;
+							}
+							else
+							{
+								_outDataPackets += EmotiBitPacket::PAYLOAD_TRUNCATED;
+								Serial.print("ERROR: _outDataPackets exceeded OUT_MESSAGE_RESERVE_SIZE ");
+								Serial.println("[" + String(_outDataPackets.length()) + "+" + String(temp.length()) + "/" + String(OUT_MESSAGE_RESERVE_SIZE) + "]");
+							}
 						}
 					}
 				}
@@ -1157,13 +1184,14 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 		}
 		else {
 			for (uint16_t d = 0; d < dataLen; d++) {
-				String temp = "," + String(data[d], precision);
-				if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE)
+				String temp = EmotiBitPacket::PAYLOAD_DELIMITER + String(data[d], precision);
+				if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE - 1)
 				{
 					_outDataPackets += temp;
 				} 
 				else
 				{
+					_outDataPackets += EmotiBitPacket::PAYLOAD_TRUNCATED;
 					Serial.print("ERROR: _outDataPackets exceeded OUT_MESSAGE_RESERVE_SIZE ");
 					Serial.println("[" + String(_outDataPackets.length()) + "+" + String(temp.length()) + "/" + String(OUT_MESSAGE_RESERVE_SIZE + "]"));
 				}
@@ -1194,21 +1222,34 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 		{
 			if (i != (uint8_t)EmotiBit::DataType::DATA_CLIPPING && i != (uint8_t)EmotiBit::DataType::DATA_OVERFLOW)
 			{
+				size_t count = 0;
 				// Count all the events across all the buffers to get dataLen
 				if (t == EmotiBit::DataType::DATA_CLIPPING)
 				{
-					dataLen += dataDoubleBuffers[i]->getClippedCount(DoubleBufferFloat::BufferSelector::OUT);
+					count = dataDoubleBuffers[i]->getClippedCount(DoubleBufferFloat::BufferSelector::OUT);
 				}
-				else if (t == EmotiBit::DataType::DATA_OVERFLOW)
+				if (t == EmotiBit::DataType::DATA_OVERFLOW)
 				{
-					size_t temp = dataDoubleBuffers[i]->getOverflowCount(DoubleBufferFloat::BufferSelector::OUT);
-#ifdef DEBUG_FEAT_EDA_CTRL
-					Serial.print(i);
-					Serial.print(": ");
-					Serial.println(temp);
-#endif
-					dataLen += temp;
+					count = dataDoubleBuffers[i]->getOverflowCount(DoubleBufferFloat::BufferSelector::OUT);
 				}
+				if (DC_DO_V2)
+				{
+					if (count > 0)
+					{
+						// Data sent as TYPE, #, etc
+						// ToDo: consider whether dataLen should be counted per delimter (+=2) or per DataType (+=1)
+						dataLen += 2;
+					}
+				}
+				else
+				{
+					dataLen += count;
+				}
+#ifdef DEBUG_FEAT_EDA_CTRL
+				Serial.print(i);
+				Serial.print(": ");
+				Serial.println(count);
+#endif
 			}
 #ifdef DEBUG_FEAT_EDA_CTRL
 			Serial.print(i);
@@ -1954,7 +1995,7 @@ bool EmotiBit::processThermopileData()
 	//Serial.println("");
 	unsigned long int waitEnd;
 	unsigned long int waitStart = micros();
-	while (samplingInterval - (micros() - _thermReadFinishedTime) < 500)
+	while (samplingInterval - (micros() - _thermReadFinishedTime) < 1000)
 	{
 		// Wait until we have at least 500 usec to do swap
 		//Serial.println("WAIT");
@@ -1967,10 +2008,10 @@ bool EmotiBit::processThermopileData()
 	}
 	
 	// Swap buffers with minimal delay to avoid size mismatch
-	//unsigned long int swapStart = micros();
+	unsigned long int swapStart = micros();
 	therm0AMB.swap();
 	therm0Sto.swap();
-	//unsigned long int swapEnd = micros();
+	unsigned long int swapEnd = micros();
 	//Serial.println("swap: " + String(swapEnd - swapStart));
 	
 	// Get pointers to the data buffers
@@ -1984,6 +2025,9 @@ bool EmotiBit::processThermopileData()
 	if (sizeAMB != sizeSto) // interrupt hit between therm0AMB.getdata and therm0Sto.getdata
 	{
 		Serial.println("WARNING: therm0AMB and therm0Sto buffers different sizes");
+		Serial.print("window: " + String(samplingInterval - (micros() - _thermReadFinishedTime)));
+		Serial.println("");
+		Serial.println("swap: " + String(swapEnd - swapStart));
 		// ToDo: Consider how to manage buffer size differences
 		// One fix option is to switch to ring buffers instead of double buffers
 		
@@ -3215,7 +3259,7 @@ void EmotiBit::appendTestData(String &dataMessage, uint16_t &packetNumber)
 			{
 				if (i > 0 || j > 0)
 				{
-					payload += ",";
+					payload += EmotiBitPacket::PAYLOAD_DELIMITER;
 				}
 				k = i * 250 / m + random(50);
 				payload += k;
