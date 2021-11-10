@@ -50,8 +50,8 @@ public:
 		float samplingRate = 15.f;	// Hz
 		uint8_t adcBits;	// Bit resolution of ADC, e.g. 12, 16
 		bool enableDigitalFilter = false;
-		int16_t clipMin;
-		int16_t clipMax;
+		int16_t clipMin;	// Min value before clipping occurs
+		int16_t clipMax;	// Max value before clipping occurs
 	} _constants;
 
 	// V2/V3 specific EDA constants
@@ -107,24 +107,31 @@ public:
 
 	/*!
 		@brief Writes EDA portion of _info.json file with relevant parameters
+		@param jsonFile _info.json file to write to
 		@return true if successful, otherwise false
 	*/
 	bool writeInfoJson(File &jsonFile);
 
 	/*!
 		@brief Loads & calculates EDA calibration from the on-board storage
+		@param nvmController Pointer to NvmController from which to load data
+		@param autoSync False requires EmotiBitNvmController::syncRW to be called in a separate thread/ISR
 		@return true if successful, otherwise false
 	*/
 	bool stageCalibLoad(EmotiBitNvmController * nvmController, bool autoSync = false);
 
 	/*!
 		@brief Stores calibration values using on-board storage
+		@param nvmController Pointer to NvmController from which to load data
+		@param autoSync False requires EmotiBitNvmController::syncRW to be called in a separate thread/ISR
+		@param edaCalibPacket Packet with calbration content (see EmotiBitEdaCalibration)
 		@return true if successful, otherwise false
 	*/
 	bool stageCalibStorage(EmotiBitNvmController * nvmController, String &edaCalibPacket, bool autoSync = false);
 
 	/*!
 		@brief Sets ISR offset correction for ADC
+		@param isrOffsetCorr Sets the ISR offset correction value
 	*/
 	void setAdcIsrOffsetCorr(float isrOffsetCorr);
 };
