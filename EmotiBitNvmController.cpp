@@ -410,7 +410,6 @@ void EmotiBitNvmController::printEepromContent(bool autoSync)
 {
 	Serial.println("NVM Content:");
 	uint8_t* data = nullptr;
-	size_t dataSize = emotibitEepromSettings.capacityBytes;
 	Serial.print("size: "); Serial.println(emotibitEepromSettings.capacityBytes);
 	_readCompleteNvm = true;
 	readState = State::READY_TO_READ;
@@ -423,7 +422,7 @@ void EmotiBitNvmController::printEepromContent(bool autoSync)
 		while (readState != State::READ_BUFFER_FULL && readState != State::IDLE);
 	}
 	data = _readBuffer.data;
-	for (int i = 0; i < dataSize; i++)
+	for (int i = 0; i < _readBuffer.dataSize; i++)
 	{
 		Serial.print("|"); Serial.print(i); Serial.print(": "); Serial.print(data[i]);
 		if ((i + 1) % 8 == 0)
@@ -435,3 +434,4 @@ void EmotiBitNvmController::printEepromContent(bool autoSync)
 	_readBuffer.clear();
 	readState = State::IDLE;
 }
+
