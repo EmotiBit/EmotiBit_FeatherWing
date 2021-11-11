@@ -192,9 +192,9 @@ public:
 	*/
 	void syncRW();
 
-	void printEepromContent();
+	void printEepromContent(bool autoSync = false);
 
-	void eraseEeprom();
+	void eraseEeprom(bool autoSync = false);
 };
 
 #endif
