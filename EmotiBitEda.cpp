@@ -380,27 +380,28 @@ bool EmotiBitEda::processData()
 		static const unsigned long int samplingInterval = 1000000 / (_constants.samplingRate * _edrOversampBuffer->capacity());
 		static const unsigned int minSwapTime = max(500, min(samplingInterval / 10, 3500));
 
-		//Serial.print("window: " + String(samplingInterval - (micros() - _readFinishedTime)));
-		//Serial.println("");
-		unsigned long int waitEnd;
+		//Serial.println("window: " + String(samplingInterval - (micros() - _thermReadFinishedTime)));
 		unsigned long int waitStart = micros();
-		while (samplingInterval - (micros() - _readFinishedTime) < minSwapTime)
+		unsigned long int waitEnd = micros();
+		unsigned long int readFinishedTime = _readFinishedTime;
+		while (samplingInterval - (waitEnd - readFinishedTime) < minSwapTime)
 		{
-			// Wait until we have at least 500 usec to do swap
+			// Wait until we have at least minSwapTime usec to do swap
 			//Serial.println("WAIT");
-			waitEnd = micros();
 			if (waitEnd - waitStart > 100000)
 			{
-				Serial.println("Timeout waiting for EmotiBitEda::_readFinishedTime");
+				Serial.println("Timeout waiting for _readFinishedTime");
 				break;
 			}
+			waitEnd = micros();
+			readFinishedTime = _readFinishedTime;
 		}
 		
 		// Swap EDL and EDR buffers with minimal delay to avoid size mismatch
-		//unsigned long int swapStart = micros();
+		unsigned long int swapStart = micros();
 		_edlBuffer->swap();
 		_edrBuffer->swap();
-		//unsigned long int swapEnd = micros();
+		unsigned long int swapEnd = micros();
 		//Serial.println("swap: " + String(swapEnd - swapStart));
 
 		// Get pointers to the data buffers
@@ -409,17 +410,17 @@ bool EmotiBitEda::processData()
 
 		if (edlN != edrN)
 		{
-			Serial.print("WARNING: EDL (");
-			Serial.print(edlN);
-			Serial.print(") and EDR (");
-			Serial.print(edrN);
-			Serial.print(") buffers different sizes.");
-			//Serial.print(" [");
-			//Serial.print(waitEnd - waitStart);
-			//Serial.print(", ");
-			//Serial.print(swapEnd - swapStart);
-			//Serial.print(" usecs]");
-			Serial.println();
+			Serial.println("WARNING: therm0AMB and therm0Sto buffers different sizes");
+			Serial.println("minSwapTime: " + String(minSwapTime));
+			Serial.println("_readFinishedTime: " + String(_readFinishedTime));
+			Serial.println("readFinishedTime: " + String(readFinishedTime));
+			Serial.println("waitEnd: " + String(waitEnd));
+			Serial.println("waitStart: " + String(waitStart));
+			Serial.println("micros(): " + String(micros()));
+			Serial.println("window: " + String(samplingInterval - (waitEnd - readFinishedTime)));
+			Serial.println("swap: " + String(swapEnd - swapStart));
+			Serial.println("edlN: " + String(edlN));
+			Serial.println("edrN: " + String(edrN));
 			// ToDo: Consider how to manage buffer size differences
 			// One fix option is to switch to ring buffers instead of double buffers
 			

@@ -1999,7 +1999,7 @@ bool EmotiBit::processThermopileData()
 	unsigned long int readFinishedTime = _thermReadFinishedTime;
 	while (samplingInterval - (waitEnd - readFinishedTime) < minSwapTime)
 	{
-		// Wait until we have at least 500 usec to do swap
+		// Wait until we have at least minSwapTime usec to do swap
 		//Serial.println("WAIT");
 		if (waitEnd - waitStart > 100000)
 		{
@@ -2031,6 +2031,8 @@ bool EmotiBit::processThermopileData()
 		Serial.println("minSwapTime: " + String(minSwapTime));
 		Serial.println("_thermReadFinishedTime: " + String(_thermReadFinishedTime));
 		Serial.println("readFinishedTime: " + String(readFinishedTime));
+		Serial.println("waitEnd: " + String(waitEnd));
+		Serial.println("waitStart: " + String(waitStart));
 		Serial.println("micros(): " + String(micros()));
 		Serial.println("window: " + String(samplingInterval - (waitEnd - readFinishedTime)));
 		Serial.println("swap: " + String(swapEnd - swapStart));
