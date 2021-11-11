@@ -33,6 +33,7 @@ public:
 	
 	enum class DataType
 	{
+		ENTIRE_NVM = -1,
 		VARIANT_INFO = 0,
 		EDA = 1,
 		length
@@ -69,6 +70,7 @@ public:
 		I2C_WRITE_ERROR,
 		CONTROLLER_BUSY,
 		INVALID_DATA_TO_WRITE,
+		HW_VERSION_NOT_SUPPORTED,
 		OTHER_FAILURE
 	};
 
@@ -109,7 +111,6 @@ public:
 	volatile bool _validateWrite;
 	volatile State writeState, readState;
 	volatile Status _writeResult, _readResult;
-	volatile bool _readCompleteNvm = false;
 	uint32_t _nextAvailableAddress = ConstEepromAddr::MEMORY_MAP_BASE + (sizeof(EepromMemoryMap)*(int)DataType::length);
 	uint8_t _numMapEntries = (uint8_t)DataType::length;
 	ExternalEEPROM emotibitEeprom;
@@ -192,9 +193,9 @@ public:
 	*/
 	void syncRW();
 
-	void printEepromContent(bool autoSync = false);
+	void printEntireNvm(bool autoSync = false);
 
-	void eraseEeprom(bool autoSync = false);
+	void eraseEeprom(bool autoSync = false, bool printAfterErase = true);
 };
 
 #endif

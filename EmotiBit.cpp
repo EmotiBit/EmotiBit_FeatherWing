@@ -3645,11 +3645,18 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 				Serial.println("Cannot test NVM for this HW version.");
 			}
 		}
-		else if (c == 's')
+		else if (c == 's') 
 		{
 			if (testingMode == TestingMode::FACTORY_TEST)
 			{
-				_emotibitNvmController.printEepromContent();
+				_emotibitNvmController.printEntireNvm();
+			}
+		}
+		else if (c == 'c')
+		{
+			if (testingMode == TestingMode::FACTORY_TEST)
+			{
+				_emotibitNvmController.eraseEeprom();
 			}
 		}
 	}

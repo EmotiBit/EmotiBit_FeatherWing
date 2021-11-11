@@ -46,8 +46,8 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.86-NvmController";
-	TestingMode testingMode = TestingMode::ACUTE;
+	String firmware_version = "1.2.86-emotibitMemoryController.1";
+	TestingMode testingMode = TestingMode::FACTORY_TEST;
 	const bool DIGITAL_WRITE_DEBUG = true;
 	const bool DC_DO_V2 = true;
 
