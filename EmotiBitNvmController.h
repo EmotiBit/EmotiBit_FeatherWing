@@ -193,8 +193,17 @@ public:
 	*/
 	void syncRW();
 
+	/*!
+		@brief Prints the entire contents of the NVM controller on Serial
+		@param autoSync set True to perform Read without external call.
+	*/
 	void printEntireNvm(bool autoSync = false);
 
+	/*!
+		@brief Erases EEPROM by writing 255 to every memory location
+		@param autoSync set True to perform Write without external call.
+		@param printAfterErase set True to print the Entire NVM content on Serial.
+	*/
 	void eraseEeprom(bool autoSync = false, bool printAfterErase = true);
 };
 
