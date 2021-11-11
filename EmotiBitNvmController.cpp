@@ -95,12 +95,13 @@ uint8_t EmotiBitNvmController::stageToWrite(DataType datatype, uint8_t datatypeV
 	}
 	else if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
 	{
+		Serial.println("Hardware Version UNKNOWN");
+		return (uint8_t)Status::HARDWARE_VERSION_UNKNOWN;
+	}
+	else
+	{
 		Serial.println("Use EmotiBit FW V1.2.86 to perform Write to NVM on HW V2/V3");
 		return (uint8_t)Status::HW_VERSION_NOT_SUPPORTED;
-	}
-	else if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
-	{
-		return (uint8_t)Status::HARDWARE_VERSION_UNKNOWN;
 	}
 }
 
@@ -328,7 +329,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 				}
 			}
 		}
-		else if ((int)_hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
+		else if ((uint8_t)_hwVersion < (uint8_t)EmotiBitVersionController::EmotiBitVersion::V04A)
 		{
 			if (_readBuffer.datatype == DataType::ENTIRE_NVM)
 			{
@@ -356,13 +357,22 @@ uint8_t EmotiBitNvmController::readFromStorage()
 					uint8_t* otpData = new uint8_t;
 					uint8_t datatypeVersion;
 					uint32_t dataSize;
-					*otpData = si7013.readRegister8(Si7013OtpMemoryMap::EMOTIBIT_VERSION_ADDR, true);
 					datatypeVersion = si7013.readRegister8(Si7013OtpMemoryMap::DATATYPE_VERSION_ADDR, true);
-					dataSize = 1;
-					_readBuffer.update(datatypeVersion, dataSize, otpData);
-					_readResult = Status::SUCCESS;
-					readState = State::READ_BUFFER_FULL;
-					return (uint8_t)_readResult; // success
+					if (datatypeVersion == 255)
+					{
+						_readResult = Status::MEMORY_NOT_UPDATED;
+						readState = State::IDLE;
+						return (uint8_t)_readResult;
+					}
+					else
+					{
+						*otpData = si7013.readRegister8(Si7013OtpMemoryMap::EMOTIBIT_VERSION_ADDR, true);
+						dataSize = 1;
+						_readBuffer.update(datatypeVersion, dataSize, otpData);
+						_readResult = Status::SUCCESS;
+						readState = State::READ_BUFFER_FULL;
+						return (uint8_t)_readResult; // success
+					}
 				}
 				else if (_readBuffer.datatype == DataType::EDA)
 				{
@@ -370,29 +380,38 @@ uint8_t EmotiBitNvmController::readFromStorage()
 					uint8_t datatypeVersion;
 					uint32_t dataSize;
 					datatypeVersion = si7013.readRegister8(Si7013OtpMemoryMap::DATATYPE_VERSION_ADDR, true);
-					uint8_t *index;
-					index = otpData;
-					for (uint8_t addr = Si7013OtpMemoryMap::EDL_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDL_DATA_START_ADDR + Si7013OtpMemoryMap::EDL_DATA_SIZE; addr++)
+					if (datatypeVersion == 255)
 					{
-						*index = si7013.readRegister8(addr, true);
-#ifdef DEBUG_SERIAL
-						Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
-#endif
-						index++;
+						_readResult = Status::MEMORY_NOT_UPDATED;
+						readState = State::IDLE;
+						return (uint8_t)_readResult;
 					}
-					for (uint8_t addr = Si7013OtpMemoryMap::EDR_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDR_DATA_START_ADDR + Si7013OtpMemoryMap::EDR_DATA_SIZE; addr++)
+					else
 					{
-						*index = si7013.readRegister8(addr, true);
+						uint8_t *index;
+						index = otpData;
+						for (uint8_t addr = Si7013OtpMemoryMap::EDL_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDL_DATA_START_ADDR + Si7013OtpMemoryMap::EDL_DATA_SIZE; addr++)
+						{
+							*index = si7013.readRegister8(addr, true);
 #ifdef DEBUG_SERIAL
-						Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
+							Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
 #endif
-						index++;
+							index++;
+						}
+						for (uint8_t addr = Si7013OtpMemoryMap::EDR_DATA_START_ADDR; addr < Si7013OtpMemoryMap::EDR_DATA_START_ADDR + Si7013OtpMemoryMap::EDR_DATA_SIZE; addr++)
+						{
+							*index = si7013.readRegister8(addr, true);
+#ifdef DEBUG_SERIAL
+							Serial.print("Addr: 0x"); Serial.print(addr, HEX); Serial.print("\t Value:"); Serial.println(*index);
+#endif
+							index++;
+						}
+						dataSize = Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE;
+						_readBuffer.update(datatypeVersion, dataSize, otpData);
+						_readResult = Status::SUCCESS;
+						readState = State::READ_BUFFER_FULL;
+						return (uint8_t)_readResult; // success
 					}
-					dataSize = Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE;
-					_readBuffer.update(datatypeVersion, dataSize, otpData);
-					_readResult = Status::SUCCESS;
-					readState = State::READ_BUFFER_FULL;
-					return (uint8_t)_readResult; // success
 				}
 				else
 				{
@@ -400,6 +419,12 @@ uint8_t EmotiBitNvmController::readFromStorage()
 					return (uint8_t)Status::OUT_OF_BOUNDS_ACCESS;
 				}
 			}
+		}
+		else if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
+		{
+			_readResult = Status::HARDWARE_VERSION_UNKNOWN;
+			readState = State::IDLE;
+			return (uint8_t)_readResult; // success
 		}
 	}
 }
@@ -426,20 +451,28 @@ void EmotiBitNvmController::printEntireNvm(bool autoSync)
 			Serial.println("|");
 		}
 	}
+	Serial.println();
 	delete[] data;
 }
 
 void EmotiBitNvmController::eraseEeprom(bool autoSync, bool printAfterErase)
 {
-	Serial.println("Erasing Entire EEPROM(defaults to 255 in each location");
-	const uint32_t NVM_SIZE = emotibitEepromSettings.capacityBytes;
-	uint8_t emptyDataArray[NVM_SIZE];
-	for (int i = 0; i < NVM_SIZE; i++)
-		emptyDataArray[i] = 255;
-	stageToWrite(DataType::ENTIRE_NVM, 0, emotibitEepromSettings.capacityBytes, emptyDataArray, autoSync, false);
-	if (printAfterErase)
+	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
-		Serial.println("Printing After Erase");
-		printEntireNvm(autoSync);
+		Serial.println("Erasing Entire EEPROM(defaults to 255 in each location)");
+		const uint32_t NVM_SIZE = emotibitEepromSettings.capacityBytes;
+		uint8_t emptyDataArray[NVM_SIZE];
+		for (int i = 0; i < NVM_SIZE; i++)
+			emptyDataArray[i] = 255;
+		stageToWrite(DataType::ENTIRE_NVM, 0, emotibitEepromSettings.capacityBytes, emptyDataArray, autoSync, false);
+		if (printAfterErase)
+		{
+			Serial.println("Printing After Erase");
+			printEntireNvm(autoSync);
+		}
+	}
+	else
+	{
+		Serial.println("NVM erase not supported for EmotiBit V3 and below");
 	}
 }
