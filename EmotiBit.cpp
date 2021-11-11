@@ -1991,22 +1991,23 @@ bool EmotiBit::processThermopileData()
 	uint32_t* timestampSto;
 
 	static const unsigned long int samplingInterval = 1000000 / (_samplingRates.thermopile * _samplesAveraged.thermopile);
-	static const unsigned int minSwapTime = max(500, min(samplingInterval / 10, 3500));
+	static const unsigned int minSwapTime = max(500, min(samplingInterval / 10, 500));
 
-	//Serial.print("window: " + String(samplingInterval - (micros() - _thermReadFinishedTime)));
-	//Serial.println("");
-	unsigned long int waitEnd;
+	//Serial.println("window: " + String(samplingInterval - (micros() - _thermReadFinishedTime)));
 	unsigned long int waitStart = micros();
-	while (samplingInterval - (micros() - _thermReadFinishedTime) < minSwapTime)
+	unsigned long int waitEnd = micros();
+	unsigned long int readFinishedTime = _thermReadFinishedTime;
+	while (samplingInterval - (waitEnd - readFinishedTime) < minSwapTime)
 	{
 		// Wait until we have at least 500 usec to do swap
 		//Serial.println("WAIT");
-		waitEnd = micros();
 		if (waitEnd - waitStart > 100000)
 		{
 			Serial.println("Timeout waiting for _thermReadFinishedTime");
 			break;
 		}
+		waitEnd = micros();
+		readFinishedTime = _thermReadFinishedTime;
 	}
 	
 	// Swap buffers with minimal delay to avoid size mismatch
@@ -2027,9 +2028,14 @@ bool EmotiBit::processThermopileData()
 	if (sizeAMB != sizeSto) // interrupt hit between therm0AMB.getdata and therm0Sto.getdata
 	{
 		Serial.println("WARNING: therm0AMB and therm0Sto buffers different sizes");
-		Serial.print("window: " + String(samplingInterval - (micros() - _thermReadFinishedTime)));
-		Serial.println("");
+		Serial.println("minSwapTime: " + String(minSwapTime));
+		Serial.println("_thermReadFinishedTime: " + String(_thermReadFinishedTime));
+		Serial.println("readFinishedTime: " + String(readFinishedTime));
+		Serial.println("micros(): " + String(micros()));
+		Serial.println("window: " + String(samplingInterval - (waitEnd - readFinishedTime)));
 		Serial.println("swap: " + String(swapEnd - swapStart));
+		Serial.println("sizeAMB: " + String(sizeAMB));
+		Serial.println("sizeSto: " + String(sizeSto));
 		// ToDo: Consider how to manage buffer size differences
 		// One fix option is to switch to ring buffers instead of double buffers
 		
@@ -2828,7 +2834,7 @@ void EmotiBit::processData()
 	static bool overflowTestOn = false;
 #ifdef TEST_OVERFLOW
 	static unsigned long overflowTestTimer = millis();
-	static unsigned long overflowOnTime = 6000;
+	static unsigned long overflowOnTime = 10000;
 	if (millis() - overflowTestTimer > overflowOnTime)
 	{
 		overflowTestOn = !overflowTestOn;
