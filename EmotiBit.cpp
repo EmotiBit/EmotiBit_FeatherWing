@@ -3604,9 +3604,9 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			_enableDigitalFilter.mz = false;
 			_enableDigitalFilter.eda = false;
 		}
-		else if (c == 'n')
+		else if (c == '+')
 		{
-			if (_version == EmotiBitVersionController::EmotiBitVersion::V04A)
+			if (_version == EmotiBitVersionController::EmotiBitVersion::V04A && testingMode == TestingMode::FACTORY_TEST)
 			{
 				static const uint32_t ARRAY_SIZE = 10;
 				char cArray[ARRAY_SIZE] = { 'a','b','c','d','e','1','2','3','4','5' };
@@ -3653,6 +3653,20 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			else
 			{
 				Serial.println("Cannot test NVM for this HW version.");
+			}
+		}
+		else if (c == 's') 
+		{
+			if (testingMode == TestingMode::FACTORY_TEST)
+			{
+				_emotibitNvmController.printEntireNvm();
+			}
+		}
+		else if (c == 'c')
+		{
+			if (testingMode == TestingMode::FACTORY_TEST)
+			{
+				_emotibitNvmController.eraseEeprom();
 			}
 		}
 	}

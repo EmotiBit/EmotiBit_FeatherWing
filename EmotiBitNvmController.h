@@ -33,6 +33,7 @@ public:
 	
 	enum class DataType
 	{
+		ENTIRE_NVM = -1,
 		VARIANT_INFO = 0,
 		EDA = 1,
 		length
@@ -51,6 +52,7 @@ public:
 		static const uint8_t EDR_DATA_SIZE = 4;  // 1 float
 		static const uint8_t EMOTIBIT_VERSION_ADDR = 0xB7;
 		static const uint8_t DATATYPE_VERSION_ADDR = 0xB6;
+		static const uint8_t OTP_SIZE_BYTES = 54; 
 	};
 
 	struct EmotiBitEepromSettings
@@ -68,6 +70,7 @@ public:
 		I2C_WRITE_ERROR,
 		CONTROLLER_BUSY,
 		INVALID_DATA_TO_WRITE,
+		HW_VERSION_NOT_SUPPORTED,
 		OTHER_FAILURE
 	};
 
@@ -189,6 +192,19 @@ public:
 		       Necessary to call this function in ISR, if autoSync is OFF in staging R/W functions.
 	*/
 	void syncRW();
+
+	/*!
+		@brief Prints the entire contents of the NVM controller on Serial
+		@param autoSync set True to perform Read without external call.
+	*/
+	void printEntireNvm(bool autoSync = false);
+
+	/*!
+		@brief Erases EEPROM by writing 255 to every memory location
+		@param autoSync set True to perform Write without external call.
+		@param printAfterErase set True to print the Entire NVM content on Serial.
+	*/
+	void eraseEeprom(bool autoSync = false, bool printAfterErase = true);
 };
 
 #endif
