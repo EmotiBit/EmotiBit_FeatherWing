@@ -13,6 +13,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <EmotiBit_Si7013.h>
+#include "EmotiBitVariants.h"
+//#include "EmotiBitFactoryTest.h"
 
 // Controls which sensor is used OTP access. uncomment the line below is use external SI-7013 connected to the emotibit
 //#define USE_ALT_SI7013
@@ -62,8 +64,15 @@ enum class SystemConstants
 
 class EmotiBitVersionController
 {
-
-public:
+public: 	
+	
+#if defined(ADAFRUIT_FEATHER_M0) 
+	static const int HIBERNATE_PIN = 6;
+	static const int EMOTIBIT_I2C_CLK_PIN = 13;
+	static const int EMOTIBIT_I2C_DAT_PIN = 11;
+	static const int SD_CARD_CHIP_SEL_PIN = 19;
+#endif
+	
 	// !!! The following ORDER of the enum class holding the Version numbers SHOULD NOT BE ALTERED.
 	// New versions should be ADDED to the end of this list 
 	enum class EmotiBitVersion {
@@ -74,59 +83,29 @@ public:
 		V02F = 3,
 		V02H = 4,
 		V03B = 5,
-		V04A = 6
+		V04A = 6,
+		length
 	};
 
-public:
-#if defined(ADAFRUIT_FEATHER_M0) 
-	static const int HIBERNATE_PIN = 6;
-	static const int EMOTIBIT_I2C_CLK_PIN = 13;
-	static const int EMOTIBIT_I2C_DAT_PIN = 11;
-	static const int SD_CARD_CHIP_SEL_PIN = 19;
-#endif
 private:
 	EmotiBitVersion _versionEst;
 	int _otpEmotiBitVersion;
 	//TwoWire *_EmotiBit_i2c;
 	Si7013 _tempHumiditySensor;
 
-public:
-	// Important: changing this address will change where the EmotiBit version is stored on the OTP
-	static const uint8_t EMOTIBIT_VERSION_ADDR_SI7013_OTP = 0xB7;
 
-	// For Handling Pin Mapping
-private:
 	static const int _MAX_EMOTIBIT_PIN_COUNT = 28;
 	int _assignedPin[_MAX_EMOTIBIT_PIN_COUNT] = { 0 };
-
-	// For Handling Constant Mapping
-private:
 	static const int _MAX_MATH_CONSTANT_COUNT = 10;
 	static const int _MAX_SYSTEM_CONSTANT_COUNT = 10;
-private:
 	float _assignedMathConstants[_MAX_MATH_CONSTANT_COUNT] = { 0 };
 	int _assignedSystemConstants[_MAX_SYSTEM_CONSTANT_COUNT] = { 0 };
 	const int _INVALID_CONSTANT_FOR_VERSION = -1;
 	const int _INVALID_REQUEST = -2; // addresses out of bounds(for array indexing) request
 	bool _initAssignmentComplete = false;
-public:
-	bool versionDetectionComplete = false;
-
-	// Member functions to control pin mapping
-public:
-	/*
-	* At the time of initialization, assign all the pin numbers to the emotibit pin names
-	*/
-	bool initPinMapping(EmotiBitVersionController::EmotiBitVersion version);
-
-	int getAssignedPin(EmotiBitPinName pin);
-
-	void echoPinMapping();
-
-	// member functions to control constant mapping
-private:
 	bool _initMappingMathConstants(EmotiBitVersionController::EmotiBitVersion version);
 	bool _initMappingSystemConstants(EmotiBitVersionController::EmotiBitVersion version);
+
 public:
 	bool initConstantMapping(EmotiBitVersionController::EmotiBitVersion version);
 	float getMathConstant(MathConstants constant);
@@ -134,13 +113,23 @@ public:
 	void echoConstants();
 	bool setMathConstantForTesting(MathConstants constant);
 	bool setSystemConstantForTesting(SystemConstants constant);
+	bool versionDetectionComplete = false;
+	// Important: changing this address will change where the EmotiBit version is stored on the OTP
+	static const uint8_t EMOTIBIT_VERSION_ADDR_SI7013_OTP = 0xB7;
+	EmotiBitVariantDataFormat dataFormat;
+	EmotiBitVariantInfo emotiBitVariantInfo;
 
-	// member functions to perform version detection
-public:
+	bool detectSdcard();
+	void setVariantDataFormat(EmotiBitVariantDataFormat dataFormat);
+	bool writeVariantInfoToNvm(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, Barcode barcode);
 	EmotiBitVersion detectEmotiBitVersion(TwoWire* EmotiBit_i2c, uint8_t flashMemoryI2cAddress = 255);
 	int readEmotiBitVersionFromSi7013();
-
-public:
 	static const char* getHardwareVersion(EmotiBitVersion version);
+
+	bool initPinMapping(EmotiBitVersionController::EmotiBitVersion version);
+
+	int getAssignedPin(EmotiBitPinName pin);
+
+	void echoPinMapping();
 };
 #endif

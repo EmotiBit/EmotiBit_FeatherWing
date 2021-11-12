@@ -1,4 +1,5 @@
 #include "EmotiBitVersionController.h"
+#include "EmotiBitNvmController.h"
 #include "Arduino.h"
 
 const char* EmotiBitVersionController::getHardwareVersion(EmotiBitVersion version)
@@ -275,6 +276,69 @@ bool EmotiBitVersionController::setMathConstantForTesting(MathConstants constant
 bool EmotiBitVersionController::setSystemConstantForTesting(SystemConstants constant)
 {
 	//ToDo: write the function to assign test values to the constants 
+}
+
+bool EmotiBitVersionController::detectSdcard()
+{
+	SdFat SD;
+	pinMode(HIBERNATE_PIN, OUTPUT);
+	digitalWrite(HIBERNATE_PIN, LOW);
+	if (SD.begin(SD_CARD_CHIP_SEL_PIN))
+	{
+		pinMode(HIBERNATE_PIN, INPUT);
+		return true;
+	}
+
+	digitalWrite(HIBERNATE_PIN, HIGH);
+	if (SD.begin(SD_CARD_CHIP_SEL_PIN))
+	{
+		pinMode(HIBERNATE_PIN, INPUT);
+		return true;
+	}
+
+	Serial.println("SD-Card not present. Please Insert Sd-Card to use EmotiBit");
+	return false;
+}
+
+bool EmotiBitVersionController::writeVariantInfoToNvm(TwoWire emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, Barcode barcode)
+{
+	EmotiBitFactorytest::convertBarcodeToVariantInfo(barcode, emotiBitVariantInfo);
+	printEmotiBitVariantInfo(emotiBitVariantInfo);
+	if (emotiBitVariantInfo.hwVersion != (uint8_t)EmotiBitVersion::V04A)
+	{
+		Serial.println("Variant Info write only supported for V4+.");
+		return false;
+	}
+	pinMode(HIBERNATE_PIN, OUTPUT);
+	digitalWrite(HIBERNATE_PIN, HIGH);
+	setVariantDataFormat(EmotiBitVariantDataFormat::V1);
+	if (emotiBitNvmController.init(emotibit_i2c, (EmotiBitVersion)emotibitVariantInfo.hwVersion))
+	{
+		emotiBitNvmController.setVersion((EmotiBitVersion)emotibitVariantInfo.hwVersion);
+		uint8_t* data;
+		EmotiBitvariantInfo* variantInfo = &emotibitVariantInfo;
+		data = (uint8_t*)variantInfo;
+		uint8_t status;
+		status = emotiBitNvmController.stageToWrite(EmotiBitNvmController::DataType::VARIANT_INFO, (uint8_t)datFormat, sizeof(EmotiBitVariantInfo), data, true);
+		if (status == 0)
+		{
+			Serial.println("Variant Information written into the NVM.");
+			pinMode(HIBERNATE_PIN, INPUT);
+			return true;
+		}
+		else
+		{
+			Serial.print("Error writing Variant Info. ErrorCode: "); Serial.println(status);
+			pinMode(HIBERNATE_PIN, INPUT);
+			return false;
+		}
+	}
+	else
+	{
+		Serial.println("NVM controller could not be initialized.");
+		pinMode(HIBERNATE_PIN, INPUT);
+		return false;
+	}
 }
 
 EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmotiBitVersion(TwoWire* EmotiBit_i2c, uint8_t flashMemoryI2cAddress)

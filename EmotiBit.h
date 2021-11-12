@@ -46,7 +46,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.87-emotibitMemoryController.1-EmotiBitEda.1";
+	String firmware_version = "1.2.87.emotibitMemoryController-1.EmotiBitEda-1.versionController-1";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = true;
 	const bool DC_DO_V2 = true;
@@ -495,7 +495,8 @@ private:
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)
 	float _gyroRange; // supported values: 125, 250, 500, 1000, 2000 (degrees/second)
 	//Version _version;
-	EmotiBitVersionController::EmotiBitVersion _version;
+	EmotiBitVersionController::EmotiBitVersion _hwVersion;
+	EmotiBitVariants::EmotiBitSkuType emotibitSku;
 	uint8_t _imuFifoFrameLen = 0; // in bytes
 	const uint8_t _maxImuFifoFrameLen = 40; // in bytes
 	uint8_t _imuBuffer[40];
