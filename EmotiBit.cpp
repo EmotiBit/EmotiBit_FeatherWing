@@ -3696,7 +3696,10 @@ void EmotiBit::processFactoryTestMessages()
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_VALUES))
 		{
-			emotibitEda.stageCalibStorage(&_emotibitNvmController, msg);
+			if (emotibitEda.stageCalibStorage(&_emotibitNvmController, msg))
+			{
+				EmotiBitFactoryTest::sendMessage(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_ACK);
+			}
 		}
 	}
 }
