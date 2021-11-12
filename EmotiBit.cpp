@@ -1123,7 +1123,10 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 		uint8_t protocolVersion = 1;
 		if (DC_DO_V2)
 		{
-			protocolVersion = 2;
+			if (t == EmotiBit::DataType::DATA_CLIPPING || t == EmotiBit::DataType::DATA_OVERFLOW)
+			{
+				protocolVersion = 2;
+			}
 		}
 
 
