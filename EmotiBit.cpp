@@ -1991,7 +1991,7 @@ bool EmotiBit::processThermopileData()
 	uint32_t* timestampSto;
 
 	static const unsigned long int samplingInterval = 1000000 / (_samplingRates.thermopile * _samplesAveraged.thermopile);
-	static const unsigned int minSwapTime = max(500, min(samplingInterval / 10, 500));
+	static const unsigned int minSwapTime = max(500, min(samplingInterval / 10, 10000));
 
 	//Serial.println("window: " + String(samplingInterval - (micros() - _thermReadFinishedTime)));
 	unsigned long int waitStart = micros();
