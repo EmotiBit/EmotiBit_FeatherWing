@@ -14,8 +14,9 @@
 #include <Wire.h>
 #include <EmotiBit_Si7013.h>
 #include "EmotiBitVariants.h"
-//#include "EmotiBitFactoryTest.h"
+#include "EmotiBitFactoryTest.h"
 
+class EmotiBitNvmController;
 // Controls which sensor is used OTP access. uncomment the line below is use external SI-7013 connected to the emotibit
 //#define USE_ALT_SI7013
 
@@ -87,6 +88,12 @@ public:
 		length
 	};
 
+	struct EmotiBitVersionParameterTable {
+		bool initHibernatePinVoltage = false;
+		bool initSi7013CommStatus = false;
+		bool initEepromCommStatus = false;
+	};
+
 private:
 	EmotiBitVersion _versionEst;
 	int _otpEmotiBitVersion;
@@ -122,6 +129,10 @@ public:
 	bool detectSdcard();
 	void setVariantDataFormat(EmotiBitVariantDataFormat dataFormat);
 	bool writeVariantInfoToNvm(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, Barcode barcode);
+	void updateVersionParameterTable();
+	EmotiBitVersion detectVersionFromParameterTable();
+	bool readVariantInfoFromNvm(EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotibitNumber);
+	bool getEmotiBitVariantInfo(EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotibitNumber);
 	EmotiBitVersion detectEmotiBitVersion(TwoWire* EmotiBit_i2c, uint8_t flashMemoryI2cAddress = 255);
 	int readEmotiBitVersionFromSi7013();
 	static const char* getHardwareVersion(EmotiBitVersion version);

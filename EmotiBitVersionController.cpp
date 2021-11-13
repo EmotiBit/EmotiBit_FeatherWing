@@ -300,9 +300,14 @@ bool EmotiBitVersionController::detectSdcard()
 	return false;
 }
 
-bool EmotiBitVersionController::writeVariantInfoToNvm(TwoWire emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, Barcode barcode)
+void EmotiBitVersionController::setVariantDataFormat(EmotiBitVariantDataFormat dataFormat)
 {
-	EmotiBitFactorytest::convertBarcodeToVariantInfo(barcode, emotiBitVariantInfo);
+	this->dataFormat = dataFormat;
+}
+
+bool EmotiBitVersionController::writeVariantInfoToNvm(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, Barcode barcode)
+{
+	EmotiBitFactoryTest::convertBarcodeToVariantInfo(barcode, emotiBitVariantInfo);
 	printEmotiBitVariantInfo(emotiBitVariantInfo);
 	if (emotiBitVariantInfo.hwVersion != (uint8_t)EmotiBitVersion::V04A)
 	{
@@ -312,14 +317,14 @@ bool EmotiBitVersionController::writeVariantInfoToNvm(TwoWire emotibit_i2c, Emot
 	pinMode(HIBERNATE_PIN, OUTPUT);
 	digitalWrite(HIBERNATE_PIN, HIGH);
 	setVariantDataFormat(EmotiBitVariantDataFormat::V1);
-	if (emotiBitNvmController.init(emotibit_i2c, (EmotiBitVersion)emotibitVariantInfo.hwVersion))
+	if (emotiBitNvmController.init(emotibit_i2c, (EmotiBitVersion)emotiBitVariantInfo.hwVersion))
 	{
-		emotiBitNvmController.setVersion((EmotiBitVersion)emotibitVariantInfo.hwVersion);
+		emotiBitNvmController.setHwVersion((EmotiBitVersion)emotiBitVariantInfo.hwVersion);
 		uint8_t* data;
-		EmotiBitvariantInfo* variantInfo = &emotibitVariantInfo;
+		EmotiBitVariantInfo* variantInfo = &emotiBitVariantInfo;
 		data = (uint8_t*)variantInfo;
 		uint8_t status;
-		status = emotiBitNvmController.stageToWrite(EmotiBitNvmController::DataType::VARIANT_INFO, (uint8_t)datFormat, sizeof(EmotiBitVariantInfo), data, true);
+		status = emotiBitNvmController.stageToWrite(EmotiBitNvmController::DataType::VARIANT_INFO, (uint8_t)dataFormat, sizeof(EmotiBitVariantInfo), data, true);
 		if (status == 0)
 		{
 			Serial.println("Variant Information written into the NVM.");
@@ -339,6 +344,23 @@ bool EmotiBitVersionController::writeVariantInfoToNvm(TwoWire emotibit_i2c, Emot
 		pinMode(HIBERNATE_PIN, INPUT);
 		return false;
 	}
+}
+
+bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotibitNumber)
+{
+	updateVersionParameterTable();
+
+	EmotiBitVersion estHwVersion;
+}
+
+EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectVersionFromParameterTable()
+{
+
+}
+
+bool EmotiBitVersionController::readVariantInfoFromNvm(EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotibitNumber)
+{
+
 }
 
 EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmotiBitVersion(TwoWire* EmotiBit_i2c, uint8_t flashMemoryI2cAddress)
