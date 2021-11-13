@@ -3713,6 +3713,7 @@ void EmotiBit::processFactoryTestMessages()
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_VALUES))
 		{
+			Serial.println(msg);
 			if (emotibitEda.stageCalibStorage(&_emotibitNvmController, msg))
 			{
 				EmotiBitFactoryTest::sendMessage(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_ACK);
