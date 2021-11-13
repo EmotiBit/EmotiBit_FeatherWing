@@ -154,7 +154,12 @@ bool EmotiBitEda::stageCalibStorage(EmotiBitNvmController * nvmController, Strin
 				Serial.println("Staging to write...");
 				uint8_t status = nvmController->stageToWrite(EmotiBitNvmController::DataType::EDA, dataVersion, sizeof(EmotiBitEdaCalibration::RawValues_V2), (uint8_t *)(&rawVals), autoSync);
 
-				if (status != (uint8_t)EmotiBitNvmController::Status::SUCCESS)
+				if (status == (uint8_t)EmotiBitNvmController::Status::SUCCESS)
+				{
+					Serial.println("sucess");
+					return true;
+				}
+				else
 				{
 					Serial.println("nvmController->stageToWrite() failed: " + String(status));
 					return false;
