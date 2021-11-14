@@ -300,14 +300,11 @@ bool EmotiBitVersionController::detectSdcard()
 	return false;
 }
 
-void EmotiBitVersionController::setVariantDataFormat(EmotiBitVariantDataFormat dataFormat)
-{
-	this->dataFormat = dataFormat;
-}
-
 bool EmotiBitVersionController::writeVariantInfoToNvm(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, Barcode barcode)
 {
+	EmotiBitVariantInfo emotiBitVariantInfo;
 	EmotiBitFactoryTest::convertBarcodeToVariantInfo(barcode, emotiBitVariantInfo);
+	Serial.println("Data being written to NVM");
 	printEmotiBitVariantInfo(emotiBitVariantInfo);
 	if (emotiBitVariantInfo.hwVersion != (uint8_t)EmotiBitVersion::V04A)
 	{
@@ -316,7 +313,6 @@ bool EmotiBitVersionController::writeVariantInfoToNvm(TwoWire &emotibit_i2c, Emo
 	}
 	pinMode(HIBERNATE_PIN, OUTPUT);
 	digitalWrite(HIBERNATE_PIN, HIGH);
-	setVariantDataFormat(EmotiBitVariantDataFormat::V1);
 	if (emotiBitNvmController.init(emotibit_i2c, (EmotiBitVersion)emotiBitVariantInfo.hwVersion))
 	{
 		emotiBitNvmController.setHwVersion((EmotiBitVersion)emotiBitVariantInfo.hwVersion);
@@ -324,45 +320,162 @@ bool EmotiBitVersionController::writeVariantInfoToNvm(TwoWire &emotibit_i2c, Emo
 		EmotiBitVariantInfo* variantInfo = &emotiBitVariantInfo;
 		data = (uint8_t*)variantInfo;
 		uint8_t status;
-		status = emotiBitNvmController.stageToWrite(EmotiBitNvmController::DataType::VARIANT_INFO, (uint8_t)dataFormat, sizeof(EmotiBitVariantInfo), data, true);
+		status = emotiBitNvmController.stageToWrite(EmotiBitNvmController::DataType::VARIANT_INFO, (uint8_t)EmotiBitVariantDataFormat::V1, sizeof(EmotiBitVariantInfo), data, true);
+		digitalWrite(HIBERNATE_PIN, LOW);
+		pinMode(HIBERNATE_PIN, INPUT);
 		if (status == 0)
 		{
 			Serial.println("Variant Information written into the NVM.");
-			pinMode(HIBERNATE_PIN, INPUT);
 			return true;
 		}
 		else
 		{
 			Serial.print("Error writing Variant Info. ErrorCode: "); Serial.println(status);
-			pinMode(HIBERNATE_PIN, INPUT);
 			return false;
 		}
 	}
 	else
 	{
 		Serial.println("NVM controller could not be initialized.");
+		digitalWrite(HIBERNATE_PIN, LOW);
 		pinMode(HIBERNATE_PIN, INPUT);
 		return false;
 	}
 }
 
-bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotibitNumber)
+bool EmotiBitVersionController::getEmotiBitVariantInfo(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotiBitNumber)
 {
-	updateVersionParameterTable();
+	updateVersionParameterTable(emotibit_i2c, emotiBitNvmController);
 
 	EmotiBitVersion estHwVersion;
+	estHwVersion = detectVersionFromParameterTable();
+	if (estHwVersion == EmotiBitVersion::UNKNOWN)
+	{
+		hwVersion = EmotiBitVersion::UNKNOWN;
+		return false;
+	}
+	if (!readVariantInfoFromNvm(estHwVersion, emotiBitNvmController, hwVersion, sku, emotiBitNumber))
+	{
+		hwVersion = estHwVersion;
+		sku = EmotiBitVariants::EmotiBitSkuType::INVALID;
+		emotiBitNumber = UINT32_MAX;
+	}
+	return true;
+}
+
+void EmotiBitVersionController::updateVersionParameterTable(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController)
+{
+	pinMode(HIBERNATE_PIN, INPUT);
+	if (digitalRead(HIBERNATE_PIN))
+	{
+		versionParameterTable.initHibernatePinVoltage = true;
+		Serial.println("Hibernate Pin pulled HIGH by default");
+		pinMode(HIBERNATE_PIN, OUTPUT);
+		digitalWrite(HIBERNATE_PIN, LOW);
+	}
+	else
+	{
+		versionParameterTable.initHibernatePinVoltage = false;
+		Serial.println("Hibernate Pin pulled LOW by default");
+		pinMode(HIBERNATE_PIN, OUTPUT);
+		digitalWrite(HIBERNATE_PIN, HIGH);
+	}
+
+	if (emotiBitNvmController.init(emotibit_i2c, EmotiBitVersion::V03B))
+	{
+		versionParameterTable.initSi7013CommStatus = true;
+		Serial.println("Si7013 detected");
+	}
+	else
+	{
+		Serial.println("Si-7013 not present");
+		versionParameterTable.initSi7013CommStatus = false;
+	}
+
+	if (emotiBitNvmController.init(emotibit_i2c, EmotiBitVersion::V04A))
+	{
+		Serial.println("EEPROM detected");
+		versionParameterTable.initEepromCommStatus = true;
+	}
+	else
+	{
+		Serial.println("EEPROM not present.");
+		versionParameterTable.initEepromCommStatus = false;
+	}
 }
 
 EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectVersionFromParameterTable()
 {
-
+	// For EmotiBit V2
+	if (versionParameterTable.initHibernatePinVoltage)
+	{
+		if (versionParameterTable.initSi7013CommStatus)
+		{
+			return EmotiBitVersion::V02H;
+		}
+		else
+		{
+			return EmotiBitVersion::UNKNOWN;
+		}
+	}
+	else
+	{
+		// EmotiBit V3
+		if (versionParameterTable.initSi7013CommStatus)
+		{
+			return EmotiBitVersion::V03B;
+		}
+		// EmotiBit V4
+		else if (versionParameterTable.initEepromCommStatus)
+		{
+			return EmotiBitVersion::V04A;
+		}
+		else
+		{
+			return EmotiBitVersion::UNKNOWN;
+		}
+	}
 }
 
-bool EmotiBitVersionController::readVariantInfoFromNvm(EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotibitNumber)
+bool EmotiBitVersionController::readVariantInfoFromNvm(EmotiBitVersion estHwVersion, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotiBitNumber)
 {
-
+	emotiBitNvmController.setHwVersion(estHwVersion);
+	uint8_t* nvmData;
+	uint8_t datatypeVersion;
+	uint32_t dataSize;
+	uint8_t status;
+	status = emotiBitNvmController.stageToRead(EmotiBitNvmController::DataType::VARIANT_INFO, datatypeVersion, dataSize, nvmData, true);
+	if (status == 0)
+	{
+		Serial.println("Successfully read variant info from NVM");
+		if (datatypeVersion == (uint8_t)EmotiBitVariantDataFormat::V0 && dataSize == 1)
+		{
+			hwVersion = (EmotiBitVersion)(*nvmData);
+			Serial.print("[NVM VARIANT INFO] HW version: "); Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersion)hwVersion));
+			sku = EmotiBitVariants::EmotiBitSkuType::INVALID;
+			emotiBitNumber = UINT32_MAX;
+			Serial.println("No SKU/EmotiBitNumber recorded for this HW version");
+		}
+		else if (datatypeVersion == (uint8_t)EmotiBitVariantDataFormat::V1)
+		{
+			EmotiBitVariantInfo* variantInfo;
+			variantInfo = (EmotiBitVariantInfo*)nvmData;
+			hwVersion = (EmotiBitVersion)variantInfo->hwVersion;
+			Serial.print("[NVM VARIANT INFO] HW version: "); Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersion)hwVersion));
+			sku = (EmotiBitVariants::EmotiBitSkuType)variantInfo->sku;
+			Serial.print("[NVM VARIANT INFO] SKU version: "); Serial.println(EmotiBitVariants::EmotiBitSkuTags[(uint8_t)sku]);
+			emotiBitNumber = variantInfo->emotiBitNumber;
+			Serial.print("[NVM VARIANT INFO] EmotiBit Number: "); Serial.println(emotiBitNumber);
+		}
+		return true;
+	}
+	else
+	{
+		Serial.println("VARIANT INFO not stored in NVM. Using estimate.");
+		return false;
+	}
 }
-
+/*
 EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmotiBitVersion(TwoWire* EmotiBit_i2c, uint8_t flashMemoryI2cAddress)
 {
 	_versionEst = EmotiBitVersion::UNKNOWN;
@@ -437,7 +550,7 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectEmot
 			return _versionEst;
 		}
 	}
-	*/
+	//*
 	bool status = true;
 	// Setup Temperature / Humidity Sensor
 	Serial.println("\n\nReading Temperature / Humidity Sensor OTP for EmotiBit version");
@@ -508,3 +621,4 @@ int EmotiBitVersionController::readEmotiBitVersionFromSi7013()
 	emotibitVersion = (uint8_t)_tempHumiditySensor.readRegister8(EMOTIBIT_VERSION_ADDR_SI7013_OTP, true);
 	return emotibitVersion;
 }
+*/

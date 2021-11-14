@@ -16,6 +16,7 @@
 #include "EmotiBitVariants.h"
 #include "EmotiBitFactoryTest.h"
 
+// ToDo: remove this forward declaration when EmotiBitVersion is moved out of versionController
 class EmotiBitNvmController;
 // Controls which sensor is used OTP access. uncomment the line below is use external SI-7013 connected to the emotibit
 //#define USE_ALT_SI7013
@@ -124,15 +125,14 @@ public:
 	// Important: changing this address will change where the EmotiBit version is stored on the OTP
 	static const uint8_t EMOTIBIT_VERSION_ADDR_SI7013_OTP = 0xB7;
 	EmotiBitVariantDataFormat dataFormat;
-	EmotiBitVariantInfo emotiBitVariantInfo;
+	EmotiBitVersionParameterTable versionParameterTable;
 
 	bool detectSdcard();
-	void setVariantDataFormat(EmotiBitVariantDataFormat dataFormat);
 	bool writeVariantInfoToNvm(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, Barcode barcode);
-	void updateVersionParameterTable();
+	void updateVersionParameterTable(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController);
 	EmotiBitVersion detectVersionFromParameterTable();
-	bool readVariantInfoFromNvm(EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotibitNumber);
-	bool getEmotiBitVariantInfo(EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotibitNumber);
+	bool readVariantInfoFromNvm(EmotiBitVersion estHwVersion, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotiBitNumber);
+	bool getEmotiBitVariantInfo(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotiBitNumber);
 	EmotiBitVersion detectEmotiBitVersion(TwoWire* EmotiBit_i2c, uint8_t flashMemoryI2cAddress = 255);
 	int readEmotiBitVersionFromSi7013();
 	static const char* getHardwareVersion(EmotiBitVersion version);

@@ -163,7 +163,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::I2C_COMM_INIT, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 	}
-	
+	emotiBitVersionController.getEmotiBitVariantInfo(*(_EmotiBit_i2c), _emotibitNvmController,_hwVersion, emotiBitSku, emotiBitNumber);
+	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
+	{
+		hibernate(false);
+	}
+	/*
 	_hwVersion = emotiBitVersionController.detectEmotiBitVersion(_EmotiBit_i2c, deviceAddress.EEPROM_FLASH_34AA02);
 	// If version is unknown
 	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
@@ -195,7 +200,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println("Download v0.6.0 for Alpha boards");
 		hibernate(false);
 	}
-
+	*/
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		// Pass only if FW version estimate is exactly = barcode version
@@ -741,7 +746,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (status)
 	{
 		// estimate SKU is MD
-		emotibitSku = EmotiBitVariants::EmotiBitSkuType::MD;
+		emotiBitSku = EmotiBitVariants::EmotiBitSkuType::MD;
 		thermopile.setMeasurementRate(thermopileFs);
 		thermopile.setMode(thermopileMode);
 		uint8_t thermMode = thermopile.getMode();
@@ -762,7 +767,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	else
 	{
 		// set SKU as EM
-		emotibitSku = EmotiBitVariants::EmotiBitSkuType::EM;
+		emotiBitSku = EmotiBitVariants::EmotiBitSkuType::EM;
 		//hibernate(false);
 	}
 	if (testingMode == TestingMode::FACTORY_TEST)
@@ -771,7 +776,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		if (barcode.sku.equals(EmotiBitVariants::EmotiBitSkuTags[(int)EmotiBitVariants::EmotiBitSkuType::MD]))
 		{
 			// is FW estimate is MD
-			if (emotibitSku == EmotiBitVariants::EmotiBitSkuType::MD)
+			if (emotiBitSku == EmotiBitVariants::EmotiBitSkuType::MD)
 			{
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_PASS);
@@ -785,7 +790,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		// if barcode is EM
 		else
 		{
-			if (emotibitSku == EmotiBitVariants::EmotiBitSkuType::MD)
+			if (emotiBitSku == EmotiBitVariants::EmotiBitSkuType::MD)
 			{
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_PASS);
@@ -3385,6 +3390,8 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("press | to enable Digital filters");
 			Serial.println("Press - to disable Digital filters");
 			//Serial.println("Press 0 to simulate nan events in the thermopile");
+			Serial.println("Press F to switch to FactoryTest mode");
+
 
 		}
 		else if (c == ':')
@@ -3679,6 +3686,11 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			{
 				_emotibitNvmController.eraseEeprom();
 			}
+		}
+		else if (c == 'F')
+		{
+			testingMode = TestingMode::FACTORY_TEST;
+			Serial.print("Testing Mode: "); Serial.println("FACTORY TEST");
 		}
 	}
 }
