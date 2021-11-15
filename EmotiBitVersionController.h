@@ -18,8 +18,6 @@
 
 // ToDo: remove this forward declaration when EmotiBitVersion is moved out of versionController
 class EmotiBitNvmController;
-// Controls which sensor is used OTP access. uncomment the line below is use external SI-7013 connected to the emotibit
-//#define USE_ALT_SI7013
 
 // All EmotiBit Pin names should be entered in this class structure.
 enum class EmotiBitPinName
@@ -96,12 +94,6 @@ public:
 	};
 
 private:
-	EmotiBitVersion _versionEst;
-	int _otpEmotiBitVersion;
-	//TwoWire *_EmotiBit_i2c;
-	Si7013 _tempHumiditySensor;
-
-
 	static const int _MAX_EMOTIBIT_PIN_COUNT = 28;
 	int _assignedPin[_MAX_EMOTIBIT_PIN_COUNT] = { 0 };
 	static const int _MAX_MATH_CONSTANT_COUNT = 10;
@@ -121,10 +113,6 @@ public:
 	void echoConstants();
 	bool setMathConstantForTesting(MathConstants constant);
 	bool setSystemConstantForTesting(SystemConstants constant);
-	bool versionDetectionComplete = false;
-	// Important: changing this address will change where the EmotiBit version is stored on the OTP
-	static const uint8_t EMOTIBIT_VERSION_ADDR_SI7013_OTP = 0xB7;
-	EmotiBitVariantDataFormat dataFormat;
 	EmotiBitVersionParameterTable versionParameterTable;
 
 	bool detectSdcard();
@@ -134,7 +122,6 @@ public:
 	bool readVariantInfoFromNvm(EmotiBitVersion estHwVersion, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotiBitNumber);
 	bool getEmotiBitVariantInfo(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotiBitNumber);
 	EmotiBitVersion detectEmotiBitVersion(TwoWire* EmotiBit_i2c, uint8_t flashMemoryI2cAddress = 255);
-	int readEmotiBitVersionFromSi7013();
 	static const char* getHardwareVersion(EmotiBitVersion version);
 
 	bool initPinMapping(EmotiBitVersionController::EmotiBitVersion version);
