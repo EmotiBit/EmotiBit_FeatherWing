@@ -276,12 +276,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	// ToDo: Create a organized way to store class vairables
 	// Set board-specific pins 
 	_batteryReadPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::BATTERY_READ_PIN);
-	_hibernatePin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::HIBERNATE);
+	_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
 	buttonPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EMOTIBIT_BUTTON);
 	//TODO: Find a better way to swap pin assignments in different modes
 	//_edlPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDL);
 	//_edrPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDR);
-	_sdCardChipSelectPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::SD_CARD_CHIP_SELECT);
+	_sdCardChipSelectPin = EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN;
 
 
 	_emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL] = emotiBitVersionController.getSystemConstant(SystemConstants::EMOTIBIT_HIBERNATE_LEVEL);

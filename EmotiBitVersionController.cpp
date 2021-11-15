@@ -46,17 +46,19 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 
 	if (version == EmotiBitVersion::V02B || version == EmotiBitVersion::V02H || version == EmotiBitVersion::V03B || version == EmotiBitVersion::V04A)
 	{
-		_assignedPin[(int)EmotiBitPinName::HIBERNATE] = 6;
+		//_assignedPin[(int)EmotiBitPinName::HIBERNATE] = 6;
 		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 12;
 		// Dont assign EDR or EDL pins for V4
+		/*
 		if (version != EmotiBitVersion::V04A)
 		{
 			_assignedPin[(int)EmotiBitPinName::EDL] = A4;
 			_assignedPin[(int)EmotiBitPinName::EDR] = A3;
 		}
-		_assignedPin[(int)EmotiBitPinName::SD_CARD_CHIP_SELECT] = 19;
-		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_I2C_CLOCK] = 13;
-		_assignedPin[(int)EmotiBitPinName::EMOTIBTI_I2C_DATA] = 11;
+		*/
+		//_assignedPin[(int)EmotiBitPinName::SD_CARD_CHIP_SELECT] = 19;
+		//_assignedPin[(int)EmotiBitPinName::EMOTIBIT_I2C_CLOCK] = 13;
+		//_assignedPin[(int)EmotiBitPinName::EMOTIBTI_I2C_DATA] = 11;
 		_assignedPin[(int)EmotiBitPinName::PPG_INT] = 15;
 		_assignedPin[(int)EmotiBitPinName::BMI_INT1] = 5;
 		_assignedPin[(int)EmotiBitPinName::BMI_INT2] = 10;
@@ -64,11 +66,11 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 	}
 	else if (version == EmotiBitVersion::V01B || version == EmotiBitVersion::V01C)
 	{
-		_assignedPin[(int)EmotiBitPinName::HIBERNATE] = 5;
+		//_assignedPin[(int)EmotiBitPinName::HIBERNATE] = 5;
 		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 13;
-		_assignedPin[(int)EmotiBitPinName::EDL] = A3;
-		_assignedPin[(int)EmotiBitPinName::EDR] = A4;
-		_assignedPin[(int)EmotiBitPinName::SD_CARD_CHIP_SELECT] = 6;
+		//_assignedPin[(int)EmotiBitPinName::EDL] = A3;
+		//_assignedPin[(int)EmotiBitPinName::EDR] = A4;
+		//_assignedPin[(int)EmotiBitPinName::SD_CARD_CHIP_SELECT] = 6;
 	}
 	else
 	{
@@ -79,10 +81,10 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 #elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
 	if (version == EmotiBitVersion::V01B || version == EmotiBitVersion::V01C)
 	{
-		_assignedPin[(int)EmotiBitPinName::HIBERNATE] = 27;//gpio pin assigned ot the mosfet
+		//_assignedPin[(int)EmotiBitPinName::HIBERNATE] = 27;//gpio pin assigned ot the mosfet
 		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 16;
-		_assignedPin[(int)EmotiBitPinName::EDL] = A3; = A3;
-		_assignedPin[(int)EmotiBitPinName::EDR] = A4;
+		//_assignedPin[(int)EmotiBitPinName::EDL] = A3; = A3;
+		//_assignedPin[(int)EmotiBitPinName::EDR] = A4;
 	}
 	else
 	{
@@ -110,13 +112,13 @@ int EmotiBitVersionController::getAssignedPin(EmotiBitPinName pin)
 
 void EmotiBitVersionController::echoPinMapping()
 {
-	Serial.print("EMOTIBIT_I2C_CLOCK: "); Serial.println(_assignedPin[(int)EmotiBitPinName::EMOTIBIT_I2C_CLOCK]);
-	Serial.print("EMOTIBTI_I2C_DATA: "); Serial.println(_assignedPin[(int)EmotiBitPinName::EMOTIBTI_I2C_DATA]);
-	Serial.print("HIBERNATE: "); Serial.println(_assignedPin[(int)EmotiBitPinName::HIBERNATE]);
+	Serial.print("EMOTIBIT_I2C_CLOCK: "); Serial.println(EMOTIBIT_I2C_CLK_PIN);
+	Serial.print("EMOTIBTI_I2C_DATA: "); Serial.println(EMOTIBIT_I2C_DAT_PIN);
+	Serial.print("HIBERNATE: "); Serial.println(HIBERNATE_PIN);
 	Serial.print("EMOTIBIT_BUTTON: "); Serial.println(_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON]);
-	Serial.print("EDL: "); Serial.println(_assignedPin[(int)EmotiBitPinName::EDL]);
-	Serial.print("EDR: "); Serial.println(_assignedPin[(int)EmotiBitPinName::EDR]);
-	Serial.print("SD_CARD_CHIP_SELECT: "); Serial.println(_assignedPin[(int)EmotiBitPinName::SD_CARD_CHIP_SELECT]);
+	//Serial.print("EDL: "); Serial.println(_assignedPin[(int)EmotiBitPinName::EDL]);
+	//Serial.print("EDR: "); Serial.println(_assignedPin[(int)EmotiBitPinName::EDR]);
+	Serial.print("SD_CARD_CHIP_SELECT: "); Serial.println(SD_CARD_CHIP_SEL_PIN);
 	Serial.print("SPI_CLK: "); Serial.println(_assignedPin[(int)EmotiBitPinName::SPI_CLK]);
 	Serial.print("SPI_MOSI: "); Serial.println(_assignedPin[(int)EmotiBitPinName::SPI_MOSI]);
 	Serial.print("SPI_MISO: "); Serial.println(_assignedPin[(int)EmotiBitPinName::SPI_MISO]);
@@ -157,7 +159,7 @@ bool EmotiBitVersionController::_initMappingMathConstants(EmotiBitVersionControl
 	_assignedMathConstants[(int)MathConstants::VCC] = 3.3f;
 	_assignedMathConstants[(int)MathConstants::ADC_BITS] = 12;
 	_assignedMathConstants[(int)MathConstants::ADC_MAX_VALUE] = pow(2, _assignedMathConstants[(int)MathConstants::ADC_BITS]) - 1;;
-	
+	/*
 	if (version == EmotiBitVersion::V04A)
 	{
 		_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ] = 1.f / (2.f * PI * 200000.f * 0.0000047f);
@@ -174,7 +176,7 @@ bool EmotiBitVersionController::_initMappingMathConstants(EmotiBitVersionControl
 		_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ] = 1.f / (2.f * PI * 200000.f * 0.0000047f);
 		
 	}
-
+	*/
 	return true;
 #endif
 }
@@ -253,12 +255,12 @@ void EmotiBitVersionController::echoConstants()
 		Serial.print("MathConstants: VCC - "); Serial.println(_assignedMathConstants[(int)MathConstants::VCC]);
 		Serial.print("MathConstants: ADC_BITS - "); Serial.println(_assignedMathConstants[(int)MathConstants::ADC_BITS]);
 		Serial.print("MathConstants: ADC_MAX_VALUE - "); Serial.println(_assignedMathConstants[(int)MathConstants::ADC_MAX_VALUE]);
-		Serial.print("MathConstants: EDR_AMPLIFICATION - "); Serial.println(_assignedMathConstants[(int)MathConstants::EDR_AMPLIFICATION]);
-		Serial.print("MathConstants: VREF1 - "); Serial.println(_assignedMathConstants[(int)MathConstants::VREF1]);
-		Serial.print("MathConstants: VREF2 - "); Serial.println(_assignedMathConstants[(int)MathConstants::VREF2]);
-		Serial.print("MathConstants: EDA_FEEDBACK_R - "); Serial.println(_assignedMathConstants[(int)MathConstants::EDA_FEEDBACK_R]);
-		Serial.print("MathConstants: EDA_CROSSOVER_FILTER_FREQ - "); Serial.println(_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ]);
-		Serial.print("MathConstants: EDA_SERIES_RESISTOR - "); Serial.println(_assignedMathConstants[(int)MathConstants::EDA_SERIES_RESISTOR]);
+		//Serial.print("MathConstants: EDR_AMPLIFICATION - "); Serial.println(_assignedMathConstants[(int)MathConstants::EDR_AMPLIFICATION]);
+		//Serial.print("MathConstants: VREF1 - "); Serial.println(_assignedMathConstants[(int)MathConstants::VREF1]);
+		//Serial.print("MathConstants: VREF2 - "); Serial.println(_assignedMathConstants[(int)MathConstants::VREF2]);
+		//Serial.print("MathConstants: EDA_FEEDBACK_R - "); Serial.println(_assignedMathConstants[(int)MathConstants::EDA_FEEDBACK_R]);
+		//Serial.print("MathConstants: EDA_CROSSOVER_FILTER_FREQ - "); Serial.println(_assignedMathConstants[(int)MathConstants::EDA_CROSSOVER_FILTER_FREQ]);
+		//Serial.print("MathConstants: EDA_SERIES_RESISTOR - "); Serial.println(_assignedMathConstants[(int)MathConstants::EDA_SERIES_RESISTOR]);
 		Serial.print("SystemConstant: EMOTIBIT_HIBERNATE_LEVEL - "); Serial.println(_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL]);
 		Serial.print("SystemConstant: LED_DRIVER_CURRENT - "); Serial.println(_assignedSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT]);
 	}

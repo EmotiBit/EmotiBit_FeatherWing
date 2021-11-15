@@ -22,13 +22,13 @@ class EmotiBitNvmController;
 // All EmotiBit Pin names should be entered in this class structure.
 enum class EmotiBitPinName
 {
-	EMOTIBIT_I2C_CLOCK = 0,
-	EMOTIBTI_I2C_DATA = 1,
-	HIBERNATE = 2,
+	//EMOTIBIT_I2C_CLOCK = 0,
+	//EMOTIBTI_I2C_DATA = 1,
+	//HIBERNATE = 2,
 	EMOTIBIT_BUTTON = 3,
-	EDL = 4,
-	EDR = 5,
-	SD_CARD_CHIP_SELECT = 6,
+	//EDL = 4,
+	//EDR = 5,
+	//SD_CARD_CHIP_SELECT = 6,
 	SPI_CLK = 7,
 	SPI_MOSI = 8,
 	SPI_MISO = 9,
@@ -45,13 +45,13 @@ enum class MathConstants
 	VCC = 0,
 	ADC_BITS = 1,
 	ADC_MAX_VALUE = 2,
-	EDR_AMPLIFICATION = 3,
-	VREF1 = 4,
-	VREF2 = 5,
-	EDA_FEEDBACK_R = 6,
-	EDA_CROSSOVER_FILTER_FREQ = 7,
-	EDA_SERIES_RESISTOR = 8,
-	COUNT = 9 // cannot be > than the _MAX_MATH_CONSTANT_COUNT
+	//EDR_AMPLIFICATION = 3,
+	//VREF1 = 4,
+	//VREF2 = 5,
+	//EDA_FEEDBACK_R = 6,
+	//EDA_CROSSOVER_FILTER_FREQ = 7,
+	//EDA_SERIES_RESISTOR = 8,
+	COUNT = 4 // cannot be > than the _MAX_MATH_CONSTANT_COUNT
 };
 
 enum class SystemConstants
@@ -96,8 +96,8 @@ public:
 private:
 	static const int _MAX_EMOTIBIT_PIN_COUNT = 28;
 	int _assignedPin[_MAX_EMOTIBIT_PIN_COUNT] = { 0 };
-	static const int _MAX_MATH_CONSTANT_COUNT = 10;
-	static const int _MAX_SYSTEM_CONSTANT_COUNT = 10;
+	static const int _MAX_MATH_CONSTANT_COUNT = 4;
+	static const int _MAX_SYSTEM_CONSTANT_COUNT = 3;
 	float _assignedMathConstants[_MAX_MATH_CONSTANT_COUNT] = { 0 };
 	int _assignedSystemConstants[_MAX_SYSTEM_CONSTANT_COUNT] = { 0 };
 	const int _INVALID_CONSTANT_FOR_VERSION = -1;
