@@ -38,7 +38,7 @@ const char* EmotiBitVersionController::getHardwareVersion(EmotiBitVersion versio
 bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiBitVersion version)
 {
 #if defined(ADAFRUIT_FEATHER_M0)
-
+	// ToDo: Move these pin Assignments(maybe inside a constructor). These are specific to MCU platform and cannot change.
 	_assignedPin[(int)EmotiBitPinName::BATTERY_READ_PIN] = A7;
 	_assignedPin[(int)EmotiBitPinName::SPI_CLK] = 24;
 	_assignedPin[(int)EmotiBitPinName::SPI_MOSI] = 23;
@@ -284,14 +284,15 @@ bool EmotiBitVersionController::detectSdcard()
 {
 	SdFat SD;
 	pinMode(HIBERNATE_PIN, OUTPUT);
-	digitalWrite(HIBERNATE_PIN, LOW);
+	
+	digitalWrite(HIBERNATE_PIN, HIGH);
 	if (SD.begin(SD_CARD_CHIP_SEL_PIN))
 	{
 		pinMode(HIBERNATE_PIN, INPUT);
 		return true;
 	}
 
-	digitalWrite(HIBERNATE_PIN, HIGH);
+	digitalWrite(HIBERNATE_PIN, LOW);
 	if (SD.begin(SD_CARD_CHIP_SEL_PIN))
 	{
 		pinMode(HIBERNATE_PIN, INPUT);
@@ -315,6 +316,7 @@ bool EmotiBitVersionController::writeVariantInfoToNvm(TwoWire &emotibit_i2c, Emo
 	}
 	pinMode(HIBERNATE_PIN, OUTPUT);
 	digitalWrite(HIBERNATE_PIN, HIGH);
+	delay(100);
 	if (emotiBitNvmController.init(emotibit_i2c, (EmotiBitVersion)emotiBitVariantInfo.hwVersion))
 	{
 		emotiBitNvmController.setHwVersion((EmotiBitVersion)emotiBitVariantInfo.hwVersion);

@@ -65,7 +65,7 @@ enum class SystemConstants
 class EmotiBitVersionController
 {
 public: 	
-	
+	// ToDo: move these pin definitions inside a struct.
 #if defined(ADAFRUIT_FEATHER_M0) 
 	static const int HIBERNATE_PIN = 6;
 	static const int EMOTIBIT_I2C_CLK_PIN = 13;

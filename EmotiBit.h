@@ -46,7 +46,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.87.emotibitMemoryController-1.EmotiBitEda-1.versionController-4";
+	String firmware_version = "1.2.87.emotibitMemoryController-1.EmotiBitEda-1.versionController-5";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = true;
 	const bool DC_DO_V2 = true;
@@ -246,11 +246,11 @@ public:
 	//float edaVDivR;
 	//float edaFeedbackAmpR;
 	//float edaCrossoverFilterFreq;
-	uint8_t _sdCardChipSelectPin;	// ToDo: create getter and make private
+	//uint8_t _sdCardChipSelectPin;	// ToDo: create getter and make private
 	BMM150TrimData bmm150TrimData;
 	bool bmm150XYClipped = false;
 	bool bmm150ZHallClipped = false;
-	uint8_t _hibernatePin;
+	//uint8_t _hibernatePin;
 	bool thermopileBegun = false;
 	int thermopileFs = 8; // *** NOTE *** changing this may wear out the Melexis flash
 	uint8_t thermopileMode = MODE_STEP;		// If changing to MODE_CONTINUOUS besure to adjust SAMPLING_DIV to match thermopile rate

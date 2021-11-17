@@ -276,12 +276,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	// ToDo: Create a organized way to store class vairables
 	// Set board-specific pins 
 	_batteryReadPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::BATTERY_READ_PIN);
-	_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
+	//_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
 	buttonPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EMOTIBIT_BUTTON);
 	//TODO: Find a better way to swap pin assignments in different modes
 	//_edlPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDL);
 	//_edrPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDR);
-	_sdCardChipSelectPin = EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN;
+	//_sdCardChipSelectPin = EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN;
 
 
 	_emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL] = emotiBitVersionController.getSystemConstant(SystemConstants::EMOTIBIT_HIBERNATE_LEVEL);
@@ -428,7 +428,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println("\nHW version-specific settings:");
 		Serial.print("buttonPin = "); Serial.println(buttonPin);
 		Serial.print("_batteryReadPin = "); Serial.println(_batteryReadPin);
-		Serial.print("_hibernatePin = "); Serial.println(_hibernatePin);
+		Serial.print("Hibernate Pin = "); Serial.println(EmotiBitVersionController::HIBERNATE_PIN);
 		//Serial.print("_edlPin = "); Serial.println(_edlPin);
 		//Serial.print("_edrPin = "); Serial.println(_edrPin);
 		Serial.print("_vcc = "); Serial.println(_vcc);
@@ -1090,7 +1090,7 @@ bool EmotiBit::setupSdCard()
 		Serial.print(i);
 		Serial.print(",");
 		// begin function initializes SPI at MAX speed by deafult. check /src/SpiDriver/SdSpiDriver.h for details on the constructor
-		if (SD.begin(_sdCardChipSelectPin))
+		if (SD.begin(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN))
 		{
 			success = true;
 			break;
@@ -1099,7 +1099,7 @@ bool EmotiBit::setupSdCard()
 	}
 	if (!success) {
 		Serial.print("...Card failed, or not present on chip select ");
-		Serial.println(_sdCardChipSelectPin);
+		Serial.println(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN);
 		// don't do anything more:
 		// ToDo: Handle case where we still want to send network data
 		//while (true) {
@@ -2973,6 +2973,14 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	Serial.println("hibernate()");
 	Serial.println("Stopping timer...");
 	stopTimer();
+	// If hibernating with version UNKNOWN, Assume version is V03
+	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
+	{
+		EmotiBitVersionController emotiBitVersionController;
+		emotiBitVersionController.initConstantMapping(EmotiBitVersionController::EmotiBitVersion::V03B);
+		_emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL] = emotiBitVersionController.getSystemConstant(SystemConstants::EMOTIBIT_HIBERNATE_LEVEL);
+		_emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE] = emotiBitVersionController.getSystemConstant(SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE);
+	}
 	// Delay to ensure the timer has finished
 	delay((1000 * 5) / BASE_SAMPLING_FREQ);
 	// if i2c sensor setup has been completed
@@ -3008,7 +3016,7 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	// Setup all pins (digital and analog) in INPUT mode (default is nothing)  
 	for (uint32_t ul = 0; ul < PINS_COUNT; ul++)
 	{
-		if (ul != _hibernatePin) {
+		if (ul != EmotiBitVersionController::HIBERNATE_PIN) {
 			pinMode(ul, OUTPUT);
 			digitalWrite(ul, LOW);
 			pinMode(ul, INPUT);
@@ -3018,10 +3026,10 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	}
 	// Turn off EmotiBit power
 	Serial.println("Disabling EmotiBit power");
-	pinMode(_hibernatePin, OUTPUT);
-	digitalWrite(_hibernatePin, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL]);
+	pinMode(EmotiBitVersionController::HIBERNATE_PIN, OUTPUT);
+	digitalWrite(EmotiBitVersionController::HIBERNATE_PIN, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL]);
 	delay(100);
-	pinMode(_hibernatePin, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE]);	//deepSleep();
+	pinMode(EmotiBitVersionController::HIBERNATE_PIN, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE]);	//deepSleep();
 	Serial.println("Entering deep sleep...");
 	LowPower.deepSleep();
 }
