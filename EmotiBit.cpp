@@ -1138,7 +1138,10 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 		uint8_t protocolVersion = 1;
 		if (DC_DO_V2)
 		{
-			protocolVersion = 2;
+			if (t == EmotiBit::DataType::DATA_CLIPPING || t == EmotiBit::DataType::DATA_OVERFLOW)
+			{
+				protocolVersion = 2;
+			}
 		}
 
 
@@ -3741,6 +3744,7 @@ void EmotiBit::processFactoryTestMessages()
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_VALUES))
 		{
+			Serial.println(msg);
 			if (emotibitEda.stageCalibStorage(&_emotibitNvmController, msg))
 			{
 				EmotiBitFactoryTest::sendMessage(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_ACK);
