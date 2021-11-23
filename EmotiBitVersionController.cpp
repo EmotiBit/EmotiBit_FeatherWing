@@ -347,7 +347,7 @@ bool EmotiBitVersionController::writeVariantInfoToNvm(TwoWire &emotibit_i2c, Emo
 	}
 }
 
-bool EmotiBitVersionController::getEmotiBitVariantInfo(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotiBitNumber)
+bool EmotiBitVersionController::getEmotiBitVariantInfo(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotiBitNumber)
 {
 	updateVersionParameterTable(emotibit_i2c, emotiBitNvmController);
 
@@ -361,7 +361,7 @@ bool EmotiBitVersionController::getEmotiBitVariantInfo(TwoWire &emotibit_i2c, Em
 	if (!readVariantInfoFromNvm(estHwVersion, emotiBitNvmController, hwVersion, sku, emotiBitNumber))
 	{
 		hwVersion = estHwVersion;
-		sku = EmotiBitVariants::EmotiBitSkuType::INVALID;
+		sku = EmotiBitVariants::EMOTIBIT_SKU_MD;
 		emotiBitNumber = UINT32_MAX;
 	}
 	return true;
@@ -441,7 +441,7 @@ EmotiBitVersionController::EmotiBitVersion EmotiBitVersionController::detectVers
 	}
 }
 
-bool EmotiBitVersionController::readVariantInfoFromNvm(EmotiBitVersion estHwVersion, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotiBitNumber)
+bool EmotiBitVersionController::readVariantInfoFromNvm(EmotiBitVersion estHwVersion, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotiBitNumber)
 {
 	emotiBitNvmController.setHwVersion(estHwVersion);
 	uint8_t* nvmData;
@@ -456,9 +456,10 @@ bool EmotiBitVersionController::readVariantInfoFromNvm(EmotiBitVersion estHwVers
 		{
 			hwVersion = (EmotiBitVersion)(*nvmData);
 			Serial.print("[NVM VARIANT INFO] HW version: "); Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersion)hwVersion));
-			sku = EmotiBitVariants::EmotiBitSkuType::INVALID;
+			sku = EmotiBitVariants::EMOTIBIT_SKU_MD;
+			Serial.print("[NVM VARIANT INFO] SKU: "); Serial.println(sku);
 			emotiBitNumber = UINT32_MAX;
-			Serial.println("No SKU/EmotiBitNumber recorded for this HW version");
+			Serial.println("No EmotiBitNumber recorded for this HW version");
 		}
 		else if (datatypeVersion == (uint8_t)EmotiBitVariantDataFormat::V1)
 		{
@@ -466,8 +467,8 @@ bool EmotiBitVersionController::readVariantInfoFromNvm(EmotiBitVersion estHwVers
 			variantInfo = (EmotiBitVariantInfo*)nvmData;
 			hwVersion = (EmotiBitVersion)variantInfo->hwVersion;
 			Serial.print("[NVM VARIANT INFO] HW version: "); Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersion)hwVersion));
-			sku = (EmotiBitVariants::EmotiBitSkuType)variantInfo->sku;
-			Serial.print("[NVM VARIANT INFO] SKU version: "); Serial.println(EmotiBitVariants::EmotiBitSkuTags[(uint8_t)sku]);
+			sku = String(variantInfo->sku);
+			Serial.print("[NVM VARIANT INFO] SKU version: "); Serial.println(sku);
 			emotiBitNumber = variantInfo->emotiBitNumber;
 			Serial.print("[NVM VARIANT INFO] EmotiBit Number: "); Serial.println(emotiBitNumber);
 		}

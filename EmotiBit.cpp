@@ -119,7 +119,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
 
-	while (!Serial.available() && millis() - now < 2000)
+	while (!Serial.available() && millis() - now < 5000)
 	{
 	}
 	while (Serial.available())
@@ -748,7 +748,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (status)
 	{
 		// estimate SKU is MD
-		emotiBitSku = EmotiBitVariants::EmotiBitSkuType::MD;
+		emotiBitSku = String(EmotiBitVariants::EMOTIBIT_SKU_MD);
 		thermopile.setMeasurementRate(thermopileFs);
 		thermopile.setMode(thermopileMode);
 		uint8_t thermMode = thermopile.getMode();
@@ -769,16 +769,16 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	else
 	{
 		// set SKU as EM
-		emotiBitSku = EmotiBitVariants::EmotiBitSkuType::EM;
+		emotiBitSku = String(EmotiBitVariants::EMOTIBIT_SKU_EM);
 		//hibernate(false);
 	}
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		// if barcode is MD
-		if (barcode.sku.equals(EmotiBitVariants::EmotiBitSkuTags[(int)EmotiBitVariants::EmotiBitSkuType::MD]))
+		if (barcode.sku.equals(EmotiBitVariants::EMOTIBIT_SKU_MD))
 		{
 			// is FW estimate is MD
-			if (emotiBitSku == EmotiBitVariants::EmotiBitSkuType::MD)
+			if (emotiBitSku.equals(EmotiBitVariants::EMOTIBIT_SKU_MD))
 			{
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_PASS);
@@ -792,7 +792,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		// if barcode is EM
 		else
 		{
-			if (emotiBitSku == EmotiBitVariants::EmotiBitSkuType::MD)
+			if (emotiBitSku.equals(EmotiBitVariants::EMOTIBIT_SKU_EM))
 			{
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_PASS);

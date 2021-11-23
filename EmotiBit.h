@@ -496,7 +496,7 @@ private:
 	float _gyroRange; // supported values: 125, 250, 500, 1000, 2000 (degrees/second)
 	//Version _version;
 	EmotiBitVersionController::EmotiBitVersion _hwVersion;
-	EmotiBitVariants::EmotiBitSkuType emotiBitSku;
+	String emotiBitSku;
 	uint32_t emotiBitNumber;
 	uint8_t _imuFifoFrameLen = 0; // in bytes
 	const uint8_t _maxImuFifoFrameLen = 40; // in bytes

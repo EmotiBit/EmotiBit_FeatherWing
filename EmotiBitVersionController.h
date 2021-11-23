@@ -119,8 +119,8 @@ public:
 	bool writeVariantInfoToNvm(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, Barcode barcode);
 	void updateVersionParameterTable(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController);
 	EmotiBitVersion detectVersionFromParameterTable();
-	bool readVariantInfoFromNvm(EmotiBitVersion estHwVersion, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotiBitNumber);
-	bool getEmotiBitVariantInfo(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, EmotiBitVariants::EmotiBitSkuType &sku, uint32_t &emotiBitNumber);
+	bool readVariantInfoFromNvm(EmotiBitVersion estHwVersion, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotiBitNumber);
+	bool getEmotiBitVariantInfo(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotiBitNumber);
 	EmotiBitVersion detectEmotiBitVersion(TwoWire* EmotiBit_i2c, uint8_t flashMemoryI2cAddress = 255);
 	static const char* getHardwareVersion(EmotiBitVersion version);
 
