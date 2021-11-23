@@ -92,9 +92,11 @@ void EmotiBit::bmm150ReadTrimRegisters()
 
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
+	// Note: No serial prints should be made till after Initial Fatory Test check is crossed. Any serial print
+	// before that breaks the Factory test ACK
 	uint32_t now = millis();
-	Serial.print("Firmware version: ");
-	Serial.println(firmware_version);
+	//Serial.print("Firmware version: ");
+	//Serial.println(firmware_version);
 	Barcode barcode;
 	EmotiBitVersionController emotiBitVersionController;
 	if (!emotiBitVersionController.detectSdcard())
@@ -112,7 +114,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_EmotiBit_i2c = new TwoWire(&sercom1, EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
 	_EmotiBit_i2c->begin();
 	// ToDo: detect if i2c init fails
-	Serial.println("I2C interface initialized");
+	//Serial.println("I2C interface initialized");
 	_EmotiBit_i2c->setClock(100000);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
