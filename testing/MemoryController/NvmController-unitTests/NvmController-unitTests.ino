@@ -77,7 +77,7 @@ void setup()
 
 	//init NvmController
 	EmotiBitNvmController emotibitNvmController;
-	emotibitNvmController.init(emotibit_i2c, hwVersion);
+	emotibitNvmController.init(emotibit_i2c);
 
 	//creating variables to read
 	uint8_t* data = nullptr;
@@ -98,7 +98,7 @@ void setup()
 	}
 
 	// Setting HW version
-	emotibitNvmController.setHwVersion(hwVersion);
+	//emotibitNvmController.setHwVersion(hwVersion);
 
 	// ########################################################
 	// Testing writing to entire EEPROM
@@ -181,9 +181,6 @@ void setup()
 	// Printing whole NVM
 	emotibitNvmController.printEntireNvm(true);
 
-	// Erasing All Data
-	emotibitNvmController.eraseEeprom(true);
-
 	// ########################################################
 	// Testing reading VARIANT_INFO from NVM
 	status = emotibitNvmController.stageToRead(EmotiBitNvmController::DataType::VARIANT_INFO, datatypeVersion, dataSize, data, true);
@@ -208,6 +205,9 @@ void setup()
 	{
 		logTestResult(TEST_NUMBER::SEVEN, RESULT_FAIL, status);
 	}
+	// Erasing All Data
+	emotibitNvmController.eraseEeprom(true);
+
 	delete[] data;
 	data = nullptr;
 	Serial.println("End of test");

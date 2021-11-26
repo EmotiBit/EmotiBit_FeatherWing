@@ -1,52 +1,45 @@
 #include "EmotiBitNvmController.h"
 
 
-bool EmotiBitNvmController::init(TwoWire &emotibit_i2c, EmotiBitVersionController::EmotiBitVersion hwVersion)
+bool EmotiBitNvmController::init(TwoWire &emotibit_i2c)
 {
-	if (hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
+
+	if (emotibitEeprom.begin(EMOTIBIT_EEPROM_I2C_ADDRESS, emotibit_i2c))
 	{
-		if (emotibitEeprom.begin(EMOTIBIT_EEPROM_I2C_ADDRESS, emotibit_i2c))
-		{
-			emotibitEepromSettings.capacityBytes = 256; // in bytes
-			emotibitEepromSettings.pageSizeBytes = 16; // in bytes
-			emotibitEeprom.setMemorySize(emotibitEepromSettings.capacityBytes);
-			emotibitEeprom.setPageSize(emotibitEepromSettings.pageSizeBytes);
-			writeState = State::IDLE;
-			readState = State::IDLE;
-			return true;
-		}
-		else // Flash module failed to init. check i2c
-		{
-			return false;
-		}
+		emotibitEepromSettings.capacityBytes = 256; // in bytes
+		emotibitEepromSettings.pageSizeBytes = 16; // in bytes
+		emotibitEeprom.setMemorySize(emotibitEepromSettings.capacityBytes);
+		emotibitEeprom.setPageSize(emotibitEepromSettings.pageSizeBytes);
+		writeState = State::IDLE;
+		readState = State::IDLE;
+		_nvmType = NvmType::EEPROM;
+		return true;
 	}
-	else if ((int)hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
+
+	if (si7013.setup(emotibit_i2c))
 	{
-		if (si7013.setup(emotibit_i2c))
-		{
-			writeState = State::IDLE;
-			readState = State::IDLE;
-			return true;
-		}
-		else // could not comm. with IC. check i2c line
-		{
-			return false;
-		}
+		writeState = State::IDLE;
+		readState = State::IDLE;
+		_nvmType = NvmType::OTP;
+		return true;
 	}
-	else
-	{
-		return false;
-	}
+
+	_nvmType = NvmType::UNKNOWN;
+	return false;
+
 }
 
+/*
 void EmotiBitNvmController::setHwVersion(EmotiBitVersionController::EmotiBitVersion hwVersion)
 {
 	_hwVersion = hwVersion;
 }
+*/
+
 
 uint8_t EmotiBitNvmController::stageToWrite(DataType datatype, uint8_t datatypeVersion, uint32_t dataSize, uint8_t* data, bool autoSync, bool enableValidateWrite)
 {
-	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
+	if (_nvmType == NvmType::EEPROM)
 	{
 		if (writeState == State::IDLE)
 		{
@@ -93,15 +86,15 @@ uint8_t EmotiBitNvmController::stageToWrite(DataType datatype, uint8_t datatypeV
 			return (uint8_t)Status::CONTROLLER_BUSY;
 		}
 	}
-	else if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
+	else if (_nvmType == NvmType::OTP)
 	{
-		Serial.println("Hardware Version UNKNOWN");
-		return (uint8_t)Status::HARDWARE_VERSION_UNKNOWN;
+		Serial.println("Use EmotiBit FW V1.2.86 to perform Write to NVM on HW V2/V3");
+		return (uint8_t)Status::NVM_TYPE_NOT_SUPPORTED;
 	}
 	else
 	{
-		Serial.println("Use EmotiBit FW V1.2.86 to perform Write to NVM on HW V2/V3");
-		return (uint8_t)Status::HW_VERSION_NOT_SUPPORTED;
+		Serial.println("");
+		return (uint8_t)Status::NVM_TYPE_UNKNOWN;
 	}
 }
 
@@ -280,7 +273,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 	if (readState == State::READY_TO_READ)
 	{
 		readState = State::BUSY_READING;
-		if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
+		if (_nvmType == NvmType::EEPROM)
 		{
 			if (_readBuffer.datatype == DataType::ENTIRE_NVM)
 			{
@@ -329,7 +322,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 				}
 			}
 		}
-		else if ((uint8_t)_hwVersion < (uint8_t)EmotiBitVersionController::EmotiBitVersion::V04A)
+		else if (_nvmType == NvmType::OTP)
 		{
 			if (_readBuffer.datatype == DataType::ENTIRE_NVM)
 			{
@@ -420,9 +413,9 @@ uint8_t EmotiBitNvmController::readFromStorage()
 				}
 			}
 		}
-		else if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
+		else if (_nvmType == NvmType::UNKNOWN)
 		{
-			_readResult = Status::HARDWARE_VERSION_UNKNOWN;
+			_readResult = Status::NVM_TYPE_UNKNOWN;
 			readState = State::IDLE;
 			return (uint8_t)_readResult; // success
 		}
@@ -457,7 +450,7 @@ void EmotiBitNvmController::printEntireNvm(bool autoSync)
 
 void EmotiBitNvmController::eraseEeprom(bool autoSync, bool printAfterErase)
 {
-	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
+	if (_nvmType == NvmType::EEPROM)
 	{
 		Serial.println("Erasing Entire EEPROM(defaults to 255 in each location)");
 		const uint32_t NVM_SIZE = emotibitEepromSettings.capacityBytes;
@@ -471,8 +464,12 @@ void EmotiBitNvmController::eraseEeprom(bool autoSync, bool printAfterErase)
 			printEntireNvm(autoSync);
 		}
 	}
-	else
+	else if (_nvmType == NvmType::OTP)
 	{
 		Serial.println("NVM erase not supported for EmotiBit V3 and below");
+	}
+	else if (_nvmType == NvmType::UNKNOWN)
+	{
+		Serial.println("NVM Type UNKNOWN. Please Init. NVM controller.");
 	}
 }
