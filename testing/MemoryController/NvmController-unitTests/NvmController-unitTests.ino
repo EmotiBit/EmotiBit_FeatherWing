@@ -51,6 +51,8 @@ void setup()
 {
 	// Setting up Serial
 	Serial.begin(115200);
+	// Add this delay and comment the serial wait if using debugger.
+	//delay(5000);
 	while (!Serial.available())
 	{
 		Serial.println("enter a character to Start NVM Test");
@@ -77,7 +79,7 @@ void setup()
 
 	//init NvmController
 	EmotiBitNvmController emotibitNvmController;
-	emotibitNvmController.init(emotibit_i2c, hwVersion);
+	emotibitNvmController.init(emotibit_i2c);
 
 	//creating variables to read
 	uint8_t* data = nullptr;
@@ -98,7 +100,7 @@ void setup()
 	}
 
 	// Setting HW version
-	emotibitNvmController.setHwVersion(hwVersion);
+	//emotibitNvmController.setHwVersion(hwVersion);
 
 	// ########################################################
 	// Testing writing to entire EEPROM
@@ -181,9 +183,6 @@ void setup()
 	// Printing whole NVM
 	emotibitNvmController.printEntireNvm(true);
 
-	// Erasing All Data
-	emotibitNvmController.eraseEeprom(true);
-
 	// ########################################################
 	// Testing reading VARIANT_INFO from NVM
 	status = emotibitNvmController.stageToRead(EmotiBitNvmController::DataType::VARIANT_INFO, datatypeVersion, dataSize, data, true);
@@ -208,6 +207,9 @@ void setup()
 	{
 		logTestResult(TEST_NUMBER::SEVEN, RESULT_FAIL, status);
 	}
+	// Erasing All Data
+	emotibitNvmController.eraseEeprom(true);
+
 	delete[] data;
 	data = nullptr;
 	Serial.println("End of test");
@@ -229,13 +231,13 @@ void testDatatypeWrite(EmotiBitNvmController *emotibitNvmController, EmotiBitNvm
 	status = emotibitNvmController->stageToWrite(datatype, datatypeVersion, dataSize, data, true, false);
 	if (status == 0)
 	{
-		data = nullptr;
+		uint8_t* nvmData = nullptr;
 		datatypeVersion = 0;
 		dataSize = 0;
-		status = emotibitNvmController->stageToRead(datatype, datatypeVersion, dataSize, data, true);
+		status = emotibitNvmController->stageToRead(datatype, datatypeVersion, dataSize, nvmData, true);
 		if (status == 0)
 		{
-			if (compareSampleDataFromNvm(data))
+			if (compareSampleDataFromNvm(nvmData))
 			{
 				logTestResult(testNumber, RESULT_PASS);
 			}
@@ -243,6 +245,8 @@ void testDatatypeWrite(EmotiBitNvmController *emotibitNvmController, EmotiBitNvm
 			{
 				logTestResult(testNumber, RESULT_FAIL, status);
 			}
+			delete[] nvmData;
+			nvmData = nullptr;
 		}
 		else
 		{
@@ -253,8 +257,7 @@ void testDatatypeWrite(EmotiBitNvmController *emotibitNvmController, EmotiBitNvm
 	{
 		logTestResult(testNumber, RESULT_FAIL, status);
 	}
-	delete[] data;
-	data = nullptr;
+	
 }
 
 bool compareSampleDataFromNvm(uint8_t* data)

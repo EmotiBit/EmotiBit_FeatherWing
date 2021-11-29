@@ -12,7 +12,7 @@
 #ifndef EMOTIBIT_MEMORY_CONTROLLER_H
 #define EMOTIBIT_MEMORY_CONTROLLER_H
 
-#include "EmotiBitVersionController.h"
+//#include "EmotiBitVersionController.h"
 #include "EmotiBit_Si7013.h"
 #include "SparkFun_External_EEPROM.h"
 
@@ -24,7 +24,14 @@
 class EmotiBitNvmController
 {
 public:
-	EmotiBitVersionController::EmotiBitVersion _hwVersion = EmotiBitVersionController::EmotiBitVersion::UNKNOWN;
+	
+	enum class NvmType {
+		UNKNOWN = -1,
+		OTP = 0,
+		EEPROM = 1,
+		length
+	};
+	
 	struct ConstEepromAddr
 	{
 		static const size_t NUM_MAP_ENTRIES = 0;
@@ -64,13 +71,13 @@ public:
 	enum class Status
 	{
 		SUCCESS = 0,
-		HARDWARE_VERSION_UNKNOWN,
-		MEMORY_NOT_UPDATED,
-		OUT_OF_BOUNDS_ACCESS,
-		I2C_WRITE_ERROR,
-		CONTROLLER_BUSY,
-		INVALID_DATA_TO_WRITE,
-		HW_VERSION_NOT_SUPPORTED,
+		NVM_TYPE_UNKNOWN = 1,
+		MEMORY_NOT_UPDATED = 2,
+		OUT_OF_BOUNDS_ACCESS = 3,
+		I2C_WRITE_ERROR = 4,
+		CONTROLLER_BUSY = 5,
+		INVALID_DATA_TO_WRITE = 6,
+		NVM_TYPE_NOT_SUPPORTED = 7,
 		OTHER_FAILURE
 	};
 
@@ -115,21 +122,20 @@ public:
 	uint8_t _numMapEntries = (uint8_t)DataType::length;
 	ExternalEEPROM emotibitEeprom;
 	Si7013 si7013;
-	
+	NvmType _nvmType = NvmType::UNKNOWN;
 	/*!
 		@brief Initialize drivers to communicate with the onboard NVM modules.
 		@param emotiBit_i2c I2C instance being used by EmotiBit to talk to sensors.
-		@param hwVersion Hardware version of EmotiBit detected.
 		@return True if successful, otherwise false.
 	*/
-	bool init(TwoWire &emotiBit_i2c, EmotiBitVersionController::EmotiBitVersion hwVersion);
+	bool init(TwoWire &emotiBit_i2c);
 
 	/*!
 		@brief Sets the HW version to control NVM access.
 		@param hwVersion Hardware Version of EmotiBit being used.
 		This function Needs to be called to perform NVM access.
 	*/
-	void setHwVersion(EmotiBitVersionController::EmotiBitVersion hwVersion);
+	//void setHwVersion(EmotiBitVersionController::EmotiBitVersion hwVersion);
 
 	/*
 		@brief Updates the write buffer with data that will be written to the NVM.
