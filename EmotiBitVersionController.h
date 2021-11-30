@@ -15,9 +15,7 @@
 #include <EmotiBit_Si7013.h>
 #include "EmotiBitVariants.h"
 #include "EmotiBitFactoryTest.h"
-
-// ToDo: remove this forward declaration when EmotiBitVersion is moved out of versionController
-class EmotiBitNvmController;
+#include "EmotiBitNvmController.h"
 
 // All EmotiBit Pin names should be entered in this class structure.
 enum class EmotiBitPinName
@@ -62,6 +60,12 @@ enum class SystemConstants
 	COUNT = 3 // cannot be greater than the _MAX_SYSTEM_CONSTANT_COUNT
 };
 
+enum class PinActivationLogic
+{
+	ACTIVE_LOW,
+	ACTIVE_HIGH
+};
+
 class EmotiBitVersionController
 {
 public: 	
@@ -87,10 +91,10 @@ public:
 		length
 	};
 
-	struct EmotiBitVersionParameterTable {
-		bool initHibernatePinVoltage = false;
-		bool initSi7013CommStatus = false;
-		bool initEepromCommStatus = false;
+	struct EmotiBitHardwareParameterTable {
+		bool isSi7013Present;
+		bool isEepromPresent;
+		bool isThermopilePresent;
 	};
 
 private:
@@ -104,7 +108,11 @@ private:
 	const int _INVALID_REQUEST = -2; // addresses out of bounds(for array indexing) request
 	bool _initAssignmentComplete = false;
 	bool _initMappingMathConstants(EmotiBitVersionController::EmotiBitVersion version);
-	bool _initMappingSystemConstants(EmotiBitVersionController::EmotiBitVersion version);
+	bool _initMappingSystemConstants(PinActivationLogic logic);
+	static const uint8_t SI7013_I2C_ADDR = 0x40;
+	static const uint8_t EEPROM_I2C_ADDR = 0x50;
+	static const uint8_t MLX90632_I2C_ADDR = 0x3A;
+
 
 public:
 	bool initConstantMapping(EmotiBitVersionController::EmotiBitVersion version);
@@ -113,15 +121,14 @@ public:
 	void echoConstants();
 	bool setMathConstantForTesting(MathConstants constant);
 	bool setSystemConstantForTesting(SystemConstants constant);
-	EmotiBitVersionParameterTable versionParameterTable;
+	PinActivationLogic hibernatePinLogic;
 
-	bool detectSdcard();
+	bool isEmotiBitReady();
+	bool validateBarcodeInfo(TwoWire &emotibit_i2c, Barcode barcode, bool &hwValidation, bool &skuValidation);
+	void updateVersionParameterTable(TwoWire &emotibit_i2c, EmotiBitHardwareParameterTable &hardwareParameterTable);
 	bool writeVariantInfoToNvm(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, Barcode barcode);
-	void updateVersionParameterTable(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController);
-	EmotiBitVersion detectVersionFromParameterTable();
-	bool readVariantInfoFromNvm(EmotiBitVersion estHwVersion, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotiBitNumber);
 	bool getEmotiBitVariantInfo(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotiBitNumber);
-	EmotiBitVersion detectEmotiBitVersion(TwoWire* EmotiBit_i2c, uint8_t flashMemoryI2cAddress = 255);
+	bool detectVariantFromHardware(TwoWire &emotibit_i2c, EmotiBitVersion &hwVersion, String &sku);
 	static const char* getHardwareVersion(EmotiBitVersion version);
 
 	bool initPinMapping(EmotiBitVersionController::EmotiBitVersion version);
