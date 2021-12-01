@@ -974,6 +974,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_sendData[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = true;
 	_sendData[(uint8_t)EmotiBit::DataType::DEBUG] = true;
 
+	// Turn off serial data sending
+	for (uint8_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
+	{
+		_sendSerialData[i] = false;
+	}
+
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::EDA] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::EDL] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::EDR] = false;
@@ -1140,7 +1146,12 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 
 
 		header = EmotiBitPacket::createHeader(typeTags[(uint8_t)t], timestamp, _outDataPacketCounter++, dataLen, protocolVersion);
-		_outDataPackets += EmotiBitPacket::headerToString(header);
+		String headerString = EmotiBitPacket::headerToString(header);
+		_outDataPackets += headerString;
+		if (_sendSerialData[(uint8_t) t])
+		{
+			Serial.print(headerString);
+		}
 
 		if (t == EmotiBit::DataType::DATA_CLIPPING || t == EmotiBit::DataType::DATA_OVERFLOW) {
 			// Handle clippping and overflow as a special case
@@ -1201,6 +1212,10 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 				if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE - 1)
 				{
 					_outDataPackets += temp;
+					if (_sendSerialData[(uint8_t) t])
+					{
+						Serial.print(temp);
+					}
 				} 
 				else
 				{
@@ -1211,6 +1226,10 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 			}
 		}
 		_outDataPackets += "\n";
+		if (_sendSerialData[(uint8_t) t])
+		{
+			Serial.print("\n");
+		}
 
 		return true;
 	}
@@ -3728,6 +3747,34 @@ void EmotiBit::processFactoryTestMessages()
 		{
 			hibernate();
 		}
+		else if (msgTypeTag.equals(EmotiBitPacket::TypeTag::SERIAL_DATA_ON))
+		{
+			String dataType;
+			EmotiBitPacket::getPacketElement(msg, dataType, 3);
+			for (uint8_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
+			{
+				if (dataType.equals(typeTags[i]))
+				{
+					_sendSerialData[i] = true;
+					Serial.print("SERIAL_DATA_ON: ");
+					Serial.println(typeTags[i]);
+				}
+			}
+		}
+		else if (msgTypeTag.equals(EmotiBitPacket::TypeTag::SERIAL_DATA_OFF))
+		{
+			String dataType;
+			EmotiBitPacket::getPacketElement(msg, dataType, 3);
+			for (uint8_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
+			{
+				if (dataType.equals(typeTags[i]))
+				{
+					_sendSerialData[i] = false;
+					Serial.print("SERIAL_DATA_OFF: ");
+					Serial.println(typeTags[i]);
+				}
+			}
+		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_VALUES))
 		{
 			Serial.println(msg);
@@ -3735,6 +3782,10 @@ void EmotiBit::processFactoryTestMessages()
 			{
 				EmotiBitFactoryTest::sendMessage(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_ACK);
 			}
+		}
+		else {
+			Serial.print("Unrecognized Serial Command: ");
+			Serial.println(msg);
 		}
 	}
 }
