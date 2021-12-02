@@ -338,6 +338,7 @@ public:
 	bool _newDataAvailable[(uint8_t)EmotiBit::DataType::length];
 	uint8_t _printLen[(uint8_t)EmotiBit::DataType::length];
 	bool _sendData[(uint8_t)EmotiBit::DataType::length];
+	bool _sendSerialData[(uint8_t)EmotiBit::DataType::length];
 
 	SdFat SD;
 	volatile uint8_t battLevel = 100;
