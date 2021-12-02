@@ -459,8 +459,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		Serial.println("fail");
 	}
-	// Handle reading the version from NVM
-	//_emotibitNvmController.setHwVersion(_version);
 
 	// setup LED DRIVER
 	Serial.print("Initializing NCP5623....");

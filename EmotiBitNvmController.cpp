@@ -1,5 +1,33 @@
-#include "EmotiBitNvmController.h"
+/**************************************************************************/
+/*!
+	@file     EmotiBitNvmController.cpp
+	@author   Nitin Nair (EmotiBit)
 
+	@mainpage NVM access handler for EmotiBit
+
+	@section intro_sec Introduction
+
+	This is a library to handle NVM acces on EmotiBit.
+
+		EmotiBit invests time and resources providing this open source code,
+	please support EmotiBit and open-source hardware by purchasing
+	products from EmotiBit!
+
+	@section author Author
+
+	Written by Nitin Nair for EmotiBit.
+
+	@section  HISTORY
+
+	v1.0  - First release
+
+	@section license License
+
+	BSD license, all text here must be included in any redistribution
+*/
+/**************************************************************************/
+
+#include "EmotiBitNvmController.h"
 
 bool EmotiBitNvmController::init(TwoWire &emotibit_i2c)
 {
@@ -29,14 +57,6 @@ bool EmotiBitNvmController::init(TwoWire &emotibit_i2c)
 
 }
 
-/*
-void EmotiBitNvmController::setHwVersion(EmotiBitVersionController::EmotiBitVersion hwVersion)
-{
-	_hwVersion = hwVersion;
-}
-*/
-
-
 uint8_t EmotiBitNvmController::stageToWrite(DataType datatype, uint8_t datatypeVersion, uint32_t dataSize, uint8_t* data, bool autoSync, bool enableValidateWrite)
 {
 	if (_nvmType == NvmType::EEPROM)
@@ -45,13 +65,13 @@ uint8_t EmotiBitNvmController::stageToWrite(DataType datatype, uint8_t datatypeV
 		{
 			if (data != nullptr && dataSize != 0)
 			{
-				if (datatype != DataType::length)
+				if ((int)datatype < (int)DataType::length)
 				{
 					_writeBuffer.setDatatype(datatype);
 					_writeBuffer.update(datatypeVersion, dataSize, data);
 					if (datatype != DataType::ENTIRE_NVM)
 					{
-						updateMemoryMap(datatype, dataSize + 1); // the version information requires an additoinal byte
+						updateMemoryMap(datatype, dataSize + 1); // the version information requires an additional byte
 					}
 				}
 				else
@@ -128,20 +148,20 @@ uint8_t EmotiBitNvmController::validateWrite()
 }
 
 
-void EmotiBitNvmController::Buffer::setDatatype(DataType datatype)
+void EmotiBitNvmController::NvmBuffer::setDatatype(DataType datatype)
 {
 	this->datatype = datatype;
 }
 
 
-void EmotiBitNvmController::Buffer::update(uint8_t datatypeVersion, uint32_t dataSize, uint8_t* data)
+void EmotiBitNvmController::NvmBuffer::update(uint8_t datatypeVersion, uint32_t dataSize, uint8_t* data)
 {
 	this->datatypeVersion = datatypeVersion;
 	this->dataSize = dataSize;
 	this->data = data;
 }
 
-void EmotiBitNvmController::Buffer::clear()
+void EmotiBitNvmController::NvmBuffer::clear()
 {
 	this->data = nullptr;
 	this->dataSize = 0;
@@ -161,7 +181,7 @@ uint8_t EmotiBitNvmController::writeToStorage()
 	if (writeState == State::READY_TO_WRITE)
 	{
 		writeState = State::BUSY_WRITING;
-		// ToDo: store the return value from i2c writes, afteer driver is updated
+		// ToDo: store the return value from i2c writes, after driver is updated
 		uint8_t i2cWriteStatus = 0;
 		if (_writeBuffer.datatype == DataType::ENTIRE_NVM)
 		{
@@ -177,7 +197,7 @@ uint8_t EmotiBitNvmController::writeToStorage()
 			}
 			// write the updated Map
 			size_t offsetMapAddress;
-			offsetMapAddress = ConstEepromAddr::MEMORY_MAP_BASE + (int)_writeBuffer.datatype * sizeof(EepromMemoryMap);
+			offsetMapAddress = ConstEepromAddr::MEMORY_MAP_START + (int)_writeBuffer.datatype * sizeof(EepromMemoryMap);
 			uint8_t* mapData;
 			mapData = (uint8_t*)(map + ((int)_writeBuffer.datatype));
 			emotibitEeprom.write(offsetMapAddress, mapData, sizeof(EepromMemoryMap));
@@ -220,9 +240,9 @@ uint8_t EmotiBitNvmController::stageToRead(DataType datatype, uint8_t &datatypeV
 		else
 		{
 			readState = State::READY_TO_READ;
-			while (readState != State::READ_BUFFER_FULL && readState != State::IDLE);
+			while (readState != State::READ_BUFFER_FILLED && readState != State::IDLE);
 		}
-		if (_readResult == Status::SUCCESS && readState == State::READ_BUFFER_FULL)
+		if (_readResult == Status::SUCCESS && readState == State::READ_BUFFER_FILLED)
 		{
 			data = _readBuffer.data;
 			dataSize = _readBuffer.dataSize;
@@ -254,11 +274,14 @@ uint8_t EmotiBitNvmController::loadMemoryMap(DataType datatype)
 	{
 		EepromMemoryMap *mapPtr;
 		uint8_t *eepromMapData = new uint8_t[sizeof(EepromMemoryMap)];
-		size_t offsetreadAddr = ConstEepromAddr::MEMORY_MAP_BASE + ((uint8_t)datatype * sizeof(EepromMemoryMap));
+		size_t offsetreadAddr = ConstEepromAddr::MEMORY_MAP_START + ((uint8_t)datatype * sizeof(EepromMemoryMap));
 		emotibitEeprom.read(offsetreadAddr, eepromMapData, sizeof(EepromMemoryMap));
 		mapPtr = (EepromMemoryMap*)eepromMapData;
 		map[(uint8_t)datatype].address = mapPtr->address;
 		map[(uint8_t)datatype].dataSize = mapPtr->dataSize;
+		mapPtr = nullptr;
+		delete[] eepromMapData;
+		eepromMapData = nullptr;
 		return 0;
 	}
 	else
@@ -283,7 +306,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 				_readBuffer.data = eepromData;
 				_readBuffer.dataSize = (uint32_t)emotibitEepromSettings.capacityBytes;
 				_readResult = Status::SUCCESS;
-				readState = State::READ_BUFFER_FULL;
+				readState = State::READ_BUFFER_FILLED;
 				return (uint8_t)Status::SUCCESS;
 			}
 			else
@@ -310,7 +333,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 						datatypeVersion = *(eepromData + dataSize);
 						_readBuffer.update(datatypeVersion, dataSize, eepromData);
 						_readResult = Status::SUCCESS;
-						readState = State::READ_BUFFER_FULL;
+						readState = State::READ_BUFFER_FILLED;
 						return (uint8_t)_readResult;
 					}
 					else
@@ -340,7 +363,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 				_readBuffer.data = otpData;
 				_readBuffer.dataSize = Si7013OtpMemoryMap::OTP_SIZE_BYTES;
 				_readResult = Status::SUCCESS;
-				readState = State::READ_BUFFER_FULL;
+				readState = State::READ_BUFFER_FILLED;
 				return (uint8_t)_readResult; // success
 			}
 			else
@@ -363,7 +386,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 						dataSize = 1;
 						_readBuffer.update(datatypeVersion, dataSize, otpData);
 						_readResult = Status::SUCCESS;
-						readState = State::READ_BUFFER_FULL;
+						readState = State::READ_BUFFER_FILLED;
 						return (uint8_t)_readResult; // success
 					}
 				}
@@ -402,7 +425,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 						dataSize = Si7013OtpMemoryMap::EDL_DATA_SIZE + Si7013OtpMemoryMap::EDR_DATA_SIZE;
 						_readBuffer.update(datatypeVersion, dataSize, otpData);
 						_readResult = Status::SUCCESS;
-						readState = State::READ_BUFFER_FULL;
+						readState = State::READ_BUFFER_FILLED;
 						return (uint8_t)_readResult; // success
 					}
 				}

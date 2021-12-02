@@ -87,17 +87,18 @@ void setup()
 	uint32_t dataSize;
 
 	uint8_t status;
-	// ########################################################
-	// Testing running NvmController without setting hwVersion
-	status = emotibitNvmController.stageToRead(EmotiBitNvmController::DataType::VARIANT_INFO, datatypeVersion, dataSize, data, true);
-	if (status != 0)
-	{
-		logTestResult((uint8_t)TEST_NUMBER::ONE, RESULT_PASS, status);
-	}
-	else
-	{
-		logTestResult((uint8_t)TEST_NUMBER::ONE, RESULT_FAIL, status);
-	}
+	// deprecated
+	//// ########################################################
+	//// Testing running NvmController without setting hwVersion
+	//status = emotibitNvmController.stageToRead(EmotiBitNvmController::DataType::VARIANT_INFO, datatypeVersion, dataSize, data, true);
+	//if (status != 0)
+	//{
+	//	logTestResult((uint8_t)TEST_NUMBER::ONE, RESULT_PASS, status);
+	//}
+	//else
+	//{
+	//	logTestResult((uint8_t)TEST_NUMBER::ONE, RESULT_FAIL, status);
+	//}
 
 	// Setting HW version
 	//emotibitNvmController.setHwVersion(hwVersion);
