@@ -3780,7 +3780,17 @@ void EmotiBit::processFactoryTestMessages()
 			Serial.println(msg);
 			if (emotibitEda.stageCalibStorage(&_emotibitNvmController, msg))
 			{
-				EmotiBitFactoryTest::sendMessage(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_ACK);
+				Serial.println("Loading Calibrated Values.");
+				uint8_t status;
+				status = emotibitEda.stageCalibLoad(&_emotibitNvmController);
+				if (status == 0)
+				{
+					EmotiBitFactoryTest::sendMessage(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_ACK);
+				}
+				else
+				{
+					Serial.print("failed to load calibration values."); Serial.print("ErrorCode: "); Serial.println(status);
+				}
 			}
 		}
 		else {
