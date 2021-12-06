@@ -1,10 +1,3 @@
-// the Emotibit Version Controller class handles all things related to EmotiBit Versions. This includes
-// 1. Detecting EmotiBit Version on startup
-// 2. Loading feather-emotibit pin mappings
-// 3. Loading emotibit specific constants
-// Author : Nitin
-// date: 17 Feb 2021
-
 #ifndef _EMOTIBIT_VERSION_CONTROLLER_H
 #define _EMOTIBIT_VERSION_CONTROLLER_H
 
@@ -20,22 +13,16 @@
 // All EmotiBit Pin names should be entered in this class structure.
 enum class EmotiBitPinName
 {
-	//EMOTIBIT_I2C_CLOCK = 0,
-	//EMOTIBTI_I2C_DATA = 1,
-	//HIBERNATE = 2,
-	EMOTIBIT_BUTTON = 3,
-	//EDL = 4,
-	//EDR = 5,
-	//SD_CARD_CHIP_SELECT = 6,
-	SPI_CLK = 7,
-	SPI_MOSI = 8,
-	SPI_MISO = 9,
-	PPG_INT = 10,
-	BMI_INT1 = 11,
-	BMI_INT2 = 12,
-	BMM_INT = 13,
-	BATTERY_READ_PIN = 14,
-	COUNT = 15 //cannot be more than 28 (16 + 12) 
+	EMOTIBIT_BUTTON = 1,
+	SPI_CLK = 2,
+	SPI_MOSI = 3,
+	SPI_MISO = 4,
+	PPG_INT = 5,
+	BMI_INT1 = 6,
+	BMI_INT2 = 7,
+	BMM_INT = 8,
+	BATTERY_READ_PIN = 9,
+	COUNT = 10 //cannot be more than 28 (16 + 12) 
 };
 
 enum class MathConstants
@@ -43,13 +30,7 @@ enum class MathConstants
 	VCC = 0,
 	ADC_BITS = 1,
 	ADC_MAX_VALUE = 2,
-	//EDR_AMPLIFICATION = 3,
-	//VREF1 = 4,
-	//VREF2 = 5,
-	//EDA_FEEDBACK_R = 6,
-	//EDA_CROSSOVER_FILTER_FREQ = 7,
-	//EDA_SERIES_RESISTOR = 8,
-	COUNT = 4 // cannot be > than the _MAX_MATH_CONSTANT_COUNT
+	COUNT = 3 // cannot be > than the _MAX_MATH_CONSTANT_COUNT
 };
 
 enum class SystemConstants
@@ -71,10 +52,10 @@ class EmotiBitVersionController
 public: 	
 	// ToDo: move these pin definitions inside a struct.
 #if defined(ADAFRUIT_FEATHER_M0) 
-	static const int HIBERNATE_PIN = 6;
 	static const int EMOTIBIT_I2C_CLK_PIN = 13;
 	static const int EMOTIBIT_I2C_DAT_PIN = 11;
-	static const int SD_CARD_CHIP_SEL_PIN = 19;
+	static int HIBERNATE_PIN;
+	static int SD_CARD_CHIP_SEL_PIN;
 #endif
 	
 	// !!! The following ORDER of the enum class holding the Version numbers SHOULD NOT BE ALTERED.
@@ -100,7 +81,7 @@ public:
 private:
 	static const int _MAX_EMOTIBIT_PIN_COUNT = 28;
 	int _assignedPin[_MAX_EMOTIBIT_PIN_COUNT] = { 0 };
-	static const int _MAX_MATH_CONSTANT_COUNT = 4;
+	static const int _MAX_MATH_CONSTANT_COUNT = 3;
 	static const int _MAX_SYSTEM_CONSTANT_COUNT = 3;
 	float _assignedMathConstants[_MAX_MATH_CONSTANT_COUNT] = { 0 };
 	int _assignedSystemConstants[_MAX_SYSTEM_CONSTANT_COUNT] = { 0 };
@@ -109,6 +90,7 @@ private:
 	bool _initAssignmentComplete = false;
 	bool _initMappingMathConstants(EmotiBitVersionController::EmotiBitVersion version);
 	bool _initMappingSystemConstants(PinActivationLogic logic);
+	// ToDo: This needs to be refactored so that the addresses can be read from individuall drivers.
 	static const uint8_t SI7013_I2C_ADDR = 0x40;
 	static const uint8_t EEPROM_I2C_ADDR = 0x50;
 	static const uint8_t MLX90632_I2C_ADDR = 0x3A;
