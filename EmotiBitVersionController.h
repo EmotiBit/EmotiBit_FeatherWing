@@ -1,3 +1,22 @@
+/**************************************************************************/
+/*!
+	@file     EmotiBitVersionController.h
+	@author   Nitin Nair (EmotiBit)
+	@mainpage Controls reading Version from NVM on start or detecting version if NVM not updated, EmotiBit pin and constant asignment on startup
+	@section intro_sec Introduction
+	This is a library to handle EmotiBit HW version detection/version retrieval from NVM on setup.
+		EmotiBit invests time and resources providing this open source code,
+	please support EmotiBit and open-source hardware by purchasing
+	products from EmotiBit!
+	@section author Author
+	Written by Nitin Nair for EmotiBit.
+	@section  HISTORY
+	v1.0  - First release
+	@section license License
+	BSD license, all text here must be included in any redistribution
+*/
+/**************************************************************************/
+
 #ifndef _EMOTIBIT_VERSION_CONTROLLER_H
 #define _EMOTIBIT_VERSION_CONTROLLER_H
 
@@ -11,6 +30,7 @@
 #include "EmotiBitNvmController.h"
 
 // All EmotiBit Pin names should be entered in this class structure.
+// ToDo: Pins will move out from version controller when other sub-systems controllers are added.
 enum class EmotiBitPinName
 {
 	EMOTIBIT_BUTTON = 1,
@@ -88,35 +108,130 @@ private:
 	const int _INVALID_CONSTANT_FOR_VERSION = -1;
 	const int _INVALID_REQUEST = -2; // addresses out of bounds(for array indexing) request
 	bool _initAssignmentComplete = false;
-	bool _initMappingMathConstants(EmotiBitVersionController::EmotiBitVersion version);
-	bool _initMappingSystemConstants(PinActivationLogic logic);
 	// ToDo: This needs to be refactored so that the addresses can be read from individuall drivers.
 	static const uint8_t SI7013_I2C_ADDR = 0x40;
 	static const uint8_t EEPROM_I2C_ADDR = 0x50;
 	static const uint8_t MLX90632_I2C_ADDR = 0x3A;
 
+	/*!
+		@brief Initializes all EmotiBit Math constant with preset values
+		@param version EmotiBit HW version
+		@return True is Constants Initialized successfully, else False
+	*/
+	bool _initMappingMathConstants(EmotiBitVersionController::EmotiBitVersion version);
+	
+	/*!
+		@brief Initializes all EmotiBit System constant with preset values
+		@param version EmotiBit HW version
+		@return True is Constants Initialized successfully, else False
+	*/
+	bool _initMappingSystemConstants(PinActivationLogic logic);
+	/*!
+		@brief Function to populate parameters dependent on HW version.
+			These paramets are used for validating the barcode and for detecting HW version, if NVM is not updated.
+		@param emotibit_i2c TwoWire instance fro EmotiBit comms
+		@param hardwareParameterTable instance of parameter table to be updated
+	*/
+	void updateVersionParameterTable(TwoWire &emotibit_i2c, EmotiBitHardwareParameterTable &hardwareParameterTable);
+
 
 public:
-	bool initConstantMapping(EmotiBitVersionController::EmotiBitVersion version);
-	float getMathConstant(MathConstants constant);
-	int getSystemConstant(SystemConstants constant);
-	void echoConstants();
-	bool setMathConstantForTesting(MathConstants constant);
-	bool setSystemConstantForTesting(SystemConstants constant);
 	PinActivationLogic hibernatePinLogic;
+	/*!
+		@brief Function call to initialize EmotiBit constants mapping.
+		@param version HW version of the EmotiBit
+		@return True if successfully mapped all constants, else False
+	*/
+	bool initConstantMapping(EmotiBitVersionController::EmotiBitVersion version);
+	
+	/*!
+		@brief Function call to retrieve Assigned Math constant
+		@param constant MathConstant name
+		@return value assigned to the constant
+	*/
+	float getMathConstant(MathConstants constant);
 
+	/*!
+		@brief Function call to retrieve Assigned System constant
+		@param constant SystemConstant name
+		@return value assigned to the constant
+	*/
+	int getSystemConstant(SystemConstants constant);
+	
+	/*!
+		@brief Prints all EmotiBit constants name and values on Serial
+	*/
+	void echoConstants();
+
+	/*!
+		@brief function call to detect SD-Card and hibernate pin logic to setup emotiBit comms.
+		@return true is SD-Card and EmotiBit detected.
+	*/
 	bool isEmotiBitReady();
+
+	/*!
+		@brief Function to validate barcode based on hardware checks on ICs.
+		@param emotibit_i2c TwoWire instance for i2c communications
+		@param barcode The parsed barcode instance being written to the NVM
+		@param hwValidation is set true if bacode has the correct HW version, else false
+		@param skuValidation is set to true is barcode has correct SKU version else false
+		@return True if barcode has been successfully validated, else fail
+	*/
 	bool validateBarcodeInfo(TwoWire &emotibit_i2c, Barcode barcode, bool &hwValidation, bool &skuValidation);
-	void updateVersionParameterTable(TwoWire &emotibit_i2c, EmotiBitHardwareParameterTable &hardwareParameterTable);
+
+	/*!
+		@brief Writes Variant Information into NVM.
+		@param emotibit_i2c TwoWire instance for i2c comms
+		@param emotiBitNvmController Nvm controller instance to access NVM
+		@param barcode verified and parsed barcode that has to be written into the NVM
+		@return returns True if data is successfully written into the NVM, else False
+	*/
 	bool writeVariantInfoToNvm(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, Barcode barcode);
+
+	/*!
+		@brief Reads EmotiBit variant information stored in NVM
+		@param emotibit_i2c TwoWire instance for i2c comms
+		@param emotiBitNvmController Nvm controller instance to access NVM
+		@param hwVersion The HW version read from the NVM
+		@param sku The SKU version read from the NVM
+		@param emotiBitNumber the EmotiBit Number read from the version(for V4+ only)
+		@return returns True, if Variant information successfully retrieved from the NVM, else False
+	*/
 	bool getEmotiBitVariantInfo(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotiBitNumber);
+	
+	/*!
+		@brief fallback function to detect version from HW, if variant information not stored in NVM
+		@param emotibit_i2c TwoWire instance for i2c comms
+		@param hwVersion estimate of hardware version detected from hardware
+		@param sku estimate of SKU version detected from hardware
+		@return returns True if Variant was estimated from hardware, else False
+	*/
 	bool detectVariantFromHardware(TwoWire &emotibit_i2c, EmotiBitVersion &hwVersion, String &sku);
+	
+	/*!
+		@brief Fucntion used to return Hardware version in char array format
+		@param version Version we need the string for
+		@return Char array corresponding to the HW version
+	*/
 	static const char* getHardwareVersion(EmotiBitVersion version);
 
+	/*!
+		@brief Maps the pin numbers on EmotiBit based on microcontroller versio and emotibit version
+		@param version HW version of the EmotiBit
+		@return True if mapping completed successfully, else False
+	*/
 	bool initPinMapping(EmotiBitVersionController::EmotiBitVersion version);
 
+	/*!
+		@brief Function call to get the pin number assigned to the pin name requested
+		@param pin Pin name for which we require the assigned pin number
+		@return returns pin number assigned to the particular pin name
+	*/
 	int getAssignedPin(EmotiBitPinName pin);
 
+	/*!
+		@brief Prints all pin mappings on the screen
+	*/
 	void echoPinMapping();
 };
 #endif

@@ -1,3 +1,22 @@
+/**************************************************************************/
+/*!
+	@file     EmotiBitVersionController.cpp
+	@author   Nitin Nair (EmotiBit)
+	@mainpage Controls reading Version from NVM on start or detecting version if NVM not updated, EmotiBit pin and constant asignment on startup
+	@section intro_sec Introduction
+	This is a library to handle EmotiBit HW version detection/version retrieval from NVM on setup.
+		EmotiBit invests time and resources providing this open source code,
+	please support EmotiBit and open-source hardware by purchasing
+	products from EmotiBit!
+	@section author Author
+	Written by Nitin Nair for EmotiBit.
+	@section  HISTORY
+	v1.0  - First release
+	@section license License
+	BSD license, all text here must be included in any redistribution
+*/
+/**************************************************************************/
+
 #include "EmotiBitVersionController.h"
 #include "Arduino.h"
 
@@ -223,16 +242,6 @@ void EmotiBitVersionController::echoConstants()
 	{
 		Serial.println("Please initilize the constants.  call emotiBitVersionController.emotibitConstantMapping.initMapping()");
 	}
-}
-
-bool EmotiBitVersionController::setMathConstantForTesting(MathConstants constant)
-{
-	//ToDo: write the function to assign test values to the constants 
-}
-
-bool EmotiBitVersionController::setSystemConstantForTesting(SystemConstants constant)
-{
-	//ToDo: write the function to assign test values to the constants 
 }
 
 bool EmotiBitVersionController::isEmotiBitReady()
