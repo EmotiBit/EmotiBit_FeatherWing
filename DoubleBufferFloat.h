@@ -38,8 +38,8 @@ public:
 private:
 	BufferFloat* _buffer1;
 	BufferFloat* _buffer2;
-	BufferFloat* _inputBuffer;
-	BufferFloat* _outputBuffer;
+	volatile BufferFloat* _inputBuffer;
+	volatile BufferFloat* _outputBuffer;
 	bool _isPushing = false;
 	bool _isGetting = false;
 
