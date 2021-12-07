@@ -380,34 +380,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				}
 			}
 		}
-		// NOTE: ISR_CORRECTION_UPDATE is out of date. Needs refactoring.
-		//else if (input == 'I')
-		//{
-		//	testingMode = TestingMode::ISR_CORRECTION_UPDATE;
-		//	_edlPin = A0;
-		//	Serial.println("\n\nTestingMode changed to ISR_CORRECTION_UPDATE");
-		//	Serial.println("Reading EDL values from pin A0. Make sure ADC correction jig is in place.");
-		//	delay(3000);
-		//}
-
-		// NOTE: AdcCorrection is out of date. Needs refactoring.
-		//else if (input == 'O')
-		//{
-		//	AdcCorrection adcCorrection;
-		//	bool retVal = false;
-		//	retVal = adcCorrection.updateIsrOffsetCorr();
-		//	if (!retVal)
-		//	{
-		//		Serial.println("Exiting correction mode without updating. Adc correction not performed or data corrupted.");
-		//	}
-		//	else
-		//	{
-		//		Serial.println("Added ISR correction to the At-Winc flash.\n Verify EDL reading in the Oscilloscope.");
-		//		// If the emotibit is in ISR_CORRECTION_UPDATE, then we need to cahnge the mode to use the isrOffsetCOrrection
-		//		testingMode = TestingMode::ISR_CORRECTION_TEST;
-		//		_edlPin = A0;
-		//	}
-		//}
 		else
 		{
 			_debugMode = true;

@@ -101,14 +101,14 @@ size_t DoubleBufferFloat::size(BufferSelector b)
 
 
 size_t DoubleBufferFloat::inSize() {
-	if (_inputBuffer != nullptr) return 0;
+	if (_inputBuffer == nullptr) return 0;
 	else {
 		_inputBuffer->size();
 	}
 }
 
 size_t DoubleBufferFloat::outSize() {
-	if (_outputBuffer != nullptr) return 0;
+	if (_outputBuffer == nullptr) return 0;
 	else {
 		_outputBuffer->size();
 	}
@@ -121,14 +121,14 @@ size_t DoubleBufferFloat::capacity(BufferSelector b)
 }
 
 size_t DoubleBufferFloat::inCapacity() {
-	if (_inputBuffer != nullptr) return 0;
+	if (_inputBuffer == nullptr) return 0;
 	else {
 		_inputBuffer->capacity();
 	}
 }
 
 size_t DoubleBufferFloat::outCapacity() {
-	if (_outputBuffer != nullptr) return 0;
+	if (_outputBuffer == nullptr) return 0;
 	else {
 		_outputBuffer->capacity();
 	}
