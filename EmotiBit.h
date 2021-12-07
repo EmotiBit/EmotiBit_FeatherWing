@@ -46,7 +46,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.87.emotibitMemoryController-3.EmotiBitEda-5.versionController-11";
+	String firmware_version = "1.2.87.emotibitMemoryController-3.EmotiBitEda-6.versionController-11";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
