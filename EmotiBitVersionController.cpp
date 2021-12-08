@@ -5,13 +5,17 @@
 	@mainpage Controls reading Version from NVM on start or detecting version if NVM not updated, EmotiBit pin and constant asignment on startup
 	@section intro_sec Introduction
 	This is a library to handle EmotiBit HW version detection/version retrieval from NVM on setup.
-		EmotiBit invests time and resources providing this open source code,
+	
+	EmotiBit invests time and resources providing this open source code,
 	please support EmotiBit and open-source hardware by purchasing
 	products from EmotiBit!
+	
 	@section author Author
 	Written by Nitin Nair for EmotiBit.
+	
 	@section  HISTORY
 	v1.0  - First release
+	
 	@section license License
 	BSD license, all text here must be included in any redistribution
 */
@@ -145,12 +149,6 @@ bool EmotiBitVersionController::initConstantMapping(EmotiBitVersionController::E
 
 bool EmotiBitVersionController::_initMappingMathConstants(EmotiBitVersionController::EmotiBitVersion version)
 {
-	if ((int)MathConstants::COUNT > (int)_MAX_MATH_CONSTANT_COUNT)
-	{
-		// more consatnts that the array has been initialized for
-		Serial.println("Out of bounds error for Math constants. please check total constant count with array memory allocation.");
-		return false;
-	}
 #if defined(ADAFRUIT_FEATHER_M0)
 	_assignedMathConstants[(int)MathConstants::VCC] = 3.3f;
 	_assignedMathConstants[(int)MathConstants::ADC_BITS] = 12;
@@ -159,15 +157,10 @@ bool EmotiBitVersionController::_initMappingMathConstants(EmotiBitVersionControl
 #endif
 }
 
-bool EmotiBitVersionController::_initMappingSystemConstants(PinActivationLogic logic)
+bool EmotiBitVersionController::_initMappingSystemConstants(VregEnablePinLogic logic)
 {
-	if ((int)SystemConstants::COUNT > (int)_MAX_SYSTEM_CONSTANT_COUNT)
-	{
-		Serial.println("Out of bounds error for System constants. please check total constant count with array memory allocation.");
-		return false;
-	}
 #if defined(ADAFRUIT_FEATHER_M0)
-	if (logic == PinActivationLogic::ACTIVE_HIGH)
+	if (logic == VregEnablePinLogic::ACTIVE_LOW)
 	{
 		// For V2
 		_assignedSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL] = HIGH;
@@ -190,7 +183,7 @@ float EmotiBitVersionController::getMathConstant(MathConstants constant)
 {
 	if (_initAssignmentComplete)
 	{
-		if ((int)constant >= _MAX_MATH_CONSTANT_COUNT)
+		if ((int)constant >= (int)MathConstants::length)
 		{
 			Serial.println("Invalid request");
 			return _INVALID_REQUEST;
@@ -211,7 +204,7 @@ int EmotiBitVersionController::getSystemConstant(SystemConstants constant)
 {
 	if (_initAssignmentComplete)
 	{
-		if ((int)constant >= _MAX_SYSTEM_CONSTANT_COUNT)
+		if ((int)constant >= (int)SystemConstants::length)
 		{
 			Serial.println("Invalid request");
 			return _INVALID_REQUEST;
@@ -252,13 +245,13 @@ bool EmotiBitVersionController::isEmotiBitReady()
 	if (digitalRead(HIBERNATE_PIN) == LOW)
 	{
 		// V3+: setting hibernate pin low hibernates EmotiBit
-		Serial.println("Hibernate Logic: Active LOW(V3+)");
-		hibernatePinLogic = PinActivationLogic::ACTIVE_LOW;
+		Serial.println("vregEnablePinLogic: Active HIGH(V3+)");
+		vregEnablePinLogic = VregEnablePinLogic::ACTIVE_HIGH;
 		pinMode(HIBERNATE_PIN, OUTPUT);
 		digitalWrite(HIBERNATE_PIN, HIGH);
 		delay(100);
 		// ToDo: Think about adding battery voltage measurement here as well
-		_initMappingSystemConstants(hibernatePinLogic);
+		_initMappingSystemConstants(vregEnablePinLogic);
 		if (SD.begin(SD_CARD_CHIP_SEL_PIN))
 		{
 			return true;
@@ -267,13 +260,13 @@ bool EmotiBitVersionController::isEmotiBitReady()
 	else
 	{
 		// V2: setting hibernate pin low hibernates EmotiBit
-		Serial.println("Hibernate Logic: Active HIGH(V2)");
-		hibernatePinLogic = PinActivationLogic::ACTIVE_HIGH;
+		Serial.println("vregEnablePinLogic: Active LOW(V2)");
+		vregEnablePinLogic = VregEnablePinLogic::ACTIVE_LOW;
 		pinMode(HIBERNATE_PIN, OUTPUT);
 		digitalWrite(HIBERNATE_PIN, LOW);
 		delay(100);
 		// ToDo: Think about adding battery voltage measurement here as well
-		_initMappingSystemConstants(hibernatePinLogic);
+		_initMappingSystemConstants(vregEnablePinLogic);
 		if (SD.begin(SD_CARD_CHIP_SEL_PIN))
 		{
 			return true;
@@ -288,7 +281,7 @@ bool EmotiBitVersionController::validateBarcodeInfo(TwoWire &emotibit_i2c, Barco
 	EmotiBitHardwareParameterTable hardwareParameterTable;
 	updateVersionParameterTable(emotibit_i2c, hardwareParameterTable);
 
-	if (hibernatePinLogic == PinActivationLogic::ACTIVE_HIGH)
+	if (vregEnablePinLogic == VregEnablePinLogic::ACTIVE_LOW)
 	{
 		Serial.println("Hardware version detected as V2. No Write operations allowed for this HW version.");
 		hwValidation = false;
@@ -350,7 +343,7 @@ bool EmotiBitVersionController::validateBarcodeInfo(TwoWire &emotibit_i2c, Barco
 	}
 }
 
-bool EmotiBitVersionController::writeVariantInfoToNvm(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, Barcode barcode)
+bool EmotiBitVersionController::writeVariantInfoToNvm(EmotiBitNvmController &emotiBitNvmController, Barcode barcode)
 {
 	EmotiBitVariantInfo emotiBitVariantInfo;
 	EmotiBitFactoryTest::convertBarcodeToVariantInfo(barcode, emotiBitVariantInfo);
@@ -374,7 +367,7 @@ bool EmotiBitVersionController::writeVariantInfoToNvm(TwoWire &emotibit_i2c, Emo
 	}
 }
 
-bool EmotiBitVersionController::getEmotiBitVariantInfo(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotiBitNumber)
+bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber)
 {
 	uint8_t* nvmData;
 	uint8_t datatypeVersion;
@@ -390,8 +383,8 @@ bool EmotiBitVersionController::getEmotiBitVariantInfo(TwoWire &emotibit_i2c, Em
 			Serial.print("[NVM VARIANT INFO] HW version: "); Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersion)hwVersion));
 			sku = EmotiBitVariants::EMOTIBIT_SKU_MD;
 			Serial.print("[NVM VARIANT INFO] SKU: "); Serial.println(sku);
-			emotiBitNumber = UINT32_MAX;
-			Serial.println("No EmotiBitNumber recorded for this HW version");
+			emotibitSerialNumber = UINT32_MAX;
+			Serial.println("No emotibitSerialNumber recorded for this HW version");
 		}
 		else if (datatypeVersion == (uint8_t)EmotiBitVariantDataFormat::V1)
 		{
@@ -401,8 +394,8 @@ bool EmotiBitVersionController::getEmotiBitVariantInfo(TwoWire &emotibit_i2c, Em
 			Serial.print("[NVM VARIANT INFO] HW version: "); Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersion)hwVersion));
 			sku = String(variantInfo->sku);
 			Serial.print("[NVM VARIANT INFO] SKU version: "); Serial.println(sku);
-			emotiBitNumber = variantInfo->emotiBitNumber;
-			Serial.print("[NVM VARIANT INFO] EmotiBit Number: "); Serial.println(emotiBitNumber);
+			emotibitSerialNumber = variantInfo->emotibitSerialNumber;
+			Serial.print("[NVM VARIANT INFO] EmotiBit Number: "); Serial.println(emotibitSerialNumber);
 		}
 		return true;
 	}
@@ -468,7 +461,7 @@ bool EmotiBitVersionController::detectVariantFromHardware(TwoWire &emotibit_i2c,
 	EmotiBitHardwareParameterTable hardwareParametertable;
 	updateVersionParameterTable(emotibit_i2c, hardwareParametertable);
 
-	if (hibernatePinLogic == PinActivationLogic::ACTIVE_HIGH)
+	if (vregEnablePinLogic == VregEnablePinLogic::ACTIVE_LOW)
 	{
 		if (hardwareParametertable.isSi7013Present && hardwareParametertable.isThermopilePresent)
 		{

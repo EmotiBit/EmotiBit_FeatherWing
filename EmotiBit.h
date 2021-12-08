@@ -46,7 +46,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.87.emotibitMemoryController-3.EmotiBitEda-6.versionController-11";
+	String firmware_version = "1.2.88";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
@@ -236,21 +236,11 @@ public:
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
 
-	int _emotiBitSystemConstants[(int)SystemConstants::COUNT];
-
-	//float edrAmplification;
-	//float vRef1; // Reference voltage of first voltage divider(15/100)
-	//float vRef2; // Reference voltage from second voltage divider(100/100)
-	//float rSkinAmp;
+	int _emotiBitSystemConstants[(int)SystemConstants::length];
 	float adcRes;
-	//float edaVDivR;
-	//float edaFeedbackAmpR;
-	//float edaCrossoverFilterFreq;
-	//uint8_t _sdCardChipSelectPin;	// ToDo: create getter and make private
 	BMM150TrimData bmm150TrimData;
 	bool bmm150XYClipped = false;
 	bool bmm150ZHallClipped = false;
-	//uint8_t _hibernatePin;
 	bool thermopileBegun = false;
 	int thermopileFs = 8; // *** NOTE *** changing this may wear out the Melexis flash
 	uint8_t thermopileMode = MODE_STEP;		// If changing to MODE_CONTINUOUS besure to adjust SAMPLING_DIV to match thermopile rate
@@ -358,8 +348,6 @@ public:
 	volatile bool _sdWrite;
 	PowerMode _powerMode;
 	bool _sendTestData = false;
-	float _edlDigFiltAlpha = 0;
-	float _edlDigFilteredVal = -1;
 	float _adcIsrOffsetCorr = 0;
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
@@ -451,7 +439,6 @@ public:
   void setAnalogEnablePin(uint8_t i); /**< Power on/off the analog circuitry */
   int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
 	int8_t updatePPGData();                /**< Read any available PPG data from the sensor FIFO into the inputBuffers */
-	//int8_t updateEDAData();                /* Deprecated. Use EmotiBitEda::readData() */
 	int8_t updateTempHumidityData();       /**< Read any available temperature and humidity data into the inputBuffers */
 	int8_t updateThermopileData();         /**< Read Thermopile data into the buffers*/
 	int8_t updateBatteryVoltageData();     /**< Take battery voltage reading and put into the inputBuffer */
@@ -489,16 +476,13 @@ private:
 	EnableDigitalFilter _enableDigitalFilter;
 	SamplesAveraged _samplesAveraged;
 	uint8_t _batteryReadPin;
-	//uint8_t _edlPin;
-	//uint8_t _edrPin;
 	float _vcc;
 	uint8_t _adcBits;
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)
 	float _gyroRange; // supported values: 125, 250, 500, 1000, 2000 (degrees/second)
-	//Version _version;
 	EmotiBitVersionController::EmotiBitVersion _hwVersion;
 	String emotiBitSku;
-	uint32_t emotiBitNumber;
+	uint32_t emotibitSerialNumber;
 	uint8_t _imuFifoFrameLen = 0; // in bytes
 	const uint8_t _maxImuFifoFrameLen = 40; // in bytes
 	uint8_t _imuBuffer[40];

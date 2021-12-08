@@ -201,7 +201,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::VERSION_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
-			if (!emotiBitVersionController.writeVariantInfoToNvm(*(_EmotiBit_i2c), _emotibitNvmController, barcode))
+			if (!emotiBitVersionController.writeVariantInfoToNvm(_emotibitNvmController, barcode))
 			{
 				hibernate(false);
 			}
@@ -230,7 +230,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		}
 	}
 
-	if (!emotiBitVersionController.getEmotiBitVariantInfo(*(_EmotiBit_i2c), _emotibitNvmController, _hwVersion, emotiBitSku, emotiBitNumber))
+	if (!emotiBitVersionController.getEmotiBitVariantInfo(_emotibitNvmController, _hwVersion, emotiBitSku, emotibitSerialNumber))
 	{
 		if (!emotiBitVersionController.detectVariantFromHardware(*(_EmotiBit_i2c), _hwVersion, emotiBitSku))
 		{
@@ -273,7 +273,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, firmware_version.c_str());
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_VERSION, EmotiBitVersionController::getHardwareVersion(_hwVersion));
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_NUMBER, barcode.emotibitNumber.c_str());
+		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_NUMBER, barcode.emotibitSerialNumber.c_str());
 	}
 	//Serial.println("All Serial inputs must be used with **No Line Ending** option from the serial monitor");
 

@@ -5,13 +5,17 @@
 	@mainpage Controls reading Version from NVM on start or detecting version if NVM not updated, EmotiBit pin and constant asignment on startup
 	@section intro_sec Introduction
 	This is a library to handle EmotiBit HW version detection/version retrieval from NVM on setup.
-		EmotiBit invests time and resources providing this open source code,
+	
+	EmotiBit invests time and resources providing this open source code,
 	please support EmotiBit and open-source hardware by purchasing
 	products from EmotiBit!
+	
 	@section author Author
 	Written by Nitin Nair for EmotiBit.
+	
 	@section  HISTORY
 	v1.0  - First release
+	
 	@section license License
 	BSD license, all text here must be included in any redistribution
 */
@@ -42,7 +46,7 @@ enum class EmotiBitPinName
 	BMI_INT2 = 7,
 	BMM_INT = 8,
 	BATTERY_READ_PIN = 9,
-	COUNT = 10 //cannot be more than 28 (16 + 12) 
+	length = 10 //cannot be more than 28 (16 + 12)
 };
 
 enum class MathConstants
@@ -50,7 +54,7 @@ enum class MathConstants
 	VCC = 0,
 	ADC_BITS = 1,
 	ADC_MAX_VALUE = 2,
-	COUNT = 3 // cannot be > than the _MAX_MATH_CONSTANT_COUNT
+	length = 3 // cannot be > than the _MAX_MATH_CONSTANT_COUNT
 };
 
 enum class SystemConstants
@@ -58,10 +62,10 @@ enum class SystemConstants
 	EMOTIBIT_HIBERNATE_LEVEL = 0,
 	LED_DRIVER_CURRENT = 1,
 	EMOTIBIT_HIBERNATE_PIN_MODE = 2,
-	COUNT = 3 // cannot be greater than the _MAX_SYSTEM_CONSTANT_COUNT
+	length = 3 // cannot be greater than the _MAX_SYSTEM_CONSTANT_COUNT
 };
 
-enum class PinActivationLogic
+enum class VregEnablePinLogic
 {
 	ACTIVE_LOW,
 	ACTIVE_HIGH
@@ -101,14 +105,12 @@ public:
 private:
 	static const int _MAX_EMOTIBIT_PIN_COUNT = 28;
 	int _assignedPin[_MAX_EMOTIBIT_PIN_COUNT] = { 0 };
-	static const int _MAX_MATH_CONSTANT_COUNT = 3;
-	static const int _MAX_SYSTEM_CONSTANT_COUNT = 3;
-	float _assignedMathConstants[_MAX_MATH_CONSTANT_COUNT] = { 0 };
-	int _assignedSystemConstants[_MAX_SYSTEM_CONSTANT_COUNT] = { 0 };
+	float _assignedMathConstants[(uint8_t)MathConstants::length] = { 0 };
+	int _assignedSystemConstants[(uint8_t)SystemConstants::length] = { 0 };
 	const int _INVALID_CONSTANT_FOR_VERSION = -1;
 	const int _INVALID_REQUEST = -2; // addresses out of bounds(for array indexing) request
 	bool _initAssignmentComplete = false;
-	// ToDo: This needs to be refactored so that the addresses can be read from individuall drivers.
+	// ToDo: This needs to be refactored so that the addresses can be read from individual drivers.
 	static const uint8_t SI7013_I2C_ADDR = 0x40;
 	static const uint8_t EEPROM_I2C_ADDR = 0x50;
 	static const uint8_t MLX90632_I2C_ADDR = 0x3A;
@@ -125,7 +127,7 @@ private:
 		@param version EmotiBit HW version
 		@return True is Constants Initialized successfully, else False
 	*/
-	bool _initMappingSystemConstants(PinActivationLogic logic);
+	bool _initMappingSystemConstants(VregEnablePinLogic  logic);
 	/*!
 		@brief Function to populate parameters dependent on HW version.
 			These paramets are used for validating the barcode and for detecting HW version, if NVM is not updated.
@@ -136,7 +138,7 @@ private:
 
 
 public:
-	PinActivationLogic hibernatePinLogic;
+	VregEnablePinLogic  vregEnablePinLogic;
 	/*!
 		@brief Function call to initialize EmotiBit constants mapping.
 		@param version HW version of the EmotiBit
@@ -186,7 +188,7 @@ public:
 		@param barcode verified and parsed barcode that has to be written into the NVM
 		@return returns True if data is successfully written into the NVM, else False
 	*/
-	bool writeVariantInfoToNvm(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, Barcode barcode);
+	bool writeVariantInfoToNvm(EmotiBitNvmController &emotiBitNvmController, Barcode barcode);
 
 	/*!
 		@brief Reads EmotiBit variant information stored in NVM
@@ -194,10 +196,10 @@ public:
 		@param emotiBitNvmController Nvm controller instance to access NVM
 		@param hwVersion The HW version read from the NVM
 		@param sku The SKU version read from the NVM
-		@param emotiBitNumber the EmotiBit Number read from the version(for V4+ only)
+		@param emotibitSerialNumber the EmotiBit Number read from the version(for V4+ only)
 		@return returns True, if Variant information successfully retrieved from the NVM, else False
 	*/
-	bool getEmotiBitVariantInfo(TwoWire &emotibit_i2c, EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotiBitNumber);
+	bool getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber);
 	
 	/*!
 		@brief fallback function to detect version from HW, if variant information not stored in NVM
@@ -209,14 +211,14 @@ public:
 	bool detectVariantFromHardware(TwoWire &emotibit_i2c, EmotiBitVersion &hwVersion, String &sku);
 	
 	/*!
-		@brief Fucntion used to return Hardware version in char array format
+		@brief Function used to return Hardware version in char array format
 		@param version Version we need the string for
 		@return Char array corresponding to the HW version
 	*/
 	static const char* getHardwareVersion(EmotiBitVersion version);
 
 	/*!
-		@brief Maps the pin numbers on EmotiBit based on microcontroller versio and emotibit version
+		@brief Maps the pin numbers on EmotiBit based on microcontroller version and emotibit version
 		@param version HW version of the EmotiBit
 		@return True if mapping completed successfully, else False
 	*/
