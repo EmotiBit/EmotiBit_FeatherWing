@@ -1,4 +1,8 @@
-//#define DEBUG
+//#define DEBUG_FEAT_EDA_CTRL
+//#define DEBUG_THERM_PROCESS
+//#define DEBUG_THERM_UPDATE
+//#define DEBUG_BUFFER
+//#define TEST_OVERFLOW
 
 #ifndef _EMOTIBIT_H_
 #define _EMOTIBIT_H_
@@ -25,6 +29,7 @@
 #include "EmotiBitFactoryTest.h"
 #include "EmotiBitEda.h"
 #include "EmotiBitVariants.h"
+#include "EmotiBitNvmController.h"
 
 class EmotiBit {
   
@@ -37,12 +42,14 @@ public:
 		ISR_CORRECTION_UPDATE,
 		ISR_CORRECTION_TEST,
 		FACTORY_TEST,
+		NVM_CONTROLLER_TEST,
 		length
 	};
 
-	String firmware_version = "1.2.86";
+	String firmware_version = "1.2.87.emotibitMemoryController-3.EmotiBitEda-5";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
+	const bool DC_DO_V2 = true;
 
 	bool _debugMode = false;
 	bool dummyIsrWithDelay = false;
@@ -114,9 +121,9 @@ public:
 	};
 	
 	struct EnableDigitalFilter {
-		bool mx = true;
-		bool my = true;
-		bool mz = true;
+		bool mx = false;
+		bool my = false;
+		bool mz = false;
 		bool eda = true;
 	};
 
@@ -143,7 +150,8 @@ public:
 		NONE = 0,
 		BUFFER_OVERFLOW = -1,
 		DATA_CLIPPING = -2,
-		INDEX_OUT_OF_BOUNDS = -4
+		INDEX_OUT_OF_BOUNDS = -4,
+		SENSOR_NOT_READY = -8
 	};
 
   enum class DataType{
@@ -226,17 +234,18 @@ public:
 	MLX90632 thermopile;
 	EdaCorrection *edaCorrection = nullptr;
 	EmotiBitEda emotibitEda;
+	EmotiBitNvmController _emotibitNvmController;
 
 	int _emotiBitSystemConstants[(int)SystemConstants::COUNT];
 
-	float edrAmplification;
-	float vRef1; // Reference voltage of first voltage divider(15/100)
-	float vRef2; // Reference voltage from second voltage divider(100/100)
+	//float edrAmplification;
+	//float vRef1; // Reference voltage of first voltage divider(15/100)
+	//float vRef2; // Reference voltage from second voltage divider(100/100)
 	//float rSkinAmp;
 	float adcRes;
-	float edaVDivR;
-	float edaFeedbackAmpR;
-	float edaCrossoverFilterFreq;
+	//float edaVDivR;
+	//float edaFeedbackAmpR;
+	//float edaCrossoverFilterFreq;
 	uint8_t _sdCardChipSelectPin;	// ToDo: create getter and make private
 	BMM150TrimData bmm150TrimData;
 	bool bmm150XYClipped = false;
@@ -245,13 +254,14 @@ public:
 	bool thermopileBegun = false;
 	int thermopileFs = 8; // *** NOTE *** changing this may wear out the Melexis flash
 	uint8_t thermopileMode = MODE_STEP;		// If changing to MODE_CONTINUOUS besure to adjust SAMPLING_DIV to match thermopile rate
+	volatile unsigned long int _thermReadFinishedTime;
 
 	// ---------- BEGIN ino refactoring --------------
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 2048;
-	static const uint16_t OUT_PACKET_MAX_SIZE = 1024;
+	static const uint16_t OUT_MESSAGE_TARGET_SIZE = 1024;
 	static const uint16_t DATA_SEND_INTERVAL = 100;
 	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
-	static const uint16_t MAX_DATA_BUFFER_SIZE = 32;
+	static const uint16_t MAX_DATA_BUFFER_SIZE = 48;
 	static const uint16_t NORMAL_POWER_MODE_PACKET_INTERVAL = 200;
 	static const uint16_t LOW_POWER_MODE_PACKET_INTERVAL = 1000;
 	uint16_t modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
@@ -326,8 +336,8 @@ public:
 
 	const char *typeTags[(uint8_t)EmotiBit::DataType::length];
 	bool _newDataAvailable[(uint8_t)EmotiBit::DataType::length];
-	uint8_t printLen[(uint8_t)EmotiBit::DataType::length];
-	bool sendData[(uint8_t)EmotiBit::DataType::length];
+	uint8_t _printLen[(uint8_t)EmotiBit::DataType::length];
+	bool _sendData[(uint8_t)EmotiBit::DataType::length];
 
 	SdFat SD;
 	volatile uint8_t battLevel = 100;
@@ -336,6 +346,7 @@ public:
 
 	EmotiBitWiFi _emotiBitWiFi; 
 	TwoWire* _EmotiBit_i2c = nullptr;
+	uint32_t i2cClkMain = 400000;
 	String _outDataPackets;		// Packets that will be sent over wireless (if enabled) and written to SD card (if recording)
 	uint16_t _outDataPacketCounter = 0;
 	//String _outSdPackets;		// Packts that will be written to SD card (if recording) but not sent over wireless
@@ -348,8 +359,7 @@ public:
 	bool _sendTestData = false;
 	float _edlDigFiltAlpha = 0;
 	float _edlDigFilteredVal = -1;
-	float _edaSeriesResistance = 0;
-	float _isrOffsetCorr = 0;
+	float _adcIsrOffsetCorr = 0;
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 
@@ -374,6 +384,9 @@ public:
 	bool addPacket(EmotiBit::DataType t);
 	void parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber);
 	void readSensors();
+	void processData();
+	void sendData();
+	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented
 	void writeSerialData(EmotiBit::DataType t);
 	
 
@@ -437,7 +450,7 @@ public:
   void setAnalogEnablePin(uint8_t i); /**< Power on/off the analog circuitry */
   int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
 	int8_t updatePPGData();                /**< Read any available PPG data from the sensor FIFO into the inputBuffers */
-	int8_t updateEDAData();                /**< Take EDA reading and put into the inputBuffer */
+	//int8_t updateEDAData();                /* Deprecated. Use EmotiBitEda::readData() */
 	int8_t updateTempHumidityData();       /**< Read any available temperature and humidity data into the inputBuffers */
 	int8_t updateThermopileData();         /**< Read Thermopile data into the buffers*/
 	int8_t updateBatteryVoltageData();     /**< Take battery voltage reading and put into the inputBuffer */
@@ -468,15 +481,15 @@ public:
 private:
 	float average(BufferFloat &b);
 	int8_t checkIMUClipping(EmotiBit::DataType type, int16_t data, uint32_t timestamp);
-	int8_t pushData(EmotiBit::DataType type, float data, uint32_t * timestamp = nullptr);
+	int8_t pushData(EmotiBit::DataType type, float data, uint32_t * timestamp = nullptr); // Deprecated. BUFFER_OVERFLOW count built into DoubleBuffer now.
 
 	SensorTimer _sensorTimer = SensorTimer::MANUAL;
 	SamplingRates _samplingRates;
 	EnableDigitalFilter _enableDigitalFilter;
 	SamplesAveraged _samplesAveraged;
 	uint8_t _batteryReadPin;
-	uint8_t _edlPin;
-	uint8_t _edrPin;
+	//uint8_t _edlPin;
+	//uint8_t _edrPin;
 	float _vcc;
 	uint8_t _adcBits;
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)
@@ -511,9 +524,13 @@ private:
 	DoubleBufferFloat magZ			 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 2);
 	DoubleBufferFloat batteryVoltage = DoubleBufferFloat(1);
 	DoubleBufferFloat batteryPercent = DoubleBufferFloat(1);
-	DoubleBufferFloat dataOverflow	 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
-	DoubleBufferFloat dataClipping   = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+	DoubleBufferFloat dataOverflow	 = DoubleBufferFloat(1);	// ToDo: Refactor with nullptr checks for removal
+	DoubleBufferFloat dataClipping   = DoubleBufferFloat(1);	// ToDo: Refactor with nullptr checks for removal
+#ifdef DEBUG_BUFFER
 	DoubleBufferFloat debugBuffer    = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
+#else
+	DoubleBufferFloat debugBuffer = DoubleBufferFloat(1);			// ToDo: Refactor for nullptr checks
+#endif
 
 	DoubleBufferFloat * dataDoubleBuffers[(uint8_t)DataType::length];
 
@@ -521,8 +538,8 @@ private:
 	// Single buffered arrays must only be accessed from ISR functions, not in the main loop
 	// ToDo: add assignment for dynamic allocation;
 	// 	**** WARNING **** THIS MUST MATCH THE SAMPLING DIVS ETC
-	BufferFloat edlBuffer = BufferFloat(24);
-	BufferFloat edrBuffer = BufferFloat(24);	
+	BufferFloat edlBuffer = BufferFloat(20);
+	BufferFloat edrBuffer = BufferFloat(20);	
 	BufferFloat temperatureBuffer = BufferFloat(4);	
 	BufferFloat humidityBuffer = BufferFloat(4);
 	BufferFloat batteryVoltageBuffer = BufferFloat(8);
@@ -536,5 +553,6 @@ private:
 void attachEmotiBit(EmotiBit*e = nullptr);
 void attachToInterruptTC3(void(*readFunction)(void), EmotiBit*e = nullptr);
 void ReadSensors();
+
 
 #endif
