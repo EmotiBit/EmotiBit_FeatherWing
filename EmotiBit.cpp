@@ -249,16 +249,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		fwVersionModifier = "-TC";
 		_debugMode = true;
 	}
-	else if (testingMode == TestingMode::ISR_CORRECTION_UPDATE)
-	{
-		fwVersionModifier = "-ISR_CORR_UPDT";
-		_debugMode = true;
-	}
-	else if (testingMode == TestingMode::ISR_CORRECTION_TEST)
-	{
-		fwVersionModifier = "-ISR_CORR_TEST";
-		_debugMode = true;
-	}
 	else if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		fwVersionModifier = "-FT";
