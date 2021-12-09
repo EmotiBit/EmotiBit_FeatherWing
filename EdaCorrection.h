@@ -68,7 +68,7 @@ public:
 		size_t edrAddresses = 0xB0 ;
 		size_t edlTestAddress = 0xA0;
 		//size_t emotiBitVersionAddr = 0xB7;// moved to EmotiBitVersionController class
-		size_t emotiBitVersionAddr = EmotiBitVersionController::EMOTIBIT_VERSION_ADDR_SI7013_OTP;
+		size_t emotiBitVersionAddr = 0xB7;
 		size_t dataVersionAddr = 0xB6;
 		bool emotiBitVersionWritten = false;
 		bool dataVersionWritten = false;

@@ -92,8 +92,15 @@ void EmotiBit::bmm150ReadTrimRegisters()
 
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
-	uint32_t now = millis();
+	EmotiBitVersionController emotiBitVersionController;
 	Barcode barcode;
+	barcode.rawCode = "";
+	String factoryTestSerialOutput;
+	factoryTestSerialOutput.reserve(150);
+	factoryTestSerialOutput += EmotiBitFactoryTest::MSG_START_CHAR;
+	uint32_t now = millis();
+	Serial.print("Firmware version: ");
+	Serial.println(firmware_version);
 	while (!Serial.available() && millis() - now < 2000)
 	{
 	}
@@ -110,9 +117,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			ackString = ackString.substring(0, ackString.length() - 1);
 			ackString += EmotiBitFactoryTest::MSG_TERM_CHAR;
 			Serial.print(ackString);
-			
+
 			Serial.println("\nEntered FACTORY TEST MODE");
-			// send ACK to the computer
 			bool barcodeReceived = false;
 			while (Serial.available() || !barcodeReceived)
 			{
@@ -120,24 +126,35 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				input = Serial.read();
 				if (input == '*')
 				{
-					barcode.code = Serial.readStringUntil('*');
+					barcode.rawCode = Serial.readStringUntil('*');
 					barcodeReceived = true;
 				}
 			}
-			// parse the barcode
-			EmotiBitFactoryTest::parseBarcode(&barcode);
-			// remove any other char in the buffer before proceeding
-			while (Serial.available())
-			{
-				Serial.read();
-			}
+		}
+		// remove any other char in the buffer before proceeding
+		while (Serial.available())
+		{
+			Serial.read();
 		}
 	}
-	EmotiBitVariants::EmotiBitSkuType emotibitSku;
-	EmotiBitVersionController emotiBitVersionController;
-	String factoryTestSerialOutput;
-	factoryTestSerialOutput.reserve(150);
-	factoryTestSerialOutput += EmotiBitFactoryTest::MSG_START_CHAR;
+	if (emotiBitVersionController.isEmotiBitReady())
+	{
+		Serial.println("EmotiBit ready");
+		if (testingMode == TestingMode::FACTORY_TEST)
+		{
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_READY, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+		}
+	}
+	else
+	{
+		if (testingMode == TestingMode::FACTORY_TEST)
+		{
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_READY, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+			Serial.println(factoryTestSerialOutput);
+		}
+		hibernate(false);
+	}
 	bool status = true;
 	if (_EmotiBit_i2c != nullptr)
 	{
@@ -145,59 +162,82 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	_EmotiBit_i2c = new TwoWire(&sercom1, EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
 	_EmotiBit_i2c->begin();
+	// ToDo: detect if i2c init fails
+	//Serial.println("I2C interface initialized");
+	_EmotiBit_i2c->setClock(100000);
+	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
+	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::I2C_COMM_INIT, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 	}
-	// ToDo: detect if i2c init fails
-	Serial.println("I2C interface initialized");
-	_EmotiBit_i2c->setClock(100000);
-	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
-	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
-	_version = emotiBitVersionController.detectEmotiBitVersion(_EmotiBit_i2c, deviceAddress.EEPROM_FLASH_34AA02);
-	// If version is unknown
-	if (_version == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
+	Serial.print("Initializing NVM controller: ");
+	if (_emotibitNvmController.init(*_EmotiBit_i2c))
 	{
-		Serial.println("initialization failed.");
-		Serial.println("Things to check:");
-		Serial.println("* is a card inserted?");
-		Serial.println("* is your wiring correct?");
-		Serial.println("Version not detected. stopping execution.");
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SD_CARD, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-		Serial.println(factoryTestSerialOutput);
-		emotiBitVersionController.initConstantMapping(EmotiBitVersionController::EmotiBitVersion::V03B);// Assume the version is V03B to set Hibernate level as Required
-		_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
-		hibernate(false);// hibenrate with setup incomplete
+		Serial.println("success");
+		if (testingMode == TestingMode::FACTORY_TEST)
+		{
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_STORAGE, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+		}
 	}
-	// If Si-7013 was not detected, hibernate with the estimated version
-	else if (!emotiBitVersionController.versionDetectionComplete && (_version == EmotiBitVersionController::EmotiBitVersion::V02H || _version == EmotiBitVersionController::EmotiBitVersion::V03B))
+	else
 	{
-		Serial.println("Si-7013 not found on EmotiBit. Check I2C wiring.");
-		// Assigning constant so that we can use the System Constant::HIBERNATE_LEVEL in hibernate()
-		emotiBitVersionController.initConstantMapping(_version);
-		_hibernatePin = EmotiBitVersionController::HIBERNATE_PIN;
-		hibernate(false);//hibernate with setup incomplete
-	}
-
-	if (_version == EmotiBitVersionController::EmotiBitVersion::V01B || _version == EmotiBitVersionController::EmotiBitVersion::V01C)
-	{
-		Serial.println("This code is not compatible with V01 (Alpha) boards");
-		Serial.println("Download v0.6.0 for Alpha boards");
+		Serial.println("fail");
+		if (testingMode == TestingMode::FACTORY_TEST)
+		{
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_STORAGE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+			Serial.println(factoryTestSerialOutput);
+		}
 		hibernate(false);
 	}
-
-	if (testingMode == TestingMode::FACTORY_TEST)
+	if (testingMode == TestingMode::FACTORY_TEST && barcode.rawCode != "")
 	{
-		// Pass only if FW version estimate is exactly = barcode version
-		if(EmotiBitFactoryTest::validateVersionEstimate(barcode.emotibitVersion, String(EmotiBitVersionController::getHardwareVersion(_version))))
+		// parse the barcode
+		EmotiBitFactoryTest::parseBarcode(&barcode);
+
+		bool hwValidation, skuValidation = false;
+		if (emotiBitVersionController.validateBarcodeInfo(*(_EmotiBit_i2c), barcode, hwValidation, skuValidation))
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::VERSION_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+			if (!emotiBitVersionController.writeVariantInfoToNvm(_emotibitNvmController, barcode))
+			{
+				hibernate(false);
+			}
 		}
 		else
 		{
-			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::VERSION_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+			if (hwValidation)
+			{
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::VERSION_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+			}
+			else
+			{
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::VERSION_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+			}
+			if (skuValidation)
+			{
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+			}
+			else
+			{
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+			}
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+			Serial.println(factoryTestSerialOutput);
+			hibernate(false);
 		}
 	}
+
+	if (!emotiBitVersionController.getEmotiBitVariantInfo(_emotibitNvmController, _hwVersion, emotiBitSku, emotibitSerialNumber))
+	{
+		if (!emotiBitVersionController.detectVariantFromHardware(*(_EmotiBit_i2c), _hwVersion, emotiBitSku))
+		{
+			hibernate(false);
+		}
+	}
+	
 	String fwVersionModifier = "";
 	if (testingMode == TestingMode::ACUTE)
 	{
@@ -225,15 +265,15 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	firmware_version += fwVersionModifier;
 
-	Serial.print("\n\nEmotiBit version: ");
-	Serial.println(EmotiBitVersionController::getHardwareVersion(_version));
+	Serial.print("\n\nEmotiBit HW version: ");
+	Serial.println(EmotiBitVersionController::getHardwareVersion(_hwVersion));
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, firmware_version.c_str());
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_VERSION, EmotiBitVersionController::getHardwareVersion(_version));
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_NUMBER, barcode.emotibitNumber.c_str());
+		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_VERSION, EmotiBitVersionController::getHardwareVersion(_hwVersion));
+		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_NUMBER, barcode.emotibitSerialNumber.c_str());
 	}
 	//Serial.println("All Serial inputs must be used with **No Line Ending** option from the serial monitor");
 
@@ -241,8 +281,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	// IMPORTANT. Need pin initialization(Performed below) for emotibit to work
 	// initializing the pin and constant mapping
-	emotiBitVersionController.initPinMapping(_version); // Any unknown version is handled in the version detection code.
-	initResult = emotiBitVersionController.initConstantMapping(_version);
+	emotiBitVersionController.initPinMapping(_hwVersion); // Any unknown version is handled in the version detection code.
+	initResult = emotiBitVersionController.initConstantMapping(_hwVersion);
 	
 	// Constant Mapping fails if NUM_CONSTANTS not updated in versionController Class
 	if (!initResult)
@@ -261,13 +301,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	// ToDo: Create a organized way to store class vairables
 	// Set board-specific pins 
 	_batteryReadPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::BATTERY_READ_PIN);
-	_hibernatePin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::HIBERNATE);
 	buttonPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EMOTIBIT_BUTTON);
 	//TODO: Find a better way to swap pin assignments in different modes
-	//_edlPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDL);
-	//_edrPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::EDR);
-	_sdCardChipSelectPin = emotiBitVersionController.getAssignedPin(EmotiBitPinName::SD_CARD_CHIP_SELECT);
-
 
 	_emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL] = emotiBitVersionController.getSystemConstant(SystemConstants::EMOTIBIT_HIBERNATE_LEVEL);
 	_emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE] = emotiBitVersionController.getSystemConstant(SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE);
@@ -325,13 +360,13 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		}
 		else if (input == 'E')
 		{
-			Serial.print("\n\n##### EmotiBit Version "); Serial.print(EmotiBitVersionController::getHardwareVersion(_version)); Serial.println(" ####");
+			Serial.print("\n\n##### EmotiBit Version "); Serial.print(EmotiBitVersionController::getHardwareVersion(_hwVersion)); Serial.println(" ####");
 			if (edaCorrection != nullptr)
 			{
 				delete edaCorrection;
 			}
 			edaCorrection = new EdaCorrection;
-			if (!edaCorrection->begin((uint8_t)_version))
+			if (!edaCorrection->begin((uint8_t)_hwVersion))
 			{
 				// exit begin. delete pointer and free memory
 				delete edaCorrection;
@@ -385,7 +420,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println("\nHW version-specific settings:");
 		Serial.print("buttonPin = "); Serial.println(buttonPin);
 		Serial.print("_batteryReadPin = "); Serial.println(_batteryReadPin);
-		Serial.print("_hibernatePin = "); Serial.println(_hibernatePin);
+		Serial.print("Hibernate Pin = "); Serial.println(EmotiBitVersionController::HIBERNATE_PIN);
 		//Serial.print("_edlPin = "); Serial.println(_edlPin);
 		//Serial.print("_edrPin = "); Serial.println(_edrPin);
 		Serial.print("_vcc = "); Serial.println(_vcc);
@@ -421,16 +456,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	samplesAveraged.battery = BASE_SAMPLING_FREQ / BATTERY_SAMPLING_DIV / 1;
 	setSamplesAveraged(samplesAveraged);
-
-	Serial.print("Initializing NVM controller: ");
-	if (_emotibitNvmController.init(*_EmotiBit_i2c))
-	{
-		Serial.println("success");
-	}
-	else
-	{
-		Serial.println("fail");
-	}
 
 	// setup LED DRIVER
 	Serial.print("Initializing NCP5623....");
@@ -632,7 +657,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		}
 		hibernate(false);
 	}
-	if ((int)_version == (int)EmotiBitVersionController::EmotiBitVersion::V03B)
+	if ((int)_hwVersion == (int)EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
 		_enableDigitalFilter.mx = true;
 		_enableDigitalFilter.my = true;
@@ -646,7 +671,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	//BMI160.detachInterrupt();
 	//BMI160.setRegister()
 
-	if ((int)_version <= (int)EmotiBitVersionController::EmotiBitVersion::V03B)
+	if ((int)_hwVersion <= (int)EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
 		// Setup Temperature / Humidity Sensor
 		Serial.print("Initializing SI-7013");
@@ -694,69 +719,46 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println(" ... Completed");
 	}
 	
-	// Thermopile
-	Serial.print("Initializing MLX90632... ");
-	MLX90632::status returnError; // Required as a parameter for begin() function in the MLX library 
-	status = thermopile.begin(deviceAddress.MLX, *_EmotiBit_i2c, returnError);
-	if (status)
+	if (emotiBitSku.equals(EmotiBitVariants::EMOTIBIT_SKU_MD))
 	{
-		// estimate SKU is MD
-		emotibitSku = EmotiBitVariants::EmotiBitSkuType::MD;
-		thermopile.setMeasurementRate(thermopileFs);
-		thermopile.setMode(thermopileMode);
-		uint8_t thermMode = thermopile.getMode();
-		if (thermMode == MODE_CONTINUOUS)
+		// Thermopile
+		Serial.print("Initializing MLX90632... ");
+		MLX90632::status returnError; // Required as a parameter for begin() function in the MLX library 
+		status = thermopile.begin(deviceAddress.MLX, *_EmotiBit_i2c, returnError);
+		if (status)
 		{
-			Serial.print("MODE_CONTINUOUS");
-		}
-		if (thermMode == MODE_STEP)
-		{
-			Serial.print("MODE_STEP");
-		}
-		if (thermMode == MODE_SLEEP)
-		{
-			Serial.print("MODE_SLEEP");
-		}
-		chipBegun.MLX90632 = true;
-	}
-	else
-	{
-		// set SKU as EM
-		emotibitSku = EmotiBitVariants::EmotiBitSkuType::EM;
-		//hibernate(false);
-	}
-	if (testingMode == TestingMode::FACTORY_TEST)
-	{
-		// if barcode is MD
-		if (barcode.sku.equals(EmotiBitVariants::EmotiBitSkuTags[(int)EmotiBitVariants::EmotiBitSkuType::MD]))
-		{
-			// is FW estimate is MD
-			if (emotibitSku == EmotiBitVariants::EmotiBitSkuType::MD)
+			if (testingMode == TestingMode::FACTORY_TEST)
 			{
-				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 			}
-			else
+			Serial.println("Success");
+			thermopile.setMeasurementRate(thermopileFs);
+			thermopile.setMode(thermopileMode);
+			uint8_t thermMode = thermopile.getMode();
+			if (thermMode == MODE_CONTINUOUS)
 			{
-				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+				Serial.print("MODE_CONTINUOUS");
 			}
+			if (thermMode == MODE_STEP)
+			{
+				Serial.print("MODE_STEP");
+			}
+			if (thermMode == MODE_SLEEP)
+			{
+				Serial.print("MODE_SLEEP");
+			}
+			chipBegun.MLX90632 = true;
 		}
-		// if barcode is EM
 		else
 		{
-			if (emotibitSku == EmotiBitVariants::EmotiBitSkuType::MD)
+			if (testingMode == TestingMode::FACTORY_TEST)
 			{
-				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			}
-			else
-			{
-				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
-			}
+			Serial.println("Failed");
+			hibernate(false);
 		}
 	}
-	Serial.println(" ... Completed");
 
 	// ADC Correction
 	Serial.println("Checking for ADC Correction...");
@@ -767,14 +769,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, adcCorrectionValues._gainCorrection, adcCorrectionValues._offsetCorrection, adcCorrectionValues.valid, adcCorrectionValues._isrOffsetCorr);
 		if (adcCorrection.atwincAdcDataCorruptionTest != AdcCorrection::Status::FAILURE && adcCorrection.atwincAdcMetaDataCorruptionTest != AdcCorrection::Status::FAILURE)
 		{
-			_adcIsrOffsetCorr = adcCorrectionValues._isrOffsetCorr;
-			emotibitEda.setAdcIsrOffsetCorr(_adcIsrOffsetCorr);
-			if (testingMode == TestingMode::ACUTE || testingMode == TestingMode::CHRONIC)
-			{
-				Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); Serial.print("\toffset correction:"); Serial.print(adcCorrectionValues._offsetCorrection);
-				Serial.print("\tisr offset Corr: "); Serial.println(_adcIsrOffsetCorr, 6);
-				//Serial.println("Enabling the ADC with the correction values");
-			}
+			emotibitEda.setAdcIsrOffsetCorr(adcCorrectionValues._isrOffsetCorr);
+			Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); Serial.print("\toffset correction:"); Serial.print(adcCorrectionValues._offsetCorrection);
+			Serial.print("\tisr offset Corr: "); Serial.println(adcCorrectionValues._isrOffsetCorr, 2);
 			analogReadCorrection(adcCorrectionValues._offsetCorrection, adcCorrectionValues._gainCorrection);
 		}
 	}
@@ -792,7 +789,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	// Setup EDA
 	Serial.println("\nInitializing EDA... ");
-	if (emotibitEda.setup(_version, _samplingRates.eda / ((float)_samplesAveraged.eda), &eda, &edl, &edr, _EmotiBit_i2c, &edlBuffer, &edrBuffer))
+	if (emotibitEda.setup(_hwVersion, _samplingRates.eda / ((float)_samplesAveraged.eda), &eda, &edl, &edr, _EmotiBit_i2c, &edlBuffer, &edrBuffer))
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 		Serial.println("Completed");
@@ -935,6 +932,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_sendData[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW] = true;
 	_sendData[(uint8_t)EmotiBit::DataType::DEBUG] = true;
 
+	// Turn off serial data sending
+	for (uint8_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
+	{
+		_sendSerialData[i] = false;
+	}
+
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::EDA] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::EDL] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::EDR] = false;
@@ -961,28 +964,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	Serial.println("EmotiBit Setup complete");
 	_EmotiBit_i2c->setClock(i2cClkMain);// Set clock to 400KHz except when accessing Si7013
-	EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::NULL_VAL);
-	//Serial.print("\nEmotiBit version: ");
-	//Serial.println(EmotiBitVersionController::getHardwareVersion(_version));
-	//Serial.print("Firmware version: ");
-	//Serial.println(firmware_version);
+	EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
-	//Serial.println("Electronic Serial Number:");
-	//Serial.print("Si7013_SNA),");
-	//Serial.print(tempHumiditySensor.sernum_a);
-	//Serial.print(", (Si7013_SNB), ");
-	//Serial.print(tempHumiditySensor.sernum_b);
 	Serial.print("\n");
-	//Serial.println("### GSR Calibration ##");
-	//Serial.println("### ADC correction ###");
-	//if (adcCorrectionValues.valid)
-	//{
-	//	Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); Serial.print("\tOffset Correction: "); Serial.println(adcCorrectionValues._offsetCorrection);
-	//}
-	//else
-	//{
-	//	Serial.println("Using ADC without correction");
-	//}
 	uint8_t ledOffdelay = 100;	// Aesthetic delay
 	led.setLED(uint8_t(EmotiBit::Led::RED), false);
 	delay(ledOffdelay);
@@ -1045,7 +1029,7 @@ bool EmotiBit::setupSdCard()
 		Serial.print(i);
 		Serial.print(",");
 		// begin function initializes SPI at MAX speed by deafult. check /src/SpiDriver/SdSpiDriver.h for details on the constructor
-		if (SD.begin(_sdCardChipSelectPin))
+		if (SD.begin(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN))
 		{
 			success = true;
 			break;
@@ -1054,7 +1038,7 @@ bool EmotiBit::setupSdCard()
 	}
 	if (!success) {
 		Serial.print("...Card failed, or not present on chip select ");
-		Serial.println(_sdCardChipSelectPin);
+		Serial.println(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN);
 		// don't do anything more:
 		// ToDo: Handle case where we still want to send network data
 		//while (true) {
@@ -1101,7 +1085,12 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 
 
 		header = EmotiBitPacket::createHeader(typeTags[(uint8_t)t], timestamp, _outDataPacketCounter++, dataLen, protocolVersion);
-		_outDataPackets += EmotiBitPacket::headerToString(header);
+		String headerString = EmotiBitPacket::headerToString(header);
+		_outDataPackets += headerString;
+		if (_sendSerialData[(uint8_t) t])
+		{
+			Serial.print(headerString);
+		}
 
 		if (t == EmotiBit::DataType::DATA_CLIPPING || t == EmotiBit::DataType::DATA_OVERFLOW) {
 			// Handle clippping and overflow as a special case
@@ -1162,6 +1151,10 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 				if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE - 1)
 				{
 					_outDataPackets += temp;
+					if (_sendSerialData[(uint8_t) t])
+					{
+						Serial.print(temp);
+					}
 				} 
 				else
 				{
@@ -1172,6 +1165,10 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 			}
 		}
 		_outDataPackets += "\n";
+		if (_sendSerialData[(uint8_t) t])
+		{
+			Serial.print("\n");
+		}
 
 		return true;
 	}
@@ -1391,7 +1388,7 @@ uint8_t EmotiBit::update()
 
 		// ToDo: Add barcode
 		Serial.print("Hardware: ");
-		Serial.println(EmotiBitVersionController::getHardwareVersion(_version));
+		Serial.println(EmotiBitVersionController::getHardwareVersion(_hwVersion));
 		Serial.print("Firmware: ");
 		Serial.println(firmware_version);
 	}
@@ -2232,7 +2229,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 #endif
 	//bool EmotiBit::printConfigInfo(File file, String datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
-	String hardware_version = EmotiBitVersionController::getHardwareVersion(_version);
+	String hardware_version = EmotiBitVersionController::getHardwareVersion(_hwVersion);
 	String feather_version = "Adafruit Feather M0 WiFi";
 
 	const uint16_t bufferSize = 1024;
@@ -2953,10 +2950,11 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	Serial.println("Shutting down serial interfaces...");
 	SPI.end(); 
 	Wire.end();
-	_EmotiBit_i2c->end();
+	
 
 	if (_EmotiBit_i2c != nullptr)
 	{
+		_EmotiBit_i2c->end();
 		delete(_EmotiBit_i2c);
 		_EmotiBit_i2c = nullptr;
 	}
@@ -2965,7 +2963,7 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	// Setup all pins (digital and analog) in INPUT mode (default is nothing)  
 	for (uint32_t ul = 0; ul < PINS_COUNT; ul++)
 	{
-		if (ul != _hibernatePin) {
+		if (ul != EmotiBitVersionController::HIBERNATE_PIN) {
 			pinMode(ul, OUTPUT);
 			digitalWrite(ul, LOW);
 			pinMode(ul, INPUT);
@@ -2975,10 +2973,10 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	}
 	// Turn off EmotiBit power
 	Serial.println("Disabling EmotiBit power");
-	pinMode(_hibernatePin, OUTPUT);
-	digitalWrite(_hibernatePin, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL]);
+	pinMode(EmotiBitVersionController::HIBERNATE_PIN, OUTPUT);
+	digitalWrite(EmotiBitVersionController::HIBERNATE_PIN, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL]);
 	delay(100);
-	pinMode(_hibernatePin, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE]);	//deepSleep();
+	pinMode(EmotiBitVersionController::HIBERNATE_PIN, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE]);	//deepSleep();
 	Serial.println("Entering deep sleep...");
 	LowPower.deepSleep();
 }
@@ -3347,6 +3345,8 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("press | to enable Digital filters");
 			Serial.println("Press - to disable Digital filters");
 			//Serial.println("Press 0 to simulate nan events in the thermopile");
+			Serial.println("Press F to switch to FactoryTest mode");
+
 
 		}
 		else if (c == ':')
@@ -3579,7 +3579,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		}
 		else if (c == '+')
 		{
-			if (_version == EmotiBitVersionController::EmotiBitVersion::V04A && testingMode == TestingMode::FACTORY_TEST)
+			if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A && testingMode == TestingMode::FACTORY_TEST)
 			{
 				static const uint32_t ARRAY_SIZE = 10;
 				char cArray[ARRAY_SIZE] = { 'a','b','c','d','e','1','2','3','4','5' };
@@ -3630,7 +3630,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		}
 		else if (c == 's') 
 		{
-			if (testingMode == TestingMode::FACTORY_TEST)
+			if (testingMode == TestingMode::ACUTE)
 			{
 				_emotibitNvmController.printEntireNvm();
 			}
@@ -3640,6 +3640,15 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			if (testingMode == TestingMode::FACTORY_TEST)
 			{
 				_emotibitNvmController.eraseEeprom();
+			}
+		}
+		else if (c == 'F')
+		{
+		// switch to factory test mode using Serial
+			if (testingMode == TestingMode::NONE)
+			{
+				testingMode = TestingMode::FACTORY_TEST;
+				Serial.print("Testing Mode: "); Serial.println("FACTORY TEST");
 			}
 		}
 	}
@@ -3681,13 +3690,49 @@ void EmotiBit::processFactoryTestMessages()
 		{
 			hibernate();
 		}
+		else if (msgTypeTag.equals(EmotiBitPacket::TypeTag::SERIAL_DATA_ON))
+		{
+			String dataType;
+			EmotiBitPacket::getPacketElement(msg, dataType, 3);
+			for (uint8_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
+			{
+				if (dataType.equals(typeTags[i]))
+				{
+					_sendSerialData[i] = true;
+					Serial.print("SERIAL_DATA_ON: ");
+					Serial.println(typeTags[i]);
+				}
+			}
+		}
+		else if (msgTypeTag.equals(EmotiBitPacket::TypeTag::SERIAL_DATA_OFF))
+		{
+			String dataType;
+			EmotiBitPacket::getPacketElement(msg, dataType, 3);
+			for (uint8_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
+			{
+				if (dataType.equals(typeTags[i]))
+				{
+					_sendSerialData[i] = false;
+					Serial.print("SERIAL_DATA_OFF: ");
+					Serial.println(typeTags[i]);
+				}
+			}
+		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_VALUES))
 		{
 			Serial.println(msg);
 			if (emotibitEda.stageCalibStorage(&_emotibitNvmController, msg))
 			{
-				EmotiBitFactoryTest::sendMessage(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_ACK);
+				Serial.println("Loading Calibrated Values.");
+				if (emotibitEda.stageCalibLoad(&_emotibitNvmController))
+				{
+					EmotiBitFactoryTest::sendMessage(EmotiBitFactoryTest::TypeTag::EDA_CALIBRATION_ACK);
+				}
 			}
+		}
+		else {
+			Serial.print("Unrecognized Serial Command: ");
+			Serial.println(msg);
 		}
 	}
 }

@@ -69,8 +69,14 @@ void setup()
 
 	// Detecting EmotiBit HW version
 	EmotiBitVersionController::EmotiBitVersion hwVersion;
+	String sku;
 	EmotiBitVersionController emotibitVersionController;
-	hwVersion = emotibitVersionController.detectEmotiBitVersion(&emotibit_i2c, 0x50);
+	if (!emotibitVersionController.isEmotiBitReady())
+	{
+		Serial.println("Check if battery and SD-Card are plugged in EmotiBit");
+		while (1);
+	}
+	emotibitVersionController.detectVariantFromHardware(emotibit_i2c, hwVersion, sku);
 	if (hwVersion == EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
 	{
 		Serial.println("Version Detection failed. Halting test.");
