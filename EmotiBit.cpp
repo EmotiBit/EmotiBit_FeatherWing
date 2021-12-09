@@ -110,6 +110,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		input = Serial.read();
 		if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
 		{
+			uint32_t waitStarForBarcode = millis();
 			testingMode = TestingMode::FACTORY_TEST;
 			String ackString;
 			ackString += EmotiBitFactoryTest::MSG_START_CHAR;
@@ -129,6 +130,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 					barcode.rawCode = Serial.readStringUntil('*');
 					barcodeReceived = true;
 				}
+				if (millis() - waitStarForBarcode > 3000)
+					break;
 			}
 		}
 		// remove any other char in the buffer before proceeding
@@ -263,7 +266,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, firmware_version.c_str());
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_VERSION, EmotiBitVersionController::getHardwareVersion(_hwVersion));
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_NUMBER, barcode.emotibitSerialNumber.c_str());
+		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_SERIAL_NUMBER, String(emotibitSerialNumber).c_str());
+		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_SKU_TYPE, emotiBitSku.c_str());
 	}
 	//Serial.println("All Serial inputs must be used with **No Line Ending** option from the serial monitor");
 
