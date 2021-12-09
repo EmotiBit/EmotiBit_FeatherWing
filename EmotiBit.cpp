@@ -411,12 +411,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.print("buttonPin = "); Serial.println(buttonPin);
 		Serial.print("_batteryReadPin = "); Serial.println(_batteryReadPin);
 		Serial.print("Hibernate Pin = "); Serial.println(EmotiBitVersionController::HIBERNATE_PIN);
-		//Serial.print("_edlPin = "); Serial.println(_edlPin);
-		//Serial.print("_edrPin = "); Serial.println(_edrPin);
 		Serial.print("_vcc = "); Serial.println(_vcc);
 		Serial.print("adcRes = "); Serial.println(adcRes);
-		//Serial.print("edaFeedbackAmpR = "); Serial.println(edaFeedbackAmpR);
-		//Serial.print("edrAmplification = "); Serial.println(edrAmplification);
 		Serial.print("LED Driver Current Level = "); Serial.println(_emotiBitSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT]);
 	}
 	
@@ -768,12 +764,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	// using correction values generated in AdcCorrectionMode
 	else
 	{
-		if (testingMode == TestingMode::ACUTE || testingMode == TestingMode::CHRONIC)
-		{
-			Serial.println("ADC correction already enabled in correction test mode");
-			Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection);
-			Serial.print("\toffset correction:"); Serial.println(adcCorrectionValues._offsetCorrection);
-		}
+		Serial.println("ADC correction already enabled in correction test mode");
+		Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection);
+		Serial.print("\toffset correction:"); Serial.println(adcCorrectionValues._offsetCorrection);
 	}
 
 
@@ -3334,10 +3327,8 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("Press f to print the FW version");
 			Serial.println("press | to enable Digital filters");
 			Serial.println("Press - to disable Digital filters");
-			//Serial.println("Press 0 to simulate nan events in the thermopile");
-			Serial.println("Press F to switch to FactoryTest mode");
-
-
+			Serial.println("[ACUTE TESTING MODE] Press s to disable Digital filters");
+			Serial.println("[ACUTE TESTING MODE] Press c to disable Digital filters");
 		}
 		else if (c == ':')
 		{
@@ -3567,57 +3558,6 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			_enableDigitalFilter.mz = false;
 			_enableDigitalFilter.eda = false;
 		}
-		else if (c == '+')
-		{
-			if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A && testingMode == TestingMode::FACTORY_TEST)
-			{
-				static const uint32_t ARRAY_SIZE = 10;
-				char cArray[ARRAY_SIZE] = { 'a','b','c','d','e','1','2','3','4','5' };
-				// write a struct of data to the EEPROM
-				Serial.println("Testing NVM Controller. Writing to EEPROM(Location VARIANT_INFO)");
-				Serial.println("Writing to EEPROM: ");
-				for (int i = 0; i < ARRAY_SIZE; i++)
-				{
-					Serial.print(cArray[i]); Serial.print("\t");
-				}
-				uint8_t status;
-				status = _emotibitNvmController.stageToWrite(EmotiBitNvmController::DataType::VARIANT_INFO, 0, ARRAY_SIZE, (uint8_t*)cArray);
-				if (status == 0)
-				{
-					Serial.println("\nWrite successful");
-				}
-				else
-				{
-					Serial.print("Write unsuccessful. ErrorCode: "); Serial.println(status);
-				}
-				Serial.println("Reading from EEPROM");
-				uint8_t* data = nullptr;
-				uint32_t dataSize = 0;
-				uint8_t dataVersion = 0;
-				char* cData;
-				status = _emotibitNvmController.stageToRead(EmotiBitNvmController::DataType::VARIANT_INFO, dataVersion, dataSize, data);
-				cData = (char*)data;
-				if (status == 0)
-				{
-					Serial.print("Version Read: "); Serial.println(dataVersion);
-					Serial.println("Data Read: ");
-					for (int i = 0; i < dataSize; i++)
-					{
-						Serial.print(cData[i]); Serial.print("\t");
-					}
-				}
-				else
-				{
-					Serial.print("Read unsuccessful. ErrorCode: "); Serial.println(status);
-				}
-				delete[] data;
-				Serial.println("Read Successful");
-			}
-			else
-			{
-				Serial.println("Cannot test NVM for this HW version.");
-			}
-		}
 		else if (c == 's') 
 		{
 			if (testingMode == TestingMode::ACUTE)
@@ -3627,18 +3567,9 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		}
 		else if (c == 'c')
 		{
-			if (testingMode == TestingMode::FACTORY_TEST)
+			if (testingMode == TestingMode::ACUTE)
 			{
 				_emotibitNvmController.eraseEeprom();
-			}
-		}
-		else if (c == 'F')
-		{
-		// switch to factory test mode using Serial
-			if (testingMode == TestingMode::NONE)
-			{
-				testingMode = TestingMode::FACTORY_TEST;
-				Serial.print("Testing Mode: "); Serial.println("FACTORY TEST");
 			}
 		}
 	}
