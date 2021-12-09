@@ -769,14 +769,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		AdcCorrection adcCorrection(AdcCorrection::AdcCorrectionRigVersion::UNKNOWN, adcCorrectionValues._gainCorrection, adcCorrectionValues._offsetCorrection, adcCorrectionValues.valid, adcCorrectionValues._isrOffsetCorr);
 		if (adcCorrection.atwincAdcDataCorruptionTest != AdcCorrection::Status::FAILURE && adcCorrection.atwincAdcMetaDataCorruptionTest != AdcCorrection::Status::FAILURE)
 		{
-			_adcIsrOffsetCorr = adcCorrectionValues._isrOffsetCorr;
-			emotibitEda.setAdcIsrOffsetCorr(_adcIsrOffsetCorr);
-			if (testingMode == TestingMode::ACUTE || testingMode == TestingMode::CHRONIC)
-			{
-				Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); Serial.print("\toffset correction:"); Serial.print(adcCorrectionValues._offsetCorrection);
-				Serial.print("\tisr offset Corr: "); Serial.println(_adcIsrOffsetCorr, 6);
-				//Serial.println("Enabling the ADC with the correction values");
-			}
+			emotibitEda.setAdcIsrOffsetCorr(adcCorrectionValues._isrOffsetCorr);
+			Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); Serial.print("\toffset correction:"); Serial.print(adcCorrectionValues._offsetCorrection);
+			Serial.print("\tisr offset Corr: "); Serial.println(adcCorrectionValues._isrOffsetCorr, 2);
 			analogReadCorrection(adcCorrectionValues._offsetCorrection, adcCorrectionValues._gainCorrection);
 		}
 	}
@@ -970,27 +965,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.println("EmotiBit Setup complete");
 	_EmotiBit_i2c->setClock(i2cClkMain);// Set clock to 400KHz except when accessing Si7013
 	EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::TEST_PASS);
-	//Serial.print("\nEmotiBit version: ");
-	//Serial.println(EmotiBitVersionController::getHardwareVersion(_version));
-	//Serial.print("Firmware version: ");
-	//Serial.println(firmware_version);
 	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
-	//Serial.println("Electronic Serial Number:");
-	//Serial.print("Si7013_SNA),");
-	//Serial.print(tempHumiditySensor.sernum_a);
-	//Serial.print(", (Si7013_SNB), ");
-	//Serial.print(tempHumiditySensor.sernum_b);
 	Serial.print("\n");
-	//Serial.println("### GSR Calibration ##");
-	//Serial.println("### ADC correction ###");
-	//if (adcCorrectionValues.valid)
-	//{
-	//	Serial.print("Gain Correction:"); Serial.print(adcCorrectionValues._gainCorrection); Serial.print("\tOffset Correction: "); Serial.println(adcCorrectionValues._offsetCorrection);
-	//}
-	//else
-	//{
-	//	Serial.println("Using ADC without correction");
-	//}
 	uint8_t ledOffdelay = 100;	// Aesthetic delay
 	led.setLED(uint8_t(EmotiBit::Led::RED), false);
 	delay(ledOffdelay);
@@ -3669,8 +3645,11 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		else if (c == 'F')
 		{
 		// switch to factory test mode using Serial
-			testingMode = TestingMode::FACTORY_TEST;
-			Serial.print("Testing Mode: "); Serial.println("FACTORY TEST");
+			if (testingMode == TestingMode::NONE)
+			{
+				testingMode = TestingMode::FACTORY_TEST;
+				Serial.print("Testing Mode: "); Serial.println("FACTORY TEST");
+			}
 		}
 	}
 }

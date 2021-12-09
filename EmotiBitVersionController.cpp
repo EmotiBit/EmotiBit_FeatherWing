@@ -280,25 +280,40 @@ bool EmotiBitVersionController::validateBarcodeInfo(TwoWire &emotibit_i2c, Barco
 {
 	EmotiBitHardwareParameterTable hardwareParameterTable;
 	updateVersionParameterTable(emotibit_i2c, hardwareParameterTable);
-
+	String barcodeHwVersion = barcode.hwVersion;
+	barcodeHwVersion.remove(barcodeHwVersion.indexOf(EmotiBitVariants::HARDWARE_VERSION_PREFIX), 1);
 	if (vregEnablePinLogic == VregEnablePinLogic::ACTIVE_LOW)
 	{
-		Serial.println("Hardware version detected as V2. No Write operations allowed for this HW version.");
-		hwValidation = false;
-		return false;
+		// V2
+		if (barcodeHwVersion.toInt() == 2)
+		{
+			Serial.println("HW validation: Passed");
+			hwValidation = true;
+		}
+		else
+		{
+			Serial.println("HW validation: Failed");
+			hwValidation = false;
+		}
 	}
 	else
 	{
 		if (hardwareParameterTable.isSi7013Present && !hardwareParameterTable.isEepromPresent)
 		{
-			Serial.println("Hardware version detected as V3. No Write operations allowed for this HW version.");
-			hwValidation = false;
-			return false;
+			// V3
+			if (barcodeHwVersion.toInt() == 3)
+			{
+				Serial.println("HW validation: Passed");
+				hwValidation = true;
+			}
+			else
+			{
+				Serial.println("HW validation: Failed");
+				hwValidation = false;
+			}
 		}
 		else if (hardwareParameterTable.isEepromPresent && !hardwareParameterTable.isSi7013Present)
 		{
-			String barcodeHwVersion = barcode.hwVersion;
-			barcodeHwVersion.remove(barcodeHwVersion.indexOf(EmotiBitVariants::HARDWARE_VERSION_PREFIX), 1);
 			if (barcodeHwVersion.toInt() >= 4)
 			{
 				Serial.println("HW validation: Passed");
@@ -309,52 +324,56 @@ bool EmotiBitVersionController::validateBarcodeInfo(TwoWire &emotibit_i2c, Barco
 				Serial.println("HW validation: Failed");
 				hwValidation = false;
 			}
-			if (hardwareParameterTable.isThermopilePresent)
-			{
-				if (barcode.sku.equals(EmotiBitVariants::EMOTIBIT_SKU_MD))
-				{
-					Serial.println("SKU validation: Passed");
-					skuValidation = true;
-					return true;
-				}
-				else
-				{
-					skuValidation = false;
-					Serial.println("SKU validation Failed. Hardware SKU detected: MD");
-					return false;
-				}
-			}
-			else
-			{
-				if (barcode.sku.equals(EmotiBitVariants::EMOTIBIT_SKU_EM))
-				{
-					Serial.println("SKU validation: Passed");
-					skuValidation = true;
-					return true;
-				}
-				else
-				{
-					skuValidation = false;
-					Serial.println("SKU validation Failed. Hardware SKU detected: EM");
-					return false;
-				}
-			}
 		}
+	}
+	if (hardwareParameterTable.isThermopilePresent)
+	{
+		if (barcode.sku.equals(EmotiBitVariants::EMOTIBIT_SKU_MD))
+		{
+			Serial.println("SKU validation: Passed");
+			skuValidation = true;
+		}
+		else
+		{
+			skuValidation = false;
+			Serial.println("SKU validation Failed. Hardware SKU detected: MD");
+		}
+	}
+	else
+	{
+		if (barcode.sku.equals(EmotiBitVariants::EMOTIBIT_SKU_EM))
+		{
+			Serial.println("SKU validation: Passed");
+			skuValidation = true;
+		}
+		else
+		{
+			skuValidation = false;
+			Serial.println("SKU validation Failed. Hardware SKU detected: EM");
+		}
+	}
+	if (hwValidation && skuValidation)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
 
 bool EmotiBitVersionController::writeVariantInfoToNvm(EmotiBitNvmController &emotiBitNvmController, Barcode barcode)
 {
-	EmotiBitVariantInfo emotiBitVariantInfo;
+	EmotiBitVariantInfo_V1 emotiBitVariantInfo;
 	EmotiBitFactoryTest::convertBarcodeToVariantInfo(barcode, emotiBitVariantInfo);
 	Serial.println("Data being written to NVM");
 	printEmotiBitVariantInfo(emotiBitVariantInfo);
 
 	uint8_t* data;
-	EmotiBitVariantInfo* variantInfo = &emotiBitVariantInfo;
+	EmotiBitVariantInfo_V1* variantInfo = &emotiBitVariantInfo;
 	data = (uint8_t*)variantInfo;
 	uint8_t status;
-	status = emotiBitNvmController.stageToWrite(EmotiBitNvmController::DataType::VARIANT_INFO, (uint8_t)EmotiBitVariantDataFormat::V1, sizeof(EmotiBitVariantInfo), data, true);
+	status = emotiBitNvmController.stageToWrite(EmotiBitNvmController::DataType::VARIANT_INFO, (uint8_t)EmotiBitVariantDataFormat::V1, sizeof(EmotiBitVariantInfo_V1), data, true);
 	if (status == 0)
 	{
 		Serial.println("Variant Information written into the NVM.");
@@ -379,17 +398,19 @@ bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitNvmController &em
 		Serial.println("Successfully read variant info from NVM");
 		if (datatypeVersion == (uint8_t)EmotiBitVariantDataFormat::V0 && dataSize == 1)
 		{
-			hwVersion = (EmotiBitVersion)(*nvmData);
+			EmotiBitVariantInfo_V0* variantInfo;
+			variantInfo = (EmotiBitVariantInfo_V0*)nvmData;
+			hwVersion = (EmotiBitVersion)(variantInfo->hwVersion);
 			Serial.print("[NVM VARIANT INFO] HW version: "); Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersion)hwVersion));
-			sku = EmotiBitVariants::EMOTIBIT_SKU_MD;
+			sku = EmotiBitVariants::EMOTIBIT_SKU_MD;  // EmotiBit V2 and V3 were only manufactured with the MD SKU
 			Serial.print("[NVM VARIANT INFO] SKU: "); Serial.println(sku);
 			emotibitSerialNumber = UINT32_MAX;
 			Serial.println("No emotibitSerialNumber recorded for this HW version");
 		}
 		else if (datatypeVersion == (uint8_t)EmotiBitVariantDataFormat::V1)
 		{
-			EmotiBitVariantInfo* variantInfo;
-			variantInfo = (EmotiBitVariantInfo*)nvmData;
+			EmotiBitVariantInfo_V1* variantInfo;
+			variantInfo = (EmotiBitVariantInfo_V1*)nvmData;
 			hwVersion = (EmotiBitVersion)variantInfo->hwVersion;
 			Serial.print("[NVM VARIANT INFO] HW version: "); Serial.println(EmotiBitVersionController::getHardwareVersion((EmotiBitVersion)hwVersion));
 			sku = String(variantInfo->sku);
@@ -458,12 +479,12 @@ void EmotiBitVersionController::updateVersionParameterTable(TwoWire &emotibit_i2
 bool EmotiBitVersionController::detectVariantFromHardware(TwoWire &emotibit_i2c, EmotiBitVersion &hwVersion, String &sku)
 {
 	Serial.println("Detecting version from HW");
-	EmotiBitHardwareParameterTable hardwareParametertable;
-	updateVersionParameterTable(emotibit_i2c, hardwareParametertable);
+	EmotiBitHardwareParameterTable hardwareParameterTable;
+	updateVersionParameterTable(emotibit_i2c, hardwareParameterTable);
 
 	if (vregEnablePinLogic == VregEnablePinLogic::ACTIVE_LOW)
 	{
-		if (hardwareParametertable.isSi7013Present && hardwareParametertable.isThermopilePresent)
+		if (hardwareParameterTable.isSi7013Present && hardwareParameterTable.isThermopilePresent)
 		{
 			Serial.println("HW Version Detected: V2");
 			hwVersion = EmotiBitVersion::V02H;
@@ -478,18 +499,18 @@ bool EmotiBitVersionController::detectVariantFromHardware(TwoWire &emotibit_i2c,
 	}
 	else
 	{
-		if (hardwareParametertable.isSi7013Present && !hardwareParametertable.isEepromPresent)
+		if (hardwareParameterTable.isSi7013Present && !hardwareParameterTable.isEepromPresent)
 		{
 			Serial.println("HW Version Detected: V3");
 			hwVersion = EmotiBitVersion::V03B;
 			sku = EmotiBitVariants::EMOTIBIT_SKU_MD;
 			return true;
 		}
-		else if (hardwareParametertable.isEepromPresent && !hardwareParametertable.isSi7013Present)
+		else if (hardwareParameterTable.isEepromPresent && !hardwareParameterTable.isSi7013Present)
 		{
 			Serial.println("HW Version Detected: V4");
 			hwVersion = EmotiBitVersion::V04A;
-			if (hardwareParametertable.isThermopilePresent)
+			if (hardwareParameterTable.isThermopilePresent)
 			{
 				Serial.println("SKU Version Detected: MD");
 				sku = EmotiBitVariants::EMOTIBIT_SKU_MD;

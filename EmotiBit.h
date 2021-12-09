@@ -46,7 +46,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.2.88";
+	String firmware_version = "1.3.0";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
@@ -348,7 +348,6 @@ public:
 	volatile bool _sdWrite;
 	PowerMode _powerMode;
 	bool _sendTestData = false;
-	float _adcIsrOffsetCorr = 0;
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 
