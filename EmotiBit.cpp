@@ -125,10 +125,19 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			{
 				char input;
 				input = Serial.read();
-				if (input == '*')
+				if (input == EmotiBitFactoryTest::MSG_START_CHAR)
 				{
-					barcode.rawCode = Serial.readStringUntil('*');
-					barcodeReceived = true;
+					String msg = Serial.readStringUntil(EmotiBitFactoryTest::MSG_TERM_CHAR);
+					String msgTypeTag = msg.substring(0, 2);
+					if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::EMOTIBIT_BARCODE))
+					{
+						EmotiBitPacket::getPacketElement(msg, barcode.rawCode, 3);
+						barcodeReceived = true;
+					}
+					else
+					{
+						Serial.println("Barcode not received in the correct packet format.");
+					}
 				}
 				if (millis() - waitStarForBarcode > 3000)
 					break;
