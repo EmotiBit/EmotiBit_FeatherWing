@@ -2972,7 +2972,18 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	pinMode(EmotiBitVersionController::HIBERNATE_PIN, OUTPUT);
 	digitalWrite(EmotiBitVersionController::HIBERNATE_PIN, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL]);
 	delay(100);
-	pinMode(EmotiBitVersionController::HIBERNATE_PIN, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE]);	//deepSleep();
+	if (_hwVersion == EmotiBitVersionController::EmotiBitVersion::V04A)
+	{
+		pinMode(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, OUTPUT);
+		digitalWrite(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, LOW);
+		pinMode(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, OUTPUT);
+		digitalWrite(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, LOW);
+		//pinMode(EmotiBitVersionController::HIBERNATE_PIN, INPUT_PULLUP);
+	}
+	else
+	{
+		pinMode(EmotiBitVersionController::HIBERNATE_PIN, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE]);	//deepSleep();
+	}
 	Serial.println("Entering deep sleep...");
 	LowPower.deepSleep();
 }
