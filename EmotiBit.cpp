@@ -467,9 +467,18 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		{
 			led.setCurrent(_emotiBitSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT]);
 		}
-		led.setLEDpwm((uint8_t)Led::RED, 8);
-		led.setLEDpwm((uint8_t)Led::BLUE, 8);
-		led.setLEDpwm((uint8_t)Led::YELLOW, 8);
+		if (testingMode == TestingMode::FACTORY_TEST)
+		{
+			led.setLEDpwm((uint8_t)Led::RED, 31);
+			led.setLEDpwm((uint8_t)Led::BLUE, 31);
+			led.setLEDpwm((uint8_t)Led::YELLOW, 31);
+		}
+		else
+		{
+			led.setLEDpwm((uint8_t)Led::RED, 8);
+			led.setLEDpwm((uint8_t)Led::BLUE, 8);
+			led.setLEDpwm((uint8_t)Led::YELLOW, 8);
+		}
 		led.setLED(uint8_t(EmotiBit::Led::RED), false);
 		led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 		led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
