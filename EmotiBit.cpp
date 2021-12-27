@@ -165,7 +165,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			Serial.println(factoryTestSerialOutput);
 		}
-		hibernate(false);
+		sleep(false);
 	}
 	bool status = true;
 	if (_EmotiBit_i2c != nullptr)
@@ -201,7 +201,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			Serial.println(factoryTestSerialOutput);
 		}
-		hibernate(false);
+		sleep(false);
 	}
 	if (testingMode == TestingMode::FACTORY_TEST && barcode.rawCode != "")
 	{
@@ -215,7 +215,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SKU_VALIDATION, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 			if (!emotiBitVersionController.writeVariantInfoToNvm(_emotibitNvmController, barcode))
 			{
-				hibernate(false);
+				sleep(false);
 			}
 		}
 		else
@@ -238,7 +238,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			}
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			Serial.println(factoryTestSerialOutput);
-			hibernate(false);
+			sleep(false);
 		}
 	}
 
@@ -246,7 +246,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		if (!emotiBitVersionController.detectVariantFromHardware(*(_EmotiBit_i2c), _hwVersion, emotiBitSku))
 		{
-			hibernate(false);
+			sleep(false);
 		}
 	}
 	
@@ -292,7 +292,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		Serial.println("Constant Mapping Failed. Stopping execution");
 		emotiBitVersionController.initConstantMapping(EmotiBitVersionController::EmotiBitVersion::V03B);// Assume the version is V03B to set Hibernate level as Required
-		hibernate(false);// hiberante with setup incomplete
+		sleep(false);
 	}
 
 #ifdef DEBUG
@@ -334,7 +334,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (!_outDataPackets.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
 		Serial.println("Failed to reserve memory for output");
 		while (true) {
-			hibernate(false);// hiberante with setup incomplete
+			sleep(false);// hiberante with setup incomplete
 		}
 	}
 	now = millis();
@@ -488,7 +488,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::LED_CONTROLLER, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			Serial.println(factoryTestSerialOutput);
-			hibernate(false);
+			sleep(false);
 		}
 	}
 	
@@ -511,7 +511,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::PPG_SENSOR, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			Serial.println(factoryTestSerialOutput);
-			hibernate(false);
+			sleep(false);
 		}
 	}
 	ppgSensor.wakeUp();
@@ -654,7 +654,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ACCEL_GYRO, EmotiBitFactoryTest::TypeTag::TEST_FAIL);		
 			Serial.println(factoryTestSerialOutput);
 		}
-		hibernate(false);
+		sleep(false);
 	}
 	if ((int)_hwVersion == (int)EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
@@ -713,7 +713,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::TEMP_SENSOR, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 				Serial.println(factoryTestSerialOutput);
 			}
-			hibernate(false);
+			sleep(false);
 		}
 		Serial.println(" ... Completed");
 	}
@@ -755,7 +755,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			}
 			Serial.println("Failed");
-			hibernate(false);
+			sleep(false);
 		}
 	}
 
@@ -837,7 +837,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SD_CARD, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 		Serial.println(factoryTestSerialOutput);
-		hibernate(true);
+		sleep(true);
 	}
 	//WiFi Setup;
 	Serial.print("\nSetting up WiFi\n");
@@ -1038,7 +1038,7 @@ bool EmotiBit::setupSdCard()
 		// don't do anything more:
 		// ToDo: Handle case where we still want to send network data
 		//while (true) {
-		//	hibernate();
+		//	sleep();
 		return false;
 	}
 	Serial.println("card initialized.");
@@ -1054,7 +1054,7 @@ bool EmotiBit::setupSdCard()
 		Serial.println("Create a file 'config.txt' with the following JSON:");
 		Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
 		while (true) {
-			hibernate();
+			sleep();
 		}
 	}
 
@@ -1495,7 +1495,7 @@ uint8_t EmotiBit::update()
 
 	// Hibernate after writing data
 	if (getPowerMode() == PowerMode::HIBERNATE) {
-		Serial.println("Hibernate");
+		Serial.println("sleep");
 
 		// Clear the remaining data buffer
 		if (getPowerMode() == PowerMode::NORMAL_POWER)
@@ -1505,7 +1505,7 @@ uint8_t EmotiBit::update()
 		writeSdCardMessage(_outDataPackets);
 		_outDataPackets = "";
 
-		hibernate();
+		sleep();
 	}
 }
 
@@ -2920,8 +2920,8 @@ int EmotiBit::freeMemory() {
 
 
 // NEW Hibernate
-void EmotiBit::hibernate(bool i2cSetupComplete) {
-	Serial.println("hibernate()");
+void EmotiBit::sleep(bool i2cSetupComplete) {
+	Serial.println("sleep()");
 	Serial.println("Stopping timer...");
 	stopTimer();
 	// Delay to ensure the timer has finished
@@ -2972,7 +2972,14 @@ void EmotiBit::hibernate(bool i2cSetupComplete) {
 	pinMode(EmotiBitVersionController::HIBERNATE_PIN, OUTPUT);
 	digitalWrite(EmotiBitVersionController::HIBERNATE_PIN, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_LEVEL]);
 	delay(100);
-	pinMode(EmotiBitVersionController::HIBERNATE_PIN, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE]);	//deepSleep();
+	pinMode(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, OUTPUT);
+	digitalWrite(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, LOW);
+	pinMode(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, OUTPUT);
+	digitalWrite(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, LOW);
+	Serial.println("DRVSTR HIGH");
+	PORT->Group[PORTA].PINCFG[17].bit.DRVSTR = 1; // SCL
+	PORT->Group[PORTA].PINCFG[16].bit.DRVSTR = 1; // SDA
+	pinMode(EmotiBitVersionController::HIBERNATE_PIN, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE]);
 	Serial.println("Entering deep sleep...");
 	LowPower.deepSleep();
 }
@@ -3622,7 +3629,7 @@ void EmotiBit::processFactoryTestMessages()
 		}
 		else if (msgTypeTag.equals(EmotiBitPacket::TypeTag::MODE_HIBERNATE))
 		{
-			hibernate();
+			sleep();
 		}
 		else if (msgTypeTag.equals(EmotiBitPacket::TypeTag::SERIAL_DATA_ON))
 		{
