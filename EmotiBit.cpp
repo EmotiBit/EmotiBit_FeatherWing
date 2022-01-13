@@ -525,6 +525,10 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		ppgSettings.pulseWidth,
 		ppgSettings.adcRange
 	);
+	if ((int)_hwVersion > (int)EmotiBitVersionController::EmotiBitVersion::V03B)
+	{
+		ppgSensor.enableDIETEMPRDY(); //Enable the temp ready interrupt. This is required.
+	}
 	ppgSensor.check();
 	chipBegun.MAX30101 = true;
 	if (testingMode == TestingMode::FACTORY_TEST)
@@ -1586,7 +1590,15 @@ int8_t EmotiBit::updateTempHumidityData() {
 	_EmotiBit_i2c->setClock(i2cClkMain);
 	return status;
 }
-
+int8_t EmotiBit::updatePpgTempData()
+{
+	uint8_t status = 0;
+	float temperature;
+	if (ppgSensor.readTemperatureAsync(temperature))
+	{
+		status = status | pushData(EmotiBit::DataType::TEMPERATURE_0, temperature);
+	}
+}
 
 int8_t EmotiBit::updateThermopileData() {
 #ifdef DEBUG_THERM_UPDATE
@@ -2677,20 +2689,35 @@ void EmotiBit::readSensors()
 		}
 
 		// Temperature / Humidity Sensor
-		if (chipBegun.SI7013 && acquireData.tempHumidity) {
-			static uint16_t temperatureCounter = timerLoopOffset.tempHumidity;
-			if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
-				// Note: Temperature/humidity and the thermistor are alternately sampled 
-				// on every other call of updateTempHumidityData()
-				// I.e. you must call updateTempHumidityData() 2x with a sufficient measurement 
-				// delay between calls to sample both temperature/humidity and the thermistor
-				int8_t tempStatus = updateTempHumidityData();
-				//if (dataStatus.tempHumidity == 0) {
-				//	dataStatus.tempHumidity = tempStatus;
-				//}
-				temperatureCounter = 0;
+		if ((int)_hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
+		{
+			if (chipBegun.SI7013 && acquireData.tempHumidity) {
+				static uint16_t temperatureCounter = timerLoopOffset.tempHumidity;
+				if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
+					// Note: Temperature/humidity and the thermistor are alternately sampled 
+					// on every other call of updateTempHumidityData()
+					// I.e. you must call updateTempHumidityData() 2x with a sufficient measurement 
+					// delay between calls to sample both temperature/humidity and the thermistor
+					int8_t tempStatus = updateTempHumidityData();
+					//if (dataStatus.tempHumidity == 0) {
+					//	dataStatus.tempHumidity = tempStatus;
+					//}
+					temperatureCounter = 0;
+				}
+				temperatureCounter++;
 			}
-			temperatureCounter++;
+		}
+		else
+		{
+			if (chipBegun.MAX30101 && acquireData.ppg)
+			{
+				static uint16_t temperatureCounter = timerLoopOffset.tempHumidity;
+				if (temperatureCounter == THERMOPILE_SAMPLING_DIV) {
+					int8_t tempStatus = updatePpgTempData();
+					temperatureCounter = 0;
+				}
+				temperatureCounter++;
+			}
 		}
 
 		// Thermopile

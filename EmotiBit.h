@@ -43,7 +43,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.6";
+	String firmware_version = "1.3.6-ppgTemp";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
@@ -436,6 +436,7 @@ public:
   int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
 	int8_t updatePPGData();                /**< Read any available PPG data from the sensor FIFO into the inputBuffers */
 	int8_t updateTempHumidityData();       /**< Read any available temperature and humidity data into the inputBuffers */
+	int8_t updatePpgTempData();			/**< Read any available temp data from PPG into buffer*/
 	int8_t updateThermopileData();         /**< Read Thermopile data into the buffers*/
 	int8_t updateBatteryVoltageData();     /**< Take battery voltage reading and put into the inputBuffer */
 	int8_t updateBatteryPercentData();     /**< Take battery percent reading and put into the inputBuffer */
