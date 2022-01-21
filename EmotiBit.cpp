@@ -1601,8 +1601,10 @@ int8_t EmotiBit::updatePpgTempData()
 {
 	uint8_t status = 0;
 	float temperature;
+	static DigitalFilter filterTemp1(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.temperature_1, 1);
 	if (ppgSensor.readTemperatureAsync(temperature))
 	{
+		temperature = filterTemp1.filter(temperature);
 		status = status | pushData(EmotiBit::DataType::TEMPERATURE_1, temperature);
 	}
 }
