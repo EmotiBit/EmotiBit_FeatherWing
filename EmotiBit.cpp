@@ -400,6 +400,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::PPG_RED] = &ppgRed;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::PPG_GREEN] = &ppgGreen;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = &temp0;
+	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::TEMPERATURE_1] = &temp1;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE] = &therm0;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = &humidity0;
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = &accelX;
@@ -438,6 +439,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	samplingRates.eda = BASE_SAMPLING_FREQ / EDA_SAMPLING_DIV;
 	samplingRates.humidity = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
 	samplingRates.temperature = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
+	samplingRates.temperature_1 = (float)BASE_SAMPLING_FREQ / (float)TEMPERATURE_1_SAMPLING_DIV;
 	samplingRates.thermopile = (float)BASE_SAMPLING_FREQ / (float)THERMOPILE_SAMPLING_DIV;
 	setSamplingRates(samplingRates);
 	// ToDo: make target down-sampled rates more transparent
@@ -445,6 +447,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	samplesAveraged.eda = samplingRates.eda / 15;
 	samplesAveraged.humidity = (float)samplingRates.humidity / 7.5f;
 	samplesAveraged.temperature = (float)samplingRates.temperature / 7.5f;
+	samplesAveraged.temperature_1 = 1;
 	if (thermopileMode == MODE_CONTINUOUS)
 	{
 		samplesAveraged.thermopile = 1;
@@ -869,6 +872,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	typeTags[(uint8_t)EmotiBit::DataType::PPG_RED] = EmotiBitPacket::TypeTag::PPG_RED;
 	typeTags[(uint8_t)EmotiBit::DataType::PPG_GREEN] = EmotiBitPacket::TypeTag::PPG_GREEN;
 	typeTags[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = EmotiBitPacket::TypeTag::TEMPERATURE_0;
+	typeTags[(uint8_t)EmotiBit::DataType::TEMPERATURE_1] = EmotiBitPacket::TypeTag::TEMPERATURE_1;
 	typeTags[(uint8_t)EmotiBit::DataType::THERMOPILE] = EmotiBitPacket::TypeTag::THERMOPILE;
 	typeTags[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = EmotiBitPacket::TypeTag::HUMIDITY_0;
 	typeTags[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = EmotiBitPacket::TypeTag::ACCELEROMETER_X;
@@ -893,6 +897,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_printLen[(uint8_t)EmotiBit::DataType::PPG_RED] = 0;
 	_printLen[(uint8_t)EmotiBit::DataType::PPG_GREEN] = 0;
 	_printLen[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = 3;
+	_printLen[(uint8_t)EmotiBit::DataType::TEMPERATURE_1] = 3;
 	_printLen[(uint8_t)EmotiBit::DataType::THERMOPILE] = 3;
 	_printLen[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = 3;
 	_printLen[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = 3;
@@ -915,6 +920,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_sendData[(uint8_t)EmotiBit::DataType::PPG_RED] = true;
 	_sendData[(uint8_t)EmotiBit::DataType::PPG_GREEN] = true;
 	_sendData[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = true;
+	_sendData[(uint8_t)EmotiBit::DataType::TEMPERATURE_1] = true;
 	_sendData[(uint8_t)EmotiBit::DataType::THERMOPILE] = true;
 	_sendData[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = true;
 	_sendData[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = true;
@@ -945,6 +951,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::PPG_RED] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::PPG_GREEN] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::TEMPERATURE_0] = false;
+	_newDataAvailable[(uint8_t)EmotiBit::DataType::TEMPERATURE_1] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::THERMOPILE] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::HUMIDITY_0] = false;
 	_newDataAvailable[(uint8_t)EmotiBit::DataType::ACCELEROMETER_X] = false;
@@ -1596,7 +1603,7 @@ int8_t EmotiBit::updatePpgTempData()
 	float temperature;
 	if (ppgSensor.readTemperatureAsync(temperature))
 	{
-		status = status | pushData(EmotiBit::DataType::TEMPERATURE_0, temperature);
+		status = status | pushData(EmotiBit::DataType::TEMPERATURE_1, temperature);
 	}
 }
 
@@ -2403,43 +2410,85 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
+	if ((int)_hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
-		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
-		//JsonArray& root = jsonBuffer.createArray();
-		const uint8_t nInfo = 1;
-		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
-		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
-		// Humidity0
-		//i++;
-		//indices[i] = &(root.createNestedObject());
-		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Humidity0");
-		infos[i]->set("type", "Humidity");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("H0");
-		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", _samplingRates.humidity / _samplesAveraged.humidity);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "Percent");
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("resolution", "RESOLUTION_H11_T11");
-		setups[i]->set("samples_averaged", _samplesAveraged.humidity);
-		setups[i]->set("oversampling_rate", _samplingRates.humidity);
-		if (root.printTo(file) == 0) {
+		{
+			// Parse the root object
+			StaticJsonBuffer<bufferSize> jsonBuffer;
+			JsonObject &root = jsonBuffer.createObject();
+			//JsonArray& root = jsonBuffer.createArray();
+			const uint8_t nInfo = 1;
+			//JsonObject* indices[nInfo];
+			JsonObject* infos[nInfo];
+			JsonArray* typeTags[nInfo];
+			JsonObject* setups[nInfo];
+			uint8_t i = 0;
+			infos[i] = &(root.createNestedObject("info"));
+			// Humidity0
+			//i++;
+			//indices[i] = &(root.createNestedObject());
+			//infos[i] = &(indices[i]->createNestedObject("info"));
+			infos[i]->set("name", "Humidity0");
+			infos[i]->set("type", "Humidity");
+			typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
+			typeTags[i]->add("H0");
+			infos[i]->set("channel_count", 1);
+			infos[i]->set("nominal_srate", _samplingRates.humidity / _samplesAveraged.humidity);
+			infos[i]->set("channel_format", "float");
+			infos[i]->set("units", "Percent");
+			setups[i] = &(infos[i]->createNestedObject("setup"));
+			setups[i]->set("resolution", "RESOLUTION_H11_T11");
+			setups[i]->set("samples_averaged", _samplesAveraged.humidity);
+			setups[i]->set("oversampling_rate", _samplingRates.humidity);
+			if (root.printTo(file) == 0) {
 #ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
+				Serial.println(F("Failed to write to file"));
 #endif
+			}
 		}
+
+		file.print(","); // Doing some manual printing to chunk JSON and save RAM
+
+		{
+			// Parse the root object
+			StaticJsonBuffer<bufferSize> jsonBuffer;
+			JsonObject &root = jsonBuffer.createObject();
+			//JsonArray& root = jsonBuffer.createArray();
+			const uint8_t nInfo = 1;
+			//JsonObject* indices[nInfo];
+			JsonObject* infos[nInfo];
+			JsonArray* typeTags[nInfo];
+			JsonObject* setups[nInfo];
+			uint8_t i = 0;
+			infos[i] = &(root.createNestedObject("info"));
+			// Temperature0
+			//i++;
+			//indices[i] = &(root.createNestedObject());
+			//infos[i] = &(indices[i]->createNestedObject("info"));
+			infos[i]->set("name", "Temperature0");
+			infos[i]->set("type", "Temperature");
+			typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
+			typeTags[i]->add("T0");
+			infos[i]->set("channel_count", 1);
+			infos[i]->set("nominal_srate", _samplingRates.temperature / _samplesAveraged.temperature);
+			infos[i]->set("channel_format", "float");
+			infos[i]->set("units", "degrees celcius");
+			infos[i]->set("sensor_part_number", "Si7013");
+			infos[i]->set("sensor_serial_number_a", tempHumiditySensor.sernum_a);
+			infos[i]->set("sensor_serial_number_b", tempHumiditySensor.sernum_b);
+			setups[i] = &(infos[i]->createNestedObject("setup"));
+			setups[i]->set("resolution", "RESOLUTION_H11_T11");
+			setups[i]->set("samples_averaged", _samplesAveraged.temperature);
+			setups[i]->set("oversampling_rate", _samplingRates.temperature);
+			if (root.printTo(file) == 0) {
+#ifdef DEBUG
+				Serial.println(F("Failed to write to file"));
+#endif
+			}
+		}
+		file.print(","); // Doing some manual printing to chunk JSON and save RAM
 	}
-
-	file.print(","); // Doing some manual printing to chunk JSON and save RAM
-
+	
 	{
 		// Parse the root object
 		StaticJsonBuffer<bufferSize> jsonBuffer;
@@ -2456,28 +2505,25 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Temperature0");
+		infos[i]->set("name", "Temperature EmotiBit Bottom");
 		infos[i]->set("type", "Temperature");
 		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("T0");
+		typeTags[i]->add("T1");
 		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", _samplingRates.temperature / _samplesAveraged.temperature);
+		infos[i]->set("nominal_srate", _samplingRates.temperature_1);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "degrees celcius");
-		infos[i]->set("sensor_part_number", "Si7013");
-		infos[i]->set("sensor_serial_number_a", tempHumiditySensor.sernum_a);
-		infos[i]->set("sensor_serial_number_b", tempHumiditySensor.sernum_b);
+		infos[i]->set("sensor_part_number", "MAX30101");
 		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("resolution", "RESOLUTION_H11_T11");
-		setups[i]->set("samples_averaged", _samplesAveraged.temperature);
-		setups[i]->set("oversampling_rate", _samplingRates.temperature);
+		setups[i]->set("samples_averaged", _samplesAveraged.temperature_1);
+		setups[i]->set("oversampling_rate", _samplingRates.temperature_1);
 		if (root.printTo(file) == 0) {
 #ifdef DEBUG
 			Serial.println(F("Failed to write to file"));
 #endif
 		}
 	}
-
+	
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
 	{
@@ -2707,18 +2753,19 @@ void EmotiBit::readSensors()
 				temperatureCounter++;
 			}
 		}
-		else
+
+		// EmotiBit bottom temp
+		if (chipBegun.MAX30101 && acquireData.emotibitBottomTemp)
 		{
-			if (chipBegun.MAX30101 && acquireData.ppg)
-			{
-				static uint16_t temperatureCounter = timerLoopOffset.tempHumidity;
-				if (temperatureCounter == THERMOPILE_SAMPLING_DIV) {
-					int8_t tempStatus = updatePpgTempData();
-					temperatureCounter = 0;
-				}
-				temperatureCounter++;
+			static uint16_t emotibitBotTemperatureCounter = timerLoopOffset.emotibitBotTemp;
+			if (emotibitBotTemperatureCounter == TEMPERATURE_1_SAMPLING_DIV) {
+				// we can add a comditional someday, when we have more than one sensor providing bottom temp
+				int8_t tempStatus = updatePpgTempData();
+				emotibitBotTemperatureCounter = 0;
 			}
+			emotibitBotTemperatureCounter++;
 		}
+
 
 		// Thermopile
 		if (chipBegun.MLX90632 && acquireData.thermopile) {
