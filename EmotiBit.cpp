@@ -2507,7 +2507,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Temperature EmotiBit Bottom");
+		infos[i]->set("name", "Temperature1");
 		infos[i]->set("type", "Temperature");
 		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
 		typeTags[i]->add("T1");
