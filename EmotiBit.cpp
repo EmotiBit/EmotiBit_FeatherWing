@@ -1601,11 +1601,24 @@ int8_t EmotiBit::updatePpgTempData()
 {
 	uint8_t status = 0;
 	float temperature;
+	static bool firstTime = true;
 	static DigitalFilter filterTemp1(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.temperature_1, 1);
-	if (ppgSensor.readTemperatureAsync(temperature))
+	if (firstTime)
+	{
+		ppgSensor.startTempMeasurement();
+		firstTime = false;
+	}
+	
+	if (ppgSensor.getTemperature(temperature))
 	{
 		temperature = filterTemp1.filter(temperature);
 		status = status | pushData(EmotiBit::DataType::TEMPERATURE_1, temperature);
+		ppgSensor.startTempMeasurement();
+	}
+	else
+	{
+		// pinged sensor too early.
+		status = status | (int8_t)EmotiBit::Error::SENSOR_NOT_READY;
 	}
 }
 
