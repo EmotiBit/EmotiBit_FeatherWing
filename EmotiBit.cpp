@@ -528,10 +528,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		ppgSettings.pulseWidth,
 		ppgSettings.adcRange
 	);
-	if ((int)_hwVersion > (int)EmotiBitVersionController::EmotiBitVersion::V03B)
-	{
-		ppgSensor.enableDIETEMPRDY(); //Enable the temp ready interrupt. This is required.
-	}
+	ppgSensor.enableDIETEMPRDY(); //Enable the temp ready interrupt. This is required to read die temperatures. Refer datasheet.
 	ppgSensor.check();
 	chipBegun.MAX30101 = true;
 	if (testingMode == TestingMode::FACTORY_TEST)
@@ -2749,28 +2746,25 @@ void EmotiBit::readSensors()
 			edaCounter++;
 		}
 
-		// Temperature / Humidity Sensor
-		if ((int)_hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
-		{
-			if (chipBegun.SI7013 && acquireData.tempHumidity) {
-				static uint16_t temperatureCounter = timerLoopOffset.tempHumidity;
-				if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
-					// Note: Temperature/humidity and the thermistor are alternately sampled 
-					// on every other call of updateTempHumidityData()
-					// I.e. you must call updateTempHumidityData() 2x with a sufficient measurement 
-					// delay between calls to sample both temperature/humidity and the thermistor
-					int8_t tempStatus = updateTempHumidityData();
-					//if (dataStatus.tempHumidity == 0) {
-					//	dataStatus.tempHumidity = tempStatus;
-					//}
-					temperatureCounter = 0;
-				}
-				temperatureCounter++;
+
+		if (chipBegun.SI7013 && acquireData.tempHumidity) {
+			static uint16_t temperatureCounter = timerLoopOffset.tempHumidity;
+			if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
+				// Note: Temperature/humidity and the thermistor are alternately sampled 
+				// on every other call of updateTempHumidityData()
+				// I.e. you must call updateTempHumidityData() 2x with a sufficient measurement 
+				// delay between calls to sample both temperature/humidity and the thermistor
+				int8_t tempStatus = updateTempHumidityData();
+				//if (dataStatus.tempHumidity == 0) {
+				//	dataStatus.tempHumidity = tempStatus;
+				//}
+				temperatureCounter = 0;
 			}
+			temperatureCounter++;
 		}
 
 		// EmotiBit bottom temp
-		if (chipBegun.MAX30101 && acquireData.emotibitBottomTemp)
+		if (chipBegun.MAX30101 && acquireData.tempPpg)
 		{
 			static uint16_t emotibitBotTemperatureCounter = timerLoopOffset.emotibitBotTemp;
 			if (emotibitBotTemperatureCounter == TEMPERATURE_1_SAMPLING_DIV) {

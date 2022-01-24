@@ -43,7 +43,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.10";
+	String firmware_version = "1.3.11";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
@@ -309,10 +309,10 @@ public:
 	struct AcquireData {
 		bool eda = true;
 		bool tempHumidity = true;
-		bool emotibitBottomTemp = true;
 		bool thermopile = true;
 		bool imu = true;
 		bool ppg = true;
+		bool tempPpg = true;
 		bool debug = false;
 		bool battery = true;
 	} acquireData;
