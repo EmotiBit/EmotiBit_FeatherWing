@@ -43,7 +43,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.6";
+	String firmware_version = "1.3.12";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
@@ -131,6 +131,7 @@ public:
 		float magnetometer = 0.f;
 		float humidity = 0.f;
 		float temperature = 0.f;
+		float temperature_1 = 0.f;
 		float thermopile = 0.f;
 		float ppg = 0.f;
 	};
@@ -139,6 +140,7 @@ public:
 		uint8_t eda = 1;
 		uint8_t humidity = 1;
 		uint8_t temperature = 1;
+		uint8_t temperature_1 = 1;
 		uint8_t thermopile = 1;
 		uint8_t battery = 1;
 	};
@@ -161,6 +163,7 @@ public:
 		EDL,
 		EDR,
 		TEMPERATURE_0,
+		TEMPERATURE_1,
 		THERMOPILE,
 		HUMIDITY_0,
 		ACCELEROMETER_X,
@@ -264,6 +267,7 @@ public:
 #define PPG_SAMPLING_DIV 5
 #define LED_REFRESH_DIV 20
 #define THERMOPILE_SAMPLING_DIV 40 	// TODO: This should change according to the rate set on the thermopile begin function 
+#define TEMPERATURE_1_SAMPLING_DIV 40
 #define TEMPERATURE_SAMPLING_DIV 10
 #define BATTERY_SAMPLING_DIV 50
 #define DUMMY_ISR_DIV 20
@@ -276,6 +280,7 @@ public:
 		uint8_t led = 4;
 		uint8_t thermopile = 3;
 		uint8_t tempHumidity = 2;
+		uint8_t bottomTemp = 2;
 		uint8_t battery = 0;
 	} timerLoopOffset;	// Sets initial value of sampling counters
 
@@ -307,6 +312,7 @@ public:
 		bool thermopile = true;
 		bool imu = true;
 		bool ppg = true;
+		bool tempPpg = true;
 		bool debug = false;
 		bool battery = true;
 	} acquireData;
@@ -436,6 +442,7 @@ public:
   int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
 	int8_t updatePPGData();                /**< Read any available PPG data from the sensor FIFO into the inputBuffers */
 	int8_t updateTempHumidityData();       /**< Read any available temperature and humidity data into the inputBuffers */
+	int8_t updatePpgTempData();			/**< Read any available temp data from PPG into buffer*/
 	int8_t updateThermopileData();         /**< Read Thermopile data into the buffers*/
 	int8_t updateBatteryVoltageData();     /**< Take battery voltage reading and put into the inputBuffer */
 	int8_t updateBatteryPercentData();     /**< Take battery percent reading and put into the inputBuffer */
@@ -492,6 +499,7 @@ private:
 	DoubleBufferFloat ppgGreen		 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE);
 	DoubleBufferFloat temp0			 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
 	// DoubleBufferFloat tempHP0 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4);
+	DoubleBufferFloat temp1		     = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4); // To store the thermistor Object Temp
 	DoubleBufferFloat therm0		 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4); // To store the thermistor Object Temp
 	DoubleBufferFloat therm0AMB		 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4); // To store the raw value AMB from the thermistor
 	DoubleBufferFloat therm0Sto		 = DoubleBufferFloat(MAX_DATA_BUFFER_SIZE / 4); // To store the raw Value Sto from the thermistor
