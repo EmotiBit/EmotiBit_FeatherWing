@@ -2522,7 +2522,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
 		typeTags[i]->add("T1");
 		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", _samplingRates.temperature_1);
+		infos[i]->set("nominal_srate", _samplingRates.temperature_1 / _samplesAveraged.temperature_1);
 		infos[i]->set("channel_format", "float");
 		infos[i]->set("units", "degrees celcius");
 		infos[i]->set("sensor_part_number", "MAX30101");
@@ -2766,13 +2766,13 @@ void EmotiBit::readSensors()
 		// EmotiBit bottom temp
 		if (chipBegun.MAX30101 && acquireData.tempPpg)
 		{
-			static uint16_t emotibitBotTemperatureCounter = timerLoopOffset.emotibitBotTemp;
-			if (emotibitBotTemperatureCounter == TEMPERATURE_1_SAMPLING_DIV) {
+			static uint16_t bottomTempCounter = timerLoopOffset.bottomTemp;
+			if (bottomTempCounter == TEMPERATURE_1_SAMPLING_DIV) {
 				// we can add a comditional someday, when we have more than one sensor providing bottom temp
 				int8_t tempStatus = updatePpgTempData();
-				emotibitBotTemperatureCounter = 0;
+				bottomTempCounter = 0;
 			}
-			emotibitBotTemperatureCounter++;
+			bottomTempCounter++;
 		}
 
 

@@ -43,7 +43,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.11";
+	String firmware_version = "1.3.12";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
@@ -280,7 +280,7 @@ public:
 		uint8_t led = 4;
 		uint8_t thermopile = 3;
 		uint8_t tempHumidity = 2;
-		uint8_t emotibitBotTemp = 2;
+		uint8_t bottomTemp = 2;
 		uint8_t battery = 0;
 	} timerLoopOffset;	// Sets initial value of sampling counters
 
