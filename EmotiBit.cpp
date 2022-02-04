@@ -1070,8 +1070,60 @@ bool EmotiBit::setupSdCard()
 
 }
 
-bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) {
+void EmotiBit::addPacketHeader(uint32_t timestamp, const String typeTag, uint16_t dataLen, uint8_t protocolVersion, bool printToSerial)
+{
 	static EmotiBitPacket::Header header;
+	header = EmotiBitPacket::createHeader(typeTag, timestamp, _outDataPacketCounter++, dataLen, protocolVersion);
+	String headerString = EmotiBitPacket::headerToString(header);
+	_outDataPackets += headerString;
+	if (printToSerial)
+	{
+		Serial.print(headerString);
+	}
+}
+
+void EmotiBit::addPacketData(float* data, uint16_t dataLen, uint8_t precision, bool printToSerial)
+{
+	for (uint16_t d = 0; d < dataLen; d++) {
+		String temp = EmotiBitPacket::PAYLOAD_DELIMITER + String(data[d], precision);
+		if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE - 1)
+		{
+			_outDataPackets += temp;
+			if (printToSerial)
+			{
+				Serial.print(temp);
+			}
+		}
+		else
+		{
+			_outDataPackets += EmotiBitPacket::PAYLOAD_TRUNCATED;
+			Serial.print("ERROR: _outDataPackets exceeded OUT_MESSAGE_RESERVE_SIZE ");
+			Serial.println("[" + String(_outDataPackets.length()) + "+" + String(temp.length()) + "/" + String(OUT_MESSAGE_RESERVE_SIZE + "]"));
+			break;
+		}
+	}
+	if (printToSerial)
+	{
+		Serial.print("\n");
+	}
+}
+ 
+
+// Function call for aperiodic signals
+bool EmotiBit::addPacket(uint32_t timestamp, const String typeTag, float * data, size_t dataLen, uint8_t precision)
+{
+	uint8_t protocolVersion = 1;
+	// toggle to True to serial print data to debug
+	bool printToSerial = false;
+	// Add packet header to _outDataPackets
+	addPacketHeader(timestamp, typeTag, dataLen, protocolVersion, printToSerial);
+	// Add packet data to _outDataPackets
+	addPacketData(data, dataLen, precision);
+	return true;
+}
+
+bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) {
+	
 	if (dataLen > 0) {
 		// ToDo: Consider faster ways to populate the _outDataPackets
 
@@ -1086,15 +1138,8 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 				protocolVersion = 2;
 			}
 		}
-
-
-		header = EmotiBitPacket::createHeader(typeTags[(uint8_t)t], timestamp, _outDataPacketCounter++, dataLen, protocolVersion);
-		String headerString = EmotiBitPacket::headerToString(header);
-		_outDataPackets += headerString;
-		if (_sendSerialData[(uint8_t) t])
-		{
-			Serial.print(headerString);
-		}
+		// Add packet header to _outDataPackets
+		addPacketHeader(timestamp, typeTags[(uint8_t)t], dataLen, protocolVersion, _sendSerialData[(uint8_t)t]);
 
 		if (t == EmotiBit::DataType::DATA_CLIPPING || t == EmotiBit::DataType::DATA_OVERFLOW) {
 			// Handle clippping and overflow as a special case
@@ -1150,30 +1195,10 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 			}
 		}
 		else {
-			for (uint16_t d = 0; d < dataLen; d++) {
-				String temp = EmotiBitPacket::PAYLOAD_DELIMITER + String(data[d], precision);
-				if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE - 1)
-				{
-					_outDataPackets += temp;
-					if (_sendSerialData[(uint8_t) t])
-					{
-						Serial.print(temp);
-					}
-				} 
-				else
-				{
-					_outDataPackets += EmotiBitPacket::PAYLOAD_TRUNCATED;
-					Serial.print("ERROR: _outDataPackets exceeded OUT_MESSAGE_RESERVE_SIZE ");
-					Serial.println("[" + String(_outDataPackets.length()) + "+" + String(temp.length()) + "/" + String(OUT_MESSAGE_RESERVE_SIZE + "]"));
-				}
-			}
+			// Add data to outDataPackets
+			addPacketData(data, dataLen, precision, _sendSerialData[(uint8_t)t]);
 		}
 		_outDataPackets += "\n";
-		if (_sendSerialData[(uint8_t) t])
-		{
-			Serial.print("\n");
-		}
-
 		return true;
 	}
 	return false;
