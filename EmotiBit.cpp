@@ -1070,7 +1070,7 @@ bool EmotiBit::setupSdCard()
 
 }
 
-void EmotiBit::addPacketHeader(uint32_t timestamp, const String typeTag, uint16_t dataLen, uint8_t protocolVersion, bool printToSerial)
+void EmotiBit::addPacketHeader(uint32_t timestamp, const String typeTag, size_t dataLen, uint8_t protocolVersion, bool printToSerial)
 {
 	static EmotiBitPacket::Header header;
 	header = EmotiBitPacket::createHeader(typeTag, timestamp, _outDataPacketCounter++, dataLen, protocolVersion);
@@ -1082,7 +1082,7 @@ void EmotiBit::addPacketHeader(uint32_t timestamp, const String typeTag, uint16_
 	}
 }
 
-void EmotiBit::addPacketData(float* data, uint16_t dataLen, uint8_t precision, bool printToSerial)
+void EmotiBit::addPacketData(float* data, size_t dataLen, uint8_t precision, bool printToSerial)
 {
 	for (uint16_t d = 0; d < dataLen; d++) {
 		String temp = EmotiBitPacket::PAYLOAD_DELIMITER + String(data[d], precision);
@@ -1114,11 +1114,11 @@ bool EmotiBit::addPacket(uint32_t timestamp, const String typeTag, float * data,
 {
 	uint8_t protocolVersion = 1;
 	// toggle to True to serial print data to debug
-	bool printToSerial = false;
+	bool printToSerial = true;
 	// Add packet header to _outDataPackets
 	addPacketHeader(timestamp, typeTag, dataLen, protocolVersion, printToSerial);
 	// Add packet data to _outDataPackets
-	addPacketData(data, dataLen, precision);
+	addPacketData(data, dataLen, precision, printToSerial);
 	return true;
 }
 
@@ -2898,6 +2898,49 @@ void EmotiBit::readSensors()
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
 }
 
+void EmotiBit::processHeartRate()
+{
+	static uint16_t interBeatSampleCount = 0;
+	static uint8_t basisSignal = (uint8_t)DataType::PPG_INFRARED;
+	static DigitalFilter heartRateFilter(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.ppg, 1);
+	const static size_t dataLen = 1;
+	const static uint8_t precision = 0;
+	const static float timePeriod = (1 / _samplingRates.ppg) * 1000; // in mS
+	float* bufferData;
+	uint16_t bufferSize;
+	uint32_t timestamp;
+	float interBeatInterval;
+	float heartRate;
+
+	bufferSize = dataDoubleBuffers[basisSignal]->getData(&bufferData, &timestamp, false);
+
+	if (bufferSize)
+	{
+		for (uint16_t i = 0; i < bufferSize; i++)
+		{
+			interBeatSampleCount++;
+			if (checkForBeat(bufferData[i]))
+			{
+				// beat detected
+				// calculate IBI
+				interBeatInterval = interBeatSampleCount * timePeriod; // in mS
+				// back calculate the time of beat occurance
+				//float timeAdjustment = (bufferSize - i - 1) * timePeriod; // in mS
+				//uint32_t beatTime = *timestamp - (uint32_t)timeAdjustment; // mS
+				addPacket(timestamp, EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL, &interBeatInterval, dataLen, precision);
+
+				// calculate heart rate
+				heartRate = (60 / interBeatInterval) * 1000; // beats per min
+				heartRate = heartRateFilter.filter(heartRate);
+				addPacket(timestamp, EmotiBitPacket::TypeTag::HEART_RATE, &heartRate, dataLen, precision);
+				
+				// reset interBeatCount
+				interBeatSampleCount = 0;
+			}
+		}
+	}
+}
+
 void EmotiBit::processData()
 {
 #ifdef DEBUG_FEAT_EDA_CTRL
@@ -2946,6 +2989,10 @@ void EmotiBit::processData()
 				dataDoubleBuffers[t]->swap();
 				//Serial.print(String(t) + ",");
 			}
+		}
+		if (acquireData.heartRate)
+		{
+			processHeartRate();
 		}
 	}
 }
