@@ -1119,6 +1119,7 @@ bool EmotiBit::addPacket(uint32_t timestamp, const String typeTag, float * data,
 	addPacketHeader(timestamp, typeTag, dataLen, protocolVersion, printToSerial);
 	// Add packet data to _outDataPackets
 	addPacketData(data, dataLen, precision, printToSerial);
+	_outDataPackets += "\n";
 	return true;
 }
 
