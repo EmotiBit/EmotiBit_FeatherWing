@@ -1,20 +1,20 @@
 eval $(ssh-agent -s)
 ssh-add ~/.ssh/id_rsa
 cd ../EmotiBit_FeatherWing
-git pull
+git checkout master
 cd ../EmotiBit_BMI160
-git pull
+git checkout master
 cd ../EmotiBit_MAX30101
-git pull
+git checkout master
 cd ../EmotiBit_MLX90632
-git pull
+git checkout master
 cd ../EmotiBit_NCP5623
-git pull
+git checkout master
 cd ../EmotiBit_SI7013
-git pull
+git checkout master
 cd ../EmotiBit_XPlat_Utils
-git pull
+git checkout master
 cd ../EmotiBit_External_EEPROM
-git pull
+git checkout master
 cd ../EmotiBit_ADS1X15
-git pull
+git checkout master
