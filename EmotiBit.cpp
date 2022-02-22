@@ -2903,7 +2903,8 @@ void EmotiBit::processHeartRate()
 {
 	static uint16_t interBeatSampleCount = 0;
 	static uint8_t basisSignal = (uint8_t)DataType::PPG_INFRARED;
-	static DigitalFilter heartRateFilter(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.ppg, 1);
+	static DigitalFilter heartRateFilter(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.ppg, 0.5);
+	static DigitalFilter ppgSensorHighpass(DigitalFilter::FilterType::IIR_HIGHPASS, _samplingRates.ppg, 1); // filter frequency selected to remove respiration artifact
 	const static size_t dataLen = 1;
 	const static uint8_t precision = 0;
 	const static float timePeriod = (1 / _samplingRates.ppg) * 1000; // in mS
@@ -2912,28 +2913,34 @@ void EmotiBit::processHeartRate()
 	uint32_t timestamp;
 	float interBeatInterval;
 	float heartRate;
-
+	static const int hrAlgoDcOffset = 100000; // randomly chosen to add offset to filtered ppgData
 	bufferSize = dataDoubleBuffers[basisSignal]->getData(&bufferData, &timestamp, false);
-
 	if (bufferSize)
 	{
 		for (uint16_t i = 0; i < bufferSize; i++)
 		{
+			float filteredPpg = ppgSensorHighpass.filter(bufferData[i]);
 			interBeatSampleCount++;
-			if (checkForBeat(bufferData[i]))
+			if (checkForBeat(filteredPpg + hrAlgoDcOffset))
 			{
 				// beat detected
 				// calculate IBI
 				interBeatInterval = interBeatSampleCount * timePeriod; // in mS
 				// back calculate the time of beat occurance
-				//float timeAdjustment = (bufferSize - i - 1) * timePeriod; // in mS
-				//uint32_t beatTime = *timestamp - (uint32_t)timeAdjustment; // mS
-				addPacket(timestamp, EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL, &interBeatInterval, dataLen, precision);
+				float timeAdjustment = (bufferSize - i - 1) * timePeriod; // in mS
+				uint32_t beatTime = timestamp - (uint32_t)timeAdjustment; // mS
+				// uncomment for debug help
+				//Serial.print("BufferSize: " + String(bufferSize) + " Beat location in buffer: " + String(i));
+				//Serial.print(" timeAdjustment(Samples): " + String(bufferSize - i - 1) + " timeAdjustment(mS): " + String(timeAdjustment) + "\n");
+				//Serial.println("timestamp(buffer): " + String(timestamp) + " beatTime(adjusted)" + String(beatTime));
 
 				// calculate heart rate
 				heartRate = (60 / interBeatInterval) * 1000; // beats per min
 				heartRate = heartRateFilter.filter(heartRate);
-				addPacket(timestamp, EmotiBitPacket::TypeTag::HEART_RATE, &heartRate, dataLen, precision);
+
+				// Add packets to output
+				addPacket(beatTime, EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL, &interBeatInterval, dataLen, precision);
+				addPacket(beatTime, EmotiBitPacket::TypeTag::HEART_RATE, &heartRate, dataLen, precision);
 				
 				// reset interBeatCount
 				interBeatSampleCount = 0;
