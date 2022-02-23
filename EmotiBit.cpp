@@ -1110,15 +1110,13 @@ void EmotiBit::addPacketData(float* data, size_t dataLen, uint8_t precision, boo
  
 
 // Function call for aperiodic signals
-bool EmotiBit::addPacket(uint32_t timestamp, const String typeTag, float * data, size_t dataLen, uint8_t precision)
+bool EmotiBit::addPacket(uint32_t timestamp, const String typeTag, float * data, size_t dataLen, uint8_t precision, bool printToSerial)
 {
 	uint8_t protocolVersion = 1;
-	// toggle to True to serial print data to debug
-	bool printToSerial = true;
 	// Add packet header to _outDataPackets
 	addPacketHeader(timestamp, typeTag, dataLen, protocolVersion, printToSerial);
 	// Add packet data to _outDataPackets
-	addPacketData(data, dataLen, precision);
+	addPacketData(data, dataLen, precision, printToSerial);
 	_outDataPackets += "\n";
 	return true;
 }

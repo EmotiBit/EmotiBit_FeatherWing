@@ -373,7 +373,7 @@ public:
 	bool loadConfigFile(const String &filename);
 	void addPacketData(float* data, size_t dataLen, uint8_t precision, bool printToSerial = false);
 	void addPacketHeader(uint32_t timestamp, const String typeTag, size_t dataLen, uint8_t protocolVersion, bool printToSerial = false);
-	bool addPacket(uint32_t timestamp, const String typeTag, float * data, size_t dataLen, uint8_t precision = 0);
+	bool addPacket(uint32_t timestamp, const String typeTag, float * data, size_t dataLen, uint8_t precision = 0, bool printToSerial = false);
 	bool addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision = 4);
 	bool addPacket(EmotiBit::DataType t);
 	void parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber);
