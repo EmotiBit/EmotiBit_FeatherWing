@@ -1997,6 +1997,76 @@ int8_t EmotiBit::pushData(EmotiBit::DataType type, float data, uint32_t * timest
 	}
 }
 
+void EmotiBit::processElectrodermalResponse()
+{
+	float* data;
+	uint32_t timestamp;
+	size_t dataSize;
+	static const float samplingFrequency = _samplingRates.eda / _samplesAveraged.eda;
+	static const float timePeriod = 1 / samplingFrequency; // in secs
+	static DigitalFilter edaLowpassFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // for bandpass @1.5Hz
+	static DigitalFilter edaBaselineFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 0.2); // @0.1Hz  // used to provide a baseline that works as a reference for threshold
+	static DigitalFilter edrFrequencyFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // lowPass digital filter @1Hz
+	static uint16 interResposeSampleCount = 0; // to count number of samples passed between EDR events
+	static const float threshold = 5000; // in ohms
+	static bool onsetDetected = false;
+	static float edrAmplitudeOnOnset;
+	static uint32_t onsetTime;
+	static const uint8_t APERIODIC_DATA_LEN = 1;
+	// Load latest EDA signal
+	dataSize = dataDoubleBuffers[(uint8_t)EmotiBit::DataType::EDA]->getData(&data, &timestamp, false);
+
+	// process EDA
+	for (size_t i = 0; i < dataSize; i++)
+	{
+		interResposeSampleCount++;
+		float filteredEda = edaLowpassFilter.filter(data[i]);
+		float edaBaseline = edaBaselineFilter.filter(data[i]);
+		if (!onsetDetected)
+		{
+			float instSkinResistance = 1000000 / filteredEda;  // Instantaneous skin Resistance
+			float baselineSkinResistance = 1000000 / edaBaseline;
+			if(baselineSkinResistance - instSkinResistance > threshold)
+			{
+				onsetDetected = true;
+				
+				//back calculate time based on buffer timestamp
+				float timeAdjustment = (dataSize - i - 1) * timePeriod * 1000; // in mS
+				onsetTime = timestamp - (uint32_t)timeAdjustment; // mS
+				edrAmplitudeOnOnset = data[i];  // record the base of the EDA peak
+				
+				// Calculate interResponseTime. interResponseTime = NxT, 1/t = f = 1/(N*T) = fs/N
+				float responseFreq = (float)samplingFrequency / (float)interResposeSampleCount; 
+				//Serial.print("SamplingFreq: " + String(samplingFrequency) + " interResposeSampleCount: " + interResposeSampleCount);
+				//Serial.println(" responseFreq: " + String(responseFreq));
+				responseFreq = edrFrequencyFilter.filter(responseFreq);  // low pass filtewr data
+				// Add packet to output
+				addPacket(onsetTime, EmotiBitPacket::TypeTag::ELECTRODERMAL_RESPONSE_FREQ, &responseFreq, APERIODIC_DATA_LEN, 4); // 4 = precision
+				interResposeSampleCount = 0;
+			}
+		}
+		else
+		{
+			// wait for a peak
+			if (data[i] < data[i - 1])
+			{
+				// peak detected
+				onsetDetected = false;
+				float amplitude = data[i - 1] - edrAmplitudeOnOnset;
+				float riseTime = (float)interResposeSampleCount * timePeriod; // Samples since onset*timePeriod (in Secs)
+				//Serial.print("edr base: " + String(edrAmplitudeOnOnset));
+				//Serial.print(" peakVal: " + String(data[i - 1]) + " Amplitude: " + String(amplitude) + "\n");
+				//Serial.print(" interResposeSampleCount: " + String(interResposeSampleCount) + " timePeriod: " + String(timePeriod));
+				//Serial.println(" riseTime: " + String(riseTime));
+				
+				// Add packet to the output
+				addPacket(onsetTime, EmotiBitPacket::TypeTag::ELECTRODERMAL_RESPONSE_CHANGE, &amplitude, APERIODIC_DATA_LEN, 4); // 4 = precision
+				addPacket(onsetTime, EmotiBitPacket::TypeTag::ELECTRODERMAL_RESPONSE_RISE_TIME, &riseTime, APERIODIC_DATA_LEN, 4); // 4 = precision
+			}
+		}
+	}
+}
+
 bool EmotiBit::processThermopileData()
 {
 #ifdef DEBUG_THERM_PROCESS
@@ -2999,6 +3069,11 @@ void EmotiBit::processData()
 		if (acquireData.heartRate)
 		{
 			processHeartRate();
+		}
+		if (acquireData.edrMetrics)
+		{
+			processElectrodermalResponse();
+
 		}
 	}
 }

@@ -44,7 +44,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.16-HR";
+	String firmware_version = "1.3.17";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
@@ -317,6 +317,7 @@ public:
 		bool debug = false;
 		bool battery = true;
 		bool heartRate = true;
+		bool edrMetrics = true;
 	} acquireData;
 
 	struct ChipBegun {
@@ -384,6 +385,7 @@ public:
 	void processData();
 	void sendData();
 	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented
+	void processElectrodermalResponse();
 	void writeSerialData(EmotiBit::DataType t);
 	
 
