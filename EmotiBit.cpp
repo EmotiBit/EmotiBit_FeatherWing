@@ -2009,7 +2009,7 @@ void EmotiBit::processElectrodermalResponse()
 	static DigitalFilter edaLowpassFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 7.5); // for bandpass @1.5Hz
 	static DigitalFilter edaBaselineFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 0.1); // @0.1Hz  // used to provide a baseline that works as a reference for threshold
 	static DigitalFilter edrFrequencyFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // lowPass digital filter @1Hz
-	static const float threshold = 0.05; // ~ 0.1 (10%)
+	static const float threshold = 0.05; // ~ 0.01 (1%)
 	static uint16 interResposeSampleCount = 0; // to count number of samples passed between EDR events
 	static const float timePeriod = 1 / samplingFrequency;
 	static bool onsetDetected = false;
@@ -2017,17 +2017,34 @@ void EmotiBit::processElectrodermalResponse()
 	// Load latest EDA signal
 	bufferSize = dataDoubleBuffers[(uint8_t)EmotiBit::DataType::EDA]->getData(&bufferData, &timestamp, false);
 
+	float edaBaselineBuffer[10];
+	float bandpassFilteredEdaBuffer[10];
+	if (bufferSize > 0 && bufferSize < 10)
+	{
+		for (int i = 0; i < bufferSize; i++)
+		{
+			edaBaselineBuffer[i] = edaBaselineFilter.filter(bufferData[i]);
+		}
+		for (int i = 0; i < bufferSize; i++)
+		{
+			bandpassFilteredEdaBuffer[i] = edaLowpassFilter.filter(bufferData[i]);
+			bandpassFilteredEdaBuffer[i] = edaHighpassFilter.filter(bandpassFilteredEdaBuffer[i]);
+		}
+	}
+	addPacket(timestamp, "BL" ,edaBaselineBuffer, bufferSize, 4);
+	addPacket(timestamp, "FE" ,bandpassFilteredEdaBuffer, bufferSize, 4);
+
 	// process EDA
 	for (size_t i = 0; i < bufferSize; i++)
 	{
 		interResposeSampleCount++;
-		float bandpassFilteredEda = edaLowpassFilter.filter(bufferData[i]);
-		bandpassFilteredEda = edaHighpassFilter.filter(bandpassFilteredEda);
-		float edaBaseline = edaBaselineFilter.filter(bufferData[i]);
+		//float bandpassFilteredEda = edaLowpassFilter.filter(bufferData[i]);
+		//bandpassFilteredEda = edaHighpassFilter.filter(bandpassFilteredEda);
+		//float edaBaseline = edaBaselineFilter.filter(bufferData[i]);
 		//Serial.println("bandpassFiltered: " + String(bandpassFilteredEda) + "baseline: " + String(edaBaseline));
 		if (!onsetDetected)
 		{
-			if (bandpassFilteredEda / edaBaseline > threshold)
+			if ( bandpassFilteredEdaBuffer[i] / edaBaselineBuffer[i] > threshold)
 			{
 				onsetDetected = true;
 				//onsetTime = back calculate time based on buffer timestamp
@@ -2037,13 +2054,14 @@ void EmotiBit::processElectrodermalResponse()
 				//Serial.print("edr base: " + String(edrAmplitudeFoot));
 				//Serial.print(" SamplingFreq: " + String(samplingFrequency) + " interResposeSampleCount: " + interResposeSampleCount);
 				//Serial.println(" responseFreq: " + String(responseFreq));
+				responseFreq = edrFrequencyFilter.filter(responseFreq);
 				addPacket(timestamp, EmotiBitPacket::TypeTag::ELECTRODERMAL_RESPONSE_FREQ, &responseFreq, 1, 4); // 4 = precision
 				interResposeSampleCount = 0;
 			}
 		}
 		else
 		{
-			if (bufferData[i] < bufferData[i - 1])
+			if (bufferData[i] <= bufferData[i - 1])
 			{
 				onsetDetected = false;
 				float amplitude = bufferData[i - 1] - edrAmplitudeFoot;
