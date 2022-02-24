@@ -1988,14 +1988,14 @@ int8_t EmotiBit::pushData(EmotiBit::DataType type, float data, uint32_t * timest
 
 void EmotiBit::processElectrodermalResponse()
 {
-	float* data;
-	uint32_t timestamp;
-	size_t dataSize;
 	static const float samplingFrequency = _samplingRates.eda / _samplesAveraged.eda;
 	static const float timePeriod = 1 / samplingFrequency; // in secs
 	static DigitalFilter edaLowpassFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // for bandpassing eda
 	static DigitalFilter edaHighpassFilter(DigitalFilter::FilterType::IIR_HIGHPASS, samplingFrequency, 0.2); // for bandpassing eda
 	static DigitalFilter edrFrequencyFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // lowPass the calculated frequency
+	float* data;
+	uint32_t timestamp;
+	size_t dataSize;
 	static uint32_t interResposeSampleCount = 0; // to count number of samples passed between EDR events
 	static const float threshold = 5000; // detect an onset if delta eda > threshold
 	static bool onsetDetected = false;
@@ -2962,8 +2962,8 @@ void EmotiBit::processHeartRate()
 	static uint16_t interBeatSampleCount = 0;
 	static uint8_t basisSignal = (uint8_t)DataType::PPG_INFRARED;
 	static DigitalFilter heartRateFilter(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.ppg, 0.5);
-	static DigitalFilter ppgSensorHighpass(DigitalFilter::FilterType::IIR_HIGHPASS, _samplingRates.ppg, 1); // filter frequency selected to remove respiration artifact
-	const static size_t APERIODIC_DATA_LEN = 1;
+	static DigitalFilter ppgSensorHighpass(DigitalFilter::FilterType::IIR_HIGHPASS, _samplingRates.ppg, 1); // to remove respiration artifact. filter frequency selected empirically
+	const static size_t APERIODIC_DATA_LEN = 1;  //used in packet header
 	const static float timePeriod = (1 / _samplingRates.ppg) * 1000; // in mS
 	float interBeatInterval; // in mS
 	float heartRate; // in bpm
@@ -2973,8 +2973,11 @@ void EmotiBit::processHeartRate()
 	{
 		for (uint16_t i = 0; i < dataSize; i++)
 		{
+			// filter ppg data to remove respiration artifact
 			float filteredPpg = ppgSensorHighpass.filter(data[i]);
 			interBeatSampleCount++;
+			// the heart rate algorithm can be found in: EmotiBit_MAX30101/src/heartRate.cpp
+			// Note: the algorithms also has its own FIR
 			if (checkForBeat(filteredPpg + hrAlgoDcOffset))
 			{
 				// beat detected
@@ -2989,8 +2992,8 @@ void EmotiBit::processHeartRate()
 				heartRate = heartRateFilter.filter(heartRate);
 
 				// Add packets to output
-				addPacket(beatTime, EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL, &interBeatInterval, 1);
-				addPacket(beatTime, EmotiBitPacket::TypeTag::HEART_RATE, &heartRate, 1);
+				addPacket(beatTime, EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL, &interBeatInterval, APERIODIC_DATA_LEN);
+				addPacket(beatTime, EmotiBitPacket::TypeTag::HEART_RATE, &heartRate, APERIODIC_DATA_LEN);
 				
 				// reset interBeatCount
 				interBeatSampleCount = 0;
