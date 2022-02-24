@@ -1072,6 +1072,7 @@ bool EmotiBit::setupSdCard()
 
 bool EmotiBit::addPacket(uint32_t timestamp, const String typeTag, float * data, size_t dataLen, uint8_t precision, bool printToSerial)
 {
+	static EmotiBitPacket::Header header;
 	if (dataLen > 0) 
 	{
 		uint8_t protocolVersion = 1;
@@ -1083,7 +1084,7 @@ bool EmotiBit::addPacket(uint32_t timestamp, const String typeTag, float * data,
 			}
 		}
 		// Add packet header to _outDataPackets
-		static EmotiBitPacket::Header header;
+		
 		// create packet header and add to outputDataPackets
 		header = EmotiBitPacket::createHeader(typeTag, timestamp, _outDataPacketCounter++, dataLen, protocolVersion);
 		String headerString = EmotiBitPacket::headerToString(header);
