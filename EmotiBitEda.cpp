@@ -584,8 +584,9 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 	static uint32_t onsetTime;  // in mS
 	static float responseFreq;  // in mins
 	static const uint8_t APERIODIC_DATA_LEN = 1; // constant for adding packet
-	static const uint16_t INTER_EDR_FREQ_UPDATE_SAMPLE_COUNT = 15; // EDR:FREQ is sent every X * (1/sampingRte)
-	static float secToMinMultiplier = 60 / (INTER_EDR_FREQ_UPDATE_SAMPLE_COUNT * timePeriod);  // multiplier used below to convert events/(n secs) -> events/min
+	static const uint16_t INTER_EDR_FREQ_UPDATE_SAMPLE_COUNT = 5; // a  EDR FREQ sample is sent every X EDA counts
+	static const float edrFreqTimePeriod = INTER_EDR_FREQ_UPDATE_SAMPLE_COUNT * timePeriod; // timePeriod of EDR:FREQ
+	static const float secToMinMultiplier = 60 / (edrFreqTimePeriod);  // multiplier used below to convert events/(n secs) -> events/min
 	static uint16_t edrOnsetCount = 0;
 	static uint16_t edaSamplesCount = 0;
 	// Load latest EDA signal
@@ -638,7 +639,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 		}
 		if (edaSamplesCount == INTER_EDR_FREQ_UPDATE_SAMPLE_COUNT)
 		{
-			float responseFreq = (edrOnsetCount / (INTER_EDR_FREQ_UPDATE_SAMPLE_COUNT * timePeriod)) * secToMinMultiplier; // EDR:FREQ in count/min
+			float responseFreq = (edrOnsetCount / edrFreqTimePeriod) * secToMinMultiplier; // EDR:FREQ in count/min
 			responseFreq = edrFrequencyFilter.filter(responseFreq);
 			uint32_t timstamp = millis();
 			emotibit->addPacket(timestamp, EmotiBitPacket::TypeTag::ELECTRODERMAL_RESPONSE_FREQ, &responseFreq, APERIODIC_DATA_LEN, 4, true); // 4 = precision
