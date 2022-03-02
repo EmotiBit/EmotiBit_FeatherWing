@@ -573,7 +573,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 	static const float timePeriod = 1 / samplingFrequency; // in secs
 	static DigitalFilter edaLowpassFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // for bandpassing eda
 	static DigitalFilter edaHighpassFilter(DigitalFilter::FilterType::IIR_HIGHPASS, samplingFrequency, 0.2); // for bandpassing eda
-	static DigitalFilter edrFrequencyFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // lowPass the calculated frequency
+	static DigitalFilter edrFrequencyFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 0.5); // lowPass the calculated frequency
 	float* data;
 	uint32_t timestamp;
 	size_t dataSize;
@@ -584,6 +584,10 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 	static uint32_t onsetTime;  // in mS
 	static float responseFreq;  // in mins
 	static const uint8_t APERIODIC_DATA_LEN = 1; // constant for adding packet
+	static const uint16_t INTER_EDR_FREQ_UPDATE_SAMPLE_COUNT = 15; // EDR:FREQ is sent every X * (1/sampingRte)
+	static float secToMinMultiplier = 60 / (INTER_EDR_FREQ_UPDATE_SAMPLE_COUNT * timePeriod);  // multiplier used below to convert events/(n secs) -> events/min
+	static uint16_t edrOnsetCount = 0;
+	static uint16_t edaSamplesCount = 0;
 	// Load latest EDA signal
 	if (_edaBuffer != nullptr)
 	{
@@ -593,6 +597,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 	for (size_t i = 0; i < dataSize; i++)
 	{
 		interResposeSampleCount++;
+		edaSamplesCount++;
 		// bandpass filter eda
 		float filteredEda = edaLowpassFilter.filter(data[i]);
 		filteredEda = edaHighpassFilter.filter(filteredEda);
@@ -604,17 +609,14 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 			// detect onset if threshold is crossed
 			if (baselineSkinResistance - instSkinResistance > threshold)
 			{
+				// Onset detected!
 				onsetDetected = true;
-
+				edrOnsetCount++;
 				//back calculate time based on buffer timestamp
 				float timeAdjustment = (dataSize - i - 1) * timePeriod * 1000; // in mS
 				onsetTime = timestamp - (uint32_t)timeAdjustment; // mS
 				edrAmplitudeOnOnset = data[i];  // record the base of the EDA peak
 
-				// Calculate interResponseTime. interResponseTime = t = NxT => 1/t = 1/(N*T) = fs/N, where T = 1/fs
-				responseFreq = (float)samplingFrequency / (float)interResposeSampleCount;
-				responseFreq *= 60; // convert to event/min
-				responseFreq = edrFrequencyFilter.filter(responseFreq);  // low pass filtewr data
 				// reset counter for next response
 				interResposeSampleCount = 0;
 			}
@@ -630,10 +632,18 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 				float riseTime = (float)interResposeSampleCount * timePeriod; // Samples since onset*timePeriod (in Secs)
 
 				// Add packet to the output
-				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::ELECTRODERMAL_RESPONSE_FREQ, &responseFreq, APERIODIC_DATA_LEN, 4, true); // 4 = precision
 				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::ELECTRODERMAL_RESPONSE_CHANGE, &amplitude, APERIODIC_DATA_LEN, 4, true); // 4 = precision
 				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::ELECTRODERMAL_RESPONSE_RISE_TIME, &riseTime, APERIODIC_DATA_LEN, 4, true); // 4 = precision
 			}
+		}
+		if (edaSamplesCount == INTER_EDR_FREQ_UPDATE_SAMPLE_COUNT)
+		{
+			float responseFreq = (edrOnsetCount / (INTER_EDR_FREQ_UPDATE_SAMPLE_COUNT * timePeriod)) * secToMinMultiplier; // EDR:FREQ in count/min
+			responseFreq = edrFrequencyFilter.filter(responseFreq);
+			uint32_t timstamp = millis();
+			emotibit->addPacket(timestamp, EmotiBitPacket::TypeTag::ELECTRODERMAL_RESPONSE_FREQ, &responseFreq, APERIODIC_DATA_LEN, 4, true); // 4 = precision
+			edrOnsetCount = 0;
+			edaSamplesCount = 0;
 		}
 	}
 }
