@@ -28,7 +28,9 @@
 #include <math.h> 
 #include "DoubleBufferFloat.h"
 #include "DigitalFilter.h"
+#include "EmotiBitPacket.h"
 
+class EmotiBit; // forward declaration to enable compile
 
 class EmotiBitEda
 {
@@ -134,6 +136,12 @@ public:
 		@param isrOffsetCorr Sets the ISR offset correction value
 	*/
 	void setAdcIsrOffsetCorr(float isrOffsetCorr);
+
+	/*!
+		@brief Processes and records Electrodermal Response
+		@param pointer to emotibit instance. Required for adding outDataPacket
+	*/
+	void processElectrodermalResponse(EmotiBit* emotibit);
 };
 
 #endif
