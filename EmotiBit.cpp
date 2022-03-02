@@ -2900,7 +2900,7 @@ void EmotiBit::processHeartRate()
 	const static float timePeriod = (1 / _samplingRates.ppg) * 1000; // in mS
 	float interBeatInterval; // in mS
 	float heartRate; // in bpm
-	static const int hrAlgoDcOffset = 100000; // randomly chosen to add offset to filtered ppgData. Required for HR algo to work
+	static const int hrAlgoDcOffset = 100000; // randomly chosen to add offset to filtered ppgData. HR algo needs a DC offset to work
 	dataSize = dataDoubleBuffers[basisSignal]->getData(&data, &timestamp, false);
 	if (dataSize)
 	{
@@ -2910,7 +2910,7 @@ void EmotiBit::processHeartRate()
 			float filteredPpg = ppgSensorHighpass.filter(data[i]);
 			interBeatSampleCount++;
 			// the heart rate algorithm can be found in: EmotiBit_MAX30101/src/heartRate.cpp
-			// Note: the algorithms also has its own FIR
+			// Note: the algorithm also has its own FIR
 			if (checkForBeat(filteredPpg + hrAlgoDcOffset))
 			{
 				// beat detected
