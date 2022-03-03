@@ -1395,6 +1395,13 @@ uint8_t EmotiBit::update()
 		Serial.println(EmotiBitVersionController::getHardwareVersion(_hwVersion));
 		Serial.print("Firmware: ");
 		Serial.println(firmware_version);
+		if (calcMinFreeMemory)
+		{
+			Serial.print("Free Memory: ");
+			Serial.println(freeMemory());
+			Serial.print("Min Free Memory: ");
+			Serial.println(minFreeMemory);
+		}
 	}
 	serialPrevAvailable = Serial.available();
 
@@ -2865,6 +2872,11 @@ void EmotiBit::readSensors()
 				led.send();
 			}
 			ledCounter++;
+		}
+
+		if (calcMinFreeMemory)
+		{
+			minFreeMemory = min(minFreeMemory, freeMemory());
 		}
 	}
 	

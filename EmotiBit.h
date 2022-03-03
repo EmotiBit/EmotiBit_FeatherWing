@@ -43,8 +43,8 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.12";
-	TestingMode testingMode = TestingMode::NONE;
+	String firmware_version = "1.3.12-feat-calc-free-memory";
+	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
 
@@ -353,6 +353,8 @@ public:
 	bool _sendTestData = false;
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
+	volatile uint32_t minFreeMemory = -1;
+	volatile bool calcMinFreeMemory = true;
 
 	bool setupSdCard();
 	void updateButtonPress();
