@@ -2897,42 +2897,40 @@ void EmotiBit::processHeartRate()
 	static DigitalFilter heartRateFilter(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.ppg, 0.5);
 	static DigitalFilter ppgSensorHighpass(DigitalFilter::FilterType::IIR_HIGHPASS, _samplingRates.ppg, 1); // to remove respiration artifact. filter frequency selected empirically
 	const static size_t APERIODIC_DATA_LEN = 1;  //used in packet header
-	const static float timePeriod = (1 / _samplingRates.ppg) * 1000; // in mS
-	float interBeatInterval; // in mS
+	const static float timePeriod = (1.f / _samplingRates.ppg) * 1000; // in mS
+	float interBeatInterval = 0; // in mS
 	float heartRate; // in bpm
 	static const int hrAlgoDcOffset = 100000; // randomly chosen to add offset to filtered ppgData. HR algo needs a DC offset to work
 	dataSize = dataDoubleBuffers[basisSignal]->getData(&data, &timestamp, false);
-	if (dataSize)
+	for (uint16_t i = 0; i < dataSize; i++)
 	{
-		for (uint16_t i = 0; i < dataSize; i++)
+		// filter ppg data to remove respiration artifact
+		float filteredPpg = ppgSensorHighpass.filter(data[i]);
+		interBeatSampleCount++;
+		// the heart rate algorithm can be found in: EmotiBit_MAX30101/src/heartRate.cpp
+		// Note: the algorithm also has its own FIR
+		if (checkForBeat(filteredPpg + hrAlgoDcOffset))
 		{
-			// filter ppg data to remove respiration artifact
-			float filteredPpg = ppgSensorHighpass.filter(data[i]);
-			interBeatSampleCount++;
-			// the heart rate algorithm can be found in: EmotiBit_MAX30101/src/heartRate.cpp
-			// Note: the algorithm also has its own FIR
-			if (checkForBeat(filteredPpg + hrAlgoDcOffset))
-			{
-				// beat detected
-				// calculate IBI
-				interBeatInterval = interBeatSampleCount * timePeriod; // in mS
-				// back calculate the time of beat occurance
-				float timeAdjustment = (dataSize - i - 1) * timePeriod; // in mS
-				uint32_t beatTime = timestamp - (uint32_t)timeAdjustment; // mS
+			// beat detected
+			// calculate IBI
+			interBeatInterval = interBeatSampleCount * timePeriod; // in mS
+			// back calculate the time of beat occurance
+			uint32_t timeAdjustment = (dataSize - i - 1) * timePeriod; // in mS
+			uint32_t beatTime = timestamp - timeAdjustment; // mS
 
-				// calculate heart rate
-				heartRate = (60 / interBeatInterval) * 1000; // beats per min
-				heartRate = heartRateFilter.filter(heartRate);
+			// calculate heart rate
+			heartRate = (60.f / interBeatInterval) * 1000; // beats per min
+			heartRate = heartRateFilter.filter(heartRate);
 
-				// Add packets to output
-				addPacket(beatTime, EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL, &interBeatInterval, APERIODIC_DATA_LEN);
-				addPacket(beatTime, EmotiBitPacket::TypeTag::HEART_RATE, &heartRate, APERIODIC_DATA_LEN);
+			// Add packets to output
+			addPacket(beatTime, EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL, &interBeatInterval, APERIODIC_DATA_LEN);
+			addPacket(beatTime, EmotiBitPacket::TypeTag::HEART_RATE, &heartRate, APERIODIC_DATA_LEN);
 				
-				// reset interBeatCount
-				interBeatSampleCount = 0;
-			}
+			// reset interBeatCount
+			interBeatSampleCount = 0;
 		}
 	}
+
 }
 
 void EmotiBit::processData()
@@ -2990,6 +2988,7 @@ void EmotiBit::processData()
 		}
 		if (acquireData.edrMetrics)
 		{
+			// Note: this may move to emotiBitEda.processData() in the future
 			emotibitEda.processElectrodermalResponse(this);
 
 		}

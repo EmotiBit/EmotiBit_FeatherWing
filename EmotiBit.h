@@ -44,7 +44,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.21";
+	String firmware_version = "1.3.22";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
@@ -316,7 +316,7 @@ public:
 		bool tempPpg = true;
 		bool debug = false;
 		bool battery = true;
-		bool heartRate = true;
+		bool heartRate = true; // Note: we may want to move this to a separarte flag someday, for controlling derivative signals
 		bool edrMetrics = true;
 	} acquireData;
 
