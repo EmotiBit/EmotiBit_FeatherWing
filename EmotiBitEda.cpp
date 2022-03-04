@@ -639,8 +639,8 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 				float riseTime = (float)(riseTimeSampleCount-1)  * timePeriod; // Samples since onset*timePeriod (in Secs)
 
 				// Add packet to the output
-				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::ELECTRODERMAL_RESPONSE_CHANGE, &amplitude, APERIODIC_DATA_LEN, 4); // 4 = precision
-				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::ELECTRODERMAL_RESPONSE_RISE_TIME, &riseTime, APERIODIC_DATA_LEN, 4); // 4 = precision
+				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_AMPLITUDE, &amplitude, APERIODIC_DATA_LEN, 4); // 4 = precision
+				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_RISE_TIME, &riseTime, APERIODIC_DATA_LEN, 4); // 4 = precision
 			}
 		}
 		// check if it time to send EDR:FREQ packet
@@ -651,7 +651,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 			responseFreq = edrFrequencyFilter.filter(responseFreq);
 			uint32_t timstamp = millis();
 			// send data
-			emotibit->addPacket(timestamp, EmotiBitPacket::TypeTag::ELECTRODERMAL_RESPONSE_FREQ, &responseFreq, APERIODIC_DATA_LEN, 4); // 4 = precision
+			emotibit->addPacket(timestamp, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_FREQ, &responseFreq, APERIODIC_DATA_LEN, 4); // 4 = precision
 			edrOnsetCount = 0;
 			edrFreqOutputCounter = 0;
 		}
