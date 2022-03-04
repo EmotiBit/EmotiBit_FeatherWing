@@ -559,6 +559,79 @@ bool EmotiBitEda::writeInfoJson(File &jsonFile)
 #endif
 		}
 	}
+	// Skin Coductance Response Amplitude
+	{
+		// Parse the root object
+		StaticJsonBuffer<bufferSize> jsonBuffer;
+		JsonObject &root = jsonBuffer.createObject();
+		const uint8_t nInfo = 1;
+		JsonObject* infos[nInfo];
+		JsonArray* typeTags[nInfo];
+		JsonObject* setups[nInfo];
+		uint8_t i = 0;
+		infos[i] = &(root.createNestedObject("info"));
+		infos[i]->set("name", "SkinConductanceResponseAmplitude");
+		infos[i]->set("type", "ElectrodermalActivity");
+		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
+		typeTags[i]->add(EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_AMPLITUDE);
+		infos[i]->set("channel_count", 1);
+		infos[i]->set("channel_format", "float");
+		infos[i]->set("units", "microsiemens");
+		if (root.printTo(jsonFile) == 0) {
+#ifdef DEBUG
+			Serial.println(F("Failed to write to file"));
+#endif
+		}
+	}
+	// Skin Coductance Response Frequency
+	{
+		// Parse the root object
+		StaticJsonBuffer<bufferSize> jsonBuffer;
+		JsonObject &root = jsonBuffer.createObject();
+		const uint8_t nInfo = 1;
+		JsonObject* infos[nInfo];
+		JsonArray* typeTags[nInfo];
+		JsonObject* setups[nInfo];
+		uint8_t i = 0;
+		infos[i] = &(root.createNestedObject("info"));
+		infos[i]->set("name", "SkinConductanceResponseFrequency");
+		infos[i]->set("type", "ElectrodermalActivity");
+		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
+		typeTags[i]->add(EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_FREQ);
+		infos[i]->set("channel_count", 1);
+		infos[i]->set("nominal_srate", _constants.samplingRate / _constants.EDA_SAMPLES_PER_SCR_FREQ_OUTPUT);
+		infos[i]->set("channel_format", "float");
+		infos[i]->set("units", "count/min");
+		if (root.printTo(jsonFile) == 0) {
+#ifdef DEBUG
+			Serial.println(F("Failed to write to file"));
+#endif
+		}
+	}
+		// Skin Coductance Response Rise Time
+	{
+		// Parse the root object
+		StaticJsonBuffer<bufferSize> jsonBuffer;
+		JsonObject &root = jsonBuffer.createObject();
+		const uint8_t nInfo = 1;
+		JsonObject* infos[nInfo];
+		JsonArray* typeTags[nInfo];
+		JsonObject* setups[nInfo];
+		uint8_t i = 0;
+		infos[i] = &(root.createNestedObject("info"));
+		infos[i]->set("name", "SkinConductanceResponseRiseTime");
+		infos[i]->set("type", "ElectrodermalActivity");
+		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
+		typeTags[i]->add(EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_RISE_TIME);
+		infos[i]->set("channel_count", 1);
+		infos[i]->set("channel_format", "float");
+		infos[i]->set("units", "secs");
+		if (root.printTo(jsonFile) == 0) {
+#ifdef DEBUG
+			Serial.println(F("Failed to write to file"));
+#endif
+		}
+	}
 
 }
 
@@ -571,24 +644,23 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 {
 	static const float samplingFrequency = _constants.samplingRate;
 	static const float timePeriod = 1.f / samplingFrequency; // in secs
-	static const uint16_t EDA_SAMPLES_PER_EDR_FREQ_OUTPUT  = 5; // = {X}. A  EDR FREQ sample is sent every {X} EDA counts
-	static const float edrFreqTimePeriod = EDA_SAMPLES_PER_EDR_FREQ_OUTPUT  * timePeriod; // timePeriod of the signal EDR:FREQ
-	static const float secToMinMultiplier = 60.f / (edrFreqTimePeriod);  // multiplier used below to convert events/(n secs) -> events/min
+	static const float scrFreqTimePeriod = _constants.EDA_SAMPLES_PER_SCR_FREQ_OUTPUT  * timePeriod; // timePeriod of the signal scr:FREQ
+	static const float secToMinMultiplier = 60.f / (scrFreqTimePeriod);  // multiplier used below to convert events/(n secs) -> events/min
 	static DigitalFilter edaLowpassFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // for bandpassing eda
 	static DigitalFilter edaHighpassFilter(DigitalFilter::FilterType::IIR_HIGHPASS, samplingFrequency, 0.2); // for bandpassing eda
-	static DigitalFilter edrFrequencyFilter(DigitalFilter::FilterType::IIR_LOWPASS, 1.f/(edrFreqTimePeriod), 0.01); // lowPass the calculated EDR:FREQ
+	static DigitalFilter scrFrequencyFilter(DigitalFilter::FilterType::IIR_LOWPASS, 1.f/(scrFreqTimePeriod), 0.01); // lowPass the calculated scr:FREQ
 	float* data;
 	uint32_t timestamp;
 	size_t dataSize;
-	static uint32_t riseTimeSampleCount  = 0; // to count number of samples between EDR onset and peak
+	static uint32_t riseTimeSampleCount  = 0; // to count number of samples between scr onset and peak
 	static const float threshold = 5000; // in Ohms. detect an onset if (delta eda) > threshold
 	static bool onsetDetected = false;
-	static float edrAmplitudeOnOnset;  // record the base of the EDR peak
+	static float scrAmplitudeOnOnset;  // record the base of the scr peak
 	static uint32_t onsetTime;  // in mS
 	static float responseFreq;  // in mins
 	static const uint8_t APERIODIC_DATA_LEN = 1; // used in pacet header
-	static uint16_t edrOnsetCount = 0; // counter for #edr events
-	static uint16_t edrFreqOutputCounter = 0; // counter for eda samples
+	static uint16_t scrOnsetCount = 0; // counter for #scr events
+	static uint16_t scrFreqOutputCounter = 0; // counter for eda samples
 	static float lastFilteredEdaValue = 0;
 	static float filteredEda = 0;
 
@@ -600,7 +672,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 
 	for (size_t i = 0; i < dataSize; i++)
 	{
-		edrFreqOutputCounter++;
+		scrFreqOutputCounter++;
 		// bandpass filter eda
 		lastFilteredEdaValue = filteredEda;
 		filteredEda = edaLowpassFilter.filter(data[i]);
@@ -616,11 +688,11 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 			{
 				// Onset detected!
 				onsetDetected = true;
-				edrOnsetCount++;
+				scrOnsetCount++;
 				//back calculate time based on buffer timestamp
 				uint32_t timeAdjustment = (dataSize - i - 1) * timePeriod * 1000; // in mS
 				onsetTime = timestamp - timeAdjustment; // mS
-				edrAmplitudeOnOnset = data[i];  // record the base of the EDA peak
+				scrAmplitudeOnOnset = data[i];  // record the base of the EDA peak
 
 				// reset counter for next response
 				riseTimeSampleCount  = 0;
@@ -635,7 +707,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 			{
 				// peak detected. calculate rise time and amplitude
 				onsetDetected = false;
-				float amplitude = data[i - 1] - edrAmplitudeOnOnset;
+				float amplitude = data[i - 1] - scrAmplitudeOnOnset;
 				float riseTime = (float)(riseTimeSampleCount-1)  * timePeriod; // Samples since onset*timePeriod (in Secs)
 
 				// Add packet to the output
@@ -643,17 +715,17 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_RISE_TIME, &riseTime, APERIODIC_DATA_LEN, 4); // 4 = precision
 			}
 		}
-		// check if it time to send EDR:FREQ packet
-		if (edrFreqOutputCounter == EDA_SAMPLES_PER_EDR_FREQ_OUTPUT )
+		// check if it time to send scr:FREQ packet
+		if (scrFreqOutputCounter == _constants.EDA_SAMPLES_PER_SCR_FREQ_OUTPUT )
 		{
-			// calculate number of EDR events in time period
-			float responseFreq = (edrOnsetCount / edrFreqTimePeriod) * secToMinMultiplier; // EDR:FREQ in count/min
-			responseFreq = edrFrequencyFilter.filter(responseFreq);
+			// calculate number of scr events in time period
+			float responseFreq = (scrOnsetCount / scrFreqTimePeriod) * secToMinMultiplier; // scr:FREQ in count/min
+			responseFreq = scrFrequencyFilter.filter(responseFreq);
 			uint32_t timstamp = millis();
 			// send data
 			emotibit->addPacket(timestamp, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_FREQ, &responseFreq, APERIODIC_DATA_LEN, 4); // 4 = precision
-			edrOnsetCount = 0;
-			edrFreqOutputCounter = 0;
+			scrOnsetCount = 0;
+			scrFreqOutputCounter = 0;
 		}
 	}
 }

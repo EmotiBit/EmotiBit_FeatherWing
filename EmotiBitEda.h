@@ -50,6 +50,7 @@ public:
 	{
 		float edaSeriesResistance = 0.f;	//Ohms
 		float samplingRate = 15.f;	// Hz
+		static const uint16_t EDA_SAMPLES_PER_SCR_FREQ_OUTPUT = 5; // = {X}. A  EDR FREQ sample is sent every {X} EDA counts
 		uint8_t adcBits;	// Bit resolution of ADC, e.g. 12, 16
 		bool enableDigitalFilter = false;
 		int16_t clipMin;	// Min value before clipping occurs
