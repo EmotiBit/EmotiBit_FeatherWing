@@ -559,6 +559,7 @@ bool EmotiBitEda::writeInfoJson(File &jsonFile)
 #endif
 		}
 	}
+	jsonFile.print(",");
 	// Skin Coductance Response Amplitude
 	{
 		// Parse the root object
@@ -583,6 +584,7 @@ bool EmotiBitEda::writeInfoJson(File &jsonFile)
 #endif
 		}
 	}
+	jsonFile.print(",");
 	// Skin Coductance Response Frequency
 	{
 		// Parse the root object
@@ -608,7 +610,8 @@ bool EmotiBitEda::writeInfoJson(File &jsonFile)
 #endif
 		}
 	}
-		// Skin Coductance Response Rise Time
+	jsonFile.print(",");
+	// Skin Coductance Response Rise Time
 	{
 		// Parse the root object
 		StaticJsonBuffer<bufferSize> jsonBuffer;

@@ -2644,6 +2644,57 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		}
 	}
 
+	file.print(","); // Doing some manual printing to chunk JSON and save RAM
+	// Heart Rate
+	{
+		// Parse the root object
+		StaticJsonBuffer<bufferSize> jsonBuffer;
+		JsonObject &root = jsonBuffer.createObject();
+		const uint8_t nInfo = 1;
+		JsonObject* infos[nInfo];
+		JsonArray* typeTags[nInfo];
+		JsonObject* setups[nInfo];
+		uint8_t i = 0;
+		infos[i] = &(root.createNestedObject("info"));
+		infos[i]->set("name", "HeartRate");
+		infos[i]->set("type", "PPG");
+		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
+		typeTags[i]->add(EmotiBitPacket::TypeTag::HEART_RATE);
+		infos[i]->set("channel_count", 1);
+		infos[i]->set("channel_format", "int");
+		infos[i]->set("units", "bpm");
+		if (root.printTo(file) == 0) {
+#ifdef DEBUG
+			Serial.println(F("Failed to write to file"));
+#endif
+		}
+	}
+
+	file.print(","); // Doing some manual printing to chunk JSON and save RAM
+	// interBeat interval
+	{
+		// Parse the root object
+		StaticJsonBuffer<bufferSize> jsonBuffer;
+		JsonObject &root = jsonBuffer.createObject();
+		const uint8_t nInfo = 1;
+		JsonObject* infos[nInfo];
+		JsonArray* typeTags[nInfo];
+		JsonObject* setups[nInfo];
+		uint8_t i = 0;
+		infos[i] = &(root.createNestedObject("info"));
+		infos[i]->set("name", "InterBeatInterval");
+		infos[i]->set("type", "PPG");
+		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
+		typeTags[i]->add(EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL);
+		infos[i]->set("channel_count", 1);
+		infos[i]->set("channel_format", "float");
+		infos[i]->set("units", "mS");
+		if (root.printTo(file) == 0) {
+#ifdef DEBUG
+			Serial.println(F("Failed to write to file"));
+#endif
+		}
+	}
 	file.print("]"); // Doing some manual printing to chunk JSON and save RAM
 
 	return true;
