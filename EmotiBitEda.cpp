@@ -658,7 +658,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 	static uint32_t riseTimeSampleCount  = 0; // to count number of samples between scr onset and peak
 	static const float threshold = 5000; // in Ohms. detect an onset if (delta eda) > threshold
 	static bool onsetDetected = false;
-	static float scrAmplitudeOnOnset;  // record the base of the scr peak
+	static float scrAmplitudeOnOnset = 0;  // record the base of the scr peak
 	static uint32_t onsetTime;  // in mS
 	static float responseFreq;  // in mins
 	static const uint8_t APERIODIC_DATA_LEN = 1; // used in pacet header
@@ -666,13 +666,30 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 	static uint16_t scrFreqOutputCounter = 0; // counter for eda samples
 	static float lastFilteredEdaValue = 0;
 	static float filteredEda = 0;
+	static float lastEdaValueFromPreviousBuffer = 0;
 
 	// Load latest EDA signal
 	if (_edaBuffer != nullptr)
 	{
 		dataSize = _edaBuffer->getData(&data, &timestamp, false);
 	}
-
+	/*
+	// testing bandpass
+	static DigitalFilter edaLowpassFilterTest(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // for bandpassing eda
+	static DigitalFilter edaHighpassFilterTest(DigitalFilter::FilterType::IIR_HIGHPASS, samplingFrequency, 0.3); // for bandpassing eda
+	float tempFiltered[10];
+	if (dataSize < 10)
+	{
+		for (int i = 0; i < dataSize; i++)
+		{
+			tempFiltered[i] = edaLowpassFilterTest.filter(data[i]);
+			tempFiltered[i] = edaHighpassFilterTest.filter(tempFiltered[i]);
+		}
+		// send a separate stream U1 to view bandpass signal.
+		// oscilloscope XML will have to be modified accordingly. oscillosopce min. v1.3.0 required.
+		emotibit->addPacket(timestamp, "U1", tempFiltered, dataSize, 4); // 4 = precision
+	}
+	*/
 	for (size_t i = 0; i < dataSize; i++)
 	{
 		scrFreqOutputCounter++;
@@ -710,9 +727,17 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 			{
 				// peak detected. calculate rise time and amplitude
 				onsetDetected = false;
-				float amplitude = data[i - 1] - scrAmplitudeOnOnset;
-				float riseTime = (float)(riseTimeSampleCount-1)  * timePeriod; // Samples since onset*timePeriod (in Secs)
-
+				float amplitude;
+				// if the downslope is detected at the first sample of the new buffer, peak = last sample of last buffer
+				if (i == 0)
+				{
+					amplitude = lastEdaValueFromPreviousBuffer - scrAmplitudeOnOnset;
+				}
+				else
+				{
+					amplitude = data[i - 1] - scrAmplitudeOnOnset;
+				}
+				float riseTime = (float)(riseTimeSampleCount - 1)  * timePeriod; // Samples since onset*timePeriod (in Secs)
 				// Add packet to the output
 				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_AMPLITUDE, &amplitude, APERIODIC_DATA_LEN, 4); // 4 = precision
 				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_RISE_TIME, &riseTime, APERIODIC_DATA_LEN, 4); // 4 = precision
@@ -731,4 +756,5 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 			scrFreqOutputCounter = 0;
 		}
 	}
+	lastEdaValueFromPreviousBuffer = data[dataSize - 1];
 }
