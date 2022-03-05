@@ -30,6 +30,7 @@
 #include "EmotiBitEda.h"
 #include "EmotiBitVariants.h"
 #include "EmotiBitNvmController.h"
+#include "heartRate.h"
 
 class EmotiBit {
   
@@ -43,7 +44,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.12";
+	String firmware_version = "1.3.25";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
@@ -315,6 +316,8 @@ public:
 		bool tempPpg = true;
 		bool debug = false;
 		bool battery = true;
+		bool heartRate = true; // Note: we may want to move this to a separarte flag someday, for controlling derivative signals
+		bool edrMetrics = true;
 	} acquireData;
 
 	struct ChipBegun {
@@ -371,10 +374,12 @@ public:
 	bool writeSdCardMessage(const String &s);
 	int freeMemory();
 	bool loadConfigFile(const String &filename);
+	bool addPacket(uint32_t timestamp, const String typeTag, float * data, size_t dataLen, uint8_t precision = 0, bool printToSerial = false);
 	bool addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision = 4);
 	bool addPacket(EmotiBit::DataType t);
 	void parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber);
 	void readSensors();
+	void processHeartRate();
 	void processData();
 	void sendData();
 	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented

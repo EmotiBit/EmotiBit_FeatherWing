@@ -28,7 +28,9 @@
 #include <math.h> 
 #include "DoubleBufferFloat.h"
 #include "DigitalFilter.h"
+#include "EmotiBitPacket.h"
 
+class EmotiBit; // forward declaration to enable compile
 
 class EmotiBitEda
 {
@@ -48,6 +50,7 @@ public:
 	{
 		float edaSeriesResistance = 0.f;	//Ohms
 		float samplingRate = 15.f;	// Hz
+		static const uint16_t EDA_SAMPLES_PER_SCR_FREQ_OUTPUT = 5; // = {X}. A  EDR FREQ sample is sent every {X} EDA counts
 		uint8_t adcBits;	// Bit resolution of ADC, e.g. 12, 16
 		bool enableDigitalFilter = false;
 		int16_t clipMin;	// Min value before clipping occurs
@@ -134,6 +137,12 @@ public:
 		@param isrOffsetCorr Sets the ISR offset correction value
 	*/
 	void setAdcIsrOffsetCorr(float isrOffsetCorr);
+
+	/*!
+		@brief Processes and records Electrodermal Response
+		@param pointer to emotibit instance. Required for adding outDataPacket
+	*/
+	void processElectrodermalResponse(EmotiBit* emotibit);
 };
 
 #endif

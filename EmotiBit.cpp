@@ -1070,45 +1070,44 @@ bool EmotiBit::setupSdCard()
 
 }
 
-bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) {
+bool EmotiBit::addPacket(uint32_t timestamp, const String typeTag, float * data, size_t dataLen, uint8_t precision, bool printToSerial)
+{
 	static EmotiBitPacket::Header header;
-	if (dataLen > 0) {
-		// ToDo: Consider faster ways to populate the _outDataPackets
-
-		//if (t == EmotiBit::DataType::DATA_OVERFLOW){
-		//	addDebugPacket((uint8_t)EmotiBit::DebugTags::WIFI_CONNHISTORY, timestamp);  // addDebugPacket(case, timestamp) 
-		//}
+	if (dataLen > 0) 
+	{
 		uint8_t protocolVersion = 1;
 		if (DC_DO_V2)
 		{
-			if (t == EmotiBit::DataType::DATA_CLIPPING || t == EmotiBit::DataType::DATA_OVERFLOW)
+			if (typeTag.equals(typeTags[(uint8_t)EmotiBit::DataType::DATA_CLIPPING]) || typeTag.equals(typeTags[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]))
 			{
 				protocolVersion = 2;
 			}
 		}
-
-
-		header = EmotiBitPacket::createHeader(typeTags[(uint8_t)t], timestamp, _outDataPacketCounter++, dataLen, protocolVersion);
+		// Add packet header to _outDataPackets
+		
+		// create packet header and add to outputDataPackets
+		header = EmotiBitPacket::createHeader(typeTag, timestamp, _outDataPacketCounter++, dataLen, protocolVersion);
 		String headerString = EmotiBitPacket::headerToString(header);
 		_outDataPackets += headerString;
-		if (_sendSerialData[(uint8_t) t])
+		if (printToSerial)
 		{
 			Serial.print(headerString);
 		}
 
-		if (t == EmotiBit::DataType::DATA_CLIPPING || t == EmotiBit::DataType::DATA_OVERFLOW) {
+		if (typeTag.equals(typeTags[(uint8_t)EmotiBit::DataType::DATA_CLIPPING]) || typeTag.equals(typeTags[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]))
+		{
 			// Handle clippping and overflow as a special case
 			for (uint8_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
 			{
 				// Add all the clipping/overflow events across all the buffers to the packet
-				if (i != (uint8_t) EmotiBit::DataType::DATA_CLIPPING && i != (uint8_t) EmotiBit::DataType::DATA_OVERFLOW) {
+				if (i != (uint8_t)EmotiBit::DataType::DATA_CLIPPING && i != (uint8_t)EmotiBit::DataType::DATA_OVERFLOW) {
 					// Skip clipping & overflow types
 					size_t count = 0;
-					if (t == EmotiBit::DataType::DATA_CLIPPING)
+					if (typeTag.equals(typeTags[(uint8_t)EmotiBit::DataType::DATA_CLIPPING]))
 					{
 						count = dataDoubleBuffers[i]->getClippedCount(DoubleBufferFloat::BufferSelector::OUT);
 					}
-					if (t == EmotiBit::DataType::DATA_OVERFLOW)
+					if (typeTag.equals(typeTags[(uint8_t)EmotiBit::DataType::DATA_OVERFLOW]))
 					{
 						count = dataDoubleBuffers[i]->getOverflowCount(DoubleBufferFloat::BufferSelector::OUT);
 					}
@@ -1120,6 +1119,10 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 							if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE - 1)
 							{
 								_outDataPackets += temp;
+								if (printToSerial)
+								{
+									Serial.print(temp);
+								}
 							}
 							else
 							{
@@ -1128,7 +1131,7 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 								Serial.println("[" + String(_outDataPackets.length()) + "+" + String(temp.length()) + "/" + String(OUT_MESSAGE_RESERVE_SIZE) + "]");
 							}
 						}
-					} 
+					}
 					else
 					{
 						for (size_t n = 0; n < count; n++)
@@ -1137,6 +1140,10 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 							if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE - 1)
 							{
 								_outDataPackets += temp;
+								if (printToSerial)
+								{
+									Serial.print(temp);
+								}
 							}
 							else
 							{
@@ -1149,34 +1156,41 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 				}
 			}
 		}
-		else {
-			for (uint16_t d = 0; d < dataLen; d++) {
+		else
+		{
+			for (uint16_t d = 0; d < dataLen; d++)
+			{
 				String temp = EmotiBitPacket::PAYLOAD_DELIMITER + String(data[d], precision);
 				if (_outDataPackets.length() + temp.length() < OUT_MESSAGE_RESERVE_SIZE - 1)
 				{
 					_outDataPackets += temp;
-					if (_sendSerialData[(uint8_t) t])
+					if (printToSerial)
 					{
 						Serial.print(temp);
 					}
-				} 
+				}
 				else
 				{
 					_outDataPackets += EmotiBitPacket::PAYLOAD_TRUNCATED;
 					Serial.print("ERROR: _outDataPackets exceeded OUT_MESSAGE_RESERVE_SIZE ");
 					Serial.println("[" + String(_outDataPackets.length()) + "+" + String(temp.length()) + "/" + String(OUT_MESSAGE_RESERVE_SIZE + "]"));
+					break;
 				}
 			}
 		}
 		_outDataPackets += "\n";
-		if (_sendSerialData[(uint8_t) t])
+		if (printToSerial)
 		{
 			Serial.print("\n");
 		}
-
 		return true;
 	}
 	return false;
+}
+
+bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) 
+{	
+	addPacket(timestamp, typeTags[(uint8_t)t], data, dataLen, precision, _sendSerialData[(uint8_t)t]);	
 }
 
 bool EmotiBit::addPacket(EmotiBit::DataType t) {
@@ -2630,6 +2644,57 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		}
 	}
 
+	file.print(","); // Doing some manual printing to chunk JSON and save RAM
+	// Heart Rate
+	{
+		// Parse the root object
+		StaticJsonBuffer<bufferSize> jsonBuffer;
+		JsonObject &root = jsonBuffer.createObject();
+		const uint8_t nInfo = 1;
+		JsonObject* infos[nInfo];
+		JsonArray* typeTags[nInfo];
+		JsonObject* setups[nInfo];
+		uint8_t i = 0;
+		infos[i] = &(root.createNestedObject("info"));
+		infos[i]->set("name", "HeartRate");
+		infos[i]->set("type", "PPG");
+		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
+		typeTags[i]->add(EmotiBitPacket::TypeTag::HEART_RATE);
+		infos[i]->set("channel_count", 1);
+		infos[i]->set("channel_format", "int");
+		infos[i]->set("units", "bpm");
+		if (root.printTo(file) == 0) {
+#ifdef DEBUG
+			Serial.println(F("Failed to write to file"));
+#endif
+		}
+	}
+
+	file.print(","); // Doing some manual printing to chunk JSON and save RAM
+	// interBeat interval
+	{
+		// Parse the root object
+		StaticJsonBuffer<bufferSize> jsonBuffer;
+		JsonObject &root = jsonBuffer.createObject();
+		const uint8_t nInfo = 1;
+		JsonObject* infos[nInfo];
+		JsonArray* typeTags[nInfo];
+		JsonObject* setups[nInfo];
+		uint8_t i = 0;
+		infos[i] = &(root.createNestedObject("info"));
+		infos[i]->set("name", "InterBeatInterval");
+		infos[i]->set("type", "PPG");
+		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
+		typeTags[i]->add(EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL);
+		infos[i]->set("channel_count", 1);
+		infos[i]->set("channel_format", "float");
+		infos[i]->set("units", "mS");
+		if (root.printTo(file) == 0) {
+#ifdef DEBUG
+			Serial.println(F("Failed to write to file"));
+#endif
+		}
+	}
 	file.print("]"); // Doing some manual printing to chunk JSON and save RAM
 
 	return true;
@@ -2873,6 +2938,52 @@ void EmotiBit::readSensors()
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
 }
 
+void EmotiBit::processHeartRate()
+{
+	float* data;
+	uint16_t dataSize;
+	uint32_t timestamp;
+	static uint16_t interBeatSampleCount = 0;
+	static uint8_t basisSignal = (uint8_t)DataType::PPG_INFRARED;
+	static DigitalFilter heartRateFilter(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.ppg, 0.5);
+	static DigitalFilter ppgSensorHighpass(DigitalFilter::FilterType::IIR_HIGHPASS, _samplingRates.ppg, 1); // to remove respiration artifact. filter frequency selected empirically
+	const static size_t APERIODIC_DATA_LEN = 1;  //used in packet header
+	const static float timePeriod = (1.f / _samplingRates.ppg) * 1000; // in mS
+	float interBeatInterval = 0; // in mS
+	float heartRate; // in bpm
+	static const int hrAlgoDcOffset = 100000; // randomly chosen to add offset to filtered ppgData. HR algo needs a DC offset to work
+	dataSize = dataDoubleBuffers[basisSignal]->getData(&data, &timestamp, false);
+	for (uint16_t i = 0; i < dataSize; i++)
+	{
+		// filter ppg data to remove respiration artifact
+		float filteredPpg = ppgSensorHighpass.filter(data[i]);
+		interBeatSampleCount++;
+		// the heart rate algorithm can be found in: EmotiBit_MAX30101/src/heartRate.cpp
+		// Note: the algorithm also has its own FIR
+		if (checkForBeat(filteredPpg + hrAlgoDcOffset))
+		{
+			// beat detected
+			// calculate IBI
+			interBeatInterval = interBeatSampleCount * timePeriod; // in mS
+			// back calculate the time of beat occurance
+			uint32_t timeAdjustment = (dataSize - i - 1) * timePeriod; // in mS
+			uint32_t beatTime = timestamp - timeAdjustment; // mS
+
+			// calculate heart rate
+			heartRate = (60.f / interBeatInterval) * 1000; // beats per min
+			heartRate = heartRateFilter.filter(heartRate);
+
+			// Add packets to output
+			addPacket(beatTime, EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL, &interBeatInterval, APERIODIC_DATA_LEN);
+			addPacket(beatTime, EmotiBitPacket::TypeTag::HEART_RATE, &heartRate, APERIODIC_DATA_LEN);
+				
+			// reset interBeatCount
+			interBeatSampleCount = 0;
+		}
+	}
+
+}
+
 void EmotiBit::processData()
 {
 #ifdef DEBUG_FEAT_EDA_CTRL
@@ -2921,6 +3032,16 @@ void EmotiBit::processData()
 				dataDoubleBuffers[t]->swap();
 				//Serial.print(String(t) + ",");
 			}
+		}
+		if (acquireData.heartRate)
+		{
+			processHeartRate();
+		}
+		if (acquireData.edrMetrics)
+		{
+			// Note: this may move to emotiBitEda.processData() in the future
+			emotibitEda.processElectrodermalResponse(this);
+
 		}
 	}
 }
