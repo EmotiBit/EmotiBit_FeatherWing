@@ -66,7 +66,15 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		Serial.println(ssid);
 		// ToDo: Add WEP support
 		_wifiOff = false;
-		status = WiFi.begin(ssid, pass);
+		if (pass.equals(""))
+		{
+			// assume open network if password is empty
+			status = WiFi.begin(ssid);
+		}
+		else
+		{
+			status = WiFi.begin(ssid, pass);
+		}
 		_needsAdvertisingBegin = true;
 		delay(attemptDelay);
 		attempt++;
