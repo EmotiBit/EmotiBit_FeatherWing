@@ -2301,6 +2301,8 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("type", "Multimodal");
 		infos[i]->set("source_id", source_id);
 		infos[i]->set("hardware_version", hardware_version);
+		infos[i]->set("sku_version", emotiBitSku);
+		infos[i]->set("serial_number", String(emotibitSerialNumber));
 		infos[i]->set("feather_version", feather_version);
 		infos[i]->set("firmware_version", firmware_version);
 		infos[i]->set("created_at", datetimeString);
