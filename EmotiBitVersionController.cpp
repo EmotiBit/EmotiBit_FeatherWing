@@ -418,6 +418,7 @@ bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitNvmController &em
 			emotibitSerialNumber = variantInfo->emotibitSerialNumber;
 			Serial.print("[NVM VARIANT INFO] EmotiBit Number: "); Serial.println(emotibitSerialNumber);
 			// ToDo: there should some day be a versioning based on barcode format here
+			barcode.reserve(15); // current barcode uses 13 characters
 			barcode = sku + EmotiBitFactoryTest::BARCODE_DELIMITER;
 			// convert hardware version to barcode format V04a -> V4
 			String tempHwVersion = getHardwareVersion(hwVersion);
@@ -427,7 +428,7 @@ bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitNvmController &em
 			barcode = barcode + EmotiBitVariants::HARDWARE_VERSION_PREFIX + String(hwVer) + EmotiBitFactoryTest::BARCODE_DELIMITER;
 			// add leading zeros
 			String leadingZeros = "0";
-			for (int i = String(emotibitSerialNumber).length(); i < EmotiBitVariants::EMOTIBIT_BARCODE_SERIAL_NUM_LENGTH; i++)
+			for (int i = String(emotibitSerialNumber).length(); i < EmotiBitVariants::BARCODE_SERIAL_NUM_LENGTH; i++)
 			{
 				barcode += leadingZeros;
 			}

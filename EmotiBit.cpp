@@ -249,7 +249,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			sleep(false);
 		}
 	}
-	
+	// device ID for V3 and lower will be updated after Temp/Humidity sensor is setup below
 	String fwVersionModifier = "";
 	if (testingMode == TestingMode::ACUTE)
 	{
@@ -703,6 +703,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			Serial.print(tempHumiditySensor.sernum_a);
 			Serial.print(", ");
 			Serial.print(tempHumiditySensor.sernum_b);
+			// update the device ID for V3 and lower
+			emotibitDeviceId = tempHumiditySensor.sernum_a + "-" + tempHumiditySensor.sernum_b;
 			//Serial.print("\n");
 			Serial.print("\tModel: ");
 			Serial.print(tempHumiditySensor._model);
@@ -1404,7 +1406,8 @@ uint8_t EmotiBit::update()
 		//Serial.print(">");
 		//Serial.println(Serial.peek());
 
-		// ToDo: Add barcode
+		Serial.print("device ID: ");
+		Serial.println(emotibitDeviceId);
 		Serial.print("Hardware: ");
 		Serial.println(EmotiBitVersionController::getHardwareVersion(_hwVersion));
 		Serial.print("Firmware: ");
