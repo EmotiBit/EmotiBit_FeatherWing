@@ -242,7 +242,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		}
 	}
 
-	if (!emotiBitVersionController.getEmotiBitVariantInfo(_emotibitNvmController, _hwVersion, emotiBitSku, emotibitSerialNumber))
+	if (!emotiBitVersionController.getEmotiBitVariantInfo(_emotibitNvmController, _hwVersion, emotiBitSku, emotibitSerialNumber, emotibitDeviceId))
 	{
 		if (!emotiBitVersionController.detectVariantFromHardware(*(_EmotiBit_i2c), _hwVersion, emotiBitSku))
 		{
@@ -2301,8 +2301,8 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("type", "Multimodal");
 		infos[i]->set("source_id", source_id);
 		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("sku_version", emotiBitSku);
-		infos[i]->set("serial_number", String(emotibitSerialNumber));
+		infos[i]->set("sku", emotiBitSku);
+		infos[i]->set("device_id", emotibitDeviceId);
 		infos[i]->set("feather_version", feather_version);
 		infos[i]->set("firmware_version", firmware_version);
 		infos[i]->set("created_at", datetimeString);

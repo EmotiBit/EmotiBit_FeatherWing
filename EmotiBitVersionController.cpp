@@ -386,7 +386,7 @@ bool EmotiBitVersionController::writeVariantInfoToNvm(EmotiBitNvmController &emo
 	}
 }
 
-bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber)
+bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode)
 {
 	uint8_t* nvmData;
 	uint8_t datatypeVersion;
@@ -417,6 +417,22 @@ bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitNvmController &em
 			Serial.print("[NVM VARIANT INFO] SKU version: "); Serial.println(sku);
 			emotibitSerialNumber = variantInfo->emotibitSerialNumber;
 			Serial.print("[NVM VARIANT INFO] EmotiBit Number: "); Serial.println(emotibitSerialNumber);
+			// ToDo: there should some day be a versioning based on barcode format here
+			barcode = sku + EmotiBitFactoryTest::BARCODE_DELIMITER;
+			// convert hardware version to barcode format V04a -> V4
+			String tempHwVersion = getHardwareVersion(hwVersion);
+			tempHwVersion.remove(tempHwVersion.indexOf(EmotiBitVariants::HARDWARE_VERSION_PREFIX), 1); // remove "V"
+			int hwVer = tempHwVersion.toInt(); // automatically discards the trailing alphabets. See arduino documentation for more details
+			// add converted HW version to barcode
+			barcode = barcode + EmotiBitVariants::HARDWARE_VERSION_PREFIX + String(hwVer) + EmotiBitFactoryTest::BARCODE_DELIMITER;
+			// add leading zeros
+			String leadingZeros = "0";
+			for (int i = String(emotibitSerialNumber).length(); i < EmotiBitVariants::EMOTIBIT_BARCODE_SERIAL_NUM_LENGTH; i++)
+			{
+				barcode += leadingZeros;
+			}
+			barcode += String(emotibitSerialNumber);
+			Serial.print("[NVM VARIANT INFO] EmotiBit device ID: "); Serial.println(barcode);
 		}
 		return true;
 	}

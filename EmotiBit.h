@@ -44,7 +44,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.27";
+	String firmware_version = "1.3.28";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
@@ -490,6 +490,7 @@ private:
 	float _gyroRange; // supported values: 125, 250, 500, 1000, 2000 (degrees/second)
 	EmotiBitVersionController::EmotiBitVersion _hwVersion;
 	String emotiBitSku;
+	String emotibitDeviceId;
 	uint32_t emotibitSerialNumber;
 	uint8_t _imuFifoFrameLen = 0; // in bytes
 	const uint8_t _maxImuFifoFrameLen = 40; // in bytes
