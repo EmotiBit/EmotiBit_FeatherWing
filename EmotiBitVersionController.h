@@ -199,7 +199,7 @@ public:
 		@param emotibitSerialNumber the EmotiBit Number read from the version(for V4+ only)
 		@return returns True, if Variant information successfully retrieved from the NVM, else False
 	*/
-	bool getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber);
+	bool getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode);
 	
 	/*!
 		@brief fallback function to detect version from HW, if variant information not stored in NVM

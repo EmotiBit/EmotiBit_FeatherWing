@@ -649,7 +649,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 	static const float timePeriod = 1.f / samplingFrequency; // in secs
 	static const float scrFreqTimePeriod = _constants.EDA_SAMPLES_PER_SCR_FREQ_OUTPUT  * timePeriod; // timePeriod of the signal scr:FREQ
 	static const float secToMinMultiplier = 60.f / (scrFreqTimePeriod);  // multiplier used below to convert events/(n secs) -> events/min
-	static DigitalFilter edaLowpassFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // for bandpassing eda
+	static DigitalFilter edaLowpassFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1.5); // for bandpassing eda
 	static DigitalFilter edaHighpassFilter(DigitalFilter::FilterType::IIR_HIGHPASS, samplingFrequency, 0.2); // for bandpassing eda
 	static DigitalFilter scrFrequencyFilter(DigitalFilter::FilterType::IIR_LOWPASS, 1.f/(scrFreqTimePeriod), 0.01); // lowPass the calculated scr:FREQ
 	float* data;
@@ -666,7 +666,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 	static uint16_t scrFreqOutputCounter = 0; // counter for eda samples
 	static float lastFilteredEdaValue = 0;
 	static float filteredEda = 0;
-	static float lastEdaValueFromPreviousBuffer = 0;
+	static float previousEdaValue = 0;
 
 	// Load latest EDA signal
 	if (_edaBuffer != nullptr)
@@ -727,20 +727,12 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 			{
 				// peak detected. calculate rise time and amplitude
 				onsetDetected = false;
-				float amplitude;
 				// if the downslope is detected at the first sample of the new buffer, peak = last sample of last buffer
-				if (i == 0)
-				{
-					amplitude = lastEdaValueFromPreviousBuffer - scrAmplitudeOnOnset;
-				}
-				else
-				{
-					amplitude = data[i - 1] - scrAmplitudeOnOnset;
-				}
+				float amplitude = previousEdaValue - scrAmplitudeOnOnset;
 				float riseTime = (float)(riseTimeSampleCount - 1)  * timePeriod; // Samples since onset*timePeriod (in Secs)
 				// Add packet to the output
-				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_AMPLITUDE, &amplitude, APERIODIC_DATA_LEN, 4); // 4 = precision
-				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_RISE_TIME, &riseTime, APERIODIC_DATA_LEN, 4); // 4 = precision
+				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_AMPLITUDE, &amplitude, APERIODIC_DATA_LEN, 6); // 6 = precision
+				emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_RISE_TIME, &riseTime, APERIODIC_DATA_LEN, 6); // 6 = precision
 			}
 		}
 		// check if it time to send scr:FREQ packet
@@ -755,6 +747,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 			scrOnsetCount = 0;
 			scrFreqOutputCounter = 0;
 		}
+		// store the current EDA value to be used in the next calculation
+		previousEdaValue = data[i];
 	}
-	lastEdaValueFromPreviousBuffer = data[dataSize - 1];
 }
