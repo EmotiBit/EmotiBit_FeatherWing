@@ -704,7 +704,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			Serial.print(", ");
 			Serial.print(tempHumiditySensor.sernum_b);
 			// update the device ID for V3 and lower
-			emotibitDeviceId = tempHumiditySensor.sernum_a + "-" + tempHumiditySensor.sernum_b;
+			emotibitDeviceId = String(tempHumiditySensor.sernum_a) + "-" + String(tempHumiditySensor.sernum_b);
 			//Serial.print("\n");
 			Serial.print("\tModel: ");
 			Serial.print(tempHumiditySensor._model);
