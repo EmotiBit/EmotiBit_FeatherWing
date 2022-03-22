@@ -201,7 +201,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			Serial.println(factoryTestSerialOutput);
 		}
-		sleep(false);
+		//sleep(false);
+		sensorSetupFailed("EEPROM");
 	}
 	if (testingMode == TestingMode::FACTORY_TEST && barcode.rawCode != "")
 	{
@@ -246,7 +247,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		if (!emotiBitVersionController.detectVariantFromHardware(*(_EmotiBit_i2c), _hwVersion, emotiBitSku))
 		{
-			sleep(false);
+			//sleep(false);
+			sensorSetupFailed("CANNOT IDENTIFY HARDWARE");
 		}
 	}
 	// device ID for V3 and lower will be updated after Temp/Humidity sensor is setup below
@@ -292,7 +294,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		Serial.println("Constant Mapping Failed. Stopping execution");
 		emotiBitVersionController.initConstantMapping(EmotiBitVersionController::EmotiBitVersion::V03B);// Assume the version is V03B to set Hibernate level as Required
-		sleep(false);
+		//sleep(false);
+		sensorSetupFailed("CONSTANT MAPPING");
 	}
 
 #ifdef DEBUG
@@ -334,7 +337,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (!_outDataPackets.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
 		Serial.println("Failed to reserve memory for output");
 		while (true) {
-			sleep(false);// hiberante with setup incomplete
+			//sleep(false);// hiberante with setup incomplete
+			sensorSetupFailed("FAILED TO RESERVE MEM FOR OUT MESSAGE");
 		}
 	}
 	now = millis();
@@ -491,7 +495,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::LED_CONTROLLER, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			Serial.println(factoryTestSerialOutput);
-			sleep(false);
+			//sleep(false);
+			sensorSetupFailed("LED CONTROLLER");
 		}
 	}
 	
@@ -514,7 +519,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::PPG_SENSOR, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			Serial.println(factoryTestSerialOutput);
-			sleep(false);
+			//sleep(false);
+			sensorSetupFailed("PPG");
 		}
 	}
 	ppgSensor.wakeUp();
@@ -658,7 +664,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ACCEL_GYRO, EmotiBitFactoryTest::TypeTag::TEST_FAIL);		
 			Serial.println(factoryTestSerialOutput);
 		}
-		sleep(false);
+		//sleep(false);
+		sensorSetupFailed("IMU");
 	}
 	if ((int)_hwVersion == (int)EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
@@ -719,7 +726,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::TEMP_SENSOR, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 				Serial.println(factoryTestSerialOutput);
 			}
-			sleep(false);
+			//sleep(false);
+			sensorSetupFailed("TEMP/HUMIDITY");
 		}
 		Serial.println(" ... Completed");
 	}
@@ -761,7 +769,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			}
 			Serial.println("Failed");
-			sleep(false);
+			//sleep(false);
+			sensorSetupFailed("THERMOPILE");
 		}
 	}
 
@@ -814,8 +823,9 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 
 	// Sensor setup complete
-	led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-	led.send();
+	Serial.println("Sensor setup complete");
+	//led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+	//led.send();
 
 	// EDL Filter Parameters
 	//edaCrossoverFilterFreq = emotiBitVersionController.getMathConstant(MathConstants::EDA_CROSSOVER_FILTER_FREQ);
@@ -831,14 +841,18 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		_edlDigFiltAlpha = pow(M_E, -2.f * PI * edaCrossoverFilterFreq / (_samplingRates.eda / _samplesAveraged.eda));
 	}
 	*/
-
+	led.setLED(uint8_t(EmotiBit::Led::RED), true);
+	led.send();
 	status = setupSdCard();
 	if (status)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SD_CARD, EmotiBitFactoryTest::TypeTag::TEST_PASS);
-		led.setLED(uint8_t(EmotiBit::Led::RED), true);
+		// Give a brief delay to signify to the user "config file is being loaded"
+		delay(2000);
+		led.setLED(uint8_t(EmotiBit::Led::RED), false);
 		led.send();
 	}
+	// ToDo: verify if this else is ever reached.
 	else
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SD_CARD, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
@@ -851,10 +865,13 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	WiFi.setPins(8, 7, 4, 2);
 #endif
 	WiFi.lowPowerMode();
-	_emotiBitWiFi.begin();
+	// turn BLUE on to signify we are trying to connect to WiFi
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 	led.send();
-
+	// ToDo: There is no catch right now for timeout. In case of timeout, EmotiBit still continues to complete setup() and proceed to update()
+	_emotiBitWiFi.begin();
+	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+	led.send();
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		// Add Pass or fail
@@ -974,13 +991,15 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
 	Serial.print("\n");
 	uint8_t ledOffdelay = 100;	// Aesthetic delay
+	// below block no longer required as light up seq. changed
+	/*
 	led.setLED(uint8_t(EmotiBit::Led::RED), false);
 	delay(ledOffdelay);
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 	delay(ledOffdelay);
 	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
 	led.send();
-
+	*/
 	if (!_sendTestData)
 	{
 		attachToInterruptTC3(&ReadSensors, this);
@@ -1024,6 +1043,16 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 } // Setup
 
+
+void EmotiBit::sensorSetupFailed(const String failureMode)
+{
+	while (1)
+	{
+		Serial.println("Failed to setup: " + failureMode);
+		Serial.println("please contact info@emotibit.com");
+		delay(1000);
+	}
+}
 bool EmotiBit::setupSdCard()
 {
 
@@ -1063,8 +1092,10 @@ bool EmotiBit::setupSdCard()
 		Serial.println("SD card configuration file parsing failed.");
 		Serial.println("Create a file 'config.txt' with the following JSON:");
 		Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
+		// ToDo: verify if we need a separate case for FACTORY_TEST. We should always have a config file, since FACTORY TEST is a controlled environment
 		while (true) {
-			sleep();
+			Serial.println("Config file not found. Please add a config file to the SD-Card.");
+			delay(1000);
 		}
 	}
 

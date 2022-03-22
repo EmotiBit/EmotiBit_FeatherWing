@@ -44,7 +44,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.31";
+	String firmware_version = "1.3.32";
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
@@ -357,6 +357,7 @@ public:
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 
+	void sensorSetupFailed(const String failureMode);
 	bool setupSdCard();
 	void updateButtonPress();
 	void sleep(bool i2cSetupComplete = true);
