@@ -1028,8 +1028,7 @@ void EmotiBit::setupFailed(const String failureMode)
 {
 	while (1)
 	{
-		Serial.println("Failed to setup: " + failureMode);
-		Serial.println("please contact info@emotibit.com\n");
+		Serial.println("Setup failed: " + failureMode);
 		delay(1000);
 	}
 }
