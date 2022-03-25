@@ -815,8 +815,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	// Sensor setup complete
 	Serial.println("Sensor setup complete");
-	//led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-	//led.send();
 
 	// EDL Filter Parameters
 	//edaCrossoverFilterFreq = emotiBitVersionController.getMathConstant(MathConstants::EDA_CROSSOVER_FILTER_FREQ);
@@ -982,15 +980,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.println("Free Ram :" + String(freeMemory(), DEC) + " bytes");
 	Serial.print("\n");
 	uint8_t ledOffdelay = 100;	// Aesthetic delay
-	// below block no longer required as light up seq. changed
-	/*
-	led.setLED(uint8_t(EmotiBit::Led::RED), false);
-	delay(ledOffdelay);
-	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
-	delay(ledOffdelay);
-	led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-	led.send();
-	*/
 	if (!_sendTestData)
 	{
 		attachToInterruptTC3(&ReadSensors, this);
@@ -1039,8 +1028,7 @@ void EmotiBit::setupFailed(const String failureMode)
 {
 	while (1)
 	{
-		Serial.println("Failed to setup: " + failureMode);
-		Serial.println("please contact info@emotibit.com\n");
+		Serial.println("Setup failed: " + failureMode);
 		delay(1000);
 	}
 }
@@ -1084,10 +1072,7 @@ bool EmotiBit::setupSdCard()
 		Serial.println("Create a file 'config.txt' with the following JSON:");
 		Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
 		// ToDo: verify if we need a separate case for FACTORY_TEST. We should always have a config file, since FACTORY TEST is a controlled environment
-		while (true) {
-			Serial.println("Config file not found. Please add a config file to the SD-Card.");
-			delay(1000);
-		}
+		setupFailed("Config file not found");
 	}
 
 	return true;
