@@ -357,7 +357,7 @@ public:
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 
-	void sensorSetupFailed(const String failureMode);
+	void setupFailed(const String failureMode);
 	bool setupSdCard();
 	void updateButtonPress();
 	void sleep(bool i2cSetupComplete = true);

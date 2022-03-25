@@ -201,8 +201,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			Serial.println(factoryTestSerialOutput);
 		}
-		//sleep(false);
-		sensorSetupFailed("EEPROM");
+		setupFailed("EEPROM");
 	}
 	if (testingMode == TestingMode::FACTORY_TEST && barcode.rawCode != "")
 	{
@@ -247,8 +246,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		if (!emotiBitVersionController.detectVariantFromHardware(*(_EmotiBit_i2c), _hwVersion, emotiBitSku))
 		{
-			//sleep(false);
-			sensorSetupFailed("CANNOT IDENTIFY HARDWARE");
+			setupFailed("CANNOT IDENTIFY HARDWARE");
 		}
 	}
 	// device ID for V3 and lower will be updated after Temp/Humidity sensor is setup below
@@ -294,8 +292,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		Serial.println("Constant Mapping Failed. Stopping execution");
 		emotiBitVersionController.initConstantMapping(EmotiBitVersionController::EmotiBitVersion::V03B);// Assume the version is V03B to set Hibernate level as Required
-		//sleep(false);
-		sensorSetupFailed("CONSTANT MAPPING");
+		setupFailed("CONSTANT MAPPING");
 	}
 
 #ifdef DEBUG
@@ -337,8 +334,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	if (!_outDataPackets.reserve(OUT_MESSAGE_RESERVE_SIZE)) {
 		Serial.println("Failed to reserve memory for output");
 		while (true) {
-			//sleep(false);// hiberante with setup incomplete
-			sensorSetupFailed("FAILED TO RESERVE MEM FOR OUT MESSAGE");
+			setupFailed("FAILED TO RESERVE MEM FOR OUT MESSAGE");
 		}
 	}
 	now = millis();
@@ -495,8 +491,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::LED_CONTROLLER, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			Serial.println(factoryTestSerialOutput);
-			//sleep(false);
-			sensorSetupFailed("LED CONTROLLER");
+			setupFailed("LED CONTROLLER");
 		}
 	}
 	
@@ -519,8 +514,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::PPG_SENSOR, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			Serial.println(factoryTestSerialOutput);
-			//sleep(false);
-			sensorSetupFailed("PPG");
+			setupFailed("PPG");
 		}
 	}
 	ppgSensor.wakeUp();
@@ -664,8 +658,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ACCEL_GYRO, EmotiBitFactoryTest::TypeTag::TEST_FAIL);		
 			Serial.println(factoryTestSerialOutput);
 		}
-		//sleep(false);
-		sensorSetupFailed("IMU");
+		setupFailed("IMU");
 	}
 	if ((int)_hwVersion == (int)EmotiBitVersionController::EmotiBitVersion::V03B)
 	{
@@ -726,8 +719,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::TEMP_SENSOR, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 				Serial.println(factoryTestSerialOutput);
 			}
-			//sleep(false);
-			sensorSetupFailed("TEMP/HUMIDITY");
+			setupFailed("TEMP/HUMIDITY");
 		}
 		Serial.println(" ... Completed");
 	}
@@ -769,8 +761,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			}
 			Serial.println("Failed");
-			//sleep(false);
-			sensorSetupFailed("THERMOPILE");
+			setupFailed("THERMOPILE");
 		}
 	}
 
@@ -1044,12 +1035,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 } // Setup
 
 
-void EmotiBit::sensorSetupFailed(const String failureMode)
+void EmotiBit::setupFailed(const String failureMode)
 {
 	while (1)
 	{
 		Serial.println("Failed to setup: " + failureMode);
-		Serial.println("please contact info@emotibit.com");
+		Serial.println("please contact info@emotibit.com\n");
 		delay(1000);
 	}
 }
