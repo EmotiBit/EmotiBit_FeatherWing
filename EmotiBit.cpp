@@ -165,7 +165,13 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SETUP_COMPLETE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
 			Serial.println(factoryTestSerialOutput);
 		}
-		sleep(false);
+		// Set Feather LED LOW
+		pinMode(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, OUTPUT);
+		// make sure the pin DRV strength is set to sink appropriate current
+		PORT->Group[PORTA].PINCFG[17].bit.DRVSTR = 1; // SCL
+		digitalWrite(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, LOW);
+		// Not putting EmotiBit to sleep helps with the FW installer process
+		setupFailed("SD-Card not detected");
 	}
 	bool status = true;
 	if (_EmotiBit_i2c != nullptr)
@@ -1026,10 +1032,15 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 void EmotiBit::setupFailed(const String failureMode)
 {
+	uint32_t timeSinceLastPrint = millis();
 	while (1)
 	{
-		Serial.println("Setup failed: " + failureMode);
-		delay(1000);
+		// not using delay to keep the CPU acitve from serial pings from host computer
+		if (millis() - timeSinceLastPrint > 1000)
+		{
+			Serial.println("Setup failed: " + failureMode);
+			timeSinceLastPrint = millis();
+		}
 	}
 }
 bool EmotiBit::setupSdCard()
