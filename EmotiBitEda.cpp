@@ -649,7 +649,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 	static const float timePeriod = 1.f / samplingFrequency; // in secs
 	static const float scrFreqTimePeriod = _constants.EDA_SAMPLES_PER_SCR_FREQ_OUTPUT  * timePeriod; // timePeriod of the signal scr:FREQ
 	static const float secToMinMultiplier = 60.f / (scrFreqTimePeriod);  // multiplier used below to convert events/(n secs) -> events/min
-	static DigitalFilter edaLowpassFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1.5); // for bandpassing eda
+	static DigitalFilter edaLowpassFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // for bandpassing eda
 	static DigitalFilter edaHighpassFilter(DigitalFilter::FilterType::IIR_HIGHPASS, samplingFrequency, 0.2); // for bandpassing eda
 	static DigitalFilter scrFrequencyFilter(DigitalFilter::FilterType::IIR_LOWPASS, 1.f/(scrFreqTimePeriod), 0.01); // lowPass the calculated scr:FREQ
 	float* data;
@@ -673,10 +673,11 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 	{
 		dataSize = _edaBuffer->getData(&data, &timestamp, false);
 	}
+	// uncomment below comment block to TX new signals to the Oscilloscope
 	/*
 	// testing bandpass
-	static DigitalFilter edaLowpassFilterTest(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // for bandpassing eda
-	static DigitalFilter edaHighpassFilterTest(DigitalFilter::FilterType::IIR_HIGHPASS, samplingFrequency, 0.3); // for bandpassing eda
+	static DigitalFilter edaLowpassFilterTest(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1.5); // for bandpassing eda
+	static DigitalFilter edaHighpassFilterTest(DigitalFilter::FilterType::IIR_HIGHPASS, samplingFrequency, 0.2); // for bandpassing eda
 	float tempFiltered[10];
 	if (dataSize < 10)
 	{
@@ -702,7 +703,6 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 			// convert uS to Ohms for thresholding
 			float instSkinResistance = 1000000.f / data[i];  // Instantaneous skin Resistance
 			float baselineSkinResistance = 1000000.f / (data[i] - filteredEda); // Resistance before Response
-
 			// detect onset if threshold is crossed
 			if (baselineSkinResistance - instSkinResistance > threshold)
 			{
@@ -715,7 +715,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 				scrAmplitudeOnOnset = data[i];  // record the base of the EDA peak
 
 				// reset counter for next response
-				riseTimeSampleCount  = 0;
+				riseTimeSampleCount = 0;
 			}
 		}
 		else
