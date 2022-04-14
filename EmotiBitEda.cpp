@@ -648,7 +648,6 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 	static const float samplingFrequency = _constants.samplingRate;
 	static const float timePeriod = 1.f / samplingFrequency; // in secs
 	static const float scrFreqTimePeriod = _constants.EDA_SAMPLES_PER_SCR_FREQ_OUTPUT  * timePeriod; // timePeriod of the signal scr:FREQ
-	static const float secToMinMultiplier = 60.f / (scrFreqTimePeriod);  // multiplier used below to convert events/(n secs) -> events/min
 	static DigitalFilter edaLowpassFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // for bandpassing eda
 	static DigitalFilter edaHighpassFilter(DigitalFilter::FilterType::IIR_HIGHPASS, samplingFrequency, 0.2); // for bandpassing eda
 	static DigitalFilter scrFrequencyFilter(DigitalFilter::FilterType::IIR_LOWPASS, 1.f/(scrFreqTimePeriod), 0.01); // lowPass the calculated scr:FREQ
@@ -734,8 +733,8 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 					// increment SCR event count after peak has been detected
 					scrEventCount++;
 					// Add packet to the output
-					emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_AMPLITUDE, &amplitude, APERIODIC_DATA_LEN, 6, true); // 6 = precision
-					emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_RISE_TIME, &riseTime, APERIODIC_DATA_LEN, 6, true); // 6 = precision
+					emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_AMPLITUDE, &amplitude, APERIODIC_DATA_LEN, 6); // 6 = precision
+					emotibit->addPacket(onsetTime, EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_RISE_TIME, &riseTime, APERIODIC_DATA_LEN, 6); // 6 = precision
 				}
 			}
 		}
@@ -743,7 +742,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 		if (scrFreqOutputCounter == _constants.EDA_SAMPLES_PER_SCR_FREQ_OUTPUT )
 		{
 			// calculate number of scr events in time period
-			float responseFreq = (scrEventCount / scrFreqTimePeriod) * secToMinMultiplier; // scr:FREQ in count/min
+			float responseFreq = (scrEventCount / scrFreqTimePeriod) * 60.f; // scr:FREQ in count/min
 			responseFreq = scrFrequencyFilter.filter(responseFreq);
 			uint32_t timstamp = millis();
 			// send data
