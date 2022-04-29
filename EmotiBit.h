@@ -44,7 +44,8 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.35";
+	String firmware_version = "1.3.36";
+
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 	const bool DC_DO_V2 = true;
