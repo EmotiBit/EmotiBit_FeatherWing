@@ -66,7 +66,15 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		Serial.println(ssid);
 		// ToDo: Add WEP support
 		_wifiOff = false;
-		status = WiFi.begin(ssid, pass);
+		if (pass.equals(""))
+		{
+			// assume open network if password is empty
+			status = WiFi.begin(ssid);
+		}
+		else
+		{
+			status = WiFi.begin(ssid, pass);
+		}
 		_needsAdvertisingBegin = true;
 		delay(attemptDelay);
 		attempt++;
@@ -311,16 +319,26 @@ int8_t EmotiBitWiFi::sendUdp(WiFiUDP& udp, const String& message, const IPAddres
 		return wifiStatus;
 	}
 
-	static int16_t firstIndex;
+	int16_t firstIndex;
 	firstIndex = 0;
 	while (firstIndex < message.length()) {
-		static int16_t lastIndex;
+		int16_t lastIndex;
+		//Serial.println(firstIndex);
 		lastIndex = message.length() - 1; // message.length() - 1 to handle \n 
+
+		// Search for the largest packet larger than MAX_SEND_LEN
 		while (lastIndex - firstIndex > MAX_SEND_LEN - 1) {
+			// Start at the end of the message and search for a packet delimiter less than MAX_SEND_LEN
 			lastIndex = message.lastIndexOf(EmotiBitPacket::PACKET_DELIMITER_CSV, lastIndex - 1);
 			//Serial.println(lastIndex);
+			if (lastIndex <= firstIndex)
+			{
+				// If we don't find a packet less than MAX_SEND_LEN, send the whole thing
+				lastIndex = message.length() - 1;
+				break;
+			}
 		}
-		//Serial.println(outputMessage.substring(firstIndex, lastIndex));
+		//Serial.println(message.substring(firstIndex, lastIndex));
 		for (uint8_t n = 0; n < _nDataSends; n++) {
 			udp.beginPacket(ip, port);
 			udp.print(message.substring(firstIndex, lastIndex + 1));	// use lastIndex + 1 to get \n back

@@ -24,7 +24,7 @@ void onShortButtonPress()
 
 void onLongButtonPress()
 {
-	emotibit.hibernate();
+	emotibit.sleep();
 }
 
 void setup() 
