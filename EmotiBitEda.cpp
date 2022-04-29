@@ -650,7 +650,7 @@ void EmotiBitEda::processElectrodermalResponse(EmotiBit* emotibit)
 	static const float scrFreqTimePeriod = _constants.EDA_SAMPLES_PER_SCR_FREQ_OUTPUT  * timePeriod; // timePeriod of the signal scr:FREQ
 	static DigitalFilter edaLowpassFilter(DigitalFilter::FilterType::IIR_LOWPASS, samplingFrequency, 1); // for bandpassing eda
 	static DigitalFilter edaHighpassFilter(DigitalFilter::FilterType::IIR_HIGHPASS, samplingFrequency, 0.2); // for bandpassing eda
-	static DigitalFilter scrFrequencyFilter(DigitalFilter::FilterType::IIR_LOWPASS, 1.f/(scrFreqTimePeriod), 1.f/60.f); // lowPass the calculated scr:FREQ
+	static DigitalFilter scrFrequencyFilter(DigitalFilter::FilterType::IIR_LOWPASS, 1.f/(scrFreqTimePeriod), 1.f/180.f); // lowPass the calculated scr:FREQ
 	float* data;
 	uint32_t timestamp;
 	size_t dataSize;
