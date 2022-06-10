@@ -16,12 +16,18 @@
 #include <SparkFun_MLX90632_Arduino_Library.h>
 #include "DoubleBufferFloat.h"
 #include <ArduinoJson.h>
-#include "wiring_private.h"
 #include "EmotiBitWiFi.h"
 #include <SPI.h>
+#ifdef ARDUINO_FEATHER_ESP32
+#include <SD.h>
+#include "driver/adc.h"
+#include <esp_wifi.h>
+#include <esp_bt.h>
+#elif defined ADAFRUIT_FEATHER_M0
 #include <SdFat.h>
-#include <ArduinoJson.h>
 #include <ArduinoLowPower.h>
+#include "wiring_private.h"
+#endif
 #include "AdcCorrection.h"
 #include "EdaCorrection.h"
 #include "EmotiBitVersionController.h"
@@ -337,7 +343,11 @@ public:
 	bool _sendData[(uint8_t)EmotiBit::DataType::length];
 	bool _sendSerialData[(uint8_t)EmotiBit::DataType::length];
 
+#ifdef ADAFRUIT_FEATHER_M0
 	SdFat SD;
+#elif defined ARDUINO_FEATHER_ESP32
+	// SD is already defined.
+#endif
 	volatile uint8_t battLevel = 100;
 	volatile uint8_t battIndicationSeq = 0;
 	volatile uint16_t BattLedDuration = 65535;
@@ -350,7 +360,12 @@ public:
 	//String _outSdPackets;		// Packts that will be written to SD card (if recording) but not sent over wireless
 	//String _inControlPackets;	// Control packets recieved over wireless
 	String _sdCardFilename = "datalog.csv";
-	const char *_configFilename = "config.txt"; 
+	// ToDo: unecessary #define. add / while passing the argument to function
+#ifdef ADAFRUIT_FEATHER_M0
+	const char *_configFilename = "config.txt";
+#elif defined ARDUINO_FEATHER_ESP32
+	const char *_configFilename = "/config.txt";
+#endif
 	File _dataFile;
 	volatile bool _sdWrite;
 	PowerMode _powerMode;
@@ -550,8 +565,13 @@ private:
 };
 
 void attachEmotiBit(EmotiBit*e = nullptr);
+#ifdef ADAFRUIT_FEATHER_M0
 void attachToInterruptTC3(void(*readFunction)(void), EmotiBit*e = nullptr);
 void ReadSensors();
+#elif defined ARDUINO_FEATHER_ESP32
+void attachToCore(void(*readFunction)(void*), EmotiBit*e = nullptr);
+void ReadSensors(void* pvParameters);
+#endif
 
 
 #endif

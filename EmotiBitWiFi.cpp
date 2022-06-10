@@ -1,17 +1,24 @@
 #include "EmotiBitWiFi.h"
+#ifdef ADAFRUIT_FEATHER_M0
 #include <driver/source/nmasic.h>
+#endif
 
 uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 {
 	uint8_t status = WiFi.status();
 	uint32_t startBegin = millis();
-
+#ifdef ADAFRUIT_FEATHER_M0
 	if (status == WL_NO_SHIELD) {
 		Serial.println("No WiFi shield found. Try WiFi.setPins().");
 		return WL_NO_SHIELD;
 	}
-
 	checkWiFi101FirmwareVersion();
+#elif defined ARDUINO_FEATHER_ESP32
+	// Taken from scanNetworks example
+	WiFi.mode(WIFI_STA);
+	WiFi.disconnect();
+	delay(100);
+#endif
 
 	while (status != WL_CONNECTED)
 	{
@@ -50,12 +57,12 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 
 	int8_t status = WiFi.status();
 	int8_t attempt = 0;
-
+#ifdef ADAFRUIT_FEATHER_M0
 	if (status == WL_NO_SHIELD) {
 		Serial.println("No WiFi shield found. Try WiFi.setPins().");
 		return WL_NO_SHIELD;
 	}
-
+#endif
 	while (status != WL_CONNECTED) 
 	{
 		if (attempt > maxAttempts)
@@ -66,6 +73,7 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		Serial.println(ssid);
 		// ToDo: Add WEP support
 		_wifiOff = false;
+#ifdef ADAFRUIT_FEATHER_M0
 		if (pass.equals(""))
 		{
 			// assume open network if password is empty
@@ -75,11 +83,24 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		{
 			status = WiFi.begin(ssid, pass);
 		}
+#elif defined ARDUINO_FEATHER_ESP32
+		if (pass.equals(""))
+		{
+			// assume open network if password is empty
+			status = WiFi.begin(ssid.c_str());
+		}
+		else
+		{
+			status = WiFi.begin(ssid.c_str(), pass.c_str());
+		}
+#endif
 		_needsAdvertisingBegin = true;
 		delay(attemptDelay);
 		attempt++;
 	}
+#ifdef ADAFRUIT_FEATHER_M0
 	WiFi.setTimeout(25);
+#endif
 	wifiBeginStart = millis();
 	Serial.println("Connected to WiFi");
 	printWiFiStatus();
@@ -107,7 +128,11 @@ void EmotiBitWiFi::end()
 	{
 		Serial.println("Ending WiFi...");
 		_wifiOff = true;
+#ifdef ADAFRUIT_FEATHER_M0
 		WiFi.end();
+#elif defined ARDUINO_FEATHER_ESP32
+		// do the equivalent of wifi.end
+#endif
 	}
 }
 
@@ -686,7 +711,7 @@ int8_t EmotiBitWiFi::status()
 	}
 	return (int8_t) WiFi.status();
 }
-
+#ifdef ADAFRUIT_FEATHER_M0
 void EmotiBitWiFi::checkWiFi101FirmwareVersion()
 {
 	// Print a welcome message
@@ -719,3 +744,4 @@ void EmotiBitWiFi::checkWiFi101FirmwareVersion()
 	Serial.print("Latest firmware version available : ");
 	Serial.println(latestFv);
 }
+#endif
