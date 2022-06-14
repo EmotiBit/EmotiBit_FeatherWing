@@ -22,11 +22,15 @@ bool EmotiBit::setSamplingRates(SamplingRates s)
 	_samplingRates.accelerometer = 25.f * pow(2.f, ((float)imuSettings.acc_odr - 6.f));	// See lookup table in BMI160 datasheet
 	_samplingRates.gyroscope = 25.f * pow(2.f, ((float)imuSettings.gyr_odr - 6.f));		// See lookup table in BMI160 datasheet
 	_samplingRates.magnetometer = 25.f * pow(2.f, ((float)imuSettings.mag_odr - 6.f));	// See lookup table in BMI160 datasheet
+	// ToDo: implement logic to determine return val
+	return true;
 }
 
 bool EmotiBit::setSamplesAveraged(SamplesAveraged s) 
 {
 	_samplesAveraged = s;
+	// ToDo: implement logic to determine return val
+	return true;
 }
 
 bool EmotiBit::getBit(uint8_t num, uint8_t bit) 
@@ -475,6 +479,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	
 	Serial.println("\nSensor setup:");
+
 	// setup sampling rates
 	EmotiBit::SamplingRates samplingRates;
 	samplingRates.accelerometer = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
@@ -502,7 +507,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 	samplesAveraged.battery = BASE_SAMPLING_FREQ / BATTERY_SAMPLING_DIV / 1;
 	setSamplesAveraged(samplesAveraged);
-
+	Serial.println("\nSet Samples averaged:");
 	// setup LED DRIVER
 	Serial.print("Initializing NCP5623....");
 	// ToDo: add a success or fail return statement for LED driver
@@ -1076,6 +1081,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println("Enter ? to know more about available options in DEBUG MODE");
 		Serial.println("**********************************************************");
 	}
+	// ToDo: implement logic to determine return val
+	return 0;
 } // Setup
 
 
@@ -1284,6 +1291,8 @@ bool EmotiBit::addPacket(uint32_t timestamp, const String typeTag, float * data,
 bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) 
 {	
 	addPacket(timestamp, typeTags[(uint8_t)t], data, dataLen, precision, _sendSerialData[(uint8_t)t]);	
+	// ToDo: implement logic to determine return val
+	return true;
 }
 
 bool EmotiBit::addPacket(EmotiBit::DataType t) {
@@ -1635,6 +1644,8 @@ uint8_t EmotiBit::update()
 
 		sleep();
 	}
+	// ToDo: implement logic to determine return val
+	return 0;
 }
 
 
@@ -1737,6 +1748,8 @@ int8_t EmotiBit::updatePpgTempData()
 		// pinged sensor too early.
 		status = status | (int8_t)EmotiBit::Error::SENSOR_NOT_READY;
 	}
+	// ToDo: implement logic to determine return val
+	return 0;
 }
 
 int8_t EmotiBit::updateThermopileData() {
@@ -1919,6 +1932,8 @@ int8_t EmotiBit::updateIMUData() {
 			bmm150ZHallClipped = false;
 		}
 	}
+	// ToDo: implement logic to determine return val
+	return 0;
 }
 
 float EmotiBit::convertRawAcc(int16_t aRaw) {
@@ -2250,6 +2265,8 @@ bool EmotiBit::processThermopileData()
 		)
 	);
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->swap();
+	// ToDo: implement logic to determine return val
+	return true;
 }
 
 
@@ -2272,6 +2289,8 @@ int8_t EmotiBit::updateBatteryVoltageData() {
 		batteryVoltage.push_back(average(batteryVoltageBuffer));
 		batteryVoltageBuffer.clear();
 	}
+	// ToDo: implement logic to determine return val
+	return 0;
 }
 
 
@@ -2281,6 +2300,8 @@ int8_t EmotiBit::updateBatteryPercentData() {
 		batteryPercent.push_back(average(batteryPercentBuffer));
 		batteryPercentBuffer.clear();
 	}
+	// ToDo: implement logic to determine return val
+	return 0;
 }
 
 float EmotiBit::readBatteryVoltage() {
@@ -2369,6 +2390,8 @@ int8_t EmotiBit::readBatteryPercent() {
 bool EmotiBit::setSensorTimer(SensorTimer t) {
 	_sensorTimer = t;
 	// ToDo: add timer handling
+		// ToDo: implement logic to determine return val
+	return true;
 }
 
 
@@ -3398,6 +3421,8 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 			_sdWrite = false;
 		}
 	}
+	// ToDo: implement logic to determine return val
+	return true;
 }
 
 EmotiBit::PowerMode EmotiBit::getPowerMode()

@@ -192,6 +192,8 @@ int8_t EmotiBitWiFi::updateWiFi()
 			wifiBeginStart = millis() - WIFI_BEGIN_ATTEMPT_DELAY - 1;
 		}
 	}
+	// ToDo: implement logic to determine return val
+	return 0;
 }
 
 int8_t EmotiBitWiFi::readUdp(WiFiUDP &udp, String &message)
@@ -324,7 +326,7 @@ int8_t EmotiBitWiFi::processAdvertising()
 
 int8_t EmotiBitWiFi::sendAdvertising(const String& message, const IPAddress& ip, uint16_t port)
 {
-	sendUdp(_advertisingCxn, message, ip, port);
+	return sendUdp(_advertisingCxn, message, ip, port);
 }
 
 int8_t EmotiBitWiFi::sendData(const String &message)
@@ -332,8 +334,10 @@ int8_t EmotiBitWiFi::sendData(const String &message)
 	if (_isConnected)
 	{
 		// ToDo: Consider adding _controlCxn.connected() conditional
-		sendUdp(_dataCxn, message, _hostIp, _dataPort);
+		return sendUdp(_dataCxn, message, _hostIp, _dataPort);
 	}
+	// ToDo: implement logic to determine return val
+	return 1; // not connected
 }
 
 int8_t EmotiBitWiFi::sendUdp(WiFiUDP& udp, const String& message, const IPAddress& ip, uint16_t port)
@@ -452,6 +456,8 @@ int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, const String& connectPaylo
 	{
 		return FAIL;
 	}
+	// ToDo: implement logic to determine return val
+	return 0;
 }
 int8_t EmotiBitWiFi::connect(const IPAddress &hostIp, uint16_t controlPort, uint16_t dataPort) {
 
@@ -555,6 +561,8 @@ int8_t EmotiBitWiFi::update(String &syncPackets, uint16_t &syncPacketCounter)
 			processTimeSync(syncPackets, syncPacketCounter);
 		}
 	}
+	// ToDo: implement logic to determine return val
+	return 0;
 }
 
 int8_t EmotiBitWiFi::processTimeSync(String &syncPackets, uint16_t &syncPacketCounter)
@@ -656,6 +664,8 @@ int8_t EmotiBitWiFi::addCredential(const String &ssid, const String &password)
 		credentials[numCredentials].pass = password;
 		numCredentials++;
 	}
+	// ToDo: implement logic to determine return val
+	return 0;
 }
 
 uint8_t EmotiBitWiFi::listNetworks() {
