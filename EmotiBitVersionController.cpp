@@ -108,17 +108,17 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 #elif defined(ARDUINO_FEATHER_ESP32)
 	// write the code here
 	_assignedPin[(int)EmotiBitPinName::BATTERY_READ_PIN] = A13;
-	_assignedPin[(int)EmotiBitPinName::SPI_CLK] = 24;
-	_assignedPin[(int)EmotiBitPinName::SPI_MOSI] = 23;
-	_assignedPin[(int)EmotiBitPinName::SPI_MISO] = 22;
+	_assignedPin[(int)EmotiBitPinName::SPI_CLK] = 5;
+	_assignedPin[(int)EmotiBitPinName::SPI_MOSI] = 18;
+	_assignedPin[(int)EmotiBitPinName::SPI_MISO] = 19;
 
 	if (version == EmotiBitVersion::V02B || version == EmotiBitVersion::V02H || version == EmotiBitVersion::V03B || version == EmotiBitVersion::V04A)
 	{
 		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 12;
-		_assignedPin[(int)EmotiBitPinName::PPG_INT] = 15;
-		_assignedPin[(int)EmotiBitPinName::BMI_INT1] = 5;
-		_assignedPin[(int)EmotiBitPinName::BMI_INT2] = 10;
-		_assignedPin[(int)EmotiBitPinName::BMM_INT] = 14;
+		_assignedPin[(int)EmotiBitPinName::PPG_INT] = 25;
+		_assignedPin[(int)EmotiBitPinName::BMI_INT1] = 14;
+		_assignedPin[(int)EmotiBitPinName::BMI_INT2] = 33;
+		_assignedPin[(int)EmotiBitPinName::BMM_INT] = 26;
 	}
 #endif
 	return true;
