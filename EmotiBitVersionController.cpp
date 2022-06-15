@@ -58,6 +58,10 @@ const char* EmotiBitVersionController::getHardwareVersion(EmotiBitVersion versio
 	{
 		return "V04a\0";
 	}
+	else
+	{
+		return "NA\0";
+	}
 }
 
 bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiBitVersion version)
