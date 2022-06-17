@@ -36,6 +36,7 @@ uint8_t DoubleBufferFloat::push_back(float f, uint32_t * timestamp) {
 		return _inputBuffer->push_back(f, timestamp);// | (_isGetting) ? BufferFloat::PUSH_WHILE_GETTING : BufferFloat::SUCCESS;
 	}
 	_isPushing = false;
+	return BufferFloat::ERROR_PTR_NULL;
 }
 
 size_t DoubleBufferFloat::getData(float ** data, uint32_t * timestamp, bool swapBuffers) 
@@ -60,6 +61,7 @@ size_t DoubleBufferFloat::getData(float ** data, uint32_t * timestamp, bool swap
 		return _outputBuffer->size();
 	}
 	_isGetting = false;
+	return BufferFloat::ERROR_PTR_NULL;
 }
 
 bool DoubleBufferFloat::swap()
@@ -103,14 +105,14 @@ size_t DoubleBufferFloat::size(BufferSelector b)
 size_t DoubleBufferFloat::inSize() {
 	if (_inputBuffer == nullptr) return 0;
 	else {
-		_inputBuffer->size();
+		return _inputBuffer->size();
 	}
 }
 
 size_t DoubleBufferFloat::outSize() {
 	if (_outputBuffer == nullptr) return 0;
 	else {
-		_outputBuffer->size();
+		return _outputBuffer->size();
 	}
 }
 
@@ -123,14 +125,14 @@ size_t DoubleBufferFloat::capacity(BufferSelector b)
 size_t DoubleBufferFloat::inCapacity() {
 	if (_inputBuffer == nullptr) return 0;
 	else {
-		_inputBuffer->capacity();
+		return _inputBuffer->capacity();
 	}
 }
 
 size_t DoubleBufferFloat::outCapacity() {
 	if (_outputBuffer == nullptr) return 0;
 	else {
-		_outputBuffer->capacity();
+		return _outputBuffer->capacity();
 	}
 }
 

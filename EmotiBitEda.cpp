@@ -638,7 +638,7 @@ bool EmotiBitEda::writeInfoJson(File &jsonFile)
 #endif
 		}
 	}
-
+	return true;
 }
 
 void EmotiBitEda::setAdcIsrOffsetCorr(float isrOffsetCorr)

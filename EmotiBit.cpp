@@ -1290,7 +1290,7 @@ bool EmotiBit::addPacket(uint32_t timestamp, const String typeTag, float * data,
 
 bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) 
 {	
-	addPacket(timestamp, typeTags[(uint8_t)t], data, dataLen, precision, _sendSerialData[(uint8_t)t]);	
+	return addPacket(timestamp, typeTags[(uint8_t)t], data, dataLen, precision, _sendSerialData[(uint8_t)t]);	
 	// ToDo: implement logic to determine return val
 	return true;
 }
