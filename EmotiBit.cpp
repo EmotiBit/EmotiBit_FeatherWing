@@ -18,11 +18,13 @@ bool EmotiBit::setSamplingRates(SamplingRates s)
 	_samplingRates.accelerometer = 25.f * pow(2.f, ((float)imuSettings.acc_odr - 6.f));	// See lookup table in BMI160 datasheet
 	_samplingRates.gyroscope = 25.f * pow(2.f, ((float)imuSettings.gyr_odr - 6.f));		// See lookup table in BMI160 datasheet
 	_samplingRates.magnetometer = 25.f * pow(2.f, ((float)imuSettings.mag_odr - 6.f));	// See lookup table in BMI160 datasheet
+	return true;
 }
 
 bool EmotiBit::setSamplesAveraged(SamplesAveraged s) 
 {
 	_samplesAveraged = s;
+	return true;
 }
 
 bool EmotiBit::getBit(uint8_t num, uint8_t bit) 
@@ -1027,6 +1029,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		Serial.println("Enter ? to know more about available options in DEBUG MODE");
 		Serial.println("**********************************************************");
 	}
+	return 0;
 } // Setup
 
 
@@ -1210,7 +1213,7 @@ bool EmotiBit::addPacket(uint32_t timestamp, const String typeTag, float * data,
 
 bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data, size_t dataLen, uint8_t precision) 
 {	
-	addPacket(timestamp, typeTags[(uint8_t)t], data, dataLen, precision, _sendSerialData[(uint8_t)t]);	
+	return addPacket(timestamp, typeTags[(uint8_t)t], data, dataLen, precision, _sendSerialData[(uint8_t)t]);	
 }
 
 bool EmotiBit::addPacket(EmotiBit::DataType t) {
@@ -1550,6 +1553,7 @@ uint8_t EmotiBit::update()
 
 		sleep();
 	}
+	return true;
 }
 
 
@@ -1652,6 +1656,7 @@ int8_t EmotiBit::updatePpgTempData()
 		// pinged sensor too early.
 		status = status | (int8_t)EmotiBit::Error::SENSOR_NOT_READY;
 	}
+	return 0;
 }
 
 int8_t EmotiBit::updateThermopileData() {
@@ -1834,6 +1839,7 @@ int8_t EmotiBit::updateIMUData() {
 			bmm150ZHallClipped = false;
 		}
 	}
+	return 0;
 }
 
 float EmotiBit::convertRawAcc(int16_t aRaw) {
@@ -2162,6 +2168,7 @@ bool EmotiBit::processThermopileData()
 		)
 	);
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->swap();
+	return true;
 }
 
 
@@ -2184,6 +2191,7 @@ int8_t EmotiBit::updateBatteryVoltageData() {
 		batteryVoltage.push_back(average(batteryVoltageBuffer));
 		batteryVoltageBuffer.clear();
 	}
+	return 0;
 }
 
 
@@ -2193,6 +2201,7 @@ int8_t EmotiBit::updateBatteryPercentData() {
 		batteryPercent.push_back(average(batteryPercentBuffer));
 		batteryPercentBuffer.clear();
 	}
+	return 0;
 }
 
 float EmotiBit::readBatteryVoltage() {
@@ -2281,6 +2290,7 @@ int8_t EmotiBit::readBatteryPercent() {
 bool EmotiBit::setSensorTimer(SensorTimer t) {
 	_sensorTimer = t;
 	// ToDo: add timer handling
+	return true;
 }
 
 
@@ -3305,6 +3315,7 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 			_sdWrite = false;
 		}
 	}
+	return true;
 }
 
 EmotiBit::PowerMode EmotiBit::getPowerMode()

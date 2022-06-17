@@ -183,7 +183,7 @@ public:
 	usage: called in emotibit.update
 	on every call, checks if the Serial input buffers have any data
 	*/
-	EdaCorrection::Status update(Si7013* si7013, float &vref1, float &vref2, float &Rfeedback); // change the name to make it more "special purpose"
+	void update(Si7013* si7013, float &vref1, float &vref2, float &Rfeedback); // change the name to make it more "special purpose"
 	
 	
 	/*
@@ -204,7 +204,7 @@ public:
 	usage: once the class has been updated with the correct values from the serial input, ask user permission to write to the otp
 	checks the Serial on every emotibit.update() for Serial available. if user approved, then change progress to WRITING_TO_OTP
 	*/
-	bool getUserApproval();
+	void getUserApproval();
 	
 	
 	/*
@@ -239,7 +239,7 @@ public:
 	/*
 	usage: solve for EmotiBit variables based on the data stored in OTP
 	*/
-	EdaCorrection::Status calcEdaCorrection();
+	void calcEdaCorrection();
 	
 	bool isOtpRegWritten(Si7013* si7013, uint8_t addr, bool isOtpOperation = true);
 

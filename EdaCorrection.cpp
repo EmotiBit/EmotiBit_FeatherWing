@@ -164,12 +164,14 @@ bool EdaCorrection::getEdaCalibrationValues(Si7013* si7013, float &vref1, float 
 		else
 		{
 			Serial.print("The value read from test Address space is: "); Serial.println(otpData.inFloat,6);
+			return true;
 		}
 #endif
 	}
 	else
 	{
 		Serial.println("In UPDATE mode. EDA will be calibrated.");
+		return false;
 	}
 
 }
@@ -222,7 +224,7 @@ EdaCorrection::Status EdaCorrection::getFloatFromString()
 	return EdaCorrection::Status::SUCCESS;
 }
 
-EdaCorrection::Status EdaCorrection::update(Si7013* si7013, float &vref1, float &vref2, float &Rfeedback)
+void EdaCorrection::update(Si7013* si7013, float &vref1, float &vref2, float &Rfeedback)
 {
 	if (getMode() == EdaCorrection::Mode::UPDATE)
 	{
@@ -423,7 +425,7 @@ void EdaCorrection::echoEdaReadingsOnScreen()
 }
 
 
-bool EdaCorrection::getUserApproval()
+void EdaCorrection::getUserApproval()
 {
 	if (Serial.available())
 	{
@@ -524,6 +526,7 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 		{
 			// Do nothing more.
 			progress = Progress::FINISH;
+			return EdaCorrection::Status::SUCCESS;
 		}
 		else
 		{
@@ -677,7 +680,8 @@ EdaCorrection::Status EdaCorrection::writeToOtp(Si7013* si7013)
 			return EdaCorrection::Status::SUCCESS;
 		}
 	}
-
+	progress = Progress::FINISH;
+	return EdaCorrection::Status::FAILURE;
 }
 
 
@@ -749,7 +753,7 @@ void EdaCorrection::displayCorrections()
 }
 
 
-EdaCorrection::Status EdaCorrection::calcEdaCorrection()
+void EdaCorrection::calcEdaCorrection()
 {
 	correctionData.vRef1 = correctionData.edlReadings[0];
 	// correctionData.vRef2 is updated in getFloatFromString while writing to OTP or from readFromOtp while reading
