@@ -2082,11 +2082,14 @@ float EmotiBit::convertMagnetoZ(int16_t mag_data_z, uint16_t data_rhall)
 }
 
 int8_t EmotiBit::pushData(EmotiBit::DataType type, float data, uint32_t * timestamp) {
+	Serial.print("TypeTag: "); Serial.println(typeTags[(uint8_t)type]);
 	if ((uint8_t)type < (uint8_t)EmotiBit::DataType::length) {
 		if (timestamp == nullptr) {
+			timestamp = new uint32_t;
 			*timestamp = millis();
 		}
 		uint8_t status = dataDoubleBuffers[(uint8_t)type]->push_back(data, timestamp);
+		delete timestamp;
 		if (status & BufferFloat::ERROR_BUFFER_OVERFLOW == BufferFloat::ERROR_BUFFER_OVERFLOW) {
 			// NOTE: DATA_OVERFLOW count is now stored in DoubleBufferFloat without a separate buffer
 
@@ -4125,7 +4128,7 @@ void attachToCore(void(*readFunction)(void*), EmotiBit*e)
 		"EmotiBitDataAcquisition",     /* name of task. */
 		10000,       /* Stack size of task */
 		NULL,        /* parameter of the task */
-		10,           /* priority of the task */
+		3,           /* priority of the task */
 		&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
 		0);          /* pin task to core 0 */
 	delay(500);
@@ -4155,17 +4158,19 @@ void ReadSensors(void *pvParameters)
 	while (1) // the function assigned to the second core should never return
 	{
 		//Serial.print("ReadSensors() -> "); Serial.println(counter++);
-		delay(3);
+		//delay(1000);
+
+		
 		if (myEmotiBit != nullptr)
 		{
-			//Serial.println("EmotiBit is NOT nullptr");
 			myEmotiBit->readSensors();
 
 		}
 		else
 		{
-			//Serial.println("EmotiBit is nullptr");
+			Serial.println("EmotiBit is nullptr");
 		}
+		
 	}
 
 }

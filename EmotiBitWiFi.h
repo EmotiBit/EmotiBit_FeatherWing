@@ -42,7 +42,7 @@
 
 class EmotiBitWiFi {
 public:
-	typedef struct Credential
+	struct Credential
 	{
 		String ssid = "";
 		String pass = "";

@@ -318,7 +318,7 @@ public:
 		bool eda = true;
 		bool tempHumidity = true;
 		bool thermopile = true;
-		bool imu = true;
+		bool imu = false;
 		bool ppg = true;
 		bool tempPpg = true;
 		bool debug = false;
