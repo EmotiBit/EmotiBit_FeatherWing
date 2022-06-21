@@ -1405,7 +1405,7 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 #ifdef ADAFRUIT_FEATHER_M0
 				_dataFile = SD.open(_sdCardFilename, O_CREAT | O_WRITE | O_AT_END);
 #elif defined ARDUINO_FEATHER_ESP32
-				_dataFile = SD.open(_sdCardFilename, FILE_WRITE);
+				_dataFile = SD.open("/" + _sdCardFilename, FILE_WRITE);
 #endif
 				if (_dataFile) {
 					_sdWrite = true;
