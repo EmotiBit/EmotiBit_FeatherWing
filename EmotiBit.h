@@ -23,7 +23,6 @@
 #include <ArduinoJson.h>
 #include <ArduinoLowPower.h>
 #include "AdcCorrection.h"
-#include "EdaCorrection.h"
 #include "EmotiBitVersionController.h"
 #include "DigitalFilter.h"
 #include "EmotiBitFactoryTest.h"
@@ -234,7 +233,6 @@ public:
 	MAX30105 ppgSensor;
 	NCP5623 led;
 	MLX90632 thermopile;
-	EdaCorrection *edaCorrection = nullptr;
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
 
