@@ -293,7 +293,7 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 #ifdef ADC_CORRECTION_VERBOSE
 		Serial.println("finding correction values");
 #endif
-		state = calcCorrectionValues();
+		calcCorrectionValues();
 #ifdef ADC_CORRECTION_VERBOSE
 		Serial.println("Writing the raw correction data to the flash");
 #endif

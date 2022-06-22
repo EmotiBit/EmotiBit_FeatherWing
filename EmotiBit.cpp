@@ -409,28 +409,6 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			}
 #endif
 		}
-		else if (input == 'E')
-		{
-			Serial.print("\n\n##### EmotiBit Version "); Serial.print(EmotiBitVersionController::getHardwareVersion(_hwVersion)); Serial.println(" ####");
-			if (edaCorrection != nullptr)
-			{
-				delete edaCorrection;
-			}
-			edaCorrection = new EdaCorrection;
-			if (!edaCorrection->begin((uint8_t)_hwVersion))
-			{
-				// exit begin. delete pointer and free memory
-				delete edaCorrection;
-				edaCorrection = nullptr;
-			}
-			else
-			{
-				if (!edaCorrection->dummyWrite)
-				{
-					acquireData.tempHumidity = false;
-				}
-			}
-		}
 		else
 		{
 			_debugMode = true;
@@ -1527,7 +1505,7 @@ uint8_t EmotiBit::update()
 	}
 	serialPrevAvailable = Serial.available();
 
-	if (_debugMode && edaCorrection == nullptr)
+	if (_debugMode)
 	{
 		static String debugPackets;
 		processDebugInputs(debugPackets, _outDataPacketCounter);
@@ -1538,21 +1516,18 @@ uint8_t EmotiBit::update()
 			writeSerialData(_serialData);
 		}
 	}
-	else if (testingMode == TestingMode::FACTORY_TEST && edaCorrection == nullptr)
+	else if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		processFactoryTestMessages();
 	}
 	else
 	{
-		// if not in debug mode, or Eda Correction UPDATE mode, always clear the input serial buffer
-		if (edaCorrection == nullptr)
+		// if not in debug mode
+		while (Serial.available() > 0)
 		{
-			while (Serial.available() > 0)
-			{
-				Serial.read();
-			}
-			serialPrevAvailable = 0; // set Previously available to 0
+			Serial.read();
 		}
+		serialPrevAvailable = 0; // set Previously available to 0
 	}
 
 
@@ -1584,22 +1559,8 @@ uint8_t EmotiBit::update()
 	}
 
 	// NOTE:: EdaCorrection is deprecated use EmotiBitEda
-	// function call to handle UPDATE mode in Eda Correction
-	//if (edaCorrection != nullptr)
-	//{
-	//	edaCorrection->update(&tempHumiditySensor, vRef1, vRef2, edaFeedbackAmpR);
-	//	// if the correction/calibration has been completed
-	//	if (edaCorrection->getMode() == EdaCorrection::Mode::NORMAL && edaCorrection->progress == EdaCorrection::Progress::FINISH)
-	//	{
-	//		delete edaCorrection;
-	//		edaCorrection = nullptr;
-	//		Serial.println("Deleted eda correction instance");
-	//		if (!edaCorrection->dummyWrite)
-	//		{
-	//			acquireData.tempHumidity = true;
-	//		}
-	//	}
-	//}
+	// NOTE:: An older firmware, v1.2.86 needs to be used to write EDA correction values to V3 (OTP) and below.
+	// Newer FW version can read both NVMs (EEPROM and OTP), but only have write ability for EEPROM
 
 
 	// Handle data buffer reading and sending
@@ -2886,17 +2847,6 @@ void EmotiBit::readSensors()
 	uint32_t readSensorsBegin = micros();
 
 	_emotibitNvmController.syncRW();
-	// NOTE: EdaCorrection deprecated, use EmotiBitEda
-	//// Write to OTP once edaCorrection class is at the right state. 
-	//if (edaCorrection != nullptr)
-	//{
-	//	if (edaCorrection->getMode() == EdaCorrection::Mode::UPDATE)
-	//	{
-	//		_EmotiBit_i2c->setClock(100000);// change the I2C clock speed to 100000
-	//		edaCorrection->writeToOtp(&tempHumiditySensor);
-	//		_EmotiBit_i2c->setClock(i2cClkMain);// change the I2C clock speed back to i2cClkMain
-	//	}
-	//}
 
 	// Battery (all analog reads must be in the ISR)
 	// TODO: use the stored/averaged Battery value instead of calling readBatteryPercent again
