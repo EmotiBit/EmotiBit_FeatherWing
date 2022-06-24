@@ -2254,8 +2254,25 @@ size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 	}
 }
 
-int8_t EmotiBit::updateBatteryVoltageData() {
-	batteryVoltageBuffer.push_back(readBatteryVoltage());
+
+int8_t EmotiBit::updateBatteryData()
+{
+	int8_t status;
+	static DigitalFilter filterBattVolt(DigitalFilter::FilterType::IIR_LOWPASS, ((BASE_SAMPLING_FREQ) / (BATTERY_SAMPLING_DIV)) / (_samplesAveraged.battery), 0.01);
+	float battVolt = readBatteryVoltage();
+	battVolt = filterBattVolt.filter(battVolt);
+	float battPcent = getBatteryPercent(battVolt);
+	// update battery level indication
+	updateBatteryIndication(battPcent);
+	// update battery voltage buffers
+	status = updateBatteryVoltageData(battVolt);
+	// update battery percent buffers
+	status = updateBatteryPercentData(battPcent);
+	return 0;
+}
+
+int8_t EmotiBit::updateBatteryVoltageData(float battVolt) {
+	batteryVoltageBuffer.push_back(battVolt);
 	if (batteryVoltageBuffer.size() >= _samplesAveraged.battery) {
 		batteryVoltage.push_back(average(batteryVoltageBuffer));
 		batteryVoltageBuffer.clear();
@@ -2265,8 +2282,8 @@ int8_t EmotiBit::updateBatteryVoltageData() {
 }
 
 
-int8_t EmotiBit::updateBatteryPercentData() {
-	batteryPercentBuffer.push_back(readBatteryPercent());
+int8_t EmotiBit::updateBatteryPercentData(float battPcent) {
+	batteryPercentBuffer.push_back(battPcent);
 	if (batteryPercentBuffer.size() >= _samplesAveraged.battery) {
 		batteryPercent.push_back(average(batteryPercentBuffer));
 		batteryPercentBuffer.clear();
@@ -2284,14 +2301,13 @@ float EmotiBit::readBatteryVoltage() {
 	return batRead;
 }
 
-int8_t EmotiBit::readBatteryPercent() {
+int8_t EmotiBit::getBatteryPercent(float bv) {
 	// Thresholded bi-linear approximation
 	// See battery discharge profile here:
 	// https://www.richtek.com/Design%20Support/Technical%20Document/AN024
-	float bv = readBatteryVoltage();
-	int8_t result;
-	// ToDo: move teh filter to updateBatteryPercentData 
-	static DigitalFilter filterBatt(DigitalFilter::FilterType::IIR_LOWPASS, ((BASE_SAMPLING_FREQ)/(BATTERY_SAMPLING_DIV))/(_samplesAveraged.battery), 0.01);
+	
+	int8_t result; 
+	
 	if (bv > 4.15f) {
 		result = 100;
 	}
@@ -2311,7 +2327,6 @@ int8_t EmotiBit::readBatteryPercent() {
 		temp += 0.f;
 		result = (int8_t)temp;
 	}
-	result = filterBatt.filter(result);
 	return result;
 	//else if (bv > 4.1f) {
 	//	return 95;
@@ -2854,9 +2869,8 @@ void EmotiBit::readSensors()
 	{
 		static uint16_t batteryCounter = timerLoopOffset.battery;
 		if (batteryCounter == BATTERY_SAMPLING_DIV) {
-			battLevel = readBatteryPercent();
-			updateBatteryIndication();
-			updateBatteryPercentData();
+			
+			updateBatteryData();
 			batteryCounter = 0;
 		}
 		batteryCounter++;
@@ -3522,12 +3536,12 @@ size_t EmotiBit::readData(EmotiBit::DataType t, float **data, uint32_t &timestam
 	return 0;
 }
 
-void EmotiBit::updateBatteryIndication()
+void EmotiBit::updateBatteryIndication(float battPercent)
 {
 	if (battIndicationSeq)
 	{
 		// Low Batt Indication is ON
-		if (battLevel > uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH))
+		if (battPercent > uint8_t(EmotiBit::BattLevel::THRESHOLD_HIGH))
 		{
 			// Wait until we hit he high threshold to avoid flickering
 			battIndicationSeq = 0;
@@ -3536,7 +3550,7 @@ void EmotiBit::updateBatteryIndication()
 	else
 	{
 		// Low Batt Indication is OFF
-		if (battLevel < uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW))
+		if (battPercent < uint8_t(EmotiBit::BattLevel::THRESHOLD_LOW))
 		{
 			battIndicationSeq = 1;
 		}
