@@ -2327,7 +2327,6 @@ int8_t EmotiBit::getBatteryPercent(float bv) {
 		temp += 0.f;
 		result = (int8_t)temp;
 	}
-	//result = filterBatt.filter(result);
 	return result;
 	//else if (bv > 4.1f) {
 	//	return 95;
