@@ -49,7 +49,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.36.feat-Esp.0";
+	String firmware_version = "1.3.36.feat-Esp.1";
 
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
@@ -346,7 +346,7 @@ public:
 #elif defined ARDUINO_FEATHER_ESP32
 	// SD is already defined.
 #endif
-	volatile uint8_t battLevel = 100;
+
 	volatile uint8_t battIndicationSeq = 0;
 	volatile uint16_t BattLedDuration = 65535;
 
@@ -443,7 +443,7 @@ public:
 	 */
 	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	
 
-	void updateBatteryIndication();
+	void updateBatteryIndication(float battPercent);
 	void appendTestData(String &dataMessage, uint16_t &packetNumber);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
@@ -464,8 +464,9 @@ public:
 	int8_t updateTempHumidityData();       /**< Read any available temperature and humidity data into the inputBuffers */
 	int8_t updatePpgTempData();			/**< Read any available temp data from PPG into buffer*/
 	int8_t updateThermopileData();         /**< Read Thermopile data into the buffers*/
-	int8_t updateBatteryVoltageData();     /**< Take battery voltage reading and put into the inputBuffer */
-	int8_t updateBatteryPercentData();     /**< Take battery percent reading and put into the inputBuffer */
+	int8_t updateBatteryData();     /**< Reads battery voltage and passes it to different buffers for update */
+	int8_t updateBatteryVoltageData(float battVolt);     /**< updates battery voltage inputBuffer */
+	int8_t updateBatteryPercentData(float battPercent);     /**< updates battery percentage inputBuffer */
 	float convertRawGyro(int16_t gRaw);
 	float convertRawAcc(int16_t aRaw);
 	float convertMagnetoX(int16_t mag_data_x, uint16_t data_rhall);
@@ -482,7 +483,7 @@ public:
   size_t getDataThermopile(float** data, uint32_t * timestamp = nullptr);
 	//size_t dataAvailable(DataType t);
 	float readBatteryVoltage();
-	int8_t readBatteryPercent();
+	int8_t getBatteryPercent(float bv);
 	bool setSensorTimer(SensorTimer t);
 	bool printConfigInfo(File &file, const String &datetimeString);
 	bool setSamplingRates(SamplingRates s);
