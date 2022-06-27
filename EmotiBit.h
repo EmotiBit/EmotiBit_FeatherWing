@@ -49,7 +49,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.36.feat-Esp.1";
+	String firmware_version = "1.3.36.feat-Esp.2";
 
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;

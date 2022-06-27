@@ -2293,11 +2293,18 @@ int8_t EmotiBit::updateBatteryPercentData(float battPcent) {
 }
 
 float EmotiBit::readBatteryVoltage() {
-	float batRead = analogRead(_batteryReadPin);
+	float batRead;
+#ifdef ADAFRUIT_FEATHER_M0
+	batRead = analogRead(_batteryReadPin);
 	//float batRead = 10000.f;
 	batRead *= 2.f;
 	batRead *= _vcc;
 	batRead /= adcRes; // ToDo: precalculate multiplier
+#elif defined ARDUINO_FEATHER_ESP32
+	batRead = analogReadMilliVolts(_batteryReadPin);
+	batRead *= 2.f;
+	batRead = batRead / 1000.f; // convert mV to V
+#endif
 	return batRead;
 }
 
