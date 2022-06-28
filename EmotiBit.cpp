@@ -3387,14 +3387,18 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 				_dataFile.print(s.substring(firstIndex, lastIndex));
 				firstIndex = lastIndex;
 			}
-#ifdef ADAFRUIT_FEATHER_M0
+
 			static uint32_t syncTimer = millis();
 			if (millis() - syncTimer > targetFileSyncDelay)
 			{
 				syncTimer = millis();
+#ifdef ARDUINO_FEATHER_ESP32
+				_dataFile.flush();
+#else
 				_dataFile.sync();
-			}
 #endif
+			}
+
 		}
 		else {
 			Serial.print("Data file didn't open properly: ");

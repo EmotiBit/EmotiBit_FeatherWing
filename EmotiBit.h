@@ -23,7 +23,7 @@
 #include "driver/adc.h"
 #include <esp_wifi.h>
 #include <esp_bt.h>
-#elif defined ADAFRUIT_FEATHER_M0
+#else
 #include <SdFat.h>
 #include <ArduinoLowPower.h>
 #include "wiring_private.h"
@@ -49,7 +49,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.36.feat-Esp.2";
+	String firmware_version = "1.3.36.feat-Esp-flush.0";
 
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
