@@ -16,7 +16,6 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 #elif defined ARDUINO_FEATHER_ESP32
 	// Taken from scanNetworks example
 	WiFi.mode(WIFI_STA);
-	WiFi.disconnect();
 	delay(100);
 #endif
 
@@ -28,7 +27,6 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 		}
 		else
 		{
-			Serial.println("<<<<<<< Switching WiFi Networks >>>>>>>");
 			status = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1, attemptDelay);
 			if (status == WL_CONNECTED) {
 				break;
@@ -39,6 +37,7 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 			Serial.println("*********** EmotiBitWiFi.begin() Timeout ***********");
 			break;
 		}
+		Serial.println("<<<<<<< Switching WiFi Networks >>>>>>>");
 		currentCredential = (currentCredential + 1) % numCredentials;
 	}
 	return status;
@@ -54,9 +53,8 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 
 uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxAttempts, uint16_t attemptDelay)
 {
-
 	int8_t status = WiFi.status();
-	int8_t attempt = 0;
+	int8_t attempt = 1;
 #ifdef ADAFRUIT_FEATHER_M0
 	if (status == WL_NO_SHIELD) {
 		Serial.println("No WiFi shield found. Try WiFi.setPins().");
@@ -128,10 +126,11 @@ void EmotiBitWiFi::end()
 	{
 		Serial.println("Ending WiFi...");
 		_wifiOff = true;
-#ifdef ADAFRUIT_FEATHER_M0
+#if defined ARDUINO_FEATHER_ESP32
+		// For more information: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_wifi.html#_CPPv413esp_wifi_stopv
+		//esp_wifi_stop();
+#else
 		WiFi.end();
-#elif defined ARDUINO_FEATHER_ESP32
-		// do the equivalent of wifi.end
 #endif
 	}
 }
@@ -514,7 +513,8 @@ int8_t EmotiBitWiFi::disconnect() {
 		{
 			Serial.println("Disconnecting... ");
 			Serial.println("Stopping Control Cxn... ");
-			_controlCxn.flush();
+			// ToDO: verify if this is needed. WiFi101 does not have an implementation and it causes isseus with ESP
+			//_controlCxn.flush();
 			_controlCxn.stop();
 		}
 		Serial.println("Stopping Data Cxn... ");
