@@ -49,7 +49,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.36.feat-Esp-flush.0";
+	String firmware_version = "1.3.36.feat-Esp.3";
 
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
