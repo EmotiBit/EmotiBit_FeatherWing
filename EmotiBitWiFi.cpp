@@ -120,15 +120,19 @@ void EmotiBitWiFi::end()
 	}
 	if (WiFi.status() == WL_CONNECTED) {
 		Serial.println("Disconnecting WiFi...");
+#if defined ARDUINO_FEATHER_ESP32
+		// for more info: https://espressif-docs.readthedocs-hosted.com/projects/arduino-esp32/en/latest/api/wifi.html#disconnect
+		WiFi.disconnect(true, true);  // (bool wifioff, bool eraseap)
+#else
 		WiFi.disconnect();
+#endif
 	}
 	if (!_wifiOff)
 	{
 		Serial.println("Ending WiFi...");
 		_wifiOff = true;
 #if defined ARDUINO_FEATHER_ESP32
-		// For more information: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_wifi.html#_CPPv413esp_wifi_stopv
-		//esp_wifi_stop();
+		// do nothing special
 #else
 		WiFi.end();
 #endif
