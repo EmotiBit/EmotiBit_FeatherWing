@@ -517,7 +517,7 @@ int8_t EmotiBitWiFi::disconnect() {
 		{
 			Serial.println("Disconnecting... ");
 			Serial.println("Stopping Control Cxn... ");
-			// ToDO: verify if this is needed. WiFi101 does not have an implementation and it causes isseus with ESP
+			// ToDO: verify if this is needed. WiFi101 does not have an implementation and it causes issues with ESP
 			//_controlCxn.flush();
 			_controlCxn.stop();
 		}
