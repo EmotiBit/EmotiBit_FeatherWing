@@ -3240,8 +3240,11 @@ int EmotiBit::freeMemory() {
 
 // NEW Hibernate
 void EmotiBit::sleep(bool i2cSetupComplete) {
-#ifdef ADAFRUIT_FEATHER_M0
 	Serial.println("sleep()");
+#ifdef ARDUINO_FEATHER_ESP32
+	// for more information: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/sleep_modes.html#entering-deep-sleep
+	esp_deep_sleep_start();
+#else
 	Serial.println("Stopping timer...");
 	stopTimer();
 
@@ -3302,8 +3305,6 @@ void EmotiBit::sleep(bool i2cSetupComplete) {
 	pinMode(EmotiBitVersionController::HIBERNATE_PIN, _emotiBitSystemConstants[(int)SystemConstants::EMOTIBIT_HIBERNATE_PIN_MODE]);
 	Serial.println("Entering deep sleep...");
 	LowPower.deepSleep();
-#elif defined ARDUINO_FEATHER_ESP32
-	// figure out "sleep" for ESP
 #endif
 }
 
@@ -3460,9 +3461,6 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	{
 		Serial.println("PowerMode::WIRELESS_OFF");
 		_emotiBitWiFi.end();
-#ifdef ARDUINO_FEATHER_ESP32
-		esp_wifi_stop();
-#endif
 	}
 	else if (getPowerMode() == PowerMode::HIBERNATE)
 	{

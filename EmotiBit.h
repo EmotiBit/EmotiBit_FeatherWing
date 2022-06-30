@@ -21,7 +21,6 @@
 #ifdef ARDUINO_FEATHER_ESP32
 #include <SD.h>
 #include "driver/adc.h"
-#include <esp_wifi.h>
 #include <esp_bt.h>
 #else
 #include <SdFat.h>
@@ -49,7 +48,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.36.feat-Esp.3";
+	String firmware_version = "1.3.36.feat-Esp.3.feat-sleep.3";
 
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
