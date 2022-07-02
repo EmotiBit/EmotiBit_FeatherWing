@@ -8,6 +8,7 @@ void(*onInterruptCallback)(void);
 
 #ifdef ARDUINO_FEATHER_ESP32
 TaskHandle_t EmotiBitDataAcquisition;
+hw_timer_t * timer = NULL;
 #endif
 
 EmotiBit::EmotiBit() 
@@ -1018,8 +1019,20 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		//Serial.println("Starting interrupts");
 		startTimer(BASE_SAMPLING_FREQ);
 #elif defined ARDUINO_FEATHER_ESP32
+		// setup timer
+		timer = timerBegin(0, 80, true); // timer ticks with APB timer, which runs at 80MHz. This setting makes the timer tick every 1uS
+
+		// Attach onTimer function to our timer.
+		timerAttachInterrupt(timer, &onTimer, true);
+
+		// Set alarm to call onTimer function (value in microseconds).
+		// Repeat the alarm (third parameter)
+		timerAlarmWrite(timer, 3333, true);
+
+		// Start an alarm
+		timerAlarmEnable(timer);
+
 		attachToCore(&ReadSensors, this);
-		Serial.println("Assigned reading sensors to core 0");
 #endif
 	}
 
@@ -4020,6 +4033,7 @@ void EmotiBit::processFactoryTestMessages()
 		}
 	}
 }
+
 #ifdef ADAFRUIT_FEATHER_M0
 void EmotiBit::setTimerFrequency(int frequencyHz) {
 	int compareValue = (CPU_HZ / (TIMER_PRESCALER_DIV * frequencyHz)) - 1;
@@ -4095,6 +4109,11 @@ void attachToInterruptTC3(void(*readFunction)(void), EmotiBit* e)
 	attachEmotiBit(e);
 	onInterruptCallback = readFunction;
 }
+
+#elif defined ARDUINO_FEATHER_ESP32
+void onTimer() {
+	vTaskResume(EmotiBitDataAcquisition);
+}
 #endif
 
 #ifdef ARDUINO_FEATHER_ESP32
@@ -4132,16 +4151,9 @@ void ReadSensors()
 #elif defined ARDUINO_FEATHER_ESP32
 void ReadSensors(void *pvParameters)
 {
-	//uint32_t timeSinceLastCall = millis();
-	uint32_t counter = 0;
 	Serial.print("The data acquisition is executing on core: "); Serial.println(xPortGetCoreID());
 	while (1) // the function assigned to the second core should never return
 	{
-		//Serial.print("ReadSensors() -> "); Serial.println(counter++);
-		// To simulate a 300 ISR
-		delay(3);
-
-		
 		if (myEmotiBit != nullptr)
 		{
 			myEmotiBit->readSensors();
@@ -4151,7 +4163,7 @@ void ReadSensors(void *pvParameters)
 		{
 			Serial.println("EmotiBit is nullptr");
 		}
-		
+		vTaskSuspend(NULL);
 	}
 
 }

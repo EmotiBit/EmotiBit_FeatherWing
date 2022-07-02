@@ -48,7 +48,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.36.feat-Esp.4";
+	String firmware_version = "1.3.36.feat-Esp.4.fix-srate.0";
 
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
@@ -567,6 +567,7 @@ void attachEmotiBit(EmotiBit*e = nullptr);
 void attachToInterruptTC3(void(*readFunction)(void), EmotiBit*e = nullptr);
 void ReadSensors();
 #elif defined ARDUINO_FEATHER_ESP32
+void onTimer();
 void attachToCore(void(*readFunction)(void*), EmotiBit*e = nullptr);
 void ReadSensors(void* pvParameters);
 #endif
