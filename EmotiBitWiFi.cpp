@@ -132,7 +132,8 @@ void EmotiBitWiFi::end()
 		Serial.println("Ending WiFi...");
 		_wifiOff = true;
 #if defined ARDUINO_FEATHER_ESP32
-		// do nothing special
+		WiFi.mode(WIFI_OFF);    // Switch WiFi off
+		// ToDo: figure out how to turn WiFi back on
 #else
 		WiFi.end();
 #endif
