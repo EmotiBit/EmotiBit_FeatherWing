@@ -1104,7 +1104,7 @@ bool EmotiBit::setupSdCard()
 #ifdef ADAFRUIT_FEATHER_M0
 		if (SD.begin(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN))
 #elif defined ARDUINO_FEATHER_ESP32
-		if (SD.begin(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN, SPI, 50000000))
+		if (SD.begin(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN, SPI, 40000000))
 #endif
 		{
 			success = true;

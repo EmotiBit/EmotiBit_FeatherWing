@@ -133,6 +133,7 @@ void EmotiBitWiFi::end()
 		_wifiOff = true;
 #if defined ARDUINO_FEATHER_ESP32
 		WiFi.mode(WIFI_OFF);    // Switch WiFi off
+		setCpuFrequencyMhz(40); // Set CPU to 40Mhz to save additional power
 		// ToDo: figure out how to turn WiFi back on
 #else
 		WiFi.end();
