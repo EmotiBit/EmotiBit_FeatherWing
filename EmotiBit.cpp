@@ -1046,12 +1046,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	// Debugging scope pins
 	if (DIGITAL_WRITE_DEBUG)
 	{
-		pinMode(14, OUTPUT);
-		digitalWrite(14, LOW);
-		pinMode(16, OUTPUT);
-		digitalWrite(16, LOW);
-		pinMode(10, OUTPUT);
-		digitalWrite(10, LOW);
+		pinMode(DEBUG_OUT_PIN_0, OUTPUT);
+		digitalWrite(DEBUG_OUT_PIN_0, LOW);
+		pinMode(DEBUG_OUT_PIN_1, OUTPUT);
+		digitalWrite(DEBUG_OUT_PIN_1, LOW);
+		pinMode(DEBUG_OUT_PIN_2, OUTPUT);
+		digitalWrite(DEBUG_OUT_PIN_2, LOW);
 	}
 
 	if (testingMode == TestingMode::ACUTE)
@@ -2877,7 +2877,7 @@ void EmotiBit::readSensors()
 #ifdef DEBUG_GET_DATA
 	Serial.println("readSensors()");
 #endif // DEBUG
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, HIGH);
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_0, HIGH);
 	
 	uint32_t readSensorsBegin = micros();
 
@@ -3063,7 +3063,7 @@ void EmotiBit::readSensors()
 	
 	if (acquireData.debug) pushData(EmotiBit::DataType::DEBUG, micros() - readSensorsBegin); // Add readSensors processing duration to debugBuffer
 
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(10, LOW);
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_0, LOW);
 }
 
 void EmotiBit::processHeartRate()
@@ -3179,7 +3179,7 @@ void EmotiBit::sendData()
 #ifdef DEBUG_FEAT_EDA_CTRL
 Serial.println("EmotiBit::sendData()");
 #endif // DEBUG
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, HIGH);
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, HIGH);
 #ifdef DEBUG_FEAT_EDA_CTRL
 
 	Serial.println("for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)");
@@ -3200,7 +3200,7 @@ Serial.println("EmotiBit::sendData()");
 			//{
 			//	Serial.println(_outDataPackets.length());
 			//}
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, HIGH);
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, HIGH);
 
 			if (getPowerMode() == PowerMode::NORMAL_POWER)
 			{
@@ -3211,7 +3211,7 @@ Serial.println("EmotiBit::sendData()");
 			//Serial.println("writeSdCardMessage()");
 			_outDataPackets = "";
 
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(16, LOW);
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, LOW);
 		}
 	}
 	if (_outDataPackets.length() > 0)
@@ -3224,7 +3224,7 @@ Serial.println("EmotiBit::sendData()");
 		_outDataPackets = "";
 	}
 
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(14, LOW);
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, LOW);
 
 #ifdef DEBUG_EDA
 	Serial.println("Exit EmotiBit::sendData()");
@@ -3682,8 +3682,10 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("Press T to togle ON the Thermopile");
 			Serial.println("Press e to togle OFF the GSR");
 			Serial.println("Press E to togle ON the GSR");
-			Serial.println("Press h to togle OFF the Temp/Humidity Sensor");
-			Serial.println("Press H to togle ON the Temp/Humidity Sensor");
+			Serial.println("Press 0 to togle OFF the Temp0 Sensor");
+			Serial.println("Press ) to togle ON the Temp0 Sensor");
+			Serial.println("Press 1 to togle OFF the Temp1 Sensor");
+			Serial.println("Press ! to togle ON the Temp1 Sensor");
 			Serial.println("Press i to toggle OFF the IMU");
 			Serial.println("Press I to toggle ON the IMU");
 			Serial.println("Press p to toggle OFF the PPG sensor");
@@ -3804,7 +3806,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::EDA;
 		}
-		else if (c == 'h')
+		else if (c == '0')
 		{
 			acquireData.tempHumidity = false;
 			payload = "acquireData.tempHumidity = ";
@@ -3812,14 +3814,31 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println(payload);
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 		}
-		else if (c == 'H')
+		else if (c == ')')
 		{
 			acquireData.tempHumidity = true;
 			payload = "acquireData.tempHumidity = ";
 			payload += acquireData.tempHumidity;
 			Serial.println(payload);
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
-			if (_serialData != DataType::length) _serialData = DataType::HUMIDITY_0;
+			if (_serialData != DataType::length) _serialData = DataType::TEMPERATURE_0;
+		}
+		else if (c == '1')
+		{
+		acquireData.tempPpg = false;
+		payload = "acquireData.tempPpg = ";
+		payload += acquireData.tempPpg;
+		Serial.println(payload);
+		debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
+		}
+		else if (c == '!')
+		{
+		acquireData.tempPpg = true;
+		payload = "acquireData.tempPpg = ";
+		payload += acquireData.tempPpg;
+		Serial.println(payload);
+		debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
+		if (_serialData != DataType::length) _serialData = DataType::TEMPERATURE_1;
 		}
 		else if (c == 'i')
 		{
@@ -4127,7 +4146,7 @@ void attachToCore(void(*readFunction)(void*), EmotiBit*e)
 		"EmotiBitDataAcquisition",     /* name of task. */
 		10000,       /* Stack size of task */
 		NULL,        /* parameter of the task */
-		3,           /* priority of the task */
+		configMAX_PRIORITIES - 1,           /* priority of the task */
 		&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
 		0);          /* pin task to core 0 */
 	delay(500);

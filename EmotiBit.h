@@ -50,8 +50,12 @@ public:
 
 	String firmware_version = "1.3.36.feat-Esp.5.feat-EspPowerOpt.5";
 
-	TestingMode testingMode = TestingMode::NONE;
-	const bool DIGITAL_WRITE_DEBUG = false;
+	TestingMode testingMode = TestingMode::CHRONIC;
+	const bool DIGITAL_WRITE_DEBUG = true;
+	const uint8_t DEBUG_OUT_PIN_0 = 26;
+	const uint8_t DEBUG_OUT_PIN_1 = 27;
+	const uint8_t DEBUG_OUT_PIN_2 = 15;
+
 	const bool DC_DO_V2 = true;
 
 	bool _debugMode = false;
@@ -351,7 +355,11 @@ public:
 
 	EmotiBitWiFi _emotiBitWiFi; 
 	TwoWire* _EmotiBit_i2c = nullptr;
+#if defined ARDUINO_FEATHER_ESP32
+	uint32_t i2cClkMain = 433000;	// Adjust for empirically slow I2C clock
+#else 
 	uint32_t i2cClkMain = 400000;
+#endif
 	String _outDataPackets;		// Packets that will be sent over wireless (if enabled) and written to SD card (if recording)
 	uint16_t _outDataPacketCounter = 0;
 	//String _outSdPackets;		// Packts that will be written to SD card (if recording) but not sent over wireless
