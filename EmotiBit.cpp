@@ -1027,7 +1027,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 		// Set alarm to call onTimer function (value in microseconds).
 		// Repeat the alarm (third parameter)
-		timerAlarmWrite(timer, 3333, true);
+		timerAlarmWrite(timer, 6666, true);
 
 		// Start an alarm
 		timerAlarmEnable(timer);
@@ -2878,10 +2878,22 @@ void EmotiBit::readSensors()
 	Serial.println("readSensors()");
 #endif // DEBUG
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_0, HIGH);
-	
-	uint32_t readSensorsBegin = micros();
+
+	static unsigned long readSensorsBegin = micros();
+	if (_debugMode)
+	{
+		readSensorsIntervalMin = min(readSensorsIntervalMin, (uint32_t)(micros()- readSensorsBegin));
+		readSensorsIntervalMax = max(readSensorsIntervalMax, (uint32_t)(micros() - readSensorsBegin));
+	}
+	readSensorsBegin = micros();
+	unsigned long read1SensorBegin = readSensorsBegin;
 
 	_emotibitNvmController.syncRW();
+	if (_debugMode)
+	{
+		readSensorsDurationMax.nvm = max(readSensorsDurationMax.nvm, (uint32_t)(micros() - read1SensorBegin));
+		read1SensorBegin = micros();
+	}
 
 	// Battery (all analog reads must be in the ISR)
 	// TODO: use the stored/averaged Battery value instead of calling readBatteryPercent again
@@ -2894,6 +2906,12 @@ void EmotiBit::readSensors()
 			batteryCounter = 0;
 		}
 		batteryCounter++;
+
+		if (_debugMode)
+		{
+			readSensorsDurationMax.battery = max(readSensorsDurationMax.battery, (uint32_t)(micros() - read1SensorBegin));
+			read1SensorBegin = micros();
+		}
 	}
 	
 	if (dummyIsrWithDelay)
@@ -2937,6 +2955,12 @@ void EmotiBit::readSensors()
 				edaCounter = 0;
 			}
 			edaCounter++;
+
+			if (_debugMode)
+			{
+				readSensorsDurationMax.eda = max(readSensorsDurationMax.eda, (uint32_t)(micros() - read1SensorBegin));
+				read1SensorBegin = micros();
+			}
 		}
 
 
@@ -2954,6 +2978,12 @@ void EmotiBit::readSensors()
 				temperatureCounter = 0;
 			}
 			temperatureCounter++;
+
+			if (_debugMode)
+			{
+				readSensorsDurationMax.tempHumidity = max(readSensorsDurationMax.tempHumidity, (uint32_t)(micros() - read1SensorBegin));
+				read1SensorBegin = micros();
+			}
 		}
 
 		// EmotiBit bottom temp
@@ -2966,6 +2996,12 @@ void EmotiBit::readSensors()
 				bottomTempCounter = 0;
 			}
 			bottomTempCounter++;
+
+			if (_debugMode)
+			{
+				readSensorsDurationMax.tempPpg = max(readSensorsDurationMax.tempPpg, (uint32_t)(micros() - read1SensorBegin));
+				read1SensorBegin = micros();
+			}
 		}
 
 
@@ -2977,6 +3013,12 @@ void EmotiBit::readSensors()
 				thermopileCounter = 0;
 			}
 			thermopileCounter++;
+
+			if (_debugMode)
+			{
+				readSensorsDurationMax.thermopile = max(readSensorsDurationMax.thermopile, (uint32_t)(micros() - read1SensorBegin));
+				read1SensorBegin = micros();
+			}
 		}
 
 		// PPG
@@ -2987,6 +3029,12 @@ void EmotiBit::readSensors()
 				ppgCounter = 0;
 			}
 			ppgCounter++;
+
+			if (_debugMode)
+			{
+				readSensorsDurationMax.ppg = max(readSensorsDurationMax.ppg, (uint32_t)(micros() - read1SensorBegin));
+				read1SensorBegin = micros();
+			}
 		}
 
 		// IMU
@@ -2997,6 +3045,12 @@ void EmotiBit::readSensors()
 				imuCounter = 0;
 			}
 			imuCounter++;
+
+			if (_debugMode)
+			{
+				readSensorsDurationMax.imu = max(readSensorsDurationMax.imu, (uint32_t)(micros() - read1SensorBegin));
+				read1SensorBegin = micros();
+			}
 		}
 
 		// LED STATUS CHANGE SEGMENT
@@ -3058,9 +3112,19 @@ void EmotiBit::readSensors()
 				led.send();
 			}
 			ledCounter++;
+
+			if (_debugMode)
+			{
+				readSensorsDurationMax.led = max(readSensorsDurationMax.led, (uint32_t)(micros() - read1SensorBegin));
+				read1SensorBegin = micros();
+			}
 		}
 	}
-	
+
+	if (_debugMode)
+	{
+		readSensorsDurationMax.total = max(readSensorsDurationMax.total, (uint32_t)(micros() - readSensorsBegin));
+	}
 	if (acquireData.debug) pushData(EmotiBit::DataType::DEBUG, micros() - readSensorsBegin); // Add readSensors processing duration to debugBuffer
 
 	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_0, LOW);
@@ -3690,17 +3754,21 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("Press I to toggle ON the IMU");
 			Serial.println("Press p to toggle OFF the PPG sensor");
 			Serial.println("Press P to toggle ON the PPG sensor");
-			Serial.println("Press d to toggle OFF recording ISR loop time");
-			Serial.println("Press D to toggle ON recording ISR loop time");
 			Serial.println("Press b to toggle OFF Battry update");
 			Serial.println("Press B to toggle ON Battery update");
+			Serial.println("Press - to toggle OFF ALL sensor reads");
+			Serial.println("Press _ to toggle ON ALL sensor reads");
 			Serial.println("Press a to toggle OFF ADC correction");
 			Serial.println("Press A to toggle ON ADC correction");
+			Serial.println("Press d to toggle OFF recording ISR loop time");
+			Serial.println("Press D to toggle ON recording ISR loop time");
 			Serial.println("Press f to print the FW version");
 			Serial.println("press | to enable Digital filters");
-			Serial.println("Press - to disable Digital filters");
-			Serial.println("[ACUTE TESTING MODE] Press s to disable Digital filters");
-			Serial.println("[ACUTE TESTING MODE] Press c to disable Digital filters");
+			Serial.println("Press \\ to disable Digital filters");
+			Serial.println("Press s to print maxReadSensors metrics");
+			Serial.println("Press S to reset maxReadSensors metrics");
+			Serial.println("[ACUTE TESTING MODE] Press n to printEntireNvm");
+			Serial.println("[ACUTE TESTING MODE] Press N to eraseEeprom");
 		}
 		else if (c == ':')
 		{
@@ -3912,6 +3980,35 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
 			if (_serialData != DataType::length) _serialData = DataType::BATTERY_PERCENT;
 		}
+		else if (c == '-')
+		{
+		chipBegun.NCP5623 = false;
+		acquireData.eda = false;
+		acquireData.tempHumidity = false;
+		acquireData.thermopile = false;
+		acquireData.imu = false;
+		acquireData.ppg = false;
+		acquireData.tempPpg = false;
+		acquireData.battery = false;
+		payload = "ALL sensor reads OFF";
+		Serial.println(payload);
+		debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
+		}
+		else if (c == '_')
+		{
+		chipBegun.NCP5623 = true;
+		acquireData.eda = true;
+		acquireData.tempHumidity = true;
+		acquireData.thermopile = true;
+		acquireData.imu = true;
+		acquireData.ppg = true;
+		acquireData.tempPpg = true;
+		acquireData.battery = true;
+		payload = "ALL sensor reads ON";
+		Serial.println(payload);
+		debugPackets += EmotiBitPacket::createPacket(EmotiBitPacket::TypeTag::EMOTIBIT_DEBUG, packetNumber++, payload, dataCount);
+		if (_serialData != DataType::length) _serialData = DataType::length;
+		}
 		/*else if (c == '0')
 		{
 			catchDataException.catchNan = !catchDataException.catchNan;
@@ -3945,7 +4042,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			_enableDigitalFilter.mz = true;
 			_enableDigitalFilter.eda = true;
 		}
-		else if (c == '-')
+		else if (c == '\\')
 		{
 			Serial.println("disabling filter(s)");
 			_enableDigitalFilter.mx = false;
@@ -3953,14 +4050,58 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			_enableDigitalFilter.mz = false;
 			_enableDigitalFilter.eda = false;
 		}
-		else if (c == 's') 
+		else if (c == 's')
+		{
+			Serial.print("readSensorsIntervalMin = ");
+			Serial.println(readSensorsIntervalMin);
+			Serial.print("readSensorsIntervalMax = ");
+			Serial.println(readSensorsIntervalMax);
+			Serial.println("readSensorsDurationMax:");
+			Serial.print("  total = ");
+			Serial.println(readSensorsDurationMax.total);
+			Serial.print("    led = ");
+			Serial.println(readSensorsDurationMax.led);
+			Serial.print("    eda = ");
+			Serial.println(readSensorsDurationMax.eda);
+			Serial.print("    ppg = ");
+			Serial.println(readSensorsDurationMax.ppg);
+			Serial.print("tempPpg = ");
+			Serial.println(readSensorsDurationMax.tempPpg);
+			Serial.print("tempHum = ");
+			Serial.println(readSensorsDurationMax.tempHumidity);
+			Serial.print("  therm = ");
+			Serial.println(readSensorsDurationMax.thermopile);
+			Serial.print("    imu = ");
+			Serial.println(readSensorsDurationMax.imu);
+			Serial.print("battery = ");
+			Serial.println(readSensorsDurationMax.battery);
+			Serial.print("    nvm = ");
+			Serial.println(readSensorsDurationMax.nvm);
+		} 
+		else if (c == 'S')
+		{
+			Serial.print("Resetting maxReadSensorsTime");
+			readSensorsIntervalMin = 1000000;
+			readSensorsIntervalMax = 0;
+			readSensorsDurationMax.total = 0;
+			readSensorsDurationMax.led = 0;
+			readSensorsDurationMax.eda = 0;
+			readSensorsDurationMax.ppg = 0;
+			readSensorsDurationMax.tempPpg = 0;
+			readSensorsDurationMax.tempHumidity = 0;
+			readSensorsDurationMax.thermopile = 0;
+			readSensorsDurationMax.imu = 0;
+			readSensorsDurationMax.battery = 0;
+			readSensorsDurationMax.nvm = 0;
+		}
+		else if (c == 'n') 
 		{
 			if (testingMode == TestingMode::ACUTE)
 			{
 				_emotibitNvmController.printEntireNvm();
 			}
 		}
-		else if (c == 'c')
+		else if (c == 'N')
 		{
 			if (testingMode == TestingMode::ACUTE)
 			{

@@ -61,6 +61,21 @@ public:
 	bool _debugMode = false;
 	bool dummyIsrWithDelay = false;
 	uint32_t targetFileSyncDelay = 1;
+	struct ReadSensorsDurationMax
+	{
+		uint32_t total = 0;
+		uint32_t led = 0;
+		uint32_t eda = 0;
+		uint32_t ppg = 0;
+		uint32_t tempPpg = 0;
+		uint32_t tempHumidity = 0;
+		uint32_t thermopile = 0;
+		uint32_t imu = 0;
+		uint32_t battery = 0;
+		uint32_t nvm = 0;
+	} readSensorsDurationMax;
+	uint32_t readSensorsIntervalMin = 1000000;
+	uint32_t readSensorsIntervalMax = 0;
 
 
 	enum class SensorTimer {
