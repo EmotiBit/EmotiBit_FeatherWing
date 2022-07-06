@@ -4289,7 +4289,7 @@ void attachToCore(void(*readFunction)(void*), EmotiBit*e)
 		NULL,        /* parameter of the task */
 		configMAX_PRIORITIES - 1,           /* priority of the task */
 		&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
-		0);          /* pin task to core 0 */
+		1);          /* pin task to core 0 */
 	delay(500);
 }
 
