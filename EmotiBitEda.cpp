@@ -63,7 +63,8 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 		_constants.adcBits = 16;
 
 		// NOTE: if these values are changed in code, we should add parameters to _info.json
-		_ads.setDataRate(RATE_ADS1115_475SPS);	// set to 475Hz to allow for 300Hz oversampling
+		_ads.setDataRate(RATE_ADS1115_250SPS);	// set to 250Hz to allow for 150Hz oversampling
+		//_ads.setDataRate(RATE_ADS1115_475SPS);	// set to 475Hz to allow for 300Hz oversampling
 		_ads.setGain(GAIN_TWO);        // 2x gain   +/- 2.048V  1 bit = 1mV      0.0625mV
 
 		_constants.clipMin = -26500;

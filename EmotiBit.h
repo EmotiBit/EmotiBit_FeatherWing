@@ -48,7 +48,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.36.feat-Esp.5.feat-EspPowerOpt.5.feat-EspIsrOpt.1";
+	String firmware_version = "1.3.36.feat-Esp.5.feat-EspPowerOpt.5.feat-EspIsrOpt.2";
 
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = true;
