@@ -1027,7 +1027,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 		// Set alarm to call onTimer function (value in microseconds).
 		// Repeat the alarm (third parameter)
-		timerAlarmWrite(timer, 6666, true);
+		timerAlarmWrite(timer, 1000000 / BASE_SAMPLING_FREQ, true);
 
 		// Start an alarm
 		timerAlarmEnable(timer);
