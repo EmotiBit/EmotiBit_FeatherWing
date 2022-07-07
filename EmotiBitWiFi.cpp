@@ -132,7 +132,9 @@ void EmotiBitWiFi::end()
 		Serial.println("Ending WiFi...");
 		_wifiOff = true;
 #if defined ARDUINO_FEATHER_ESP32
-		// do nothing special
+		WiFi.mode(WIFI_OFF);    // Switch WiFi off
+		//setCpuFrequencyMhz(40); // Setting CPU to 40Mhz requires a 10MHz SPI clock. ISR impact needs assessment.
+		// ToDo: figure out how to turn WiFi back on
 #else
 		WiFi.end();
 #endif

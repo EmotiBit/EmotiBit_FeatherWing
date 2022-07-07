@@ -48,15 +48,34 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.36.feat-Esp.5";
+	String firmware_version = "1.3.36.feat-Esp.5.feat-EspPowerOpt.5.feat-EspIsrOpt.1";
 
-	TestingMode testingMode = TestingMode::NONE;
-	const bool DIGITAL_WRITE_DEBUG = false;
+	TestingMode testingMode = TestingMode::CHRONIC;
+	const bool DIGITAL_WRITE_DEBUG = true;
+	const uint8_t DEBUG_OUT_PIN_0 = 26;
+	const uint8_t DEBUG_OUT_PIN_1 = 27;
+	const uint8_t DEBUG_OUT_PIN_2 = 15;
+
 	const bool DC_DO_V2 = true;
 
 	bool _debugMode = false;
 	bool dummyIsrWithDelay = false;
 	uint32_t targetFileSyncDelay = 1;
+	struct ReadSensorsDurationMax
+	{
+		uint32_t total = 0;
+		uint32_t led = 0;
+		uint32_t eda = 0;
+		uint32_t ppg = 0;
+		uint32_t tempPpg = 0;
+		uint32_t tempHumidity = 0;
+		uint32_t thermopile = 0;
+		uint32_t imu = 0;
+		uint32_t battery = 0;
+		uint32_t nvm = 0;
+	} readSensorsDurationMax;
+	uint32_t readSensorsIntervalMin = 1000000;
+	uint32_t readSensorsIntervalMax = 0;
 
 
 	enum class SensorTimer {
@@ -263,30 +282,30 @@ public:
 
 	// Timer constants
 #define TIMER_PRESCALER_DIV 1024
-	const uint32_t CPU_HZ = 48000000;
+	const uint32_t CPU_HZ = 48000000; // ToDo: Add ESP32 CPU Hz
 
 	// ToDo: Make sampling variables changeable
-#define BASE_SAMPLING_FREQ 300
+#define BASE_SAMPLING_FREQ 150
+#define LED_REFRESH_DIV 10
 #define EDA_SAMPLING_DIV 1
-#define IMU_SAMPLING_DIV 5
-#define PPG_SAMPLING_DIV 5
-#define LED_REFRESH_DIV 20
-#define THERMOPILE_SAMPLING_DIV 40 	// TODO: This should change according to the rate set on the thermopile begin function 
-#define TEMPERATURE_1_SAMPLING_DIV 40
-#define TEMPERATURE_SAMPLING_DIV 10
-#define BATTERY_SAMPLING_DIV 50
-#define DUMMY_ISR_DIV 20
+#define PPG_SAMPLING_DIV 2
+#define TEMPERATURE_1_SAMPLING_DIV 20
+#define TEMPERATURE_SAMPLING_DIV 5
+#define THERMOPILE_SAMPLING_DIV 20 	// TODO: This should change according to the rate set on the thermopile begin function 
+#define IMU_SAMPLING_DIV 2
+#define BATTERY_SAMPLING_DIV 25
+#define DUMMY_ISR_DIV 10
 
 	struct TimerLoopOffset
 	{
-		uint8_t eda = 0;
-		uint8_t imu = 0;
-		uint8_t ppg = 1;
 		uint8_t led = 4;
-		uint8_t thermopile = 3;
+		uint8_t eda = 1;
+		uint8_t ppg = 0;
+		uint8_t bottomTemp = 5;
 		uint8_t tempHumidity = 2;
-		uint8_t bottomTemp = 2;
-		uint8_t battery = 0;
+		uint8_t thermopile = 3;
+		uint8_t imu = 0;
+		uint8_t battery = 7;
 	} timerLoopOffset;	// Sets initial value of sampling counters
 
 
@@ -351,7 +370,11 @@ public:
 
 	EmotiBitWiFi _emotiBitWiFi; 
 	TwoWire* _EmotiBit_i2c = nullptr;
+#if defined ARDUINO_FEATHER_ESP32
+	uint32_t i2cClkMain = 433000;	// Adjust for empirically slow I2C clock
+#else 
 	uint32_t i2cClkMain = 400000;
+#endif
 	String _outDataPackets;		// Packets that will be sent over wireless (if enabled) and written to SD card (if recording)
 	uint16_t _outDataPacketCounter = 0;
 	//String _outSdPackets;		// Packts that will be written to SD card (if recording) but not sent over wireless
@@ -550,12 +573,12 @@ private:
 	// Single buffered arrays must only be accessed from ISR functions, not in the main loop
 	// ToDo: add assignment for dynamic allocation;
 	// 	**** WARNING **** THIS MUST MATCH THE SAMPLING DIVS ETC
-	BufferFloat edlBuffer = BufferFloat(20);
-	BufferFloat edrBuffer = BufferFloat(20);	
-	BufferFloat temperatureBuffer = BufferFloat(4);	
-	BufferFloat humidityBuffer = BufferFloat(4);
-	BufferFloat batteryVoltageBuffer = BufferFloat(8);
-	BufferFloat batteryPercentBuffer = BufferFloat(8);
+	BufferFloat edlBuffer = BufferFloat(10);
+	BufferFloat edrBuffer = BufferFloat(10);	
+	BufferFloat temperatureBuffer = BufferFloat(2);	
+	BufferFloat humidityBuffer = BufferFloat(2);
+	BufferFloat batteryVoltageBuffer = BufferFloat(4);
+	BufferFloat batteryPercentBuffer = BufferFloat(4);
 
 	const uint8_t SCOPE_TEST_PIN = A0;
 	bool scopeTestPinOn = false;
