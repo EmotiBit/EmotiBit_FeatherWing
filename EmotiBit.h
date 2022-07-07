@@ -577,8 +577,8 @@ private:
 	BufferFloat edrBuffer = BufferFloat(10);	
 	BufferFloat temperatureBuffer = BufferFloat(2);	
 	BufferFloat humidityBuffer = BufferFloat(2);
-	BufferFloat batteryVoltageBuffer = BufferFloat(4);
-	BufferFloat batteryPercentBuffer = BufferFloat(4);
+	BufferFloat batteryVoltageBuffer = BufferFloat(6);
+	BufferFloat batteryPercentBuffer = BufferFloat(6);
 
 	const uint8_t SCOPE_TEST_PIN = A0;
 	bool scopeTestPinOn = false;
