@@ -53,7 +53,7 @@ public:
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = true;
 	const uint8_t DEBUG_OUT_PIN_0 = 26;
-	const uint8_t DEBUG_OUT_PIN_1 = 27;
+	const uint8_t DEBUG_OUT_PIN_1 = 33;
 	const uint8_t DEBUG_OUT_PIN_2 = 15;
 
 	const bool DC_DO_V2 = true;
