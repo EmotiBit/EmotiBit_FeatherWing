@@ -1763,7 +1763,7 @@ int8_t EmotiBit::updateThermopileData() {
 				status = status | therm0AMB.push_back(AMB, &(timestamp));
 				status = status | therm0Sto.push_back(Sto, &(timestamp));
 				thermopile.startRawSensorValues(thermStatus);
-				if (returnError == MLX90632::status::SENSOR_SUCCESS)
+				if (thermStatus == MLX90632::status::SENSOR_SUCCESS)
 				{
 					thermopileBegun = true;
 					status = status | (int8_t)EmotiBit::Error::NONE;
