@@ -1730,6 +1730,7 @@ int8_t EmotiBit::updateThermopileData() {
 #ifdef DEBUG_THERM_UPDATE
 	Serial.println("updateThermopileData");
 #endif
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, HIGH);
 	// Thermopile
 	int8_t status = 0;
 	uint32_t timestamp;
@@ -1762,6 +1763,11 @@ int8_t EmotiBit::updateThermopileData() {
 				status = status | therm0AMB.push_back(AMB, &(timestamp));
 				status = status | therm0Sto.push_back(Sto, &(timestamp));
 				thermopile.startRawSensorValues(thermStatus);
+				if (returnError == MLX90632::status::SENSOR_SUCCESS)
+				{
+					thermopileBegun = true;
+					status = status | (int8_t)EmotiBit::Error::NONE;
+				}
 			}
 			else
 			{
@@ -1782,6 +1788,7 @@ int8_t EmotiBit::updateThermopileData() {
 	}
 	
 	_thermReadFinishedTime = micros();
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, LOW);
 	return status;
 }
 
@@ -3243,7 +3250,7 @@ void EmotiBit::sendData()
 #ifdef DEBUG_FEAT_EDA_CTRL
 Serial.println("EmotiBit::sendData()");
 #endif // DEBUG
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, HIGH);
+	
 #ifdef DEBUG_FEAT_EDA_CTRL
 
 	Serial.println("for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)");
@@ -3287,9 +3294,7 @@ Serial.println("EmotiBit::sendData()");
 		writeSdCardMessage(_outDataPackets);
 		_outDataPackets = "";
 	}
-
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, LOW);
-
+	
 #ifdef DEBUG_EDA
 	Serial.println("Exit EmotiBit::sendData()");
 #endif // DEBUG
