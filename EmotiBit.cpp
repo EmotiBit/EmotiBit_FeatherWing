@@ -465,8 +465,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	samplingRates.gyroscope = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
 	samplingRates.magnetometer = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
 	samplingRates.eda = BASE_SAMPLING_FREQ / EDA_SAMPLING_DIV;
-	samplingRates.humidity = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
-	samplingRates.temperature = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
+	samplingRates.humidity = BASE_SAMPLING_FREQ / TEMPERATURE_0_SAMPLING_DIV / 2;
+	samplingRates.temperature = BASE_SAMPLING_FREQ / TEMPERATURE_0_SAMPLING_DIV / 2;
 	samplingRates.temperature_1 = (float)BASE_SAMPLING_FREQ / (float)TEMPERATURE_1_SAMPLING_DIV;
 	samplingRates.thermopile = (float)BASE_SAMPLING_FREQ / (float)THERMOPILE_SAMPLING_DIV;
 	setSamplingRates(samplingRates);
@@ -1730,6 +1730,7 @@ int8_t EmotiBit::updateThermopileData() {
 #ifdef DEBUG_THERM_UPDATE
 	Serial.println("updateThermopileData");
 #endif
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, HIGH);
 	// Thermopile
 	int8_t status = 0;
 	uint32_t timestamp;
@@ -1758,10 +1759,12 @@ int8_t EmotiBit::updateThermopileData() {
 #endif
 			if (thermStatus == MLX90632::status::SENSOR_SUCCESS)
 			{
+				if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, HIGH);
 				timestamp = millis();
 				status = status | therm0AMB.push_back(AMB, &(timestamp));
 				status = status | therm0Sto.push_back(Sto, &(timestamp));
 				thermopile.startRawSensorValues(thermStatus);
+				if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, LOW);
 			}
 			else
 			{
@@ -1782,6 +1785,7 @@ int8_t EmotiBit::updateThermopileData() {
 	}
 	
 	_thermReadFinishedTime = micros();
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, LOW);
 	return status;
 }
 
@@ -2103,8 +2107,8 @@ bool EmotiBit::processThermopileData()
 	size_t n;
 	float* dataAMB;
 	float* dataSto;
-	uint32_t* timestampAmb;
-	uint32_t* timestampSto;
+	uint32_t timestampAmb;
+	uint32_t timestampSto;
 
 	static const unsigned long int samplingInterval = 1000000 / (_samplingRates.thermopile * _samplesAveraged.thermopile);
 #ifdef ADAFRUIT_FEATHER_M0
@@ -2137,8 +2141,8 @@ bool EmotiBit::processThermopileData()
 	//Serial.println("swap: " + String(swapEnd - swapStart));
 	
 	// Get pointers to the data buffers
-	sizeAMB = therm0AMB.getData(&dataAMB, timestampAmb, false);
-	sizeSto = therm0Sto.getData(&dataSto, timestampSto, false);
+	sizeAMB = therm0AMB.getData(&dataAMB, &timestampAmb, false);
+	sizeSto = therm0Sto.getData(&dataSto, &timestampSto, false);
 #ifdef DEBUG_THERM_PROCESS
 	Serial.println("sizeof(therm0AMB) " + String(sizeAMB));
 	Serial.println("sizeof(therm0Sto) " + String(sizeSto));
@@ -2239,7 +2243,7 @@ bool EmotiBit::processThermopileData()
 			payloadAMB = "";
 			payloadSto = "";
 		}
-		pushData(EmotiBit::DataType::THERMOPILE, objectTemp, timestampAmb);
+		pushData(EmotiBit::DataType::THERMOPILE, objectTemp, &timestampAmb);
 	}
 	// Transfer overflow counts
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->incrOverflowCount(DoubleBufferFloat::BufferSelector::IN,
@@ -2966,7 +2970,7 @@ void EmotiBit::readSensors()
 
 		if (chipBegun.SI7013 && acquireData.tempHumidity) {
 			static uint16_t temperatureCounter = timerLoopOffset.tempHumidity;
-			if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
+			if (temperatureCounter == TEMPERATURE_0_SAMPLING_DIV) {
 				// Note: Temperature/humidity and the thermistor are alternately sampled 
 				// on every other call of updateTempHumidityData()
 				// I.e. you must call updateTempHumidityData() 2x with a sufficient measurement 
@@ -3243,7 +3247,7 @@ void EmotiBit::sendData()
 #ifdef DEBUG_FEAT_EDA_CTRL
 Serial.println("EmotiBit::sendData()");
 #endif // DEBUG
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, HIGH);
+	
 #ifdef DEBUG_FEAT_EDA_CTRL
 
 	Serial.println("for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)");
@@ -3264,7 +3268,6 @@ Serial.println("EmotiBit::sendData()");
 			//{
 			//	Serial.println(_outDataPackets.length());
 			//}
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, HIGH);
 
 			if (getPowerMode() == PowerMode::NORMAL_POWER)
 			{
@@ -3275,7 +3278,6 @@ Serial.println("EmotiBit::sendData()");
 			//Serial.println("writeSdCardMessage()");
 			_outDataPackets = "";
 
-			if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, LOW);
 		}
 	}
 	if (_outDataPackets.length() > 0)
@@ -3287,9 +3289,7 @@ Serial.println("EmotiBit::sendData()");
 		writeSdCardMessage(_outDataPackets);
 		_outDataPackets = "";
 	}
-
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, LOW);
-
+	
 #ifdef DEBUG_EDA
 	Serial.println("Exit EmotiBit::sendData()");
 #endif // DEBUG
