@@ -48,7 +48,7 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.36.feat-Esp.5.feat-EspPowerOpt.5.feat-EspIsrOpt.6";
+	String firmware_version = "1.3.36.feat-Esp.5.feat-EspPowerOpt.5.feat-EspIsrOpt.7";
 
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = true;
@@ -287,25 +287,25 @@ public:
 	// ToDo: Make sampling variables changeable
 #define BASE_SAMPLING_FREQ 150
 #define LED_REFRESH_DIV 10
-#define EDA_SAMPLING_DIV 1
+#define EDA_SAMPLING_DIV 2
 #define PPG_SAMPLING_DIV 2
 #define TEMPERATURE_1_SAMPLING_DIV 20
-#define TEMPERATURE_SAMPLING_DIV 5
+#define TEMPERATURE_0_SAMPLING_DIV 10
 #define THERMOPILE_SAMPLING_DIV 20 	// TODO: This should change according to the rate set on the thermopile begin function 
 #define IMU_SAMPLING_DIV 2
-#define BATTERY_SAMPLING_DIV 25
+#define BATTERY_SAMPLING_DIV 10
 #define DUMMY_ISR_DIV 10
 
 	struct TimerLoopOffset
 	{
 		uint8_t led = 4;
 		uint8_t eda = 1;
-		uint8_t ppg = 0;
-		uint8_t bottomTemp = 5;
+		uint8_t ppg = 1;
+		uint8_t bottomTemp = 2;
 		uint8_t tempHumidity = 2;
-		uint8_t thermopile = 3;
-		uint8_t imu = 0;
-		uint8_t battery = 7;
+		uint8_t thermopile = 0;
+		uint8_t imu = 1;
+		uint8_t battery = 6;
 	} timerLoopOffset;	// Sets initial value of sampling counters
 
 
@@ -316,7 +316,7 @@ public:
 //#define PPG_SAMPLING_DIV 4
 //#define LED_REFRESH_DIV 8
 //#define THERMOPILE_SAMPLING_DIV 16	// TODO: This should change according to the rate set on the thermopile begin function 
-//#define TEMPERATURE_SAMPLING_DIV 4
+//#define TEMPERATURE_0_SAMPLING_DIV 4
 //#define BATTERY_SAMPLING_DIV 20
 
 	//struct TimerLoopOffset
@@ -573,12 +573,12 @@ private:
 	// Single buffered arrays must only be accessed from ISR functions, not in the main loop
 	// ToDo: add assignment for dynamic allocation;
 	// 	**** WARNING **** THIS MUST MATCH THE SAMPLING DIVS ETC
-	BufferFloat edlBuffer = BufferFloat(10);
-	BufferFloat edrBuffer = BufferFloat(10);	
+	BufferFloat edlBuffer = BufferFloat(5);
+	BufferFloat edrBuffer = BufferFloat(5);	
 	BufferFloat temperatureBuffer = BufferFloat(2);	
 	BufferFloat humidityBuffer = BufferFloat(2);
-	BufferFloat batteryVoltageBuffer = BufferFloat(6);
-	BufferFloat batteryPercentBuffer = BufferFloat(6);
+	BufferFloat batteryVoltageBuffer = BufferFloat(15);
+	BufferFloat batteryPercentBuffer = BufferFloat(15);
 
 	const uint8_t SCOPE_TEST_PIN = A0;
 	bool scopeTestPinOn = false;

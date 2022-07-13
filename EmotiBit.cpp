@@ -465,8 +465,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	samplingRates.gyroscope = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
 	samplingRates.magnetometer = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
 	samplingRates.eda = BASE_SAMPLING_FREQ / EDA_SAMPLING_DIV;
-	samplingRates.humidity = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
-	samplingRates.temperature = BASE_SAMPLING_FREQ / TEMPERATURE_SAMPLING_DIV / 2;
+	samplingRates.humidity = BASE_SAMPLING_FREQ / TEMPERATURE_0_SAMPLING_DIV / 2;
+	samplingRates.temperature = BASE_SAMPLING_FREQ / TEMPERATURE_0_SAMPLING_DIV / 2;
 	samplingRates.temperature_1 = (float)BASE_SAMPLING_FREQ / (float)TEMPERATURE_1_SAMPLING_DIV;
 	samplingRates.thermopile = (float)BASE_SAMPLING_FREQ / (float)THERMOPILE_SAMPLING_DIV;
 	setSamplingRates(samplingRates);
@@ -2970,7 +2970,7 @@ void EmotiBit::readSensors()
 
 		if (chipBegun.SI7013 && acquireData.tempHumidity) {
 			static uint16_t temperatureCounter = timerLoopOffset.tempHumidity;
-			if (temperatureCounter == TEMPERATURE_SAMPLING_DIV) {
+			if (temperatureCounter == TEMPERATURE_0_SAMPLING_DIV) {
 				// Note: Temperature/humidity and the thermistor are alternately sampled 
 				// on every other call of updateTempHumidityData()
 				// I.e. you must call updateTempHumidityData() 2x with a sufficient measurement 

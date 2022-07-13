@@ -31,7 +31,7 @@ void setup()
 {
 	// ToDo: Consider moving this inside EmotiBit setup with an #ifdef ESP
 	// Different Cpu Frequencies can be used to change performance and battery life
-	setCpuFrequencyMhz(160); // 80 has been tested working to save battery life
+	setCpuFrequencyMhz(80); // 80 has been tested working to save battery life
 	btStop(); // ToDo: consider where to turn off bt and add #ifdef ESP
 	
 	Serial.begin(SERIAL_BAUD);
