@@ -7,16 +7,16 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 {
 	uint8_t status = WiFi.status();
 	uint32_t startBegin = millis();
-#ifdef ADAFRUIT_FEATHER_M0
+#if defined ARDUINO_FEATHER_ESP32
+	// Taken from scanNetworks example
+	WiFi.mode(WIFI_STA);
+	delay(100);
+#else
 	if (status == WL_NO_SHIELD) {
 		Serial.println("No WiFi shield found. Try WiFi.setPins().");
 		return WL_NO_SHIELD;
 	}
 	checkWiFi101FirmwareVersion();
-#elif defined ARDUINO_FEATHER_ESP32
-	// Taken from scanNetworks example
-	WiFi.mode(WIFI_STA);
-	delay(100);
 #endif
 
 	while (status != WL_CONNECTED)
@@ -71,17 +71,6 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		Serial.println(ssid);
 		// ToDo: Add WEP support
 		_wifiOff = false;
-#ifdef ADAFRUIT_FEATHER_M0
-		if (pass.equals(""))
-		{
-			// assume open network if password is empty
-			status = WiFi.begin(ssid);
-		}
-		else
-		{
-			status = WiFi.begin(ssid, pass);
-		}
-#elif defined ARDUINO_FEATHER_ESP32
 		if (pass.equals(""))
 		{
 			// assume open network if password is empty
@@ -91,14 +80,13 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		{
 			status = WiFi.begin(ssid.c_str(), pass.c_str());
 		}
-#endif
 		_needsAdvertisingBegin = true;
 		delay(attemptDelay);
 		attempt++;
 	}
-#ifdef ADAFRUIT_FEATHER_M0
+//#ifdef ADAFRUIT_FEATHER_M0
 	WiFi.setTimeout(25);
-#endif
+//#endif
 	wifiBeginStart = millis();
 	Serial.println("Connected to WiFi");
 	printWiFiStatus();

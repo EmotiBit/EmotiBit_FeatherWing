@@ -25,10 +25,10 @@
 #define _EMOTIBIT_VERSION_CONTROLLER_H
 
 #include <SPI.h>
-#ifdef ADAFRUIT_FEATHER_M0
-#include <SdFat.h>
-#elif defined ARDUINO_FEATHER_ESP32
+#if defined ARDUINO_FEATHER_ESP32
 #include <SD.h>
+#else
+#include <SdFat.h>
 #endif
 #include <Arduino.h>
 #include <Wire.h>

@@ -103,6 +103,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
 #ifdef ARDUINO_FEATHER_ESP32
 	esp_bt_controller_disable();
+	// ToDo: assess similarity with btStop();
+	setCpuFrequencyMhz(80); // 80 has been tested working to save battery life
 #endif
 	EmotiBitVersionController emotiBitVersionController;
 	//EmotiBitUtilities::printFreeRAM("Begining of setup", 1);
@@ -189,6 +191,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		PORT->Group[PORTA].PINCFG[17].bit.DRVSTR = 1; // SCL
 		digitalWrite(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, LOW);
 		// Not putting EmotiBit to sleep helps with the FW installer process
+		// ToDo: Consider ESP32 case
 #endif
 		setupFailed("SD-Card not detected");
 	}
@@ -198,18 +201,18 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		delete(_EmotiBit_i2c);
 	}
 #ifdef ADAFRUIT_FEATHER_M0
+	Serial.print("Setting up I2C For M0...");
 	_EmotiBit_i2c = new TwoWire(&sercom1, EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
 	_EmotiBit_i2c->begin();
 	// ToDo: detect if i2c init fails
 	//Serial.println("I2C interface initialized");
-	_EmotiBit_i2c->setClock(100000);
+	//_EmotiBit_i2c->setClock(100000);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
 #elif defined ARDUINO_FEATHER_ESP32
 	_EmotiBit_i2c = new TwoWire(0);
-	Serial.print("Setting up I2C(For ESP32)....");
+	Serial.print("Setting up I2C For ESP32...");
 	status = _EmotiBit_i2c->begin(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
-	//status = _EmotiBit_i2c->begin(27, 13);
 	if (status)
 	{
 		Serial.println("I2c setup complete");
@@ -218,11 +221,11 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		Serial.println("I2c setup failed");
 	}
+#endif
 	uint32_t i2cRate = 100000;
-	Serial.print("setting clock to");
+	Serial.print("Setting clock to");
 	Serial.print(i2cRate);
 	_EmotiBit_i2c->setClock(i2cRate);
-#endif
 
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
@@ -340,7 +343,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		setupFailed("CONSTANT MAPPING");
 	}
 
-#if defined(DEBUG) || defined(ARDUINO_FEATHER_ESP32)
+#if defined(DEBUG))
 	// testing if mapping was successful
 	emotiBitVersionController.echoPinMapping();
 	emotiBitVersionController.echoConstants();
@@ -536,9 +539,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		_EmotiBit_i2c->flush();
 		_EmotiBit_i2c->endTransmission();
 		_EmotiBit_i2c->clearWriteError();
-#ifdef ADAFRUIT_FEATHER_M0
 		_EmotiBit_i2c->end();
-#endif
 		static uint32_t hibernateTimer = millis();
 		if (millis() - hibernateTimer > 2000)
 		{
@@ -1101,10 +1102,10 @@ bool EmotiBit::setupSdCard()
 		Serial.print(i);
 		Serial.print(",");
 		// begin function initializes SPI at MAX speed by deafult. check /src/SpiDriver/SdSpiDriver.h for details on the constructor
-#ifdef ADAFRUIT_FEATHER_M0
-		if (SD.begin(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN))
-#elif defined ARDUINO_FEATHER_ESP32
+#if defined ARDUINO_FEATHER_ESP32
 		if (SD.begin(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN, SPI, 10000000)) // 10MHz works with 40MHz CPU, 20Mhz does NOT
+#else
+		if (SD.begin(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN))
 #endif
 		{
 			success = true;
@@ -1125,9 +1126,7 @@ bool EmotiBit::setupSdCard()
 	if (testingMode == TestingMode::ACUTE || testingMode == TestingMode::CHRONIC)
 	{
 		// list all files on SD-Card
-#ifdef ADAFRUIT_FEATHER_M0
-		SD.ls(LS_R);
-#elif defined ARDUINO_FEATHER_ESP32
+#if defined ARDUINO_FEATHER_ESP32
 		Serial.println("ESP::: Reading SD-Card");
 		File dir;
 		dir = SD.open("/");
@@ -1144,6 +1143,8 @@ bool EmotiBit::setupSdCard()
 			}
 			entry.close();
 		}
+#else 
+		SD.ls(LS_R);
 #endif
 
 	}
@@ -1287,10 +1288,6 @@ bool EmotiBit::addPacket(uint32_t timestamp, EmotiBit::DataType t, float * data,
 }
 
 bool EmotiBit::addPacket(EmotiBit::DataType t) {
-#ifdef DEBUG_FEAT_EDA_CTRL
-	Serial.print("addPacket: ");
-	Serial.println((uint8_t)t);
-#endif // DEBUG
 	float * data;
 	uint32_t timestamp;
 	size_t dataLen;
@@ -1327,17 +1324,7 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 				{
 					dataLen += count;
 				}
-#ifdef DEBUG_FEAT_EDA_CTRL
-				Serial.print(i);
-				Serial.print(": ");
-				Serial.println(count);
-#endif
 			}
-#ifdef DEBUG_FEAT_EDA_CTRL
-			Serial.print(i);
-			Serial.print(": ");
-			Serial.println(dataLen);
-#endif
 		}
 	}
 	else
@@ -1349,10 +1336,6 @@ bool EmotiBit::addPacket(EmotiBit::DataType t) {
 			_newDataAvailable[(uint8_t)t] = true;	// set new data is available in the outputBuffer
 		}
 	}
-
-#ifdef DEBUG_FEAT_EDA_CTRL
-	Serial.println(dataLen);
-#endif
 
 	if (_sendData[(uint8_t)t]) {
 		return addPacket(timestamp, t, data, dataLen, _printLen[(uint8_t)t]);
@@ -1377,10 +1360,10 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 #endif
 				String datetimeString = packet.substring(dataStartChar, packet.length());
 				// Write the configuration info to json file
-#ifdef ADAFRUIT_FEATHER_M0
-				String infoFilename = datetimeString + "_info.json";
-#elif defined(ARDUINO_FEATHER_ESP32)
+#if defined(ARDUINO_FEATHER_ESP32)
 				String infoFilename = "/" + datetimeString + "_info.json";
+#else
+				String infoFilename = datetimeString + "_info.json";
 #endif
 				_dataFile = SD.open(infoFilename, FILE_WRITE);
 				if (_dataFile) {
@@ -1393,10 +1376,10 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 				// Try to open the data file to be sure we can write
 				_sdCardFilename = datetimeString + ".csv";
 				uint32_t start_timeOpenFile = millis();
-#ifdef ADAFRUIT_FEATHER_M0
-				_dataFile = SD.open(_sdCardFilename, O_CREAT | O_WRITE | O_AT_END);
-#elif defined ARDUINO_FEATHER_ESP32
+#if defined ARDUINO_FEATHER_ESP32
 				_dataFile = SD.open("/" + _sdCardFilename, FILE_WRITE);
+#else 
+				_dataFile = SD.open(_sdCardFilename, O_CREAT | O_WRITE | O_AT_END);
 #endif
 				if (_dataFile) {
 					_sdWrite = true;
@@ -2111,11 +2094,8 @@ bool EmotiBit::processThermopileData()
 	uint32_t timestampSto;
 
 	static const unsigned long int samplingInterval = 1000000 / (_samplingRates.thermopile * _samplesAveraged.thermopile);
-#ifdef ADAFRUIT_FEATHER_M0
 	static const unsigned int minSwapTime = max(500, min(samplingInterval / 10, 10000));
-#elif defined ARDUINO_FEATHER_ESP32
-	static const unsigned int minSwapTime = _max(500, _min(samplingInterval / 10, 10000));
-#endif
+
 	//Serial.println("window: " + String(samplingInterval - (micros() - _thermReadFinishedTime)));
 	unsigned long int waitStart = micros();
 	unsigned long int waitEnd = micros();
@@ -2311,16 +2291,16 @@ int8_t EmotiBit::updateBatteryPercentData(float battPcent) {
 
 float EmotiBit::readBatteryVoltage() {
 	float batRead;
-#ifdef ADAFRUIT_FEATHER_M0
+#if defined ARDUINO_FEATHER_ESP32
+	batRead = analogReadMilliVolts(_batteryReadPin);
+	batRead *= 2.f;
+	batRead = batRead / 1000.f; // convert mV to V
+#else
 	batRead = analogRead(_batteryReadPin);
 	//float batRead = 10000.f;
 	batRead *= 2.f;
 	batRead *= _vcc;
 	batRead /= adcRes; // ToDo: precalculate multiplier
-#elif defined ARDUINO_FEATHER_ESP32
-	batRead = analogReadMilliVolts(_batteryReadPin);
-	batRead *= 2.f;
-	batRead = batRead / 1000.f; // convert mV to V
 #endif
 	return batRead;
 }
@@ -3182,10 +3162,6 @@ void EmotiBit::processHeartRate()
 
 void EmotiBit::processData()
 {
-#ifdef DEBUG_FEAT_EDA_CTRL
-	Serial.println("EmotiBit::processData()");
-#endif // DEBUG
-
 	// Perform all derivative calculations
 	// Swap all buffers to that data is ready to send from OUT buffer
 
@@ -3244,23 +3220,9 @@ void EmotiBit::processData()
 
 void EmotiBit::sendData()
 {
-#ifdef DEBUG_FEAT_EDA_CTRL
-Serial.println("EmotiBit::sendData()");
-#endif // DEBUG
-	
-#ifdef DEBUG_FEAT_EDA_CTRL
-
-	Serial.println("for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)");
-	#endif
 	for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
 	{
-#ifdef DEBUG_FEAT_EDA_CTRL
-		Serial.println(i);
-#endif
 		addPacket((EmotiBit::DataType) i);
-#ifdef DEBUG_FEAT_EDA_CTRL
-		Serial.println("addPacket() complete");
-#endif // DEBUG
 		if (_outDataPackets.length() > OUT_MESSAGE_TARGET_SIZE)
 		{
 			// Avoid overrunning our reserve memory
@@ -3289,10 +3251,6 @@ Serial.println("EmotiBit::sendData()");
 		writeSdCardMessage(_outDataPackets);
 		_outDataPackets = "";
 	}
-	
-#ifdef DEBUG_EDA
-	Serial.println("Exit EmotiBit::sendData()");
-#endif // DEBUG
 }
 
 #ifdef ADAFRUIT_FEATHER_M0
@@ -3473,7 +3431,7 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 #ifdef ARDUINO_FEATHER_ESP32
 				_dataFile.flush();
 #else
-				_dataFile.sync();
+				_dataFile.sync(); // ToDo: Consider using flush() for all MCUs
 #endif
 			}
 

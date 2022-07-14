@@ -359,10 +359,10 @@ public:
 	bool _sendData[(uint8_t)EmotiBit::DataType::length];
 	bool _sendSerialData[(uint8_t)EmotiBit::DataType::length];
 
-#ifdef ADAFRUIT_FEATHER_M0
-	SdFat SD;
-#elif defined ARDUINO_FEATHER_ESP32
-	// SD is already defined.
+#ifdef ARDUINO_FEATHER_ESP32
+	// SD is already defined in ESP32 
+#else
+	SdFat SD;	// Use SdFat library
 #endif
 
 	volatile uint8_t battIndicationSeq = 0;
@@ -370,7 +370,7 @@ public:
 
 	EmotiBitWiFi _emotiBitWiFi; 
 	TwoWire* _EmotiBit_i2c = nullptr;
-#if defined ARDUINO_FEATHER_ESP32
+#ifdef ARDUINO_FEATHER_ESP32
 	uint32_t i2cClkMain = 433000;	// Adjust for empirically slow I2C clock
 #else 
 	uint32_t i2cClkMain = 400000;
@@ -380,11 +380,10 @@ public:
 	//String _outSdPackets;		// Packts that will be written to SD card (if recording) but not sent over wireless
 	//String _inControlPackets;	// Control packets recieved over wireless
 	String _sdCardFilename = "datalog.csv";
-	// ToDo: unecessary #define. add / while passing the argument to function
-#ifdef ADAFRUIT_FEATHER_M0
-	const char *_configFilename = "config.txt";
-#elif defined ARDUINO_FEATHER_ESP32
+#if defined ARDUINO_FEATHER_ESP32
 	const char *_configFilename = "/config.txt";
+#else
+	const char *_configFilename = "config.txt";
 #endif
 	File _dataFile;
 	volatile bool _sdWrite;
