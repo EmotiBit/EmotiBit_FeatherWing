@@ -2045,19 +2045,8 @@ float EmotiBit::convertMagnetoZ(int16_t mag_data_z, uint16_t data_rhall)
 int8_t EmotiBit::pushData(EmotiBit::DataType type, float data, uint32_t * timestamp) {
 	//Serial.print("TypeTag: "); Serial.println(typeTags[(uint8_t)type]);
 	if ((uint8_t)type < (uint8_t)EmotiBit::DataType::length) {
-		bool mallocTimestamp = false;
-		if (timestamp == nullptr) {
-			// For debugging
-			//Serial.println("EmotiBit::pushData-> timestamp is null");
-			timestamp = new uint32_t;
-			mallocTimestamp = true;
-			*timestamp = millis();
-		}
 		uint8_t status = dataDoubleBuffers[(uint8_t)type]->push_back(data, timestamp);
-		if (mallocTimestamp)
-		{
-			delete timestamp;
-		}
+
 		if (status & BufferFloat::ERROR_BUFFER_OVERFLOW == BufferFloat::ERROR_BUFFER_OVERFLOW) {
 			// NOTE: DATA_OVERFLOW count is now stored in DoubleBufferFloat without a separate buffer
 
