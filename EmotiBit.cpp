@@ -343,7 +343,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		setupFailed("CONSTANT MAPPING");
 	}
 
-#if defined(DEBUG))
+#if defined(DEBUG)
 	// testing if mapping was successful
 	emotiBitVersionController.echoPinMapping();
 	emotiBitVersionController.echoConstants();
@@ -2093,8 +2093,8 @@ bool EmotiBit::processThermopileData()
 	uint32_t timestampAmb;
 	uint32_t timestampSto;
 
-	static const unsigned long int samplingInterval = 1000000 / (_samplingRates.thermopile * _samplesAveraged.thermopile);
-	static const unsigned int minSwapTime = max(500, min(samplingInterval / 10, 10000));
+	static const int samplingInterval = 1000000 / (_samplingRates.thermopile * _samplesAveraged.thermopile);
+	static const int minSwapTime = max(500, min(samplingInterval / 10, 10000));
 
 	//Serial.println("window: " + String(samplingInterval - (micros() - _thermReadFinishedTime)));
 	unsigned long int waitStart = micros();

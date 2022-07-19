@@ -84,9 +84,9 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		delay(attemptDelay);
 		attempt++;
 	}
-//#ifdef ADAFRUIT_FEATHER_M0
+#ifndef ARDUINO_FEATHER_ESP32
 	WiFi.setTimeout(25);
-//#endif
+#endif
 	wifiBeginStart = millis();
 	Serial.println("Connected to WiFi");
 	printWiFiStatus();
