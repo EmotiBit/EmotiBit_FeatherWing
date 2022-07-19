@@ -172,17 +172,14 @@ bool EmotiBitVersionController::initConstantMapping(EmotiBitVersionController::E
 
 bool EmotiBitVersionController::_initMappingMathConstants(EmotiBitVersionController::EmotiBitVersion version)
 {
-#if defined(ADAFRUIT_FEATHER_M0)|| defined (ARDUINO_FEATHER_ESP32)
 	_assignedMathConstants[(int)MathConstants::VCC] = 3.3f;
 	_assignedMathConstants[(int)MathConstants::ADC_BITS] = 12;
 	_assignedMathConstants[(int)MathConstants::ADC_MAX_VALUE] = pow(2, _assignedMathConstants[(int)MathConstants::ADC_BITS]) - 1;;
 	return true;
-#endif
 }
 
 bool EmotiBitVersionController::_initMappingSystemConstants(VregEnablePinLogic logic)
 {
-#if defined(ADAFRUIT_FEATHER_M0)|| defined (ARDUINO_FEATHER_ESP32)
 	if (logic == VregEnablePinLogic::ACTIVE_LOW)
 	{
 		// For V2
@@ -199,7 +196,6 @@ bool EmotiBitVersionController::_initMappingSystemConstants(VregEnablePinLogic l
 	}
 
 	return true;
-#endif
 }
 
 float EmotiBitVersionController::getMathConstant(MathConstants constant)
@@ -263,10 +259,11 @@ void EmotiBitVersionController::echoConstants()
 bool EmotiBitVersionController::isEmotiBitReady()
 {
 #if defined (ARDUINO_FEATHER_ESP32)
-
-#elif defined (ADAFRUIT_FEATHER_M0)
+	// Use Arduino SD already defined
+#else
 	SdFat SD;
 #endif
+
 	pinMode(HIBERNATE_PIN, INPUT);
 
 	if (digitalRead(HIBERNATE_PIN) == LOW)

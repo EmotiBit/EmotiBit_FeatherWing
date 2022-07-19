@@ -386,12 +386,9 @@ bool EmotiBitEda::processData()
 		// NOTE: this can create a small main loop delay
 		// This wouldn't be necessary with a ring buffer
 
-		static const unsigned long int samplingInterval = 1000000 / (_constants.samplingRate * _edrOversampBuffer->capacity());
-#ifdef ADAFRUIT_FEATHER_M0
-		static const unsigned int minSwapTime = max(500, min(samplingInterval / 10, 3500));
-#elif defined ARDUINO_FEATHER_ESP32
-		static const unsigned int minSwapTime = _max(500, _min(samplingInterval / 10, 3500));
-#endif
+		static const int samplingInterval = 1000000 / (_constants.samplingRate * _edrOversampBuffer->capacity());
+		static const int minSwapTime = max(500, min(samplingInterval / 10, 3500));
+
 		//Serial.println("window: " + String(samplingInterval - (micros() - _thermReadFinishedTime)));
 		unsigned long int waitStart = micros();
 		unsigned long int waitEnd = micros();
