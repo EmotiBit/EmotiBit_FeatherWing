@@ -464,12 +464,12 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	// setup sampling rates
 	EmotiBit::SamplingRates samplingRates;
-	samplingRates.accelerometer = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
-	samplingRates.gyroscope = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
-	samplingRates.magnetometer = BASE_SAMPLING_FREQ / IMU_SAMPLING_DIV;
-	samplingRates.eda = BASE_SAMPLING_FREQ / EDA_SAMPLING_DIV;
-	samplingRates.humidity = BASE_SAMPLING_FREQ / TEMPERATURE_0_SAMPLING_DIV / 2;
-	samplingRates.temperature = BASE_SAMPLING_FREQ / TEMPERATURE_0_SAMPLING_DIV / 2;
+	samplingRates.accelerometer = (float) BASE_SAMPLING_FREQ / (float) IMU_SAMPLING_DIV;
+	samplingRates.gyroscope = (float) BASE_SAMPLING_FREQ / (float) IMU_SAMPLING_DIV;
+	samplingRates.magnetometer = (float) BASE_SAMPLING_FREQ / (float) IMU_SAMPLING_DIV;
+	samplingRates.eda = (float) BASE_SAMPLING_FREQ / (float) EDA_SAMPLING_DIV;
+	samplingRates.humidity = (float) BASE_SAMPLING_FREQ / (float) TEMPERATURE_0_SAMPLING_DIV / 2;
+	samplingRates.temperature = (float) BASE_SAMPLING_FREQ / (float) TEMPERATURE_0_SAMPLING_DIV / 2;
 	samplingRates.temperature_1 = (float)BASE_SAMPLING_FREQ / (float)TEMPERATURE_1_SAMPLING_DIV;
 	samplingRates.thermopile = (float)BASE_SAMPLING_FREQ / (float)THERMOPILE_SAMPLING_DIV;
 	setSamplingRates(samplingRates);
