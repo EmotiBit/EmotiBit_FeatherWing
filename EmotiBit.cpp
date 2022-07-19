@@ -468,14 +468,14 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	samplingRates.gyroscope = (float) BASE_SAMPLING_FREQ / (float) IMU_SAMPLING_DIV;
 	samplingRates.magnetometer = (float) BASE_SAMPLING_FREQ / (float) IMU_SAMPLING_DIV;
 	samplingRates.eda = (float) BASE_SAMPLING_FREQ / (float) EDA_SAMPLING_DIV;
-	samplingRates.humidity = (float) BASE_SAMPLING_FREQ / (float) TEMPERATURE_0_SAMPLING_DIV / 2;
-	samplingRates.temperature = (float) BASE_SAMPLING_FREQ / (float) TEMPERATURE_0_SAMPLING_DIV / 2;
+	samplingRates.humidity = (float) BASE_SAMPLING_FREQ / (float) TEMPERATURE_0_SAMPLING_DIV / 2.f;
+	samplingRates.temperature = (float) BASE_SAMPLING_FREQ / (float) TEMPERATURE_0_SAMPLING_DIV / 2.f;
 	samplingRates.temperature_1 = (float)BASE_SAMPLING_FREQ / (float)TEMPERATURE_1_SAMPLING_DIV;
 	samplingRates.thermopile = (float)BASE_SAMPLING_FREQ / (float)THERMOPILE_SAMPLING_DIV;
 	setSamplingRates(samplingRates);
 	// ToDo: make target down-sampled rates more transparent
 	EmotiBit::SamplesAveraged samplesAveraged;
-	samplesAveraged.eda = samplingRates.eda / 15;
+	samplesAveraged.eda = samplingRates.eda / 15.f;
 	samplesAveraged.humidity = (float)samplingRates.humidity / 7.5f;
 	samplesAveraged.temperature = (float)samplingRates.temperature / 7.5f;
 	samplesAveraged.temperature_1 = 1;
@@ -487,7 +487,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		samplesAveraged.thermopile = (float)samplingRates.thermopile / 7.5f;
 	}
-	samplesAveraged.battery = BASE_SAMPLING_FREQ / BATTERY_SAMPLING_DIV / 1;
+	samplesAveraged.battery = (float) BASE_SAMPLING_FREQ / (float) BATTERY_SAMPLING_DIV / 1.f;
 	setSamplesAveraged(samplesAveraged);
 	Serial.println("\nSet Samples averaged:");
 	// setup LED DRIVER
