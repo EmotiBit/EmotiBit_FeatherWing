@@ -3453,7 +3453,9 @@ void EmotiBit::setPowerMode(PowerMode mode)
 			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
 		}
 #ifdef ADAFRUIT_FEATHER_M0
+		// For ADAFRUIT_FEATHER_M0, lowPowerMode() is a good balance of performance and battery
 		WiFi.lowPowerMode();
+		// For ESP32 the default WIFI_PS_MIN_MODEM is probably optimal https://www.mischianti.org/2021/03/06/esp32-practical-power-saving-manage-wifi-and-cpu-1/
 #endif
 		modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
 	}
@@ -3479,6 +3481,7 @@ void EmotiBit::setPowerMode(PowerMode mode)
 #ifdef ADAFRUIT_FEATHER_M0
 		WiFi.maxLowPowerMode();
 #endif
+		// ToDo: for ESP32 There may be some value to explore WIFI_PS_MAX_MODEM https://www.mischianti.org/2021/03/06/esp32-practical-power-saving-manage-wifi-and-cpu-1/
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
 	}
 	else if (getPowerMode() == PowerMode::WIRELESS_OFF)
