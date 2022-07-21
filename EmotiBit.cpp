@@ -104,7 +104,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 #ifdef ARDUINO_FEATHER_ESP32
 	esp_bt_controller_disable();
 	// ToDo: assess similarity with btStop();
-	setCpuFrequencyMhz(80); // 80 has been tested working to save battery life
+	setCpuFrequencyMhz(CPU_HZ / 1000000); // 80MHz has been tested working to save battery life
 #endif
 	EmotiBitVersionController emotiBitVersionController;
 	//EmotiBitUtilities::printFreeRAM("Begining of setup", 1);

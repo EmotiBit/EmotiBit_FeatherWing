@@ -282,7 +282,11 @@ public:
 
 	// Timer constants
 #define TIMER_PRESCALER_DIV 1024
-	const uint32_t CPU_HZ = 48000000; // ToDo: Add ESP32 CPU Hz
+#if defined(ARDUINO_FEATHER_ESP32)
+	const uint32_t CPU_HZ = 80000000; // 80MHz has been tested working to save battery life
+#elif defined(ADAFRUIT_FEATHER_M0)
+	const uint32_t CPU_HZ = 48000000; // In Hz
+#endif
 
 	// ToDo: Make sampling variables changeable
 #define BASE_SAMPLING_FREQ 150
