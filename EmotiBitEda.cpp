@@ -308,11 +308,19 @@ uint8_t EmotiBitEda::readData()
 	}
 	else
 	{
-		// Reads EDA data from SAMD21 ADC
+		// Reads EDA data from ADC
 
 		// Check EDL and EDR voltages for saturation
+#if defined(ARDUINO_FEATHER_ESP32)
+		// analogReadMillis is much more accurate for ESP
+		// and needs to be converted to ADC bits to follow EDA pipeline
+		static const float millisToBits = ((float)_constants_v2_v3.adcRes) / _constants_v2_v3.vcc / 1000.f;
+		edlTemp = analogReadMillis(_constants_v2_v3.edlPin) * millisToBits;
+		edrTemp = analogReadMillis(_constants_v2_v3.edrPin) * millisToBits;
+#else
 		edlTemp = analogRead(_constants_v2_v3.edlPin);
 		edrTemp = analogRead(_constants_v2_v3.edrPin);
+#endif
 
 		status = status | _edlOversampBuffer->push_back(edlTemp);
 		status = status | _edrOversampBuffer->push_back(edrTemp);
