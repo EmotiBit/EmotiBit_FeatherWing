@@ -48,7 +48,7 @@ public:
 		length
 	};
 
-  String firmware_version = "1.3.36.feat-Esp.10";
+  String firmware_version = "1.3.36.feat-Esp.12";
 
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = true;
@@ -385,7 +385,7 @@ public:
 	//String _inControlPackets;	// Control packets recieved over wireless
 	String _sdCardFilename = "datalog.csv";
 #if defined ARDUINO_FEATHER_ESP32
-	const char *_configFilename = "config.txt";
+	const char *_configFilename = "/config.txt";
 #else
 	const char *_configFilename = "config.txt";
 #endif
