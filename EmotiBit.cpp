@@ -208,7 +208,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
 #elif defined ARDUINO_FEATHER_ESP32
-	_EmotiBit_i2c = new TwoWire(0);
+	_EmotiBit_i2c = new TwoWire(1);
 	Serial.print("Setting up I2C For ESP32...");
 	status = _EmotiBit_i2c->begin(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
 	if (status)

@@ -315,8 +315,8 @@ uint8_t EmotiBitEda::readData()
 		// analogReadMillis is much more accurate for ESP
 		// and needs to be converted to ADC bits to follow EDA pipeline
 		static const float millisToBits = ((float)_constants_v2_v3.adcRes) / _constants_v2_v3.vcc / 1000.f;
-		edlTemp = analogReadMillis(_constants_v2_v3.edlPin) * millisToBits;
-		edrTemp = analogReadMillis(_constants_v2_v3.edrPin) * millisToBits;
+		edlTemp = analogReadMilliVolts(_constants_v2_v3.edlPin) * millisToBits;
+		edrTemp = analogReadMilliVolts(_constants_v2_v3.edrPin) * millisToBits;
 #else
 		edlTemp = analogRead(_constants_v2_v3.edlPin);
 		edrTemp = analogRead(_constants_v2_v3.edrPin);
