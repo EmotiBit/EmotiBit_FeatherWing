@@ -2382,7 +2382,12 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	//bool EmotiBit::printConfigInfo(File file, String datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	String hardware_version = EmotiBitVersionController::getHardwareVersion(_hwVersion);
-	String feather_version = "Adafruit Feather M0 WiFi";
+	String feather_version = "UNKNOWN";
+#if defined(ARDUINO_FEATHER_ESP32)
+	feather_version = "Adafruit Feather HUZZAH32";
+#elif defined(ADAFRUIT_FEATHER_M0)
+	feather_version = "Adafruit Feather M0 WiFi";
+#endif
 
 	const uint16_t bufferSize = 1024;
 
