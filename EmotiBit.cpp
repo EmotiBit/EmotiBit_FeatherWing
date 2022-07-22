@@ -106,6 +106,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	// ToDo: assess similarity with btStop();
 	setCpuFrequencyMhz(CPU_HZ / 1000000); // 80MHz has been tested working to save battery life
 #endif
+
 	EmotiBitVersionController emotiBitVersionController;
 	//EmotiBitUtilities::printFreeRAM("Begining of setup", 1);
 	Serial.print("I2C data pin:"); Serial.println(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN);
@@ -185,14 +186,13 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			Serial.println(factoryTestSerialOutput);
 		}
 #ifdef ADAFRUIT_FEATHER_M0
+		PORT->Group[PORTA].PINCFG[17].bit.DRVSTR = 1; // Increase SCL pin drive strength to over-power current pulling up
+#endif
 		// Set Feather LED LOW
 		pinMode(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, OUTPUT);
 		// make sure the pin DRV strength is set to sink appropriate current
-		PORT->Group[PORTA].PINCFG[17].bit.DRVSTR = 1; // SCL
 		digitalWrite(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, LOW);
 		// Not putting EmotiBit to sleep helps with the FW installer process
-		// ToDo: Consider ESP32 case
-#endif
 		setupFailed("SD-Card not detected");
 	}
 	bool status = true;
