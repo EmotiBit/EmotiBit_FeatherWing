@@ -2296,9 +2296,25 @@ int8_t EmotiBit::getBatteryPercent(float bv) {
 	// Thresholded bi-linear approximation
 	// See battery discharge profile here:
 	// https://www.richtek.com/Design%20Support/Technical%20Document/AN024
-	
-	int8_t result; 
-	
+
+	int8_t result;
+
+#if defined ARDUINO_FEATHER_ESP32
+	const float V100 = 4.05f;
+	const float V0 - 3.4f;
+	const float factor_V100_V0 = 1 / (V100 - V0); // Precalculate multiplier to save CPU
+	if (bv > V100) {
+		result = 100;
+	}
+	else if (bv > V0) {
+		float temp = (bv - V0) * factor_V100_V0;
+		float temp;
+		result = (int8_t)temp;
+	}
+	else {
+		result = 0;
+	}
+#elif defined(ADAFRUIT_FEATHER_M0)
 	if (bv > 4.15f) {
 		result = 100;
 	}
@@ -2318,6 +2334,10 @@ int8_t EmotiBit::getBatteryPercent(float bv) {
 		temp += 0.f;
 		result = (int8_t)temp;
 	}
+	else {
+		result = 0;
+	}
+#endif
 	return result;
 	//else if (bv > 4.1f) {
 	//	return 95;
