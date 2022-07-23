@@ -1492,6 +1492,10 @@ uint8_t EmotiBit::update()
 		//Serial.println(Serial.peek());
 
 		Serial.println("[{\"info\":{");
+				
+		Serial.print("\"source_id\":\"");
+		Serial.print(_sourceId);
+		Serial.println("\",");
 
 		Serial.print("\"hardware_version\":\"");
 		Serial.print(EmotiBitVersionController::getHardwareVersion(_hwVersion));
@@ -1507,6 +1511,10 @@ uint8_t EmotiBit::update()
 
 		Serial.print("\"feather_version\":\"");
 		Serial.print(_featherVersion);
+		Serial.println("\",");
+
+		Serial.print("\"feather_mac\":\"");
+		Serial.print(getFeatherMacAddress());
 		Serial.println("\",");
 
 		Serial.print("\"firmware_version\":\"");
@@ -2431,7 +2439,6 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	Serial.println("printConfigInfo");
 #endif
 	//bool EmotiBit::printConfigInfo(File file, String datetimeString) {
-	String source_id = "EmotiBit FeatherWing";
 	String hardware_version = EmotiBitVersionController::getHardwareVersion(_hwVersion);
 
 	const uint16_t bufferSize = 1024;
@@ -2460,11 +2467,12 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i] = &(root.createNestedObject("info"));
 		infos[i]->set("name", "EmotiBitData");
 		infos[i]->set("type", "Multimodal");
-		infos[i]->set("source_id", source_id);
+		infos[i]->set("source_id", _sourceId);
 		infos[i]->set("hardware_version", hardware_version);
 		infos[i]->set("sku", emotiBitSku);
 		infos[i]->set("device_id", emotibitDeviceId);
 		infos[i]->set("feather_version", _featherVersion);
+		infos[i]->set("feather_mac", getFeatherMacAddress());
 		infos[i]->set("firmware_version", firmware_version);
 		infos[i]->set("created_at", datetimeString);
 		if (root.printTo(file) == 0) {
@@ -4358,3 +4366,22 @@ void ReadSensors(void *pvParameters)
 
 }
 #endif
+
+String EmotiBit::getFeatherMacAddress()
+{
+	const uint8_t len = 6;
+	String out = String(len * 5 + 1); // ToDo: Assess if capacity requires space for \0
+	uint8_t mac[len];
+	WiFi.macAddress(mac);
+	for (uint8_t i = len; i > 0; i--)
+	{
+		//Serial.println(mac[i - 1]);
+		if (mac[i - 1] < 16)
+		{
+			out += "0";
+		}
+		out += String(mac[i - 1], HEX);
+		out += ":";
+	}
+	return out;
+}

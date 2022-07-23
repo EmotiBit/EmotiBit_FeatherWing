@@ -48,7 +48,7 @@ public:
 		length
 	};
 
-  String firmware_version = "1.3.36.feat-Esp.23";
+  String firmware_version = "1.3.36.feat-Esp.26";
 
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = true;
@@ -474,6 +474,7 @@ public:
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
 	void processDebugInputs(String &debugPackets, uint16_t &packetNumber);
 	void processFactoryTestMessages();
+	String getFeatherMacAddress();
 	String getHardwareVersion();
 	int detectEmotiBitVersion();
 
@@ -537,6 +538,7 @@ private:
 #else
 	String _featherVersion = "UNKNOWN";
 #endif
+	String _sourceId = "EmotiBit FeatherWing";
 	String emotiBitSku;
 	String emotibitDeviceId = "";
 	uint32_t emotibitSerialNumber;
