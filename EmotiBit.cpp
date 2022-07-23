@@ -1614,7 +1614,7 @@ uint8_t EmotiBit::update()
 			sleep();
 		}
 	}
-
+	
 	// ToDo: implement logic to determine return val
 	return 0;
 }
@@ -3083,15 +3083,45 @@ void EmotiBit::readSensors()
 					}
 					else
 					{
-
 						// WiFi connected status LED
 						if (_emotiBitWiFi.isConnected())
 						{
+							// Connected to oscilloscope
+							// turn LED on
 							led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 						}
 						else
 						{
-							led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+							if (_emotiBitWiFi.status() == WL_CONNECTED) // ToDo: assess if WiFi.status() is thread/interrupt safe
+							{
+								// Not connected to oscilloscope, but connected to wifi
+								// blink LED
+								static unsigned long onTime = 125; // msec
+								static unsigned long totalTime = 500; // msec
+								static bool wifiConnectedBlinkState = false;
+
+								static unsigned long wifiConnBlinkTimer = millis();
+
+								unsigned long timeNow = millis();
+								if (timeNow - wifiConnBlinkTimer < onTime)
+								{
+									led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+								}
+								else if (timeNow - wifiConnBlinkTimer < totalTime)
+								{
+									led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+								}
+								else
+								{
+									wifiConnBlinkTimer = timeNow;
+								}
+							}
+							else
+							{
+								// not connected to wifi
+								// turn LED off
+								led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+							}
 						}
 
 						// Battery LED
