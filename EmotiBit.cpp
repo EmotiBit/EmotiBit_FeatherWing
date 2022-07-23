@@ -101,6 +101,7 @@ void EmotiBit::bmm150ReadTrimRegisters()
 
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
+
 #ifdef ARDUINO_FEATHER_ESP32
 	esp_bt_controller_disable();
 	// ToDo: assess similarity with btStop();
@@ -1490,12 +1491,29 @@ uint8_t EmotiBit::update()
 		//Serial.print(">");
 		//Serial.println(Serial.peek());
 
-		Serial.print("device ID: ");
-		Serial.println(emotibitDeviceId);
-		Serial.print("Hardware: ");
-		Serial.println(EmotiBitVersionController::getHardwareVersion(_hwVersion));
-		Serial.print("Firmware: ");
-		Serial.println(firmware_version);
+		Serial.println("[{\"info\":{");
+
+		Serial.print("\"hardware_version\":\"");
+		Serial.print(EmotiBitVersionController::getHardwareVersion(_hwVersion));
+		Serial.println("\",");
+
+		Serial.print("\"sku\":\"");
+		Serial.print(emotiBitSku);
+		Serial.println("\",");
+
+		Serial.print("\"device_id\":\"");
+		Serial.print(emotibitDeviceId);
+		Serial.println("\",");
+
+		Serial.print("\"feather_version\":\"");
+		Serial.print(_featherVersion);
+		Serial.println("\",");
+
+		Serial.print("\"firmware_version\":\"");
+		Serial.print(firmware_version);
+		Serial.println("\",");
+
+		Serial.println("}}]");
 	}
 	serialPrevAvailable = Serial.available();
 
@@ -2415,12 +2433,6 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	//bool EmotiBit::printConfigInfo(File file, String datetimeString) {
 	String source_id = "EmotiBit FeatherWing";
 	String hardware_version = EmotiBitVersionController::getHardwareVersion(_hwVersion);
-	String feather_version = "UNKNOWN";
-#if defined(ARDUINO_FEATHER_ESP32)
-	feather_version = "Adafruit Feather HUZZAH32";
-#elif defined(ADAFRUIT_FEATHER_M0)
-	feather_version = "Adafruit Feather M0 WiFi";
-#endif
 
 	const uint16_t bufferSize = 1024;
 
@@ -2452,7 +2464,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("hardware_version", hardware_version);
 		infos[i]->set("sku", emotiBitSku);
 		infos[i]->set("device_id", emotibitDeviceId);
-		infos[i]->set("feather_version", feather_version);
+		infos[i]->set("feather_version", _featherVersion);
 		infos[i]->set("firmware_version", firmware_version);
 		infos[i]->set("created_at", datetimeString);
 		if (root.printTo(file) == 0) {

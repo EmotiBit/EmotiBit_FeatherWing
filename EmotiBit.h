@@ -48,7 +48,7 @@ public:
 		length
 	};
 
-  String firmware_version = "1.3.36.feat-Esp.22";
+  String firmware_version = "1.3.36.feat-Esp.23";
 
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = true;
@@ -530,6 +530,13 @@ private:
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)
 	float _gyroRange; // supported values: 125, 250, 500, 1000, 2000 (degrees/second)
 	EmotiBitVersionController::EmotiBitVersion _hwVersion;
+#if defined(ARDUINO_FEATHER_ESP32)
+	String _featherVersion = "Adafruit Feather HUZZAH32";
+#elif defined(ADAFRUIT_FEATHER_M0)
+	String _featherVersion = "Adafruit Feather M0 WiFi";
+#else
+	String _featherVersion = "UNKNOWN";
+#endif
 	String emotiBitSku;
 	String emotibitDeviceId = "";
 	uint32_t emotibitSerialNumber;
