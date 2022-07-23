@@ -48,9 +48,9 @@ public:
 		length
 	};
 
-  String firmware_version = "1.3.36.feat-Esp.16";
+  String firmware_version = "1.3.36.feat-Esp.19";
 
-	TestingMode testingMode = TestingMode::CHRONIC;
+	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = true;
 	const uint8_t DEBUG_OUT_PIN_0 = 26;
 	const uint8_t DEBUG_OUT_PIN_1 = 33;

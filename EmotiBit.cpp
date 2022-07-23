@@ -1599,6 +1599,22 @@ uint8_t EmotiBit::update()
 
 		sleep();
 	}
+
+	// Auto-sleep when battery percent hits zero
+	float battPct;
+	size_t dataAvailable = readData(EmotiBit::DataType::BATTERY_PERCENT, &battPct, 1);
+	if (dataAvailable > 0 && !_debugMode)
+	{
+		// Smooth the heck out of the battPct before we use it to call sleep.
+		static DigitalFilter battSleepFilt = DigitalFilter(DigitalFilter::FilterType::IIR_LOWPASS,
+			((float) BASE_SAMPLING_FREQ) / ((float) BATTERY_SAMPLING_DIV) / ((float) batteryPercentBuffer.size()), 
+			0.2f);
+		if (battSleepFilt.filter(battPct) < 0.1)
+		{
+			sleep();
+		}
+	}
+
 	// ToDo: implement logic to determine return val
 	return 0;
 }
@@ -2301,14 +2317,13 @@ int8_t EmotiBit::getBatteryPercent(float bv) {
 
 #if defined ARDUINO_FEATHER_ESP32
 	const float V100 = 4.05f;
-	const float V0 - 3.4f;
-	const float factor_V100_V0 = 1 / (V100 - V0); // Precalculate multiplier to save CPU
+	const float V0 = 3.4f;
+	const float FACTOR_V100_V0 = 1 / (V100 - V0) * 100.f; // Precalculate multiplier to save CPU
 	if (bv > V100) {
 		result = 100;
 	}
 	else if (bv > V0) {
-		float temp = (bv - V0) * factor_V100_V0;
-		float temp;
+		float temp = (bv - V0) * FACTOR_V100_V0;
 		result = (int8_t)temp;
 	}
 	else {
