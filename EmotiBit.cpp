@@ -4370,7 +4370,8 @@ void ReadSensors(void *pvParameters)
 String EmotiBit::getFeatherMacAddress()
 {
 	const uint8_t len = 6;
-	String out = String(len * 5 + 1); // ToDo: Assess if capacity requires space for \0
+	String out;
+	out.reserve(len * 5 + 1); // ToDo: Assess if capacity requires space for \0
 	uint8_t mac[len];
 	WiFi.macAddress(mac);
 	for (uint8_t i = len; i > 0; i--)
@@ -4381,7 +4382,10 @@ String EmotiBit::getFeatherMacAddress()
 			out += "0";
 		}
 		out += String(mac[i - 1], HEX);
-		out += ":";
+		if (i > 1)
+		{
+			out += ":";
+		}
 	}
 	return out;
 }
