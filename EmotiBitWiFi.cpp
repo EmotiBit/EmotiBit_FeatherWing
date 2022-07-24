@@ -3,7 +3,7 @@
 #include <driver/source/nmasic.h>
 #endif
 
-uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
+uint8_t EmotiBitWiFi::begin(int32_t timeout, uint16_t attemptDelay)
 {
 	uint8_t wifiStatus = status();
 	uint32_t startBegin = millis();
@@ -32,7 +32,7 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 				break;
 			}
 		}
-		if (millis() - startBegin > timeout)
+		if ((timeout > -1 ) && (millis() - startBegin > timeout))
 		{
 			Serial.println("*********** EmotiBitWiFi.begin() Timeout ***********");
 			break;
@@ -90,6 +90,7 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		}
 		_needsAdvertisingBegin = true;
 		delay(attemptDelay);
+		wifiStatus = status();
 		attempt++;
 	}
 

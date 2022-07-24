@@ -79,8 +79,8 @@ public:
 	static const uint8_t SUCCESS = 0;
 	static const uint8_t FAIL = -1;
 	static const uint16_t MAX_SEND_LEN = 512;							// messages longer than this will be broken up into multiple sends
-	static const uint32_t WIFI_BEGIN_ATTEMPT_DELAY = 5000;
-	static const uint32_t WIFI_BEGIN_SWITCH_CRED = 30000;// Set to 30000 for debug, 300000 for Release
+	static const uint32_t WIFI_BEGIN_ATTEMPT_DELAY = 5000;// Duration to wait after WiFi lost before attempting to reconnect
+	static const uint32_t WIFI_BEGIN_SWITCH_CRED = 300000;// Set to 30000 for debug, 300000 for Release
 	static const uint32_t SETUP_TIMEOUT = 61500;          // Enough time to run through list of network credentials twice
 	static const uint8_t MAX_WIFI_CONNECT_HISTORY = 20;		// NO. of wifi connectivity status to remember
 	static const uint16_t TIME_SYNC_INTERVAL = 5107;			// milliseconds between time syncs
@@ -103,7 +103,7 @@ public:
 	//uint16_t dataPacketCounter = 0;
 
 	//int8_t setup();
-	uint8_t begin(uint16_t timeout = 61500, uint16_t attemptDelay = 1000);
+	uint8_t begin(int32_t timeout = 61500, uint16_t attemptDelay = 1000);
 	//uint8_t begin(uint8_t credentialIndex, uint8_t maxAttempts = 10, uint16_t attemptDelay = 1000);
 	uint8_t begin(const String &ssid, const String &pass, uint8_t maxAttempts = 10, uint16_t attemptDelay = 1000);
 	void end();
