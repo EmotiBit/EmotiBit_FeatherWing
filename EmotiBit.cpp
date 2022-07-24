@@ -1552,6 +1552,7 @@ uint8_t EmotiBit::update()
 
 
 	// Handle updating WiFi connction + syncing
+	_emotiBitWiFi.updateStatus(); // asynchronous WiFi.status() update
 	static String inSyncPackets;
 	_emotiBitWiFi.update(inSyncPackets, _outDataPacketCounter);
 	_outDataPackets += inSyncPackets;
@@ -3112,8 +3113,7 @@ void EmotiBit::readSensors()
 						}
 						else
 						{
-#if defined (ARDUINO_FEATHER_ESP32) // testing whether crashing M0
-							if (_emotiBitWiFi.status() == WL_CONNECTED) // ToDo: assess if WiFi.status() is thread/interrupt safe
+							if (_emotiBitWiFi.status(false) == WL_CONNECTED) // ToDo: assess if WiFi.status() is thread/interrupt safe
 							{
 								// Not connected to oscilloscope, but connected to wifi
 								// blink LED
@@ -3143,9 +3143,6 @@ void EmotiBit::readSensors()
 								// turn LED off
 								led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 							}
-#else
-							led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
-#endif
 						}
 
 						// Battery LED

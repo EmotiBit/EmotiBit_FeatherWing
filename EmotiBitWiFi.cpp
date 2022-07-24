@@ -5,21 +5,21 @@
 
 uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 {
-	uint8_t status = WiFi.status();
+	uint8_t wifiStatus = status();
 	uint32_t startBegin = millis();
 #if defined ARDUINO_FEATHER_ESP32
 	// Taken from scanNetworks example
 	WiFi.mode(WIFI_STA);
 	delay(100);
 #else
-	if (status == WL_NO_SHIELD) {
+	if (wifiStatus == WL_NO_SHIELD) {
 		Serial.println("No WiFi shield found. Try WiFi.setPins().");
 		return WL_NO_SHIELD;
 	}
 	checkWiFi101FirmwareVersion();
 #endif
 
-	while (status != WL_CONNECTED)
+	while (wifiStatus != WL_CONNECTED)
 	{
 		if (numCredentials == 0)
 		{
@@ -27,8 +27,8 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 		}
 		else
 		{
-			status = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1, attemptDelay);
-			if (status == WL_CONNECTED) {
+			wifiStatus = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1, attemptDelay);
+			if (wifiStatus == WL_CONNECTED) {
 				break;
 			}
 		}
@@ -40,7 +40,7 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 		Serial.println("<<<<<<< Switching WiFi Networks >>>>>>>");
 		currentCredential = (currentCredential + 1) % numCredentials;
 	}
-	return status;
+	return wifiStatus;
 }
 
 //uint8_t EmotiBitWiFi::begin(uint8_t credentialIndex, uint8_t maxAttempts, uint16_t attemptDelay)
@@ -53,11 +53,11 @@ uint8_t EmotiBitWiFi::begin(uint16_t timeout, uint16_t attemptDelay)
 
 uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxAttempts, uint16_t attemptDelay)
 {
-	int8_t status = WiFi.status();
+	uint8_t wifiStatus = status();
 	int8_t attempt = 1;
 
 #if !defined (ARDUINO_FEATHER_ESP32)
-	if (status == WL_NO_SHIELD) {
+	if (wifiStatus == WL_NO_SHIELD) {
 		Serial.println("No WiFi shield found. Try WiFi.setPins().");
 		return WL_NO_SHIELD;
 	}
@@ -69,11 +69,11 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 	WiFi.setTimeout(25);
 #endif
 
-	while (status != WL_CONNECTED) 
+	while (wifiStatus != WL_CONNECTED) 
 	{
 		if (attempt > maxAttempts)
 		{
-			return status;
+			return wifiStatus;
 		}
 		Serial.print("Attempting to connect to SSID: ");
 		Serial.println(ssid);
@@ -82,11 +82,11 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		if (pass.equals(""))
 		{
 			// assume open network if password is empty
-			status = WiFi.begin(ssid.c_str());
+			wifiStatus = WiFi.begin(ssid.c_str());
 		}
 		else
 		{
-			status = WiFi.begin(ssid.c_str(), pass.c_str());
+			wifiStatus = WiFi.begin(ssid.c_str(), pass.c_str());
 		}
 		_needsAdvertisingBegin = true;
 		delay(attemptDelay);
@@ -102,7 +102,7 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 	_advertisingCxn.begin(_advertisingPort);
 	_needsAdvertisingBegin = false;
 
-	return status;
+	return wifiStatus;
 }
 
 void EmotiBitWiFi::end()
@@ -112,7 +112,7 @@ void EmotiBitWiFi::end()
 		Serial.println("Disconnecting EmotiBitWiFi");
 		disconnect();
 	}
-	if (WiFi.status() == WL_CONNECTED) {
+	if (status() == WL_CONNECTED) {
 		Serial.println("Disconnecting WiFi...");
 #if defined ARDUINO_FEATHER_ESP32
 		// for more info: https://espressif-docs.readthedocs-hosted.com/projects/arduino-esp32/en/latest/api/wifi.html#disconnect
@@ -147,7 +147,7 @@ int8_t EmotiBitWiFi::updateWiFi()
 		return WL_DISCONNECTED;
 	}
 
-	int wifiStatus = WiFi.status();
+	uint8_t wifiStatus = status();
 	if (wifiStatus != WL_CONNECTED)
 	{
 		static bool getLostWifiTime = true;
@@ -713,13 +713,22 @@ bool EmotiBitWiFi::isConnected()
 	return _isConnected;
 }
 
-int8_t EmotiBitWiFi::status()
+void EmotiBitWiFi::updateStatus()
 {
 	if (_wifiOff)
 	{
-		return WL_DISCONNECTED;
+		_wifiStatus = WL_DISCONNECTED;
 	}
-	return (int8_t) WiFi.status();
+	_wifiStatus = WiFi.status();
+}
+
+uint8_t EmotiBitWiFi::status(bool update)
+{
+	if (update)
+	{
+		updateStatus();
+	}
+	return _wifiStatus;
 }
 #ifdef ADAFRUIT_FEATHER_M0
 void EmotiBitWiFi::checkWiFi101FirmwareVersion()
@@ -729,7 +738,7 @@ void EmotiBitWiFi::checkWiFi101FirmwareVersion()
 
 	// Check for the presence of the shield
 	Serial.print("WiFi101 shield: ");
-	if (WiFi.status() == WL_NO_SHIELD) {
+	if (status() == WL_NO_SHIELD) {
 		Serial.println("NOT PRESENT");
 		return; // don't continue
 	}

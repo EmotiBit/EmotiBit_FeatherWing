@@ -70,6 +70,7 @@ public:
 	WiFiUDP _dataCxn;
 
 	volatile bool _isConnected = false;
+	volatile uint8_t _wifiStatus = WL_DISCONNECTED;
 	int _keyIndex = 0;            // your network key Index number (needed only for WEP)
 	//bool gotIp = false;
 	uint8_t _nDataSends = 1; // Number of times to send the same packet (e.g. for UDPx3 = 3)
@@ -127,6 +128,18 @@ public:
 	uint8_t listNetworks();
 	bool isConnected();
 	bool isOff();
-	int8_t status();
+
+	/*!
+	@Brief Reads and stores WiFi.status() for access in interrupts
+	*/
+	void updateStatus();
+
+	/*!
+	@Brief Returns the status of Arduino WiFi.status()
+	@param If update = false the fn returns the last interrupt-safe value stored by updateStatus()
+	@return Value of WiFi.status() or WL_DISCONNECTED if WiFi is OFF
+	*/
+	uint8_t status(bool update = true);
+
 	void checkWiFi101FirmwareVersion();
 };
