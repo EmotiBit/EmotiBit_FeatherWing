@@ -1513,7 +1513,7 @@ uint8_t EmotiBit::update()
 		Serial.print(_featherVersion);
 		Serial.println("\",");
 
-		Serial.print("\"feather_mac\":\"");
+		Serial.print("\"feather_wifi_mac_addr\":\"");
 		Serial.print(getFeatherMacAddress());
 		Serial.println("\",");
 
@@ -2472,7 +2472,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("sku", emotiBitSku);
 		infos[i]->set("device_id", emotibitDeviceId);
 		infos[i]->set("feather_version", _featherVersion);
-		infos[i]->set("feather_mac", getFeatherMacAddress());
+		infos[i]->set("feather_wifi_mac_addr", getFeatherMacAddress());
 		infos[i]->set("firmware_version", firmware_version);
 		infos[i]->set("created_at", datetimeString);
 		if (root.printTo(file) == 0) {
@@ -3112,6 +3112,7 @@ void EmotiBit::readSensors()
 						}
 						else
 						{
+#if defined (ARDUINO_FEATHER_ESP32) // testing whether crashing M0
 							if (_emotiBitWiFi.status() == WL_CONNECTED) // ToDo: assess if WiFi.status() is thread/interrupt safe
 							{
 								// Not connected to oscilloscope, but connected to wifi
@@ -3142,6 +3143,9 @@ void EmotiBit::readSensors()
 								// turn LED off
 								led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 							}
+#else
+							led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+#endif
 						}
 
 						// Battery LED
