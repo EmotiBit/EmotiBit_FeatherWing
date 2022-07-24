@@ -64,9 +64,9 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 #endif
 
 #if defined(ARDUINO_FEATHER_ESP32)
-	WiFi.waitForConnectResult(25);
+	WiFi.waitForConnectResult(attemptDelay);
 #else
-	WiFi.setTimeout(25);
+	WiFi.setTimeout(attemptDelay);
 #endif
 
 	while (wifiStatus != WL_CONNECTED) 
@@ -79,6 +79,7 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		Serial.println(ssid);
 		// ToDo: Add WEP support
 		_wifiOff = false;
+		unsigned long beginDuration = millis();
 		if (pass.equals(""))
 		{
 			// assume open network if password is empty
@@ -88,9 +89,13 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		{
 			wifiStatus = WiFi.begin(ssid.c_str(), pass.c_str());
 		}
+		Serial.print("WiFi.begin() duration = ");
+		Serial.println(millis() - beginDuration);
 		_needsAdvertisingBegin = true;
-		delay(attemptDelay);
-		wifiStatus = status();
+		//delay(attemptDelay); // It seems better to utilize setTimeout instead of attemptDelay
+		//wifiStatus = status(); // only necessary if utilizing attemptDelay
+		Serial.print("WiFi.status() = ");
+		Serial.println(wifiStatus);
 		attempt++;
 	}
 
