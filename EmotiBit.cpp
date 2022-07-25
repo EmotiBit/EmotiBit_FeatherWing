@@ -3539,7 +3539,7 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		Serial.println("PowerMode::NORMAL_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
+			_emotiBitWiFi.begin(500, 500);	// ToDo: create a async begin option
 		}
 #ifdef ADAFRUIT_FEATHER_M0
 		// For ADAFRUIT_FEATHER_M0, lowPowerMode() is a good balance of performance and battery
@@ -3553,7 +3553,7 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		Serial.println("PowerMode::LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
+			_emotiBitWiFi.begin(500, 500);	// ToDo: create a async begin option
 		}
 #ifdef ADAFRUIT_FEATHER_M0
 		WiFi.lowPowerMode();
@@ -3565,7 +3565,7 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		Serial.println("PowerMode::MAX_LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
+			_emotiBitWiFi.begin(500, 500);	// ToDo: create a async begin option
 		}
 #ifdef ADAFRUIT_FEATHER_M0
 		WiFi.maxLowPowerMode();
