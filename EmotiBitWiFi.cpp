@@ -3,7 +3,7 @@
 #include <driver/source/nmasic.h>
 #endif
 
-uint8_t EmotiBitWiFi::begin(int32_t timeout, uint16_t attemptDelay)
+uint8_t EmotiBitWiFi::begin(int32_t timeout, uint8_t maxAttemptsPerCred, uint16_t attemptDelay)
 {
 	uint8_t wifiStatus = status();
 	uint32_t startBegin = millis();
@@ -27,7 +27,7 @@ uint8_t EmotiBitWiFi::begin(int32_t timeout, uint16_t attemptDelay)
 		}
 		else
 		{
-			wifiStatus = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1, attemptDelay);
+			wifiStatus = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, maxAttemptsPerCred, attemptDelay);
 			if (wifiStatus == WL_CONNECTED) {
 				break;
 			}
@@ -106,6 +106,8 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 	}
 
 	wifiBeginStart = millis();
+	Serial.print("WiFi.begin() attempts = ");
+	Serial.println(attempt);
 	Serial.println("Connected to WiFi");
 	printWiFiStatus();
 
@@ -191,8 +193,11 @@ int8_t EmotiBitWiFi::updateWiFi()
 			}
 			Serial.print("WIFI_BEGIN_ATTEMPT_DELAY: ");
 			Serial.println(WIFI_BEGIN_ATTEMPT_DELAY);
+			unsigned long beginTime = millis();
 			//Serial.println(lostWifiTime);               //uncomment for debugging
-			wifiStatus = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1, 0);
+			wifiStatus = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 2, 100);
+			Serial.print("Total WiFi.begin() = ");
+			Serial.println(millis() - beginTime);
 			wifiReconnectAttempts++;
 			wifiBeginStart = millis();
 		}

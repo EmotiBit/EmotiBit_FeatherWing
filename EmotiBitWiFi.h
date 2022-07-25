@@ -103,7 +103,7 @@ public:
 	//uint16_t dataPacketCounter = 0;
 
 	//int8_t setup();
-	uint8_t begin(int32_t timeout = 61500, uint16_t attemptDelay = 3000);
+	uint8_t begin(int32_t timeout = 61500, uint8_t maxAttemptsPerCred = 2, uint16_t attemptDelay = 3000);
 	//uint8_t begin(uint8_t credentialIndex, uint8_t maxAttempts = 10, uint16_t attemptDelay = 1000);
 	uint8_t begin(const String &ssid, const String &pass, uint8_t maxAttempts = 10, uint16_t attemptDelay = 3000);
 	void end();

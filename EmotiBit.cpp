@@ -2357,23 +2357,14 @@ int8_t EmotiBit::getBatteryPercent(float bv) {
 		result = 0;
 	}
 #elif defined(ADAFRUIT_FEATHER_M0)
-	if (bv > 4.15f) {
+	const float V100 = 4.1f;
+	const float V0 = 3.56f;
+	const float FACTOR_V100_V0 = 1 / (V100 - V0) * 100.f; // Precalculate multiplier to save CPU
+	if (bv > V100) {
 		result = 100;
 	}
-	else if (bv > 3.65f) {
-		float temp;
-		temp = (bv - 3.65f);
-		temp /= (4.15f - 3.65f);
-		temp *= 93.f;
-		temp += 7.f;
-		result = (int8_t)temp;
-	}
-	else if (bv > 3.3f) {
-		float temp;
-		temp = (bv - 3.3f);
-		temp /= (4.65f - 3.3f);
-		temp *= 7.f;
-		temp += 0.f;
+	else if (bv > V0) {
+		float temp = (bv - V0) * FACTOR_V100_V0;
 		result = (int8_t)temp;
 	}
 	else {
@@ -3539,7 +3530,10 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		Serial.println("PowerMode::NORMAL_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin(500, 500);	// ToDo: create a async begin option
+			unsigned long beginTime = millis();
+			_emotiBitWiFi.begin(100, 2, 100);	// This ToDo: create a async begin option
+			Serial.print("Total WiFi.begin() = ");
+			Serial.println(millis() - beginTime);
 		}
 #ifdef ADAFRUIT_FEATHER_M0
 		// For ADAFRUIT_FEATHER_M0, lowPowerMode() is a good balance of performance and battery
@@ -3553,7 +3547,10 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		Serial.println("PowerMode::LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin(500, 500);	// ToDo: create a async begin option
+			unsigned long beginTime = millis();
+			_emotiBitWiFi.begin(100, 2, 100);	// This ToDo: create a async begin option
+			Serial.print("Total WiFi.begin() = ");
+			Serial.println(millis() - beginTime);
 		}
 #ifdef ADAFRUIT_FEATHER_M0
 		WiFi.lowPowerMode();
@@ -3565,7 +3562,10 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		Serial.println("PowerMode::MAX_LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin(500, 500);	// ToDo: create a async begin option
+			unsigned long beginTime = millis();
+			_emotiBitWiFi.begin(100, 2, 100);	// This ToDo: create a async begin option
+			Serial.print("Total WiFi.begin() = ");
+			Serial.println(millis() - beginTime);
 		}
 #ifdef ADAFRUIT_FEATHER_M0
 		WiFi.maxLowPowerMode();
