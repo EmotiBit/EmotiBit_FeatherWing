@@ -95,7 +95,7 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		_needsAdvertisingBegin = true;
 		while((wifiStatus == WL_IDLE_STATUS) && (millis() - beginDuration < attemptDelay)); // This is necessary for ESP32 unless callback is utilized
 		{
-			delay(attemptDelay / 10);
+			delay(attemptDelay / 5);
 			wifiStatus = status();
 		}
 		Serial.print("WiFi.status() = ");
@@ -195,8 +195,8 @@ int8_t EmotiBitWiFi::updateWiFi()
 			Serial.println(WIFI_BEGIN_ATTEMPT_DELAY);
 			unsigned long beginTime = millis();
 			//Serial.println(lostWifiTime);               //uncomment for debugging
-			wifiStatus = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 2, 100);
-			Serial.print("Total WiFi.begin() = ");
+			wifiStatus = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1, 100);
+			Serial.print("updateWiFi() Total WiFi.begin() = ");
 			Serial.println(millis() - beginTime);
 			wifiReconnectAttempts++;
 			wifiBeginStart = millis();

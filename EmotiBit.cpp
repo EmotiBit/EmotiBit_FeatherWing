@@ -888,7 +888,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 	led.send();
 	// ToDo: There is no catch right now for timeout. In case of timeout, EmotiBit still continues to complete setup() and proceed to update()
-	_emotiBitWiFi.begin(-1);
+	_emotiBitWiFi.begin(-1, 1);
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 	led.send();
 	if (testingMode == TestingMode::FACTORY_TEST)
@@ -1381,6 +1381,11 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 				_dataFile = SD.open(_sdCardFilename, O_CREAT | O_WRITE | O_AT_END);
 #endif
 				if (_dataFile) {
+					// Clear the data buffers before writing to file to avoid mismatches
+					processData();
+					sendData();
+					processData();
+					sendData();
 					_sdWrite = true;
 					Serial.print("** Recording Begin: ");
 					Serial.print(_sdCardFilename);
@@ -3531,7 +3536,7 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		if (_emotiBitWiFi.isOff())
 		{
 			unsigned long beginTime = millis();
-			_emotiBitWiFi.begin(100, 2, 100);	// This ToDo: create a async begin option
+			_emotiBitWiFi.begin(100, 1, 100);	// This ToDo: create a async begin option
 			Serial.print("Total WiFi.begin() = ");
 			Serial.println(millis() - beginTime);
 		}
@@ -3548,7 +3553,7 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		if (_emotiBitWiFi.isOff())
 		{
 			unsigned long beginTime = millis();
-			_emotiBitWiFi.begin(100, 2, 100);	// This ToDo: create a async begin option
+			_emotiBitWiFi.begin(100, 1, 100);	// This ToDo: create a async begin option
 			Serial.print("Total WiFi.begin() = ");
 			Serial.println(millis() - beginTime);
 		}
@@ -3563,7 +3568,7 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		if (_emotiBitWiFi.isOff())
 		{
 			unsigned long beginTime = millis();
-			_emotiBitWiFi.begin(100, 2, 100);	// This ToDo: create a async begin option
+			_emotiBitWiFi.begin(100, 1, 100);	// This ToDo: create a async begin option
 			Serial.print("Total WiFi.begin() = ");
 			Serial.println(millis() - beginTime);
 		}
