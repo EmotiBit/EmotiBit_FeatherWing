@@ -101,11 +101,13 @@ void EmotiBit::bmm150ReadTrimRegisters()
 
 uint8_t EmotiBit::setup(size_t bufferCapacity)
 {
+
 #ifdef ARDUINO_FEATHER_ESP32
 	esp_bt_controller_disable();
 	// ToDo: assess similarity with btStop();
-	setCpuFrequencyMhz(80); // 80 has been tested working to save battery life
+	setCpuFrequencyMhz(CPU_HZ / 1000000); // 80MHz has been tested working to save battery life
 #endif
+
 	EmotiBitVersionController emotiBitVersionController;
 	//EmotiBitUtilities::printFreeRAM("Begining of setup", 1);
 	Serial.print("I2C data pin:"); Serial.println(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN);
@@ -185,14 +187,13 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			Serial.println(factoryTestSerialOutput);
 		}
 #ifdef ADAFRUIT_FEATHER_M0
+		PORT->Group[PORTA].PINCFG[17].bit.DRVSTR = 1; // Increase SCL pin drive strength to over-power current pulling up
+#endif
 		// Set Feather LED LOW
 		pinMode(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, OUTPUT);
 		// make sure the pin DRV strength is set to sink appropriate current
-		PORT->Group[PORTA].PINCFG[17].bit.DRVSTR = 1; // SCL
 		digitalWrite(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, LOW);
 		// Not putting EmotiBit to sleep helps with the FW installer process
-		// ToDo: Consider ESP32 case
-#endif
 		setupFailed("SD-Card not detected");
 	}
 	bool status = true;
@@ -205,12 +206,10 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	_EmotiBit_i2c = new TwoWire(&sercom1, EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
 	_EmotiBit_i2c->begin();
 	// ToDo: detect if i2c init fails
-	//Serial.println("I2C interface initialized");
-	//_EmotiBit_i2c->setClock(100000);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, PIO_SERCOM);
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
 #elif defined ARDUINO_FEATHER_ESP32
-	_EmotiBit_i2c = new TwoWire(0);
+	_EmotiBit_i2c = new TwoWire(1);
 	Serial.print("Setting up I2C For ESP32...");
 	status = _EmotiBit_i2c->begin(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
 	if (status)
@@ -889,7 +888,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 	led.send();
 	// ToDo: There is no catch right now for timeout. In case of timeout, EmotiBit still continues to complete setup() and proceed to update()
-	_emotiBitWiFi.begin();
+	_emotiBitWiFi.begin(-1, 1);
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 	led.send();
 	if (testingMode == TestingMode::FACTORY_TEST)
@@ -1382,6 +1381,11 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 				_dataFile = SD.open(_sdCardFilename, O_CREAT | O_WRITE | O_AT_END);
 #endif
 				if (_dataFile) {
+					// Clear the data buffers before writing to file to avoid mismatches
+					processData();
+					sendData();
+					processData();
+					sendData();
 					_sdWrite = true;
 					Serial.print("** Recording Begin: ");
 					Serial.print(_sdCardFilename);
@@ -1492,12 +1496,37 @@ uint8_t EmotiBit::update()
 		//Serial.print(">");
 		//Serial.println(Serial.peek());
 
-		Serial.print("device ID: ");
-		Serial.println(emotibitDeviceId);
-		Serial.print("Hardware: ");
-		Serial.println(EmotiBitVersionController::getHardwareVersion(_hwVersion));
-		Serial.print("Firmware: ");
-		Serial.println(firmware_version);
+		Serial.println("[{\"info\":{");
+				
+		Serial.print("\"source_id\":\"");
+		Serial.print(_sourceId);
+		Serial.println("\",");
+
+		Serial.print("\"hardware_version\":\"");
+		Serial.print(EmotiBitVersionController::getHardwareVersion(_hwVersion));
+		Serial.println("\",");
+
+		Serial.print("\"sku\":\"");
+		Serial.print(emotiBitSku);
+		Serial.println("\",");
+
+		Serial.print("\"device_id\":\"");
+		Serial.print(emotibitDeviceId);
+		Serial.println("\",");
+
+		Serial.print("\"feather_version\":\"");
+		Serial.print(_featherVersion);
+		Serial.println("\",");
+
+		Serial.print("\"feather_wifi_mac_addr\":\"");
+		Serial.print(getFeatherMacAddress());
+		Serial.println("\",");
+
+		Serial.print("\"firmware_version\":\"");
+		Serial.print(firmware_version);
+		Serial.println("\",");
+
+		Serial.println("}}]");
 	}
 	serialPrevAvailable = Serial.available();
 
@@ -1528,6 +1557,7 @@ uint8_t EmotiBit::update()
 
 
 	// Handle updating WiFi connction + syncing
+	_emotiBitWiFi.updateStatus(); // asynchronous WiFi.status() update
 	static String inSyncPackets;
 	_emotiBitWiFi.update(inSyncPackets, _outDataPacketCounter);
 	_outDataPackets += inSyncPackets;
@@ -1601,6 +1631,22 @@ uint8_t EmotiBit::update()
 
 		sleep();
 	}
+
+	// Auto-sleep when battery percent hits zero
+	float battPct;
+	size_t dataAvailable = readData(EmotiBit::DataType::BATTERY_PERCENT, &battPct, 1);
+	if (dataAvailable > 0 && !_debugMode)
+	{
+		// Smooth the heck out of the battPct before we use it to call sleep.
+		static DigitalFilter battSleepFilt = DigitalFilter(DigitalFilter::FilterType::IIR_LOWPASS,
+			((float) BASE_SAMPLING_FREQ) / ((float) BATTERY_SAMPLING_DIV) / ((float) batteryPercentBuffer.size()), 
+			0.2f);
+		if (battSleepFilt.filter(battPct) < 0.1)
+		{
+			sleep();
+		}
+	}
+	
 	// ToDo: implement logic to determine return val
 	return 0;
 }
@@ -2298,28 +2344,38 @@ int8_t EmotiBit::getBatteryPercent(float bv) {
 	// Thresholded bi-linear approximation
 	// See battery discharge profile here:
 	// https://www.richtek.com/Design%20Support/Technical%20Document/AN024
-	
-	int8_t result; 
-	
-	if (bv > 4.15f) {
+
+	int8_t result;
+
+#if defined ARDUINO_FEATHER_ESP32
+	const float V100 = 4.05f;
+	const float V0 = 3.4f;
+	const float FACTOR_V100_V0 = 1 / (V100 - V0) * 100.f; // Precalculate multiplier to save CPU
+	if (bv > V100) {
 		result = 100;
 	}
-	else if (bv > 3.65f) {
-		float temp;
-		temp = (bv - 3.65f);
-		temp /= (4.15f - 3.65f);
-		temp *= 93.f;
-		temp += 7.f;
+	else if (bv > V0) {
+		float temp = (bv - V0) * FACTOR_V100_V0;
 		result = (int8_t)temp;
 	}
-	else if (bv > 3.3f) {
-		float temp;
-		temp = (bv - 3.3f);
-		temp /= (4.65f - 3.3f);
-		temp *= 7.f;
-		temp += 0.f;
+	else {
+		result = 0;
+	}
+#elif defined(ADAFRUIT_FEATHER_M0)
+	const float V100 = 4.1f;
+	const float V0 = 3.56f;
+	const float FACTOR_V100_V0 = 1 / (V100 - V0) * 100.f; // Precalculate multiplier to save CPU
+	if (bv > V100) {
+		result = 100;
+	}
+	else if (bv > V0) {
+		float temp = (bv - V0) * FACTOR_V100_V0;
 		result = (int8_t)temp;
 	}
+	else {
+		result = 0;
+	}
+#endif
 	return result;
 	//else if (bv > 4.1f) {
 	//	return 95;
@@ -2380,9 +2436,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	Serial.println("printConfigInfo");
 #endif
 	//bool EmotiBit::printConfigInfo(File file, String datetimeString) {
-	String source_id = "EmotiBit FeatherWing";
 	String hardware_version = EmotiBitVersionController::getHardwareVersion(_hwVersion);
-	String feather_version = "Adafruit Feather M0 WiFi";
 
 	const uint16_t bufferSize = 1024;
 
@@ -2410,11 +2464,12 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i] = &(root.createNestedObject("info"));
 		infos[i]->set("name", "EmotiBitData");
 		infos[i]->set("type", "Multimodal");
-		infos[i]->set("source_id", source_id);
+		infos[i]->set("source_id", _sourceId);
 		infos[i]->set("hardware_version", hardware_version);
 		infos[i]->set("sku", emotiBitSku);
 		infos[i]->set("device_id", emotibitDeviceId);
-		infos[i]->set("feather_version", feather_version);
+		infos[i]->set("feather_version", _featherVersion);
+		infos[i]->set("feather_wifi_mac_addr", getFeatherMacAddress());
 		infos[i]->set("firmware_version", firmware_version);
 		infos[i]->set("created_at", datetimeString);
 		if (root.printTo(file) == 0) {
@@ -3045,15 +3100,45 @@ void EmotiBit::readSensors()
 					}
 					else
 					{
-
 						// WiFi connected status LED
 						if (_emotiBitWiFi.isConnected())
 						{
+							// Connected to oscilloscope
+							// turn LED on
 							led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 						}
 						else
 						{
-							led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+							if (_emotiBitWiFi.status(false) == WL_CONNECTED) // ToDo: assess if WiFi.status() is thread/interrupt safe
+							{
+								// Not connected to oscilloscope, but connected to wifi
+								// blink LED
+								static unsigned long onTime = 125; // msec
+								static unsigned long totalTime = 500; // msec
+								static bool wifiConnectedBlinkState = false;
+
+								static unsigned long wifiConnBlinkTimer = millis();
+
+								unsigned long timeNow = millis();
+								if (timeNow - wifiConnBlinkTimer < onTime)
+								{
+									led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+								}
+								else if (timeNow - wifiConnBlinkTimer < totalTime)
+								{
+									led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+								}
+								else
+								{
+									wifiConnBlinkTimer = timeNow;
+								}
+							}
+							else
+							{
+								// not connected to wifi
+								// turn LED off
+								led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+							}
 						}
 
 						// Battery LED
@@ -3450,10 +3535,15 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		Serial.println("PowerMode::NORMAL_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
+			unsigned long beginTime = millis();
+			_emotiBitWiFi.begin(100, 1, 100);	// This ToDo: create a async begin option
+			Serial.print("Total WiFi.begin() = ");
+			Serial.println(millis() - beginTime);
 		}
 #ifdef ADAFRUIT_FEATHER_M0
+		// For ADAFRUIT_FEATHER_M0, lowPowerMode() is a good balance of performance and battery
 		WiFi.lowPowerMode();
+		// For ESP32 the default WIFI_PS_MIN_MODEM is probably optimal https://www.mischianti.org/2021/03/06/esp32-practical-power-saving-manage-wifi-and-cpu-1/
 #endif
 		modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
 	}
@@ -3462,7 +3552,10 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		Serial.println("PowerMode::LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
+			unsigned long beginTime = millis();
+			_emotiBitWiFi.begin(100, 1, 100);	// This ToDo: create a async begin option
+			Serial.print("Total WiFi.begin() = ");
+			Serial.println(millis() - beginTime);
 		}
 #ifdef ADAFRUIT_FEATHER_M0
 		WiFi.lowPowerMode();
@@ -3474,11 +3567,15 @@ void EmotiBit::setPowerMode(PowerMode mode)
 		Serial.println("PowerMode::MAX_LOW_POWER");
 		if (_emotiBitWiFi.isOff())
 		{
-			_emotiBitWiFi.begin(100, 100);	// ToDo: create a async begin option
+			unsigned long beginTime = millis();
+			_emotiBitWiFi.begin(100, 1, 100);	// This ToDo: create a async begin option
+			Serial.print("Total WiFi.begin() = ");
+			Serial.println(millis() - beginTime);
 		}
 #ifdef ADAFRUIT_FEATHER_M0
 		WiFi.maxLowPowerMode();
 #endif
+		// ToDo: for ESP32 There may be some value to explore WIFI_PS_MAX_MODEM https://www.mischianti.org/2021/03/06/esp32-practical-power-saving-manage-wifi-and-cpu-1/
 		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
 	}
 	else if (getPowerMode() == PowerMode::WIRELESS_OFF)
@@ -4275,3 +4372,26 @@ void ReadSensors(void *pvParameters)
 
 }
 #endif
+
+String EmotiBit::getFeatherMacAddress()
+{
+	const uint8_t len = 6;
+	String out;
+	out.reserve(len * 5 + 1); // ToDo: Assess if capacity requires space for \0
+	uint8_t mac[len];
+	WiFi.macAddress(mac);
+	for (uint8_t i = len; i > 0; i--)
+	{
+		//Serial.println(mac[i - 1]);
+		if (mac[i - 1] < 16)
+		{
+			out += "0";
+		}
+		out += String(mac[i - 1], HEX);
+		if (i > 1)
+		{
+			out += ":";
+		}
+	}
+	return out;
+}

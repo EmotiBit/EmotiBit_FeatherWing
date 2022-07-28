@@ -48,7 +48,7 @@ public:
 		length
 	};
 
-  String firmware_version = "1.3.36.feat-Esp.8";
+  String firmware_version = "1.3.36.feat-Esp.50";
 
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = true;
@@ -282,7 +282,11 @@ public:
 
 	// Timer constants
 #define TIMER_PRESCALER_DIV 1024
-	const uint32_t CPU_HZ = 48000000; // ToDo: Add ESP32 CPU Hz
+#if defined(ARDUINO_FEATHER_ESP32)
+	const uint32_t CPU_HZ = 80000000; // 80MHz has been tested working to save battery life
+#elif defined(ADAFRUIT_FEATHER_M0)
+	const uint32_t CPU_HZ = 48000000; // In Hz
+#endif
 
 	// ToDo: Make sampling variables changeable
 #define BASE_SAMPLING_FREQ 150
@@ -470,6 +474,7 @@ public:
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
 	void processDebugInputs(String &debugPackets, uint16_t &packetNumber);
 	void processFactoryTestMessages();
+	String getFeatherMacAddress();
 	String getHardwareVersion();
 	int detectEmotiBitVersion();
 
@@ -526,6 +531,14 @@ private:
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)
 	float _gyroRange; // supported values: 125, 250, 500, 1000, 2000 (degrees/second)
 	EmotiBitVersionController::EmotiBitVersion _hwVersion;
+#if defined(ARDUINO_FEATHER_ESP32)
+	String _featherVersion = "Adafruit Feather HUZZAH32";
+#elif defined(ADAFRUIT_FEATHER_M0)
+	String _featherVersion = "Adafruit Feather M0 WiFi";
+#else
+	String _featherVersion = "UNKNOWN";
+#endif
+	String _sourceId = "EmotiBit FeatherWing";
 	String emotiBitSku;
 	String emotibitDeviceId = "";
 	uint32_t emotibitSerialNumber;
