@@ -3445,6 +3445,7 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 
 	if (!root.success()) {
 		Serial.println(F("Failed to parse config file"));
+		setupFailed("Failed to parse Config fie contents");
 		return false;
 	}
 
