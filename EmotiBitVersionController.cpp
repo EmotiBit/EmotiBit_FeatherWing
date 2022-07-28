@@ -23,9 +23,13 @@
 
 #include "EmotiBitVersionController.h"
 #include "Arduino.h"
-
+#if defined(ADAFRUIT_FEATHER_M0)
 int EmotiBitVersionController::HIBERNATE_PIN = 6;
 int EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN = 19;
+#elif defined(ARDUINO_FEATHER_ESP32)
+int EmotiBitVersionController::HIBERNATE_PIN = 32;
+int EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN = 4;
+#endif
 
 const char* EmotiBitVersionController::getHardwareVersion(EmotiBitVersion version)
 {
@@ -57,6 +61,10 @@ const char* EmotiBitVersionController::getHardwareVersion(EmotiBitVersion versio
 	else if (version == EmotiBitVersion::V04A)
 	{
 		return "V04a\0";
+	}
+	else
+	{
+		return "NA\0";
 	}
 }
 
@@ -100,6 +108,21 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 		// unknown version
 		Serial.println("Unknown Version");
 		return false;
+	}
+#elif defined(ARDUINO_FEATHER_ESP32)
+	// write the code here
+	_assignedPin[(int)EmotiBitPinName::BATTERY_READ_PIN] = A13;
+	_assignedPin[(int)EmotiBitPinName::SPI_CLK] = 5;
+	_assignedPin[(int)EmotiBitPinName::SPI_MOSI] = 18;
+	_assignedPin[(int)EmotiBitPinName::SPI_MISO] = 19;
+
+	if (version == EmotiBitVersion::V02B || version == EmotiBitVersion::V02H || version == EmotiBitVersion::V03B || version == EmotiBitVersion::V04A)
+	{
+		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 12;
+		_assignedPin[(int)EmotiBitPinName::PPG_INT] = 25;
+		_assignedPin[(int)EmotiBitPinName::BMI_INT1] = 14;
+		_assignedPin[(int)EmotiBitPinName::BMI_INT2] = 33;
+		_assignedPin[(int)EmotiBitPinName::BMM_INT] = 26;
 	}
 #endif
 	return true;
@@ -149,17 +172,14 @@ bool EmotiBitVersionController::initConstantMapping(EmotiBitVersionController::E
 
 bool EmotiBitVersionController::_initMappingMathConstants(EmotiBitVersionController::EmotiBitVersion version)
 {
-#if defined(ADAFRUIT_FEATHER_M0)
 	_assignedMathConstants[(int)MathConstants::VCC] = 3.3f;
 	_assignedMathConstants[(int)MathConstants::ADC_BITS] = 12;
 	_assignedMathConstants[(int)MathConstants::ADC_MAX_VALUE] = pow(2, _assignedMathConstants[(int)MathConstants::ADC_BITS]) - 1;;
 	return true;
-#endif
 }
 
 bool EmotiBitVersionController::_initMappingSystemConstants(VregEnablePinLogic logic)
 {
-#if defined(ADAFRUIT_FEATHER_M0)
 	if (logic == VregEnablePinLogic::ACTIVE_LOW)
 	{
 		// For V2
@@ -176,7 +196,6 @@ bool EmotiBitVersionController::_initMappingSystemConstants(VregEnablePinLogic l
 	}
 
 	return true;
-#endif
 }
 
 float EmotiBitVersionController::getMathConstant(MathConstants constant)
@@ -239,7 +258,12 @@ void EmotiBitVersionController::echoConstants()
 
 bool EmotiBitVersionController::isEmotiBitReady()
 {
+#if defined (ARDUINO_FEATHER_ESP32)
+	// Use Arduino SD already defined
+#else
 	SdFat SD;
+#endif
+
 	pinMode(HIBERNATE_PIN, INPUT);
 
 	if (digitalRead(HIBERNATE_PIN) == LOW)
@@ -254,6 +278,7 @@ bool EmotiBitVersionController::isEmotiBitReady()
 		_initMappingSystemConstants(vregEnablePinLogic);
 		if (SD.begin(SD_CARD_CHIP_SEL_PIN))
 		{
+			SD.end();
 			return true;
 		}
 	}
@@ -273,6 +298,7 @@ bool EmotiBitVersionController::isEmotiBitReady()
 		}
 	}
 	Serial.println("EmotiBit not ready. Please check if Battery and SD-Card are present on the EmotiBit.");
+	SD.end();
 	return false;
 }
 

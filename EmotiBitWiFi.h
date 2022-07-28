@@ -31,14 +31,19 @@
 #pragma once
 
 #include <SPI.h>
+#ifdef ADAFRUIT_FEATHER_M0
 #include <WiFi101.h>
+#elif defined ARDUINO_FEATHER_ESP32
+#include <WiFi.h>
+#include <esp_wifi.h>
+#endif
 #include <WiFiUdp.h>
 #include "EmotiBitComms.h"
 #include "EmotiBitPacket.h"
 
 class EmotiBitWiFi {
 public:
-	typedef struct Credential
+	struct Credential
 	{
 		String ssid = "";
 		String pass = "";
@@ -65,6 +70,7 @@ public:
 	WiFiUDP _dataCxn;
 
 	volatile bool _isConnected = false;
+	volatile uint8_t _wifiStatus = WL_DISCONNECTED;
 	int _keyIndex = 0;            // your network key Index number (needed only for WEP)
 	//bool gotIp = false;
 	uint8_t _nDataSends = 1; // Number of times to send the same packet (e.g. for UDPx3 = 3)
@@ -73,7 +79,7 @@ public:
 	static const uint8_t SUCCESS = 0;
 	static const uint8_t FAIL = -1;
 	static const uint16_t MAX_SEND_LEN = 512;							// messages longer than this will be broken up into multiple sends
-	static const uint32_t WIFI_BEGIN_ATTEMPT_DELAY = 5000;
+	static const uint32_t WIFI_BEGIN_ATTEMPT_DELAY = 5000;// Duration to wait after WiFi lost before attempting to reconnect
 	static const uint32_t WIFI_BEGIN_SWITCH_CRED = 300000;// Set to 30000 for debug, 300000 for Release
 	static const uint32_t SETUP_TIMEOUT = 61500;          // Enough time to run through list of network credentials twice
 	static const uint8_t MAX_WIFI_CONNECT_HISTORY = 20;		// NO. of wifi connectivity status to remember
@@ -97,9 +103,9 @@ public:
 	//uint16_t dataPacketCounter = 0;
 
 	//int8_t setup();
-	uint8_t begin(uint16_t timeout = 61500, uint16_t attemptDelay = 1000);
+	uint8_t begin(int32_t timeout = 61500, uint8_t maxAttemptsPerCred = 2, uint16_t attemptDelay = 3000);
 	//uint8_t begin(uint8_t credentialIndex, uint8_t maxAttempts = 10, uint16_t attemptDelay = 1000);
-	uint8_t begin(const String &ssid, const String &pass, uint8_t maxAttempts = 10, uint16_t attemptDelay = 1000);
+	uint8_t begin(const String &ssid, const String &pass, uint8_t maxAttempts = 10, uint16_t attemptDelay = 3000);
 	void end();
 	int8_t updateWiFi();
 	int8_t connect(const IPAddress &hostIp, const String &connectPayload);
@@ -122,6 +128,18 @@ public:
 	uint8_t listNetworks();
 	bool isConnected();
 	bool isOff();
-	int8_t status();
+
+	/*!
+	@Brief Reads and stores WiFi.status() for access in interrupts
+	*/
+	void updateStatus();
+
+	/*!
+	@Brief Returns the status of Arduino WiFi.status()
+	@param If update = false the fn returns the last interrupt-safe value stored by updateStatus()
+	@return Value of WiFi.status() or WL_DISCONNECTED if WiFi is OFF
+	*/
+	uint8_t status(bool update = true);
+
 	void checkWiFi101FirmwareVersion();
 };

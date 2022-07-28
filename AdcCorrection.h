@@ -1,3 +1,4 @@
+#ifdef ADAFRUIT_FEATHER_M0
 /*
 change the name of the highPrecisionRig
 Add a function to write the rig metadata
@@ -189,7 +190,7 @@ public:
 	*/
 	AdcCorrection::Status updateAtwincDataArray();
 	
-	bool parseAtwincDataArray();
+	void parseAtwincDataArray();
 	
 	/*
 	@f: writeAtwincFlash
@@ -227,7 +228,7 @@ public:
 		1. calculating the correction values before shipping
 		2. Reads the raw values from the highPrecisionRig struct and updates the gain and offset correction values
 	*/
-	bool calcCorrectionValues();
+	void calcCorrectionValues();
 	
 	
 	/*
@@ -302,3 +303,4 @@ public:
 	int serialToInt();
 };
 
+#endif

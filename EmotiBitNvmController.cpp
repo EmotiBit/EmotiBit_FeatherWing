@@ -223,6 +223,7 @@ uint8_t EmotiBitNvmController::writeToStorage()
 		_writeResult = Status::SUCCESS;
 		return 0;
 	}
+	return ((uint8_t)State::BUSY_READING);
 }
 
 
@@ -443,6 +444,7 @@ uint8_t EmotiBitNvmController::readFromStorage()
 			return (uint8_t)_readResult; // success
 		}
 	}
+	return ((uint8_t)State::BUSY_READING);
 }
 
 void EmotiBitNvmController::syncRW()

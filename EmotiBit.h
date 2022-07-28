@@ -16,14 +16,18 @@
 #include <SparkFun_MLX90632_Arduino_Library.h>
 #include "DoubleBufferFloat.h"
 #include <ArduinoJson.h>
-#include "wiring_private.h"
 #include "EmotiBitWiFi.h"
 #include <SPI.h>
+#ifdef ARDUINO_FEATHER_ESP32
+#include <SD.h>
+#include "driver/adc.h"
+#include <esp_bt.h>
+#else
 #include <SdFat.h>
-#include <ArduinoJson.h>
 #include <ArduinoLowPower.h>
+#include "wiring_private.h"
+#endif
 #include "AdcCorrection.h"
-#include "EdaCorrection.h"
 #include "EmotiBitVersionController.h"
 #include "DigitalFilter.h"
 #include "EmotiBitFactoryTest.h"
@@ -44,15 +48,34 @@ public:
 		length
 	};
 
-	String firmware_version = "1.3.36";
+  String firmware_version = "1.4.0";
 
 	TestingMode testingMode = TestingMode::NONE;
-	const bool DIGITAL_WRITE_DEBUG = false;
+	const bool DIGITAL_WRITE_DEBUG = true;
+	const uint8_t DEBUG_OUT_PIN_0 = 26;
+	const uint8_t DEBUG_OUT_PIN_1 = 33;
+	const uint8_t DEBUG_OUT_PIN_2 = 15;
+
 	const bool DC_DO_V2 = true;
 
 	bool _debugMode = false;
 	bool dummyIsrWithDelay = false;
 	uint32_t targetFileSyncDelay = 1;
+	struct ReadSensorsDurationMax
+	{
+		uint32_t total = 0;
+		uint32_t led = 0;
+		uint32_t eda = 0;
+		uint32_t ppg = 0;
+		uint32_t tempPpg = 0;
+		uint32_t tempHumidity = 0;
+		uint32_t thermopile = 0;
+		uint32_t imu = 0;
+		uint32_t battery = 0;
+		uint32_t nvm = 0;
+	} readSensorsDurationMax;
+	uint32_t readSensorsIntervalMin = 1000000;
+	uint32_t readSensorsIntervalMax = 0;
 
 
 	enum class SensorTimer {
@@ -234,7 +257,6 @@ public:
 	MAX30105 ppgSensor;
 	NCP5623 led;
 	MLX90632 thermopile;
-	EdaCorrection *edaCorrection = nullptr;
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
 
@@ -260,30 +282,34 @@ public:
 
 	// Timer constants
 #define TIMER_PRESCALER_DIV 1024
-	const uint32_t CPU_HZ = 48000000;
+#if defined(ARDUINO_FEATHER_ESP32)
+	const uint32_t CPU_HZ = 80000000; // 80MHz has been tested working to save battery life
+#elif defined(ADAFRUIT_FEATHER_M0)
+	const uint32_t CPU_HZ = 48000000; // In Hz
+#endif
 
 	// ToDo: Make sampling variables changeable
-#define BASE_SAMPLING_FREQ 300
-#define EDA_SAMPLING_DIV 1
-#define IMU_SAMPLING_DIV 5
-#define PPG_SAMPLING_DIV 5
-#define LED_REFRESH_DIV 20
-#define THERMOPILE_SAMPLING_DIV 40 	// TODO: This should change according to the rate set on the thermopile begin function 
-#define TEMPERATURE_1_SAMPLING_DIV 40
-#define TEMPERATURE_SAMPLING_DIV 10
-#define BATTERY_SAMPLING_DIV 50
-#define DUMMY_ISR_DIV 20
+#define BASE_SAMPLING_FREQ 150
+#define LED_REFRESH_DIV 10
+#define EDA_SAMPLING_DIV 2
+#define PPG_SAMPLING_DIV 2
+#define TEMPERATURE_1_SAMPLING_DIV 20
+#define TEMPERATURE_0_SAMPLING_DIV 10
+#define THERMOPILE_SAMPLING_DIV 20 	// TODO: This should change according to the rate set on the thermopile begin function 
+#define IMU_SAMPLING_DIV 2
+#define BATTERY_SAMPLING_DIV 10
+#define DUMMY_ISR_DIV 10
 
 	struct TimerLoopOffset
 	{
-		uint8_t eda = 0;
-		uint8_t imu = 0;
-		uint8_t ppg = 1;
 		uint8_t led = 4;
-		uint8_t thermopile = 3;
-		uint8_t tempHumidity = 2;
+		uint8_t eda = 1;
+		uint8_t ppg = 1;
 		uint8_t bottomTemp = 2;
-		uint8_t battery = 0;
+		uint8_t tempHumidity = 2;
+		uint8_t thermopile = 0;
+		uint8_t imu = 1;
+		uint8_t battery = 6;
 	} timerLoopOffset;	// Sets initial value of sampling counters
 
 
@@ -294,7 +320,7 @@ public:
 //#define PPG_SAMPLING_DIV 4
 //#define LED_REFRESH_DIV 8
 //#define THERMOPILE_SAMPLING_DIV 16	// TODO: This should change according to the rate set on the thermopile begin function 
-//#define TEMPERATURE_SAMPLING_DIV 4
+//#define TEMPERATURE_0_SAMPLING_DIV 4
 //#define BATTERY_SAMPLING_DIV 20
 
 	//struct TimerLoopOffset
@@ -337,20 +363,32 @@ public:
 	bool _sendData[(uint8_t)EmotiBit::DataType::length];
 	bool _sendSerialData[(uint8_t)EmotiBit::DataType::length];
 
-	SdFat SD;
-	volatile uint8_t battLevel = 100;
+#ifdef ARDUINO_FEATHER_ESP32
+	// SD is already defined in ESP32 
+#else
+	SdFat SD;	// Use SdFat library
+#endif
+
 	volatile uint8_t battIndicationSeq = 0;
 	volatile uint16_t BattLedDuration = 65535;
 
 	EmotiBitWiFi _emotiBitWiFi; 
 	TwoWire* _EmotiBit_i2c = nullptr;
+#ifdef ARDUINO_FEATHER_ESP32
+	uint32_t i2cClkMain = 433000;	// Adjust for empirically slow I2C clock
+#else 
 	uint32_t i2cClkMain = 400000;
+#endif
 	String _outDataPackets;		// Packets that will be sent over wireless (if enabled) and written to SD card (if recording)
 	uint16_t _outDataPacketCounter = 0;
 	//String _outSdPackets;		// Packts that will be written to SD card (if recording) but not sent over wireless
 	//String _inControlPackets;	// Control packets recieved over wireless
 	String _sdCardFilename = "datalog.csv";
-	const char *_configFilename = "config.txt"; 
+#if defined ARDUINO_FEATHER_ESP32
+	const char *_configFilename = "/config.txt";
+#else
+	const char *_configFilename = "config.txt";
+#endif
 	File _dataFile;
 	volatile bool _sdWrite;
 	PowerMode _powerMode;
@@ -430,12 +468,13 @@ public:
 	 */
 	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	
 
-	void updateBatteryIndication();
+	void updateBatteryIndication(float battPercent);
 	void appendTestData(String &dataMessage, uint16_t &packetNumber);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
 	void processDebugInputs(String &debugPackets, uint16_t &packetNumber);
 	void processFactoryTestMessages();
+	String getFeatherMacAddress();
 	String getHardwareVersion();
 	int detectEmotiBitVersion();
 
@@ -451,8 +490,9 @@ public:
 	int8_t updateTempHumidityData();       /**< Read any available temperature and humidity data into the inputBuffers */
 	int8_t updatePpgTempData();			/**< Read any available temp data from PPG into buffer*/
 	int8_t updateThermopileData();         /**< Read Thermopile data into the buffers*/
-	int8_t updateBatteryVoltageData();     /**< Take battery voltage reading and put into the inputBuffer */
-	int8_t updateBatteryPercentData();     /**< Take battery percent reading and put into the inputBuffer */
+	int8_t updateBatteryData();     /**< Reads battery voltage and passes it to different buffers for update */
+	int8_t updateBatteryVoltageData(float battVolt);     /**< updates battery voltage inputBuffer */
+	int8_t updateBatteryPercentData(float battPercent);     /**< updates battery percentage inputBuffer */
 	float convertRawGyro(int16_t gRaw);
 	float convertRawAcc(int16_t aRaw);
 	float convertMagnetoX(int16_t mag_data_x, uint16_t data_rhall);
@@ -469,7 +509,7 @@ public:
   size_t getDataThermopile(float** data, uint32_t * timestamp = nullptr);
 	//size_t dataAvailable(DataType t);
 	float readBatteryVoltage();
-	int8_t readBatteryPercent();
+	int8_t getBatteryPercent(float bv);
 	bool setSensorTimer(SensorTimer t);
 	bool printConfigInfo(File &file, const String &datetimeString);
 	bool setSamplingRates(SamplingRates s);
@@ -491,6 +531,14 @@ private:
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)
 	float _gyroRange; // supported values: 125, 250, 500, 1000, 2000 (degrees/second)
 	EmotiBitVersionController::EmotiBitVersion _hwVersion;
+#if defined(ARDUINO_FEATHER_ESP32)
+	String _featherVersion = "Adafruit Feather HUZZAH32";
+#elif defined(ADAFRUIT_FEATHER_M0)
+	String _featherVersion = "Adafruit Feather M0 WiFi";
+#else
+	String _featherVersion = "UNKNOWN";
+#endif
+	String _sourceId = "EmotiBit FeatherWing";
 	String emotiBitSku;
 	String emotibitDeviceId = "";
 	uint32_t emotibitSerialNumber;
@@ -537,12 +585,12 @@ private:
 	// Single buffered arrays must only be accessed from ISR functions, not in the main loop
 	// ToDo: add assignment for dynamic allocation;
 	// 	**** WARNING **** THIS MUST MATCH THE SAMPLING DIVS ETC
-	BufferFloat edlBuffer = BufferFloat(20);
-	BufferFloat edrBuffer = BufferFloat(20);	
-	BufferFloat temperatureBuffer = BufferFloat(4);	
-	BufferFloat humidityBuffer = BufferFloat(4);
-	BufferFloat batteryVoltageBuffer = BufferFloat(8);
-	BufferFloat batteryPercentBuffer = BufferFloat(8);
+	BufferFloat edlBuffer = BufferFloat(5);
+	BufferFloat edrBuffer = BufferFloat(5);	
+	BufferFloat temperatureBuffer = BufferFloat(2);	
+	BufferFloat humidityBuffer = BufferFloat(2);
+	BufferFloat batteryVoltageBuffer = BufferFloat(15);
+	BufferFloat batteryPercentBuffer = BufferFloat(15);
 
 	const uint8_t SCOPE_TEST_PIN = A0;
 	bool scopeTestPinOn = false;
@@ -550,8 +598,14 @@ private:
 };
 
 void attachEmotiBit(EmotiBit*e = nullptr);
+#ifdef ADAFRUIT_FEATHER_M0
 void attachToInterruptTC3(void(*readFunction)(void), EmotiBit*e = nullptr);
 void ReadSensors();
+#elif defined ARDUINO_FEATHER_ESP32
+void onTimer();
+void attachToCore(void(*readFunction)(void*), EmotiBit*e = nullptr);
+void ReadSensors(void* pvParameters);
+#endif
 
 
 #endif

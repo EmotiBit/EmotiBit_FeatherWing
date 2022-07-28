@@ -63,7 +63,9 @@ bool EmotiBitEda::setup(EmotiBitVersionController::EmotiBitVersion version, floa
 		_constants.adcBits = 16;
 
 		// NOTE: if these values are changed in code, we should add parameters to _info.json
-		_ads.setDataRate(RATE_ADS1115_475SPS);	// set to 475Hz to allow for 300Hz oversampling
+		_ads.setDataRate(RATE_ADS1115_128SPS);	// set to 128Hz to allow for 75Hz oversampling
+		//_ads.setDataRate(RATE_ADS1115_250SPS);	// set to 250Hz to allow for 150Hz oversampling
+		//_ads.setDataRate(RATE_ADS1115_475SPS);	// set to 475Hz to allow for 300Hz oversampling
 		_ads.setGain(GAIN_TWO);        // 2x gain   +/- 2.048V  1 bit = 1mV      0.0625mV
 
 		_constants.clipMin = -26500;
@@ -306,11 +308,19 @@ uint8_t EmotiBitEda::readData()
 	}
 	else
 	{
-		// Reads EDA data from SAMD21 ADC
+		// Reads EDA data from ADC
 
 		// Check EDL and EDR voltages for saturation
+#if defined(ARDUINO_FEATHER_ESP32)
+		// analogReadMillis is much more accurate for ESP
+		// and needs to be converted to ADC bits to follow EDA pipeline
+		static const float millisToBits = ((float)_constants_v2_v3.adcRes) / _constants_v2_v3.vcc / 1000.f;
+		edlTemp = analogReadMilliVolts(_constants_v2_v3.edlPin) * millisToBits;
+		edrTemp = analogReadMilliVolts(_constants_v2_v3.edrPin) * millisToBits;
+#else
 		edlTemp = analogRead(_constants_v2_v3.edlPin);
 		edrTemp = analogRead(_constants_v2_v3.edrPin);
+#endif
 
 		status = status | _edlOversampBuffer->push_back(edlTemp);
 		status = status | _edrOversampBuffer->push_back(edrTemp);
@@ -384,8 +394,8 @@ bool EmotiBitEda::processData()
 		// NOTE: this can create a small main loop delay
 		// This wouldn't be necessary with a ring buffer
 
-		static const unsigned long int samplingInterval = 1000000 / (_constants.samplingRate * _edrOversampBuffer->capacity());
-		static const unsigned int minSwapTime = max(500, min(samplingInterval / 10, 3500));
+		static const int samplingInterval = 1000000 / (_constants.samplingRate * _edrOversampBuffer->capacity());
+		static const int minSwapTime = max(500, min(samplingInterval / 10, 3500));
 
 		//Serial.println("window: " + String(samplingInterval - (micros() - _thermReadFinishedTime)));
 		unsigned long int waitStart = micros();
@@ -635,7 +645,7 @@ bool EmotiBitEda::writeInfoJson(File &jsonFile)
 #endif
 		}
 	}
-
+	return true;
 }
 
 void EmotiBitEda::setAdcIsrOffsetCorr(float isrOffsetCorr)

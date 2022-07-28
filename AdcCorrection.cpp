@@ -1,3 +1,4 @@
+#ifdef ADAFRUIT_FEATHER_M0
 #include "AdcCorrection.h"
 
 
@@ -78,7 +79,7 @@ AdcCorrection::AdcCorrection(AdcCorrection::AdcCorrectionRigVersion version, uin
 
 }
 
-bool AdcCorrection::parseAtwincDataArray()
+void AdcCorrection::parseAtwincDataArray()
 {
 	if (rigMetadata[METADATA_LOC_RIG_VERSION] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_0 || rigMetadata[METADATA_LOC_RIG_VERSION] == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_1)
 	{
@@ -292,7 +293,7 @@ bool AdcCorrection::begin(uint16_t &gainCorr, uint16_t &offsetCorr, bool &valid)
 #ifdef ADC_CORRECTION_VERBOSE
 		Serial.println("finding correction values");
 #endif
-		state = calcCorrectionValues();
+		calcCorrectionValues();
 #ifdef ADC_CORRECTION_VERBOSE
 		Serial.println("Writing the raw correction data to the flash");
 #endif
@@ -420,7 +421,12 @@ bool AdcCorrection::updateIsrOffsetCorr()
 			else
 			{
 				atwincAdcDataCorruptionTest = AdcCorrection::Status::FAILURE;
+				return false;
 			}
+		}
+		else
+		{
+			return false;
 		}
 	}
 	else
@@ -428,13 +434,6 @@ bool AdcCorrection::updateIsrOffsetCorr()
 		// Adc Correction has not been performed
 #ifdef ADC_CORRECTION_VERBOSE
 		Serial.println("Flash has not been updated with adc correction");
-#endif
-		return false;
-	}
-	if (atwincAdcMetaDataCorruptionTest == AdcCorrection::Status::FAILURE || atwincAdcDataCorruptionTest == AdcCorrection::Status::FAILURE)
-	{
-#ifdef ADC_CORRECTION_VERBOSE
-		Serial.println("Failed data or metadata integrity test");
 #endif
 		return false;
 	}
@@ -507,6 +506,7 @@ AdcCorrection::Status AdcCorrection::updateAtwincDataArray()
 		_isupdatedAtwincArray = true;
 		return AdcCorrection::Status::SUCCESS;
 	}
+	return AdcCorrection::Status::FAILURE;
 }
 
 
@@ -530,11 +530,12 @@ AdcCorrection::Status AdcCorrection::initWifiModule()
 #ifdef ADC_CORRECTION_VERBOSE
 			Serial.println("\nEntered download mode successfully");
 			Serial.print("The flash size is:"); Serial.println(_atwincFlashSize);
-			return AdcCorrection::Status::SUCCESS;
 #endif
+			return AdcCorrection::Status::SUCCESS;
 		}
 
 	}
+	return AdcCorrection::Status::FAILURE;;
 }
 
 AdcCorrection::Status AdcCorrection::writeAtwincFlash()
@@ -646,7 +647,7 @@ AdcCorrection::Status AdcCorrection::readAtwincFlash(size_t readMemLoc, uint16_t
 }
 
 
-bool AdcCorrection::calcCorrectionValues()
+void AdcCorrection::calcCorrectionValues()
 {
 	// determines which location in the data array to query for measured low and high values
 	if ((uint8_t)getRigVersion() == (uint8_t) AdcCorrection::AdcCorrectionRigVersion::VER_0 || (uint8_t)getRigVersion() == (uint8_t)AdcCorrection::AdcCorrectionRigVersion::VER_1)
@@ -931,3 +932,4 @@ void AdcCorrection::echoResults(uint16_t gainCorr, uint16_t offsetCorr)
 	WiFi.end();
 
 }
+#endif

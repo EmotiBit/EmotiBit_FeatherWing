@@ -25,7 +25,11 @@
 #define _EMOTIBIT_VERSION_CONTROLLER_H
 
 #include <SPI.h>
+#if defined ARDUINO_FEATHER_ESP32
+#include <SD.h>
+#else
 #include <SdFat.h>
+#endif
 #include <Arduino.h>
 #include <Wire.h>
 #include <EmotiBit_Si7013.h>
@@ -78,6 +82,11 @@ public:
 #if defined(ADAFRUIT_FEATHER_M0) 
 	static const int EMOTIBIT_I2C_CLK_PIN = 13;
 	static const int EMOTIBIT_I2C_DAT_PIN = 11;
+	static int HIBERNATE_PIN;
+	static int SD_CARD_CHIP_SEL_PIN;
+#elif defined (ARDUINO_FEATHER_ESP32) 
+	static const int EMOTIBIT_I2C_CLK_PIN = 13;
+	static const int EMOTIBIT_I2C_DAT_PIN = 27;
 	static int HIBERNATE_PIN;
 	static int SD_CARD_CHIP_SEL_PIN;
 #endif
