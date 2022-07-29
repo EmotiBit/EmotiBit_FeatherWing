@@ -48,13 +48,19 @@ public:
 		length
 	};
 
-  String firmware_version = "1.4.0";
+  String firmware_version = "1.4.1";
 
 	TestingMode testingMode = TestingMode::NONE;
-	const bool DIGITAL_WRITE_DEBUG = true;
+	const bool DIGITAL_WRITE_DEBUG = false;
+#if defined (ARDUINO_FEATHER_ESP32)
 	const uint8_t DEBUG_OUT_PIN_0 = 26;
 	const uint8_t DEBUG_OUT_PIN_1 = 33;
 	const uint8_t DEBUG_OUT_PIN_2 = 15;
+#elif defined (ADAFRUIT_FEATHER_M0)
+	const uint8_t DEBUG_OUT_PIN_0 = 14;
+	const uint8_t DEBUG_OUT_PIN_1 = 10;
+	const uint8_t DEBUG_OUT_PIN_2 = 9;
+#endif
 
 	const bool DC_DO_V2 = true;
 
