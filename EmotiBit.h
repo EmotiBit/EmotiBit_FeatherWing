@@ -48,9 +48,9 @@ public:
 		length
 	};
 
-  String firmware_version = "1.4.1.feat-bufferLimitTest.2";
+  String firmware_version = "1.4.1.feat-bufferLimitTest.2.feat-100HzPPG.0";
 
-	TestingMode testingMode = TestingMode::NONE;
+	TestingMode testingMode = TestingMode::ACUTE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 #if defined (ARDUINO_FEATHER_ESP32)
 	const uint8_t DEBUG_OUT_PIN_0 = 26;
@@ -129,6 +129,16 @@ public:
 		uint16_t dig_xyz1;
 	};
   
+#if defined(EMOTIBIT_PPG_100HZ)
+	struct PPGSettings {
+		uint8_t ledPowerLevel = 0x2F; //Options: 0=Off to 255=50mA
+		uint16_t sampleAverage = 8;   //Options: 1, 2, 4, 8, 16, 32
+		uint8_t ledMode = 3;          //Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
+		uint16_t sampleRate = 800;    //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
+		uint16_t pulseWidth = 215;     //Options: 69, 118, 215, 411
+		uint16_t adcRange = 4096;     //Options: 2048, 4096, 8192, 16384
+	};
+#else
 	struct PPGSettings {
 		uint8_t ledPowerLevel = 0x2F; //Options: 0=Off to 255=50mA
 		uint16_t sampleAverage = 16;   //Options: 1, 2, 4, 8, 16, 32
@@ -137,6 +147,7 @@ public:
 		uint16_t pulseWidth = 215;     //Options: 69, 118, 215, 411
 		uint16_t adcRange = 4096;     //Options: 2048, 4096, 8192, 16384
 	};
+#endif
 
 	struct IMUSettings {
 		uint8_t acc_odr = BMI160AccelRate::BMI160_ACCEL_RATE_25HZ;
@@ -560,40 +571,56 @@ private:
 	const uint8_t _maxImuFifoFrameLen = 40; // in bytes
 	uint8_t _imuBuffer[40];
 
-#if defined(ARDUINO_FEATHER_ESP32)
-	const uint8_t BUFFER_SIZE_FACTOR = 2;
-#else
-	const uint8_t BUFFER_SIZE_FACTOR = 1;
-#endif
+	// ToDo: Utilize on-chip PPG 32 sample buffer
+	// Adjust buffer sizes for different PPG sampling rates & MCUs
+	// See EmotiBit Buffer Size RAM Calculator google sheet
+	// ToDo: Consider how to better manange stack memory allocation
+#if !defined(EMOTIBIT_PPG_100HZ) && !defined(ARDUINO_FEATHER_ESP32)
 	const uint16_t EDA_BUFFER_SIZE = 36;
 	const uint16_t PPG_BUFFER_SIZE = 60;
 	const uint16_t TEMP_BUFFER_SIZE = 18;
-	const uint16_t IMU_BUFFER_SIZE = 10;
-	const uint16_t IMU_CHIP_BUFFER_SIZE = 51;
+	const uint16_t IMU_BUFFER_SIZE = 9;
+#endif
+#if !defined(EMOTIBIT_PPG_100HZ) && defined(ARDUINO_FEATHER_ESP32)
+	const uint16_t EDA_BUFFER_SIZE = 72;
+	const uint16_t PPG_BUFFER_SIZE = 120;
+	const uint16_t TEMP_BUFFER_SIZE = 36;
+	const uint16_t IMU_BUFFER_SIZE = 69;
+#endif
+#if defined(EMOTIBIT_PPG_100HZ) && !defined(ARDUINO_FEATHER_ESP32)
+	const uint16_t EDA_BUFFER_SIZE = 18;
+	const uint16_t PPG_BUFFER_SIZE = 120;
+	const uint16_t TEMP_BUFFER_SIZE = 9;
+	const uint16_t IMU_BUFFER_SIZE = 4;
+#endif
+#if defined(EMOTIBIT_PPG_100HZ) && defined(ARDUINO_FEATHER_ESP32)
+	const uint16_t EDA_BUFFER_SIZE = 54;
+	const uint16_t PPG_BUFFER_SIZE = 360;
+	const uint16_t TEMP_BUFFER_SIZE = 27;
+	const uint16_t IMU_BUFFER_SIZE = 39;
+#endif
 
-
-	DoubleBufferFloat eda			 = DoubleBufferFloat(EDA_BUFFER_SIZE * BUFFER_SIZE_FACTOR);
-	DoubleBufferFloat edl			 = DoubleBufferFloat(EDA_BUFFER_SIZE * BUFFER_SIZE_FACTOR);
-	DoubleBufferFloat edr			 = DoubleBufferFloat(EDA_BUFFER_SIZE * BUFFER_SIZE_FACTOR);
-	DoubleBufferFloat ppgInfrared	 = DoubleBufferFloat(PPG_BUFFER_SIZE * BUFFER_SIZE_FACTOR);
-	DoubleBufferFloat ppgRed		 = DoubleBufferFloat(PPG_BUFFER_SIZE * BUFFER_SIZE_FACTOR);
-	DoubleBufferFloat ppgGreen		 = DoubleBufferFloat(PPG_BUFFER_SIZE * BUFFER_SIZE_FACTOR);
-	DoubleBufferFloat temp0			 = DoubleBufferFloat(TEMP_BUFFER_SIZE * BUFFER_SIZE_FACTOR);
-	// DoubleBufferFloat tempHP0 = DoubleBufferFloat(TEMP_BUFFER_SIZE;
-	DoubleBufferFloat temp1		     = DoubleBufferFloat(TEMP_BUFFER_SIZE * BUFFER_SIZE_FACTOR); // To store the thermistor Object Temp
-	DoubleBufferFloat therm0		 = DoubleBufferFloat(TEMP_BUFFER_SIZE * BUFFER_SIZE_FACTOR); // To store the thermistor Object Temp
-	DoubleBufferFloat therm0AMB		 = DoubleBufferFloat(TEMP_BUFFER_SIZE * BUFFER_SIZE_FACTOR); // To store the raw value AMB from the thermistor
-	DoubleBufferFloat therm0Sto		 = DoubleBufferFloat(TEMP_BUFFER_SIZE * BUFFER_SIZE_FACTOR); // To store the raw Value Sto from the thermistor
-	DoubleBufferFloat humidity0		 = DoubleBufferFloat(TEMP_BUFFER_SIZE * BUFFER_SIZE_FACTOR);
-	DoubleBufferFloat accelX		 = DoubleBufferFloat(IMU_BUFFER_SIZE * BUFFER_SIZE_FACTOR + IMU_CHIP_BUFFER_SIZE * (BUFFER_SIZE_FACTOR - 1)); // Account for IMU_CHIP_BUFFER_SIZE when creating BUFFER_SIZE_FACTOR > 1
-	DoubleBufferFloat accelY		 = DoubleBufferFloat(IMU_BUFFER_SIZE * BUFFER_SIZE_FACTOR + IMU_CHIP_BUFFER_SIZE * (BUFFER_SIZE_FACTOR - 1));
-	DoubleBufferFloat accelZ		 = DoubleBufferFloat(IMU_BUFFER_SIZE * BUFFER_SIZE_FACTOR + IMU_CHIP_BUFFER_SIZE * (BUFFER_SIZE_FACTOR - 1));
-	DoubleBufferFloat gyroX			 = DoubleBufferFloat(IMU_BUFFER_SIZE * BUFFER_SIZE_FACTOR + IMU_CHIP_BUFFER_SIZE * (BUFFER_SIZE_FACTOR - 1));
-	DoubleBufferFloat gyroY			 = DoubleBufferFloat(IMU_BUFFER_SIZE * BUFFER_SIZE_FACTOR + IMU_CHIP_BUFFER_SIZE * (BUFFER_SIZE_FACTOR - 1));
-	DoubleBufferFloat gyroZ			 = DoubleBufferFloat(IMU_BUFFER_SIZE * BUFFER_SIZE_FACTOR + IMU_CHIP_BUFFER_SIZE * (BUFFER_SIZE_FACTOR - 1));
-	DoubleBufferFloat magX			 = DoubleBufferFloat(IMU_BUFFER_SIZE * BUFFER_SIZE_FACTOR + IMU_CHIP_BUFFER_SIZE * (BUFFER_SIZE_FACTOR - 1));
-	DoubleBufferFloat magY			 = DoubleBufferFloat(IMU_BUFFER_SIZE * BUFFER_SIZE_FACTOR + IMU_CHIP_BUFFER_SIZE * (BUFFER_SIZE_FACTOR - 1));
-	DoubleBufferFloat magZ			 = DoubleBufferFloat(IMU_BUFFER_SIZE * BUFFER_SIZE_FACTOR + IMU_CHIP_BUFFER_SIZE * (BUFFER_SIZE_FACTOR - 1));
+	DoubleBufferFloat eda			 = DoubleBufferFloat(EDA_BUFFER_SIZE);
+	DoubleBufferFloat edl			 = DoubleBufferFloat(EDA_BUFFER_SIZE);
+	DoubleBufferFloat edr			 = DoubleBufferFloat(EDA_BUFFER_SIZE);
+	DoubleBufferFloat ppgInfrared	 = DoubleBufferFloat(PPG_BUFFER_SIZE);
+	DoubleBufferFloat ppgRed		 = DoubleBufferFloat(PPG_BUFFER_SIZE);
+	DoubleBufferFloat ppgGreen		 = DoubleBufferFloat(PPG_BUFFER_SIZE);
+	DoubleBufferFloat temp0			 = DoubleBufferFloat(TEMP_BUFFER_SIZE);
+	DoubleBufferFloat temp1		     = DoubleBufferFloat(TEMP_BUFFER_SIZE); // To store the thermistor Object Temp
+	DoubleBufferFloat therm0		 = DoubleBufferFloat(TEMP_BUFFER_SIZE); // To store the thermistor Object Temp
+	DoubleBufferFloat therm0AMB		 = DoubleBufferFloat(TEMP_BUFFER_SIZE); // To store the raw value AMB from the thermistor
+	DoubleBufferFloat therm0Sto		 = DoubleBufferFloat(TEMP_BUFFER_SIZE); // To store the raw Value Sto from the thermistor
+	DoubleBufferFloat humidity0		 = DoubleBufferFloat(TEMP_BUFFER_SIZE);
+	DoubleBufferFloat accelX		 = DoubleBufferFloat(IMU_BUFFER_SIZE); // Account for IMU_CHIP_BUFFER_SIZE when creating BUFFER_SIZE_FACTOR > 1
+	DoubleBufferFloat accelY		 = DoubleBufferFloat(IMU_BUFFER_SIZE);
+	DoubleBufferFloat accelZ		 = DoubleBufferFloat(IMU_BUFFER_SIZE);
+	DoubleBufferFloat gyroX			 = DoubleBufferFloat(IMU_BUFFER_SIZE);
+	DoubleBufferFloat gyroY			 = DoubleBufferFloat(IMU_BUFFER_SIZE);
+	DoubleBufferFloat gyroZ			 = DoubleBufferFloat(IMU_BUFFER_SIZE);
+	DoubleBufferFloat magX			 = DoubleBufferFloat(IMU_BUFFER_SIZE);
+	DoubleBufferFloat magY			 = DoubleBufferFloat(IMU_BUFFER_SIZE);
+	DoubleBufferFloat magZ			 = DoubleBufferFloat(IMU_BUFFER_SIZE);
 	DoubleBufferFloat batteryVoltage = DoubleBufferFloat(1);
 	DoubleBufferFloat batteryPercent = DoubleBufferFloat(1);
 	DoubleBufferFloat dataOverflow	 = DoubleBufferFloat(1);	// ToDo: Refactor with nullptr checks for removal
