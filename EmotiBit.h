@@ -487,7 +487,7 @@ public:
 	* @param delayInterval Interval to poll buffers and print results
 	* @param humanReadable Boolean to switch between commas and carriage returns for human readability
 	*/
-	void bufferOverflowTest(unsigned int maxTestDuration = 3000, unsigned int delayInterval = 100, bool humanReadable = true);
+	void bufferOverflowTest(unsigned int maxTestDuration = 5000, unsigned int delayInterval = 100, bool humanReadable = true);
 	String getFeatherMacAddress();
 	String getHardwareVersion();
 	int detectEmotiBitVersion();
@@ -559,6 +559,7 @@ private:
 	uint8_t _imuFifoFrameLen = 0; // in bytes
 	const uint8_t _maxImuFifoFrameLen = 40; // in bytes
 	uint8_t _imuBuffer[40];
+
 #if defined(ARDUINO_FEATHER_ESP32)
 	const uint8_t BUFFER_SIZE_FACTOR = 2;
 #else
