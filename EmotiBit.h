@@ -48,9 +48,9 @@ public:
 		length
 	};
 
-  String firmware_version = "1.4.1.feat-bufferLimitTest.0";
+  String firmware_version = "1.4.1.feat-bufferLimitTest.1";
 
-	TestingMode testingMode = TestingMode::ACUTE;
+	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 #if defined (ARDUINO_FEATHER_ESP32)
 	const uint8_t DEBUG_OUT_PIN_0 = 26;
