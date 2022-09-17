@@ -4415,17 +4415,15 @@ void EmotiBit::bufferOverflowTest(unsigned int maxTestDuration, unsigned int del
 	unsigned long startTime = millis();
 	unsigned int totalDuration = millis() - startTime;
 
+	Serial.println("Results format:");
+	Serial.print("totalDuration");
+	humanReadable ? Serial.println("") : Serial.print(", ");
+	Serial.println("TypeTag, size, capacity, overflowCount");
+
 	while (totalDuration < maxTestDuration)
 	{
 		Serial.print(totalDuration);
-		if (humanReadable)
-		{
-			Serial.println("");
-		}
-		else
-		{
-			Serial.print(",");
-		}
+		humanReadable ? Serial.println("") : Serial.print(", ");
 
 		for (uint8_t d = 0; d < (uint8_t) DataType::length; d++)
 		{
@@ -4437,14 +4435,7 @@ void EmotiBit::bufferOverflowTest(unsigned int maxTestDuration, unsigned int del
 			Serial.print(", ");
 			Serial.print(dataDoubleBuffers[(uint8_t)d]->getOverflowCount(DoubleBufferFloat::BufferSelector::IN));
 
-			if (humanReadable)
-			{
-				Serial.println("");
-			}
-			else
-			{
-				Serial.print(",");
-			}
+			humanReadable ? Serial.println("") : Serial.print(", ");
 		}
 		Serial.println("");
 		delay(delayInterval);
