@@ -1614,6 +1614,12 @@ uint8_t EmotiBit::update()
 
 			// Send data to SD card and over wireless
 			sendData();
+
+			if (startBufferOverflowTest)
+			{
+				startBufferOverflowTest = false;
+				bufferOverflowTest();
+			}
 		}
 	}
 
@@ -1866,6 +1872,7 @@ int8_t EmotiBit::updateIMUData() {
 				}
 			}
 			if (bufferMaxed && !imuBufferFull) {
+				// ToDo: Consider how to improve logic so that chip buffer is incrementally emptied rather than dumped into DO events
 				// data is about to overflow... leave it on the FIFO unless FIFO is also full
 				break;
 			}
@@ -3807,6 +3814,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("Press A to toggle ON ADC correction");
 			Serial.println("Press d to toggle OFF recording ISR loop time");
 			Serial.println("Press D to toggle ON recording ISR loop time");
+			Serial.println("Press o to start bufferOverflowTest");
 			Serial.println("Press f to print the FW version");
 			Serial.println("press | to enable Digital filters");
 			Serial.println("Press \\ to disable Digital filters");
@@ -4074,6 +4082,11 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			ADC->CTRLB.bit.CORREN = 1;
 		}
 #endif
+		else if (c == 'o')
+		{
+			Serial.println("Starting bufferOverflowTest");
+			startBufferOverflowTest = true;
+		}
 		else if (c == 'f')
 		{
 			Serial.print("Firmware version: ");
@@ -4395,4 +4408,46 @@ String EmotiBit::getFeatherMacAddress()
 		}
 	}
 	return out;
+}
+
+void EmotiBit::bufferOverflowTest(unsigned int maxTestDuration, unsigned int delayInterval, bool humanReadable)
+{
+	unsigned long startTime = millis();
+	unsigned int totalDuration = millis() - startTime;
+
+	while (totalDuration < maxTestDuration)
+	{
+		Serial.print(totalDuration);
+		if (humanReadable)
+		{
+			Serial.println("");
+		}
+		else
+		{
+			Serial.print(",");
+		}
+
+		for (uint8_t d = 0; d < (uint8_t) DataType::length; d++)
+		{
+			Serial.print(typeTags[(uint8_t)d]);
+			Serial.print(", ");
+			Serial.print(dataDoubleBuffers[(uint8_t)d]->size(DoubleBufferFloat::BufferSelector::IN));
+			Serial.print(", ");
+			Serial.print(dataDoubleBuffers[(uint8_t)d]->capacity(DoubleBufferFloat::BufferSelector::IN));
+			Serial.print(", ");
+			Serial.print(dataDoubleBuffers[(uint8_t)d]->getOverflowCount(DoubleBufferFloat::BufferSelector::IN));
+
+			if (humanReadable)
+			{
+				Serial.println("");
+			}
+			else
+			{
+				Serial.print(",");
+			}
+		}
+		Serial.println("");
+		delay(delayInterval);
+		totalDuration = millis() - startTime;
+	}
 }
