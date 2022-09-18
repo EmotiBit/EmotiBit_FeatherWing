@@ -57,7 +57,7 @@
         </plot>
     </scope>
     <scope>
-        <samplingFrequency>25.000000000</samplingFrequency>
+        <samplingFrequency>100.000000000</samplingFrequency>
         <timeWindow>10.000000000</timeWindow>
         <yMin>0.000000000</yMin>
         <yMax>0.000000000</yMax>

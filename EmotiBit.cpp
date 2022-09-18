@@ -1036,6 +1036,18 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 #endif
 	}
 
+	Serial.println("");
+#if defined(ARDUINO_FEATHER_ESP32)
+	Serial.println("HUZZAH32 Feather detected.");
+#endif
+#if defined(ADAFRUIT_FEATHER_M0)
+	Serial.println("Feather M0 detected.");
+#endif
+#if defined(EMOTIBIT_PPG_100HZ)
+	Serial.println("100Hz PPG activated. Ensure correct settings in ofxOscilloscopeSettings.xml are used to correctly visualize live data.");
+#endif
+	Serial.println("");
+
 	Serial.println("Switch to EmotiBit Oscilloscope to stream Data");
 	
 	if (testingMode == TestingMode::FACTORY_TEST)

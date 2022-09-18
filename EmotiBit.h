@@ -48,7 +48,7 @@ public:
 		length
 	};
 
-  String firmware_version = "1.4.1.feat-bufferLimitTest.2.feat-100HzPPG.0";
+  String firmware_version = "1.4.1.feat-bufferLimitTest.2.feat-100HzPPG.1";
 
 	TestingMode testingMode = TestingMode::ACUTE;
 	const bool DIGITAL_WRITE_DEBUG = false;
@@ -135,7 +135,7 @@ public:
 		uint16_t sampleAverage = 8;   //Options: 1, 2, 4, 8, 16, 32
 		uint8_t ledMode = 3;          //Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
 		uint16_t sampleRate = 800;    //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
-		uint16_t pulseWidth = 215;     //Options: 69, 118, 215, 411
+		uint16_t pulseWidth = 118;     //Options: 69, 118, 215, 411
 		uint16_t adcRange = 4096;     //Options: 2048, 4096, 8192, 16384
 	};
 #else

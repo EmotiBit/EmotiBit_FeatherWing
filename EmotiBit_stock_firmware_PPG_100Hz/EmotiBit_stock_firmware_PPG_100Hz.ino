@@ -1,6 +1,6 @@
-#include "EmotiBit.h"
+//#define EMOTIBIT_PPG_100HZ // Use this line to activate 100Hz PPG sampling rate
 
-#define EMOTIBIT_PPG_100HZ
+#include "EmotiBit.h"
 
 #define SerialUSB SERIAL_PORT_USBVIRTUAL // Required to work in Visual Micro / Visual Studio IDE
 const uint32_t SERIAL_BAUD = 2000000; //115200
