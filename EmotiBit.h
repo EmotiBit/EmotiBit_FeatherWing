@@ -576,24 +576,28 @@ private:
 	// See EmotiBit Buffer Size RAM Calculator google sheet
 	// ToDo: Consider how to better manange stack memory allocation
 #if !defined(EMOTIBIT_PPG_100HZ) && !defined(ARDUINO_FEATHER_ESP32)
+	// 2.4 seconds data buffering
 	const uint16_t EDA_BUFFER_SIZE = 36;
 	const uint16_t PPG_BUFFER_SIZE = 60;
 	const uint16_t TEMP_BUFFER_SIZE = 18;
 	const uint16_t IMU_BUFFER_SIZE = 9;
 #endif
 #if !defined(EMOTIBIT_PPG_100HZ) && defined(ARDUINO_FEATHER_ESP32)
+	// 4.8 seconds data buffering
 	const uint16_t EDA_BUFFER_SIZE = 72;
 	const uint16_t PPG_BUFFER_SIZE = 120;
 	const uint16_t TEMP_BUFFER_SIZE = 36;
 	const uint16_t IMU_BUFFER_SIZE = 69;
 #endif
 #if defined(EMOTIBIT_PPG_100HZ) && !defined(ARDUINO_FEATHER_ESP32)
-	const uint16_t EDA_BUFFER_SIZE = 18;
-	const uint16_t PPG_BUFFER_SIZE = 120;
-	const uint16_t TEMP_BUFFER_SIZE = 9;
-	const uint16_t IMU_BUFFER_SIZE = 4;
+	// 1.07 seconds data buffering
+	const uint16_t EDA_BUFFER_SIZE = 16;
+	const uint16_t PPG_BUFFER_SIZE = 107;
+	const uint16_t TEMP_BUFFER_SIZE = 8;
+	const uint16_t IMU_BUFFER_SIZE = 8;
 #endif
 #if defined(EMOTIBIT_PPG_100HZ) && defined(ARDUINO_FEATHER_ESP32)
+	// 3.6 seconds data buffering
 	const uint16_t EDA_BUFFER_SIZE = 54;
 	const uint16_t PPG_BUFFER_SIZE = 360;
 	const uint16_t TEMP_BUFFER_SIZE = 27;
