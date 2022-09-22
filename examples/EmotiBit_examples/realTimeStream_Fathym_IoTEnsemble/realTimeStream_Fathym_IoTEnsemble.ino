@@ -1,313 +1,319 @@
-#include "EmotiBit.h"
-#include <Adafruit_GFX.h>
-#include "Adafruit_LEDBackpack.h"
 #include "Esp32MQTTClient.h"
-#include <NTPClient.h>
-#include <WiFiUdp.h>
-#include <algorithm>
-
-Adafruit_7segment matrix = Adafruit_7segment();
+#include "EmotiBit.h"
 
 #define SerialUSB SERIAL_PORT_USBVIRTUAL // Required to work in Visual Micro / Visual Studio IDE
+#define MESSAGE_MAX_LEN 512
 const uint32_t SERIAL_BAUD = 2000000; //115200
 
 EmotiBit emotibit;
 const size_t dataSize = EmotiBit::MAX_DATA_BUFFER_SIZE;
 float data[dataSize];
-
-//	Fathym Cloud Connect
-char fathymConnectionString[] = "";
-char fathymDeviceID[] = "";
-char fathymReadings[][] = {};
 static bool hasIoTHub = false;
-static int readingsInterval = 5000;
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP);
-char metadataTypeTags[] = { "BV", "BP", "DO", "DC", "DB" };
+//uint32_t dataTime;
+//unsigned long Epoch_Time;
+//const char* ntpServer = "pool.ntp.org";
+static const char* fathymConnectionString = "HostName=fathym-cloud-prd.azure-devices.net;DeviceId=ffe32f40-22ff-402b-9b64-ddc6533c867a-emotibit;SharedAccessKey=+9rUpmlgdgIsZI8VVgELvUhgFUuwDo3I/XQyncGSSMc=";
+String fathymDeviceID = "emotibit";
+char fathymReadings[][3] = {"PI", "PR", "PG"};
+int readingsInterval = 5000;
+char metadataTypeTags[3];
 
 void onShortButtonPress()
 {
-	// toggle wifi on/off
-	if (emotibit.getPowerMode() == EmotiBit::PowerMode::NORMAL_POWER)
-	{
-		emotibit.setPowerMode(EmotiBit::PowerMode::WIRELESS_OFF);
-		Serial.println("PowerMode::WIRELESS_OFF");
-	}
-	else
-	{
-		emotibit.setPowerMode(EmotiBit::PowerMode::NORMAL_POWER);
-		Serial.println("PowerMode::NORMAL_POWER");
-	}
+  // toggle wifi on/off
+  if (emotibit.getPowerMode() == EmotiBit::PowerMode::NORMAL_POWER)
+  {
+    emotibit.setPowerMode(EmotiBit::PowerMode::WIRELESS_OFF);
+    Serial.println("PowerMode::WIRELESS_OFF");
+  }
+  else
+  {
+    emotibit.setPowerMode(EmotiBit::PowerMode::NORMAL_POWER);
+    Serial.println("PowerMode::NORMAL_POWER");
+  }
 }
 
 void onLongButtonPress()
 {
-	emotibit.hibernate();
+  emotibit.sleep();
 }
 
-void setup() 
+EmotiBit::DataType loadDataTypeFromTypeTag(String typeTag) {
+  if (typeTag == "AX"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::ACCELEROMETER_X};
+    return dataType;
+  } 
+  else if (typeTag == "AY"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::ACCELEROMETER_Y};
+    return dataType;
+  }
+  else if (typeTag == "AZ"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::ACCELEROMETER_Z};
+    return dataType;
+  }
+  else if (typeTag == "GX"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::GYROSCOPE_X};
+    return dataType;
+  }
+  else if (typeTag == "GY"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::GYROSCOPE_Y};
+    return dataType;
+  }
+  else if (typeTag == "GZ"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::GYROSCOPE_Z};
+    return dataType;
+  }
+  else if (typeTag == "MX"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::MAGNETOMETER_X};
+    return dataType;
+  }
+  else if (typeTag == "MY"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::MAGNETOMETER_Y};
+    return dataType;
+  }
+  else if (typeTag == "MZ"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::MAGNETOMETER_Z};
+    return dataType;
+  }
+  else if (typeTag == "EA"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::EDA};
+    return dataType;
+  }
+  else if (typeTag == "EL"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::EDL};
+    return dataType;
+  }
+  else if (typeTag == "ER"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::EDR};
+    return dataType;
+  }
+  else if (typeTag == "H0"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::HUMIDITY_0};
+    return dataType;
+  }
+  else if (typeTag == "T0"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::TEMPERATURE_0};
+    return dataType;
+  }
+  else if (typeTag == "TH"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::THERMOPILE};
+    return dataType;
+  }
+  else if (typeTag == "PI"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::PPG_INFRARED};
+    return dataType;
+  }
+  else if (typeTag == "PR"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::PPG_RED};
+    return dataType;
+  }
+  else if (typeTag == "PG"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::PPG_GREEN};
+    return dataType;
+  }
+  else if (typeTag == "BV"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::BATTERY_VOLTAGE};
+    return dataType;
+  }
+  else if (typeTag == "BP"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::BATTERY_PERCENT};
+    return dataType;
+  }
+  else if (typeTag == "DO"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::DATA_OVERFLOW};
+    return dataType;
+  }
+  else if (typeTag == "DC"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::DATA_CLIPPING};
+    return dataType;
+  }
+  else if (typeTag == "DB"){
+    EmotiBit::DataType dataType {EmotiBit::DataType::DEBUG};
+    return dataType;
+  }
+  else{
+    EmotiBit::DataType dataType {EmotiBit::DataType::DEBUG};
+    return dataType;
+  }  
+}
+
+void setup()
 {
-	Serial.begin(SERIAL_BAUD);
-	Serial.println("Serial started");
-	Serial.println("EmotiBit Labs - Cloud Streaming");
-	
-	delay(2000);	// short delay to allow user to connect to serial, if desired
+  Serial.begin(SERIAL_BAUD);
+  Serial.println("Serial started");
+  delay(2000);  // short delay to allow user to connect to serial, if desired
 
-	emotibit.setup(EmotiBit::Version::V02H);
-	// emotibit.setup();
+  emotibit.setup();
 
-	//	Connecting to time server for timestamping
-	timeClient.begin();
-	timeClient.update();
+  //if (!loadConfigFile(emotibit._configFilename)) {
+  //Serial.println("SD card configuration file parsing failed.");
+  //Serial.println("Create a file 'config.txt' with the following JSON:");
+  //Serial.println("{\"WifiCredentials\": [{\"ssid\": \"SSSS\", \"password\" : \"PPPP\"}],\"Fathym\":{\"ConnectionString\": \"xxx\", \"DeviceID\": \"yyy\"}}");
+  //}
+  //configTime(0, 0, ntpServer);
+  
+  if (!Esp32MQTTClient_Init((const uint8_t*)fathymConnectionString, true))
+  {
+    hasIoTHub = false;
+    Serial.println("Initializing IoT hub failed.");
+    return;
+  }
 
-	if (!loadConfigFile(_configFilename)) {
-		Serial.println("SD card configuration file parsing failed.");
-		Serial.println("Create a file 'config.txt' with the following JSON:");
-		Serial.println("{\"WifiCredentials\": [{\"ssid\": \"SSSS\", \"password\" : \"PPPP\"}],\"Fathym\":{\"ConnectionString\": \"xxx\", \"DeviceID\": \"yyy\"}}");
-		while (true) {
-			hibernate();
-		}
-	}
+  hasIoTHub = true;
 
-	if (!Esp32MQTTClient_Init((const uint8_t*)fathymConnectionString, true))
-	{​​​​​​​​
-		hasIoTHub = false;
-
-		Serial.println("Initializing IoT hub failed.");
-
-		return;
-	}​​​​​​​​
-
-	hasIoTHub = true;
-
-	// Attach callback functions
-	emotibit.attachShortButtonPress(&onShortButtonPress);
-	emotibit.attachLongButtonPress(&onLongButtonPress);
+  // Attach callback functions
+  emotibit.attachShortButtonPress(&onShortButtonPress);
+  emotibit.attachLongButtonPress(&onLongButtonPress);
 }
 
 void loop()
 {
-	//Serial.println("emotibit.update()");
-	emotibit.update();
+  emotibit.update();
+  
+  // allocate the memory for the document
+  const size_t CAPACITY = JSON_OBJECT_SIZE(1);
+  
+  StaticJsonBuffer<500> doc;
+  
+  JsonObject& payload = doc.createObject();
 
-	// allocate the memory for the document
-	const size_t CAPACITY = JSON_OBJECT_SIZE(1);
-	StaticJsonDocument<CAPACITY> doc;
+  payload[String("DeviceID")] = fathymDeviceID;
 
-	// create an object
-	JsonObject payload = doc.to<JsonObject>();
+  payload["DeviceType"] = "emotibit";
 
-	payload["DeviceID"] = fathymDeviceID;
+  payload["Version"] = "1";
 
-	payload["DeviceType"] = "emotibit";
+  // object["Timestamp"] = timeClient.getFormattedDate();
 
-	payload["Version"] = "1";
+  JsonObject& payloadDeviceData = payload.createNestedObject("DeviceData");
 
-	// object["Timestamp"] = timeClient.getFormattedDate();
+  //payloadDeviceData["EpochTime"] = timeclient.getEpochTime();
 
-	JsonObject payloadDeviceData = payload.createNestedObject("DeviceData");
+  //payloadDeviceData["Timestamp"] = timeclient.getFormattedDate();
 
-	payloadDeviceData["EpochTime"] = timeclient.getEpochTime();
+  JsonObject& payloadSensorReadings = payload.createNestedObject("SensorReadings");
 
-	payloadDeviceData["Timestamp"] = timeclient.getFormattedDate();
+  JsonObject& payloadSensorMetadata = payload.createNestedObject("SensorMetadata");
 
-	JsonObject payloadSensorReadings = payload.createNestedObject("SensorReadings");
+  JsonObject& payloadSensorMetadataRoot = payloadSensorMetadata.createNestedObject("_");
+ 
+  for (auto typeTag : fathymReadings) {
+      
+    enum EmotiBit::DataType dataType = loadDataTypeFromTypeTag(String(typeTag));
+    size_t dataAvailable = emotibit.readData((EmotiBit::DataType)dataType, &data[0], dataSize);
+        
+    if (dataAvailable > 0)
+    {
+      payloadSensorReadings[String(typeTag)] = String(data[dataAvailable - 1]);
+    }
+  }
+  
+  char messagePayload[MESSAGE_MAX_LEN];
 
-	JsonObject payloadSensorMetadata = payload.createNestedObject("SensorMetadata");
+  // serialize the payload for sending
+  payload.printTo(messagePayload);
 
-	JsonObject payloadSensorMetadataRoot = payloadSensorMetadata.createNestedObject("_");
+  Serial.println(messagePayload);
 
-	for (char typeTag[] : fathymReadings) {
-		uint8_t dataType = loadDataTypeFromTypeTag(typeTag);
+  EVENT_INSTANCE* message = Esp32MQTTClient_Event_Generate(messagePayload, MESSAGE);
 
-		size_t dataAvailable = emotibit.readData(dataType, &data[0], dataSize);
-		
-		if (dataAvailable > 0)
-		{
-			if (!contains(metadataTypeTags, typeTag))
-			{
-				payloadSensorReadings[typeTag] = data;
-			}
-			else
-			{
-				payloadSensorMetadataRoot[typeTag] = data;
-			}
+  Esp32MQTTClient_SendEventInstance(message);
 
-			// print the data to view in the serial plotter
-			bool printData = false;
-			if (printData)
-			{
-				for (size_t i = 0; i < dataAvailable && i < dataSize; i++)
-				{
-					// Note that dataAvailable can be larger than dataSize
-					Serial.println(data[i]);
-				}
-			}
-		}
-	}
-	
-	char messagePayload[];
-
-	// serialize the payload for sending
-	serializeJson(doc, messagePayload);
-
-	Serial.println(messagePayload);
-
-	EVENT_INSTANCE* message = Esp32MQTTClient_Event_Generate(messagePayload, MESSAGE);
-
-	Esp32MQTTClient_SendEventInstance(message);
-
-	delay(readingsInterval);
+  delay(readingsInterval);
 }
 
 // Loads the configuration from a file
-bool loadConfigFile(const String &filename) {
-	// Open file for reading
-	File file = SD.open(filename);
+//bool loadConfigFile(const char *filename) {
+  // Open file for reading
+  //File file = SD.open(filename);
 
-	if (!file) {
-		Serial.print("File ");
-		Serial.print(filename);
-		Serial.println(" not found");
-		return false;
-	}
+  //if (!file) {
+    //Serial.print("File ");
+    //Serial.print(filename);
+    //Serial.println(" not found");
+    //return false;
+  //}
 
-	Serial.print("Parsing: ");
-	Serial.println(filename);
+  //Serial.print("Parsing: ");
+  //Serial.println(filename);
 
-	// Allocate the memory pool on the stack.
-	// Don't forget to change the capacity to match your JSON document.
-	// Use arduinojson.org/assistant to compute the capacity.
-	//StaticJsonBuffer<1024> jsonBuffer;
-	StaticJsonBuffer<1024> jsonBuffer;
+  // Allocate the memory pool on the stack.
+  // Don't forget to change the capacity to match your JSON document.
+  // Use arduinojson.org/assistant to compute the capacity.
+  //StaticJsonBuffer<1024> jsonBuffer;
 
-	// Parse the root object
-	JsonObject &root = jsonBuffer.parseObject(file);
+  // Parse the root object
+  //JsonObject &root = jsonBuffer.parseObject(json);
 
-	if (!root.success()) {
-		Serial.println(F("Failed to parse config file"));
-		return false;
-	}
+  //if (!root.success()) {
+    //Serial.println(F("Failed to parse config file"));
+    //setupFailed("Failed to parse Config fie contents");
+    //return false;
+  //}
 
-	fathymConnectionString = root["Fathym"]["ConnectionString"] | "";
-	
-	fathymDeviceID = root["Fathym"]["DeviceID"] | "";
+  //size_t configSize;
+  //configSize = root.get<JsonVariant>("Fathym").as<JsonArray>().size();
 
-	fathymReadings = root["Fathym"]["Readings"] | "";
+  //try{
+  //for(size_t i =0; i < configSize; i++) {
+  //fathymConnectionString = root["Fathym"]["ConnectionString"];
+  //Serial.println("CS : ");
+  //Serial.println(fathymConnectionString);
+  //fathymDeviceID = root["Fathym"]["DeviceID"];
+  //Serial.println("DeviceID : ");
+  //Serial.println(fathymDeviceID);
 
-	readingsInterval = root["Fathym"]["ReadingsInterval"] | 5000;
+  //int fathymReadingsCount = root["Fathym"]["Readings"].as<JsonArray>().copyTo(fathymReadings);
+  //}}
+  //catch(int ex){
+  //Serial.println("Error");
+  //}
 
-	//strlcpy(config.hostname,                   // <- destination
-	//	root["hostname"] | "example.com",  // <- source
-	//	sizeof(config.hostname));          // <- destination's capacity
+  //const char* fathymReadings[MAX_READINGS_COUNT];
 
-	// Close the file (File's destructor doesn't close the file)
-	// ToDo: Handle multiple credentials
+  //Serial.println("Readings : ");
+  //Serial.println(fathymReadings);
 
-	file.close();
-	return true;
-}
 
-uint8_t loadDataTypeFromTypeTag(char typeTag[]) {
-	uint8_t dataType;
 
-	switch (typeTag) {
-		case "AX":
-			dataType = EmotiBit::DataType::ACCELEROMETER_X;
-			break;
-			
-		case "AY":
-			dataType = EmotiBit::DataType::ACCELEROMETER_Y;
-			break;
-			
-		case "AZ":
-			dataType = EmotiBit::DataType::ACCELEROMETER_Z;
-			break;
-			
-		case "GX":
-			dataType = EmotiBit::DataType::GYROSCOPE_X;
-			break;
-			
-		case "GY":
-			dataType = EmotiBit::DataType::GYROSCOPE_Y;
-			break;
-			
-		case "GZ":
-			dataType = EmotiBit::DataType::GYROSCOPE_Z;
-			break;
-			
-		case "MX":
-			dataType = EmotiBit::DataType::MAGNETOMETER_X;
-			break;
-			
-		case "MY":
-			dataType = EmotiBit::DataType::MAGNETOMETER_Y;
-			break;
-			
-		case "MZ":
-			dataType = EmotiBit::DataType::MAGNETOMETER_Z;
-			break;
-			
-		case "EA":
-			dataType = EmotiBit::DataType::EDA;
-			break;
-			
-		case "EL":
-			dataType = EmotiBit::DataType::EDL;
-			break;
-			
-		case "ER":
-			dataType = EmotiBit::DataType::EDR;
-			break;
-			
-		case "H0":
-			dataType = EmotiBit::DataType::HUMIDITY_0;
-			break;
-			
-		case "T0":
-			dataType = EmotiBit::DataType::TEMPERATURE_0;
-			break;
-			
-		case "TH":
-			dataType = EmotiBit::DataType::THERMOPILE;
-			break;
-			
-		case "PI":
-			dataType = EmotiBit::DataType::PPG_INFRARED;
-			break;
-			
-		case "PR":
-			dataType = EmotiBit::DataType::PPG_RED;
-			break;
-			
-		case "PG":
-			dataType = EmotiBit::DataType::PPG_GREEN;
-			break;
-			
-		case "BV":
-			dataType = EmotiBit::DataType::BATTERY_VOLTAGE;
-			break;
-			
-		case "BP":
-			dataType = EmotiBit::DataType::BATTERY_PERCENT;
-			break;
-			
-		case "DO":
-			dataType = EmotiBit::DataType::DATA_OVERFLOW;
-			break;
-			
-		case "DC":
-			dataType = EmotiBit::DataType::DATA_CLIPPING;
-			break;
-			
-		case "DB":
-			dataType = EmotiBit::DataType::DEBUG;
-			break;
-	}
+  //try {
+  //strlcpy(fathymConnectionString,
+  //doc["Fathym"]["ConnectionString"],
+  //sizeof(fathymConnectionString));
 
-	return dataType;
-}
+  //int counter = 0;
 
-bool contains(C&& c, T e) { 
-    return std::find(std::begin(c), std::end(c), e) != std::end(c);
-};
+  //for (char reading[3] : doc["Fathym"]["Readings"] ){
+  //strlcpy(fathymReadings[0][counter],
+  //reading,
+  //sizeof(fathymReadings[0][counter]));
+
+  //counter++;
+  //}
+
+  //strlcpy(fathymDeviceID,
+  //doc["Fathym"]["DeviceID"],
+  //sizeof(fathymDeviceID));
+
+  //fathymConnectionString = doc["Fathym"]["ConnectionString"];
+
+  //fathymReadings = doc["Fathym"]["Readings"];
+
+  //fathymDeviceID = doc["Fathym"]["DeviceID"];
+
+  //if(readingsInterval = doc["Fathym"]["ReadingsInterval"] ==  NULL)
+  //readingsInterval = 5000;
+  //else
+  //readingsInterval = doc["Fathym"]["ReadingsInterval"];
+  //}
+
+  //catch (int num) {
+  //Serial.println(F("Missing properties from config file"));
+  //}
+
+  // Close the file (File's destructor doesn't close the file)
+  // ToDo: Handle multiple credentials
+
+  //file.close();
+  //return true;
+//}
