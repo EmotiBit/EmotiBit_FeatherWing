@@ -48,7 +48,7 @@ public:
 		length
 	};
 
-  String firmware_version = "1.4.1";
+  String firmware_version = "1.4.1.feat-100R-EDA-min.0";
 
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
