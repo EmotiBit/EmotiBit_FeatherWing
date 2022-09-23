@@ -12,7 +12,7 @@ static bool hasIoTHub = false;
 //uint32_t dataTime;
 //unsigned long Epoch_Time;
 //const char* ntpServer = "pool.ntp.org";
-static const char* fathymConnectionString = "HostName=fathym-cloud-prd.azure-devices.net;DeviceId=ffe32f40-22ff-402b-9b64-ddc6533c867a-emotibit;SharedAccessKey=+9rUpmlgdgIsZI8VVgELvUhgFUuwDo3I/XQyncGSSMc=";
+static const char* fathymConnectionString = "";
 String fathymDeviceID = "emotibit";
 char fathymReadings[][3] = {"PI", "PR", "PG"};
 int readingsInterval = 5000;
