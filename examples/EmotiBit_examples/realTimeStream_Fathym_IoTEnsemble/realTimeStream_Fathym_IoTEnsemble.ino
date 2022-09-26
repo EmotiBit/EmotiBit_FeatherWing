@@ -1,21 +1,21 @@
 #include "Esp32MQTTClient.h"
 #include "EmotiBit.h"
+#include "time.h"
 
 #define SerialUSB SERIAL_PORT_USBVIRTUAL // Required to work in Visual Micro / Visual Studio IDE
-#define MESSAGE_MAX_LEN 512
+#define MESSAGE_MAX_LEN 1024
 const uint32_t SERIAL_BAUD = 2000000; //115200
 
 EmotiBit emotibit;
 const size_t dataSize = EmotiBit::MAX_DATA_BUFFER_SIZE;
 float data[dataSize];
 static bool hasIoTHub = false;
-//uint32_t dataTime;
-//unsigned long Epoch_Time;
-//const char* ntpServer = "pool.ntp.org";
-static const char* fathymConnectionString = "";
-String fathymDeviceID = "emotibit";
-char fathymReadings[][3] = {"PI", "PR", "PG"};
-int readingsInterval = 5000;
+unsigned long epochTime;
+const char* ntpServer = "pool.ntp.org";
+String fathymConnectionStringPtr;
+String fathymDeviceID;
+char fathymReadings[25][3] = {{}};
+int readingsInterval;
 char metadataTypeTags[3];
 
 void onShortButtonPress()
@@ -145,14 +145,15 @@ void setup()
 
   emotibit.setup();
 
-  //if (!loadConfigFile(emotibit._configFilename)) {
-  //Serial.println("SD card configuration file parsing failed.");
-  //Serial.println("Create a file 'config.txt' with the following JSON:");
-  //Serial.println("{\"WifiCredentials\": [{\"ssid\": \"SSSS\", \"password\" : \"PPPP\"}],\"Fathym\":{\"ConnectionString\": \"xxx\", \"DeviceID\": \"yyy\"}}");
-  //}
-  //configTime(0, 0, ntpServer);
+  if (!loadConfigFile(emotibit._configFilename)) {
+    Serial.println("SD card configuration file parsing failed.");
+    Serial.println("Create a file 'config.txt' with the following JSON:");
+    Serial.println("{\"WifiCredentials\": [{\"ssid\": \"SSSS\", \"password\" : \"PPPP\"}],\"Fathym\":{\"ConnectionString\": \"xxx\", \"DeviceID\": \"yyy\"}}");
+  }
   
-  if (!Esp32MQTTClient_Init((const uint8_t*)fathymConnectionString, true))
+  const char* connStr = fathymConnectionStringPtr.c_str();
+  
+  if (!Esp32MQTTClient_Init((const uint8_t*)connStr, true))
   {
     hasIoTHub = false;
     Serial.println("Initializing IoT hub failed.");
@@ -164,16 +165,20 @@ void setup()
   // Attach callback functions
   emotibit.attachShortButtonPress(&onShortButtonPress);
   emotibit.attachLongButtonPress(&onLongButtonPress);
+
+  configTime(0, 0, ntpServer);
 }
 
 void loop()
 {
   emotibit.update();
+
+  epochTime = getTime();
   
   // allocate the memory for the document
   const size_t CAPACITY = JSON_OBJECT_SIZE(1);
   
-  StaticJsonBuffer<500> doc;
+  StaticJsonBuffer<1000> doc;
   
   JsonObject& payload = doc.createObject();
 
@@ -183,28 +188,23 @@ void loop()
 
   payload["Version"] = "1";
 
-  // object["Timestamp"] = timeClient.getFormattedDate();
-
   JsonObject& payloadDeviceData = payload.createNestedObject("DeviceData");
 
-  //payloadDeviceData["EpochTime"] = timeclient.getEpochTime();
-
-  //payloadDeviceData["Timestamp"] = timeclient.getFormattedDate();
+  payloadDeviceData["Timestamp"] = String(epochTime);
 
   JsonObject& payloadSensorReadings = payload.createNestedObject("SensorReadings");
 
   JsonObject& payloadSensorMetadata = payload.createNestedObject("SensorMetadata");
 
   JsonObject& payloadSensorMetadataRoot = payloadSensorMetadata.createNestedObject("_");
- 
-  for (auto typeTag : fathymReadings) {
-      
-    enum EmotiBit::DataType dataType = loadDataTypeFromTypeTag(String(typeTag));
+
+  for (String typeTag : fathymReadings) {     
+    enum EmotiBit::DataType dataType = loadDataTypeFromTypeTag(typeTag);
     size_t dataAvailable = emotibit.readData((EmotiBit::DataType)dataType, &data[0], dataSize);
         
     if (dataAvailable > 0)
     {
-      payloadSensorReadings[String(typeTag)] = String(data[dataAvailable - 1]);
+      payloadSensorReadings[typeTag] = String(data[dataAvailable - 1]);
     }
   }
   
@@ -223,97 +223,64 @@ void loop()
 }
 
 // Loads the configuration from a file
-//bool loadConfigFile(const char *filename) {
+bool loadConfigFile(const char *filename) {
   // Open file for reading
-  //File file = SD.open(filename);
+  File file = SD.open(filename);
 
-  //if (!file) {
-    //Serial.print("File ");
-    //Serial.print(filename);
-    //Serial.println(" not found");
-    //return false;
-  //}
+  if (!file) {
+    Serial.print("File ");
+    Serial.print(filename);
+    Serial.println(" not found");
+    return false;
+  }
 
-  //Serial.print("Parsing: ");
-  //Serial.println(filename);
+  Serial.print("Parsing: ");
+  Serial.println(filename);
 
   // Allocate the memory pool on the stack.
   // Don't forget to change the capacity to match your JSON document.
   // Use arduinojson.org/assistant to compute the capacity.
-  //StaticJsonBuffer<1024> jsonBuffer;
+  StaticJsonBuffer<1024> jsonBuffer;
 
   // Parse the root object
-  //JsonObject &root = jsonBuffer.parseObject(json);
+  JsonObject& root = jsonBuffer.parseObject(file);
 
-  //if (!root.success()) {
-    //Serial.println(F("Failed to parse config file"));
-    //setupFailed("Failed to parse Config fie contents");
-    //return false;
-  //}
+  JsonArray& readingValues = root["Fathym"]["Readings"].as<JsonArray>();
 
-  //size_t configSize;
-  //configSize = root.get<JsonVariant>("Fathym").as<JsonArray>().size();
+  const char* readings[11];
+  
+  readingValues.copyTo(readings);
 
-  //try{
-  //for(size_t i =0; i < configSize; i++) {
-  //fathymConnectionString = root["Fathym"]["ConnectionString"];
-  //Serial.println("CS : ");
-  //Serial.println(fathymConnectionString);
-  //fathymDeviceID = root["Fathym"]["DeviceID"];
-  //Serial.println("DeviceID : ");
-  //Serial.println(fathymDeviceID);
+  for(int i = 0; i < (sizeof readings / sizeof readings[0]); i++){
+    strcpy(fathymReadings[i], readings[i]);
+  }
 
-  //int fathymReadingsCount = root["Fathym"]["Readings"].as<JsonArray>().copyTo(fathymReadings);
-  //}}
-  //catch(int ex){
-  //Serial.println("Error");
-  //}
+  if (!root.success()) {
+    Serial.println(F("Failed to parse config file"));
+    return false;
+  }
 
-  //const char* fathymReadings[MAX_READINGS_COUNT];
+  fathymConnectionStringPtr = root["Fathym"]["ConnectionString"].as<String>();
+  
+  fathymDeviceID = root["Fathym"]["DeviceID"].as<String>();
 
-  //Serial.println("Readings : ");
-  //Serial.println(fathymReadings);
-
-
-
-  //try {
-  //strlcpy(fathymConnectionString,
-  //doc["Fathym"]["ConnectionString"],
-  //sizeof(fathymConnectionString));
-
-  //int counter = 0;
-
-  //for (char reading[3] : doc["Fathym"]["Readings"] ){
-  //strlcpy(fathymReadings[0][counter],
-  //reading,
-  //sizeof(fathymReadings[0][counter]));
-
-  //counter++;
-  //}
-
-  //strlcpy(fathymDeviceID,
-  //doc["Fathym"]["DeviceID"],
-  //sizeof(fathymDeviceID));
-
-  //fathymConnectionString = doc["Fathym"]["ConnectionString"];
-
-  //fathymReadings = doc["Fathym"]["Readings"];
-
-  //fathymDeviceID = doc["Fathym"]["DeviceID"];
-
-  //if(readingsInterval = doc["Fathym"]["ReadingsInterval"] ==  NULL)
-  //readingsInterval = 5000;
-  //else
-  //readingsInterval = doc["Fathym"]["ReadingsInterval"];
-  //}
-
-  //catch (int num) {
-  //Serial.println(F("Missing properties from config file"));
-  //}
+  readingsInterval = root["Fathym"]["ReadingInterval"] | 5000;
 
   // Close the file (File's destructor doesn't close the file)
   // ToDo: Handle multiple credentials
 
-  //file.close();
-  //return true;
-//}
+  file.close();
+  return true;
+}
+
+// Function that gets current epoch time
+unsigned long getTime() {
+  time_t now;
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    //Serial.println("Failed to obtain time");
+    return(0);
+  }
+  time(&now);
+  return now;
+}
