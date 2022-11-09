@@ -430,6 +430,7 @@ public:
 	void sendData();
 	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented
 	void writeSerialData(EmotiBit::DataType t);
+	void printEmotiBitInfo();
 	
 
 	/**

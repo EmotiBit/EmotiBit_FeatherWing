@@ -884,6 +884,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	WiFi.setPins(8, 7, 4, 2);
 	WiFi.lowPowerMode();
 #endif
+	printEmotiBitInfo();
 	// turn BLUE on to signify we are trying to connect to WiFi
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 	led.send();
@@ -1495,37 +1496,7 @@ uint8_t EmotiBit::update()
 		static uint16_t serialPrevAvailable = Serial.available();
 		if (Serial.available() > serialPrevAvailable)
 		{
-			Serial.println("[{\"info\":{");
-					
-			Serial.print("\"source_id\":\"");
-			Serial.print(_sourceId);
-			Serial.println("\",");
-
-			Serial.print("\"hardware_version\":\"");
-			Serial.print(EmotiBitVersionController::getHardwareVersion(_hwVersion));
-			Serial.println("\",");
-
-			Serial.print("\"sku\":\"");
-			Serial.print(emotiBitSku);
-			Serial.println("\",");
-
-			Serial.print("\"device_id\":\"");
-			Serial.print(emotibitDeviceId);
-			Serial.println("\",");
-
-			Serial.print("\"feather_version\":\"");
-			Serial.print(_featherVersion);
-			Serial.println("\",");
-
-			Serial.print("\"feather_wifi_mac_addr\":\"");
-			Serial.print(getFeatherMacAddress());
-			Serial.println("\",");
-
-			Serial.print("\"firmware_version\":\"");
-			Serial.print(firmware_version);
-			Serial.println("\",");
-
-			Serial.println("}}]");
+			printEmotiBitInfo();
 		}
 		serialPrevAvailable = Serial.available();
 		
@@ -4390,4 +4361,38 @@ String EmotiBit::getFeatherMacAddress()
 		}
 	}
 	return out;
+}
+void EmotiBit::printEmotiBitInfo()
+{
+	Serial.println("[{\"info\":{");
+			
+	Serial.print("\"source_id\":\"");
+	Serial.print(_sourceId);
+	Serial.println("\",");
+
+	Serial.print("\"hardware_version\":\"");
+	Serial.print(EmotiBitVersionController::getHardwareVersion(_hwVersion));
+	Serial.println("\",");
+
+	Serial.print("\"sku\":\"");
+	Serial.print(emotiBitSku);
+	Serial.println("\",");
+
+	Serial.print("\"device_id\":\"");
+	Serial.print(emotibitDeviceId);
+	Serial.println("\",");
+
+	Serial.print("\"feather_version\":\"");
+	Serial.print(_featherVersion);
+	Serial.println("\",");
+
+	Serial.print("\"feather_wifi_mac_addr\":\"");
+	Serial.print(getFeatherMacAddress());
+	Serial.println("\",");
+
+	Serial.print("\"firmware_version\":\"");
+	Serial.print(firmware_version);
+	Serial.println("\",");
+
+	Serial.println("}}]");
 }
