@@ -1485,76 +1485,71 @@ void EmotiBit::updateButtonPress()
 
 uint8_t EmotiBit::update()
 {
-	static uint16_t serialPrevAvailable = Serial.available();
-	if (Serial.available() > serialPrevAvailable)
-	{
-		// There's new data available on serial
-		// Print to show we're alive
-		//Serial.print(Serial.available());
-		//Serial.print(':');
-		//Serial.print(serialPrevAvailable);
-		//Serial.print(">");
-		//Serial.println(Serial.peek());
-
-		Serial.println("[{\"info\":{");
-				
-		Serial.print("\"source_id\":\"");
-		Serial.print(_sourceId);
-		Serial.println("\",");
-
-		Serial.print("\"hardware_version\":\"");
-		Serial.print(EmotiBitVersionController::getHardwareVersion(_hwVersion));
-		Serial.println("\",");
-
-		Serial.print("\"sku\":\"");
-		Serial.print(emotiBitSku);
-		Serial.println("\",");
-
-		Serial.print("\"device_id\":\"");
-		Serial.print(emotibitDeviceId);
-		Serial.println("\",");
-
-		Serial.print("\"feather_version\":\"");
-		Serial.print(_featherVersion);
-		Serial.println("\",");
-
-		Serial.print("\"feather_wifi_mac_addr\":\"");
-		Serial.print(getFeatherMacAddress());
-		Serial.println("\",");
-
-		Serial.print("\"firmware_version\":\"");
-		Serial.print(firmware_version);
-		Serial.println("\",");
-
-		Serial.println("}}]");
-	}
-	serialPrevAvailable = Serial.available();
-
-	if (_debugMode)
-	{
-		static String debugPackets;
-		processDebugInputs(debugPackets, _outDataPacketCounter);
-		_outDataPackets += debugPackets;
-		debugPackets = "";
-		if (_serialData != DataType::length)
-		{
-			writeSerialData(_serialData);
-		}
-	}
-	else if (testingMode == TestingMode::FACTORY_TEST)
+	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		processFactoryTestMessages();
 	}
-	else
-	{
-		// if not in debug mode
-		while (Serial.available() > 0)
+	else 
+	{	
+		// Print out EmotiBit info when serial available && not FACTORY_TEST
+		static uint16_t serialPrevAvailable = Serial.available();
+		if (Serial.available() > serialPrevAvailable)
 		{
-			Serial.read();
-		}
-		serialPrevAvailable = 0; // set Previously available to 0
-	}
+			Serial.println("[{\"info\":{");
+					
+			Serial.print("\"source_id\":\"");
+			Serial.print(_sourceId);
+			Serial.println("\",");
 
+			Serial.print("\"hardware_version\":\"");
+			Serial.print(EmotiBitVersionController::getHardwareVersion(_hwVersion));
+			Serial.println("\",");
+
+			Serial.print("\"sku\":\"");
+			Serial.print(emotiBitSku);
+			Serial.println("\",");
+
+			Serial.print("\"device_id\":\"");
+			Serial.print(emotibitDeviceId);
+			Serial.println("\",");
+
+			Serial.print("\"feather_version\":\"");
+			Serial.print(_featherVersion);
+			Serial.println("\",");
+
+			Serial.print("\"feather_wifi_mac_addr\":\"");
+			Serial.print(getFeatherMacAddress());
+			Serial.println("\",");
+
+			Serial.print("\"firmware_version\":\"");
+			Serial.print(firmware_version);
+			Serial.println("\",");
+
+			Serial.println("}}]");
+		}
+		serialPrevAvailable = Serial.available();
+		
+		if (_debugMode)
+		{
+			static String debugPackets;
+			processDebugInputs(debugPackets, _outDataPacketCounter);
+			_outDataPackets += debugPackets;
+			debugPackets = "";
+			if (_serialData != DataType::length)
+			{
+				writeSerialData(_serialData);
+			}
+		}
+		else
+		{
+			// if not in debug mode
+			while (Serial.available() > 0)
+			{
+				Serial.read();
+			}
+			serialPrevAvailable = 0; // set Previously available to 0
+		}
+	}
 
 	// Handle updating WiFi connction + syncing
 	_emotiBitWiFi.updateStatus(); // asynchronous WiFi.status() update
