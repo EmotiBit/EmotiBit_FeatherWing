@@ -77,13 +77,14 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 	_assignedPin[(int)EmotiBitPinName::SPI_MOSI] = 23;
 	_assignedPin[(int)EmotiBitPinName::SPI_MISO] = 22;
 
+	_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 12;
+	_assignedPin[(int)EmotiBitPinName::PPG_INT] = 15;
+	_assignedPin[(int)EmotiBitPinName::BMI_INT1] = 5;
+	_assignedPin[(int)EmotiBitPinName::BMI_INT2] = 10;
+	_assignedPin[(int)EmotiBitPinName::BMM_INT] = 14;
+
 	if (version == EmotiBitVersion::V02B || version == EmotiBitVersion::V02H || version == EmotiBitVersion::V03B || version == EmotiBitVersion::V04A)
 	{
-		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 12;
-		_assignedPin[(int)EmotiBitPinName::PPG_INT] = 15;
-		_assignedPin[(int)EmotiBitPinName::BMI_INT1] = 5;
-		_assignedPin[(int)EmotiBitPinName::BMI_INT2] = 10;
-		_assignedPin[(int)EmotiBitPinName::BMM_INT] = 14;
 	}
 	else if (version == EmotiBitVersion::V01B || version == EmotiBitVersion::V01C)
 	{
@@ -116,14 +117,25 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 	_assignedPin[(int)EmotiBitPinName::SPI_MOSI] = 18;
 	_assignedPin[(int)EmotiBitPinName::SPI_MISO] = 19;
 
+	_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 12;
+	_assignedPin[(int)EmotiBitPinName::PPG_INT] = 25;
+	_assignedPin[(int)EmotiBitPinName::BMI_INT1] = 14;
+	_assignedPin[(int)EmotiBitPinName::BMI_INT2] = 33;
+	_assignedPin[(int)EmotiBitPinName::BMM_INT] = 26;
+
 	if (version == EmotiBitVersion::V02B || version == EmotiBitVersion::V02H || version == EmotiBitVersion::V03B || version == EmotiBitVersion::V04A)
 	{
-		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 12;
-		_assignedPin[(int)EmotiBitPinName::PPG_INT] = 25;
-		_assignedPin[(int)EmotiBitPinName::BMI_INT1] = 14;
-		_assignedPin[(int)EmotiBitPinName::BMI_INT2] = 33;
-		_assignedPin[(int)EmotiBitPinName::BMM_INT] = 26;
 	}
+	else
+	{
+		// unknown version
+		Serial.println("Unknown Version");
+		return false;
+	}
+#else 
+	// unknown version
+	Serial.println("Unknown Feather");
+	return false;
 #endif
 	return true;
 }
