@@ -1122,7 +1122,7 @@ void EmotiBit::setupFailed(const String failureMode, int buttonPin)
 			
 			if (buttonState == false)
 			{
-				Serial.println("\n\n**** Button Press Detected (DVDD is Working) ****\n\n");
+				Serial.println("**** Button Press Detected (DVDD is Working) ****");
 				// return;
 			}
 			buttonState = true;
