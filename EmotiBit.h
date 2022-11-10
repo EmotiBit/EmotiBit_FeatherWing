@@ -48,7 +48,7 @@ public:
 		length
 	};
 
-  String firmware_version = "1.4.2";
+  String firmware_version = "1.4.3";
 
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
@@ -430,6 +430,7 @@ public:
 	void sendData();
 	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented
 	void writeSerialData(EmotiBit::DataType t);
+	void printEmotiBitInfo();
 	
 
 	/**
