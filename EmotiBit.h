@@ -48,7 +48,7 @@ public:
 		length
 	};
 
-  String firmware_version = "1.4.2";
+  String firmware_version = "1.4.2.feat-detectLdoFail.0";
 
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
@@ -402,7 +402,7 @@ public:
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 
-	void setupFailed(const String failureMode);
+	void setupFailed(const String failureMode, int buttonPin = -1);
 	bool setupSdCard();
 	void updateButtonPress();
 	void sleep(bool i2cSetupComplete = true);

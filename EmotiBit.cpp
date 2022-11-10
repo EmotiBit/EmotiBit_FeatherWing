@@ -170,6 +170,25 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			Serial.read();
 		}
 	}
+	// Added initPinMapping(UNKOWN) to perform basic pin measurements before isEmotiBitReady is successful
+	emotiBitVersionController.initPinMapping(EmotiBitVersionController::EmotiBitVersion::UNKNOWN);
+	// Test code to assess pin states
+	//const int nTestPins = 3;
+	//int testPins[nTestPins] =
+	//{
+	//	emotiBitVersionController.getAssignedPin(EmotiBitPinName::BMI_INT1),
+	//	emotiBitVersionController.getAssignedPin(EmotiBitPinName::BMM_INT),
+	//	emotiBitVersionController.getAssignedPin(EmotiBitPinName::PPG_INT)
+	//};
+	//for (int t = 0; t < nTestPins; t++)
+	//{
+	//	pinMode(testPins[t], INPUT);
+	//	Serial.print("Pin ");
+	//	Serial.print(t);
+	//	Serial.print(": ");
+	//	Serial.println(digitalRead(testPins[t]));
+	//}
+
 	if (emotiBitVersionController.isEmotiBitReady())
 	{
 		Serial.println("EmotiBit ready");
@@ -194,7 +213,18 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		// make sure the pin DRV strength is set to sink appropriate current
 		digitalWrite(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, LOW);
 		// Not putting EmotiBit to sleep helps with the FW installer process
-		setupFailed("SD-Card not detected");
+
+		// Test code to assess pin states
+		//for (int t = 0; t < nTestPins; t++)
+		//{
+		//	pinMode(testPins[t], INPUT);
+		//	Serial.print("Pin ");
+		//	Serial.print(t);
+		//	Serial.print(": ");
+		//	Serial.println(digitalRead(testPins[t]));
+		//}
+
+		setupFailed("SD-Card not detected", emotiBitVersionController.getAssignedPin(EmotiBitPinName::EMOTIBIT_BUTTON));
 	}
 	bool status = true;
 	if (_EmotiBit_i2c != nullptr)
@@ -202,7 +232,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		delete(_EmotiBit_i2c);
 	}
 #ifdef ADAFRUIT_FEATHER_M0
-	Serial.print("Setting up I2C For M0...");
+	Serial.println("Setting up I2C For M0...");
 	_EmotiBit_i2c = new TwoWire(&sercom1, EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
 	_EmotiBit_i2c->begin();
 	// ToDo: detect if i2c init fails
@@ -210,7 +240,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
 #elif defined ARDUINO_FEATHER_ESP32
 	_EmotiBit_i2c = new TwoWire(1);
-	Serial.print("Setting up I2C For ESP32...");
+	Serial.println("Setting up I2C For ESP32...");
 	status = _EmotiBit_i2c->begin(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
 	if (status)
 	{
@@ -222,8 +252,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 #endif
 	uint32_t i2cRate = 100000;
-	Serial.print("Setting clock to");
-	Serial.print(i2cRate);
+	Serial.print("Setting clock to ");
+	Serial.println(i2cRate);
 	_EmotiBit_i2c->setClock(i2cRate);
 
 	if (testingMode == TestingMode::FACTORY_TEST)
@@ -1077,11 +1107,31 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 } // Setup
 
 
-void EmotiBit::setupFailed(const String failureMode)
+void EmotiBit::setupFailed(const String failureMode, int buttonPin)
 {
+	if (buttonPin > -1)
+	{
+		pinMode(buttonPin, INPUT);
+	}
+	bool buttonState = false;
 	uint32_t timeSinceLastPrint = millis();
 	while (1)
 	{
+		if (buttonPin > -1 && digitalRead(buttonPin))
+		{
+			
+			if (buttonState == false)
+			{
+				Serial.println("\n\n**** Button Press Detected (DVDD is Working) ****\n\n");
+				return;
+			}
+			buttonState = true;
+		}
+		else
+		{
+			buttonState = false;
+		}
+
 		// not using delay to keep the CPU acitve from serial pings from host computer
 		if (millis() - timeSinceLastPrint > 1000)
 		{
