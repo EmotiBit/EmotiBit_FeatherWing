@@ -48,7 +48,7 @@ public:
 		length
 	};
 
-  String firmware_version = "1.4.2.fix-facTestSerialInfo.0";
+  String firmware_version = "1.4.3";
 
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
