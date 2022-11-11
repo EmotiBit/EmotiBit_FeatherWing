@@ -1118,6 +1118,7 @@ void EmotiBit::setupFailed(const String failureMode, int buttonPin)
 	uint32_t timeSinceLastPrint = millis();
 	while (1)
 	{
+		// NOTE: The button press check doesn't work on EmotiBit v02 because DVDD is not enabled
 		if (buttonPin > -1 && digitalRead(buttonPin))
 		{
 			
