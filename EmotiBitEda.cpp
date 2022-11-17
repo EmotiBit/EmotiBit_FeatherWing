@@ -365,7 +365,7 @@ bool EmotiBitEda::processData()
 		{
 			// ToDo: Calculate slope/intercept to avoid expensive division in loop
 			edaTemp = edlData[i] * _constants_v4_plus.edaTransformSlope + _constants_v4_plus.edaTransformIntercept;
-			edaTemp = max(1000.f , edaTemp);
+			edaTemp = max(100.f , edaTemp); // Clamp the EDA measurement at 100 Ohm (0.0001 Siemens)
 			edaTemp = 1000000.f / edaTemp;
 			// ToDo: Consider filtering
 			_edaBuffer->push_back(edaTemp, &timestamp);
@@ -483,7 +483,7 @@ bool EmotiBitEda::processData()
 
 			if (edaTemp - _constants_v2_v3.vRef1 < 0.000086f)
 			{
-				edaTemp = 0.001f; // Clamp the EDA measurement at 1K Ohm (0.001 Siemens)
+				edaTemp = 0.0001f; // Clamp the EDA measurement at 100 Ohm (0.0001 Siemens)
 			}
 			else
 			{

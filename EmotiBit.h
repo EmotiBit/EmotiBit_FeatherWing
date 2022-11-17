@@ -48,7 +48,9 @@ public:
 		length
 	};
 
-  String firmware_version = "1.4.1.feat-bufferLimitTest.2";
+
+  String firmware_version = "1.5.1";
+
 
 	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
@@ -403,7 +405,7 @@ public:
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;
 
-	void setupFailed(const String failureMode);
+	void setupFailed(const String failureMode, int buttonPin = -1);
 	bool setupSdCard();
 	void updateButtonPress();
 	void sleep(bool i2cSetupComplete = true);
@@ -431,6 +433,7 @@ public:
 	void sendData();
 	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented
 	void writeSerialData(EmotiBit::DataType t);
+	void printEmotiBitInfo();
 	
 
 	/**
