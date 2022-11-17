@@ -483,8 +483,8 @@ public:
 	void processFactoryTestMessages();
 	/**
 	* Test to assess buffer overflow duration limits
-	* @param maxTestDuration Total duration of test to assess overflows
-	* @param delayInterval Interval to poll buffers and print results
+	* @param maxTestDuration Total duration (in mS) of test to assess overflows
+	* @param delayInterval Interval (in mS) to poll buffers and print results
 	* @param humanReadable Boolean to switch between commas and carriage returns for human readability
 	*/
 	void bufferOverflowTest(unsigned int maxTestDuration = 5000, unsigned int delayInterval = 100, bool humanReadable = true);
