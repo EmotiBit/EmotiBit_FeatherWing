@@ -5,6 +5,7 @@
 	@mainpage Controls reading Version from NVM on start or detecting version if NVM not updated, EmotiBit pin and constant asignment on startup
 	@section intro_sec Introduction
 	This is a library to handle EmotiBit HW version detection/version retrieval from NVM on setup.
+	See also "FW update instructions to support new HW version (EmotiBit).gdoc"
 	
 	EmotiBit invests time and resources providing this open source code,
 	please support EmotiBit and open-source hardware by purchasing
@@ -50,7 +51,8 @@ enum class EmotiBitPinName
 	BMI_INT2 = 7,
 	BMM_INT = 8,
 	BATTERY_READ_PIN = 9,
-	length = 10 //cannot be more than 28 (16 + 12)
+	ADS_RDY = 10,
+	length = 11 //cannot be more than 28 (16 + 12)
 };
 
 enum class MathConstants
@@ -102,6 +104,7 @@ public:
 		V02H = 4,
 		V03B = 5,
 		V04A = 6,
+		V05C = 7,
 		length
 	};
 

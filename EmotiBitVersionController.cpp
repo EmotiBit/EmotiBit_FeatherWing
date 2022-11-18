@@ -5,6 +5,7 @@
 	@mainpage Controls reading Version from NVM on start or detecting version if NVM not updated, EmotiBit pin and constant asignment on startup
 	@section intro_sec Introduction
 	This is a library to handle EmotiBit HW version detection/version retrieval from NVM on setup.
+	See also "FW update instructions to support new HW version (EmotiBit).gdoc"
 	
 	EmotiBit invests time and resources providing this open source code,
 	please support EmotiBit and open-source hardware by purchasing
@@ -62,6 +63,10 @@ const char* EmotiBitVersionController::getHardwareVersion(EmotiBitVersion versio
 	{
 		return "V04a\0";
 	}
+	else if (version == EmotiBitVersion::V05C)
+	{
+		return "v05c\0";
+	}
 	else
 	{
 		return "NA\0";
@@ -82,15 +87,21 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 	_assignedPin[(int)EmotiBitPinName::BMI_INT1] = 5;
 	_assignedPin[(int)EmotiBitPinName::BMI_INT2] = 10;
 	_assignedPin[(int)EmotiBitPinName::BMM_INT] = 14;
+	_assignedPin[(int)EmotiBitPinName::ADS_RDY] = -1;
 
-	if (version == EmotiBitVersion::V02B || version == EmotiBitVersion::V02H || version == EmotiBitVersion::V03B || version == EmotiBitVersion::V04A)
-	{
-	}
-	else if (version == EmotiBitVersion::V01B || version == EmotiBitVersion::V01C)
+	if (version < EmotiBitVersion::V02B)
 	{
 		HIBERNATE_PIN = 5;
 		SD_CARD_CHIP_SEL_PIN = 6;
 		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 13;
+	}
+	else if (version <= EmotiBitVersion::V04A)
+	{
+	}
+	else if (version >= EmotiBitVersion::V05C)
+	{
+		_assignedPin[(int)EmotiBitPinName::PPG_INT] = 17;
+		_assignedPin[(int)EmotiBitPinName::ADS_RDY] = 15;
 	}
 	else
 	{
@@ -122,10 +133,20 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 	_assignedPin[(int)EmotiBitPinName::BMI_INT1] = 14;
 	_assignedPin[(int)EmotiBitPinName::BMI_INT2] = 33;
 	_assignedPin[(int)EmotiBitPinName::BMM_INT] = 26;
+	_assignedPin[(int)EmotiBitPinName::ADS_RDY] = -1;
 
-	if (version == EmotiBitVersion::V02B || version == EmotiBitVersion::V02H || version == EmotiBitVersion::V03B || version == EmotiBitVersion::V04A)
+	if (version < EmotiBitVersion::V02B)
+	{
+		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 13;
+	}
+	else if (version <= EmotiBitVersion::V04A)
 	{
 	}
+	else if (version >= EmotiBitVersion::V05C)
+	{
+		_assignedPin[(int)EmotiBitPinName::PPG_INT] = 39;
+		_assignedPin[(int)EmotiBitPinName::ADS_RDY] = 25;
+}
 	else
 	{
 		// unknown version
