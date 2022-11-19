@@ -49,7 +49,7 @@ public:
 	};
 
 
-  String firmware_version = "1.5.1-feat-v05c-support.1";
+  String firmware_version = "1.5.2";
 
 
 	TestingMode testingMode = TestingMode::NONE;
