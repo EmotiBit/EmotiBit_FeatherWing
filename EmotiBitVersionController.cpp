@@ -75,7 +75,10 @@ const char* EmotiBitVersionController::getHardwareVersion(EmotiBitVersion versio
 
 bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiBitVersion version)
 {
+	const bool checkLogic = false;
+	checkLogic ? Serial.println("initPinMapping:") : true;
 #if defined(ADAFRUIT_FEATHER_M0)
+	checkLogic ? Serial.println("ADAFRUIT_FEATHER_M0") : true;
 	// ToDo: Move these pin Assignments(maybe inside a constructor). These are specific to MCU platform and cannot change.
 	_assignedPin[(int)EmotiBitPinName::BATTERY_READ_PIN] = A7;
 	_assignedPin[(int)EmotiBitPinName::SPI_CLK] = 24;
@@ -89,17 +92,25 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 	_assignedPin[(int)EmotiBitPinName::BMM_INT] = 14;
 	_assignedPin[(int)EmotiBitPinName::ADS_RDY] = -1;
 
-	if (version < EmotiBitVersion::V02B)
+	if (version == EmotiBitVersion::UNKNOWN)
 	{
+		checkLogic ? Serial.println("EmotiBitVersion::UNKNOWN") : true;
+		return true;
+	}
+	else if ((int)version < (int)EmotiBitVersion::V02B)
+	{
+		checkLogic ? Serial.println("v01") : true;
 		HIBERNATE_PIN = 5;
 		SD_CARD_CHIP_SEL_PIN = 6;
 		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 13;
 	}
-	else if (version <= EmotiBitVersion::V04A)
+	else if ((int)version <= (int)EmotiBitVersion::V04A)
 	{
+		checkLogic ? Serial.println("v02-v04") : true;
 	}
-	else if (version >= EmotiBitVersion::V05C)
+	else if ((int)version >= (int)EmotiBitVersion::V05C)
 	{
+		checkLogic ? Serial.println("v05+") : true;
 		_assignedPin[(int)EmotiBitPinName::PPG_INT] = 17;
 		_assignedPin[(int)EmotiBitPinName::ADS_RDY] = 15;
 	}
@@ -110,8 +121,14 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 		return false;
 	}
 #elif defined(ADAFRUIT_BLUEFRUIT_NRF52_FEATHER)
-	if (version == EmotiBitVersion::V01B || version == EmotiBitVersion::V01C)
+	if (version == EmotiBitVersion::UNKNOWN)
 	{
+		checkLogic ? Serial.println("EmotiBitVersion::UNKNOWN") : true;
+		return true;
+	}
+	else if ((int)version < (int)EmotiBitVersion::V02B)
+	{
+		checkLogic ? Serial.println("v01") : true;
 		HIBERNATE_PIN = 27;
 		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 16;
 	}
@@ -122,6 +139,7 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 		return false;
 	}
 #elif defined(ARDUINO_FEATHER_ESP32)
+	checkLogic ? Serial.println("ARDUINO_FEATHER_ESP32") : true;
 	// write the code here
 	_assignedPin[(int)EmotiBitPinName::BATTERY_READ_PIN] = A13;
 	_assignedPin[(int)EmotiBitPinName::SPI_CLK] = 5;
@@ -135,18 +153,26 @@ bool EmotiBitVersionController::initPinMapping(EmotiBitVersionController::EmotiB
 	_assignedPin[(int)EmotiBitPinName::BMM_INT] = 26;
 	_assignedPin[(int)EmotiBitPinName::ADS_RDY] = -1;
 
-	if (version < EmotiBitVersion::V02B)
+	if (version == EmotiBitVersion::UNKNOWN)
 	{
+		checkLogic ? Serial.println("EmotiBitVersion::UNKNOWN") : true;
+		return true;
+	}
+	else if ((int)version < (int)EmotiBitVersion::V02B)
+	{
+		checkLogic ? Serial.println("v01") : true;
 		_assignedPin[(int)EmotiBitPinName::EMOTIBIT_BUTTON] = 13;
 	}
-	else if (version <= EmotiBitVersion::V04A)
+	else if ((int)version <= (int)EmotiBitVersion::V04A)
 	{
+		checkLogic ? Serial.println("v02-v04") : true;
 	}
-	else if (version >= EmotiBitVersion::V05C)
+	else if ((int)version >= (int)EmotiBitVersion::V05C)
 	{
+		checkLogic ? Serial.println("v05+") : true;
 		_assignedPin[(int)EmotiBitPinName::PPG_INT] = 39;
 		_assignedPin[(int)EmotiBitPinName::ADS_RDY] = 25;
-}
+	}
 	else
 	{
 		// unknown version
