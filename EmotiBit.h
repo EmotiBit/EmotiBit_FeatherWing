@@ -49,7 +49,7 @@ public:
 	};
 
 
-  String firmware_version = "1.5.2";
+  String firmware_version = "1.5.2.fix-parseBarcode.0";
 
 
 	TestingMode testingMode = TestingMode::NONE;
