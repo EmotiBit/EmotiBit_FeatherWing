@@ -65,7 +65,7 @@ const char* EmotiBitVersionController::getHardwareVersion(EmotiBitVersion versio
 	}
 	else if (version == EmotiBitVersion::V05C)
 	{
-		return "v05c\0";
+		return "V05c\0";
 	}
 	else
 	{
