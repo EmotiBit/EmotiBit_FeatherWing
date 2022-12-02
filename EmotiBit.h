@@ -499,7 +499,13 @@ public:
 
 	
   EmotiBit();
-  uint8_t setup(size_t bufferCapacity = 64);   /**< Setup all the sensors */
+	
+	/*!
+		@brief Setup of all things EmotiBit
+		@param String firmwareVariant typically passes name of .ino file for traceability
+		@return 0 if successful, otherwise error code [ToDo: Add setup error codes]
+	*/
+  uint8_t setup(String firmwareVariant);   /**< Setup all the sensors */
 	uint8_t update();
   void setAnalogEnablePin(uint8_t i); /**< Power on/off the analog circuitry */
   int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
@@ -558,6 +564,7 @@ private:
 	String _sourceId = "EmotiBit FeatherWing";
 	String emotiBitSku;
 	String emotibitDeviceId = "";
+	String firmware_variant = "";
 	uint32_t emotibitSerialNumber;
 	uint8_t _imuFifoFrameLen = 0; // in bytes
 	const uint8_t _maxImuFifoFrameLen = 40; // in bytes
