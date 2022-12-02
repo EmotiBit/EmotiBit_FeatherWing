@@ -505,7 +505,7 @@ public:
 		@param String firmwareVariant typically passes name of .ino file for traceability
 		@return 0 if successful, otherwise error code [ToDo: Add setup error codes]
 	*/
-  uint8_t setup(String firmwareVariant);   /**< Setup all the sensors */
+  uint8_t setup(String firmwareVariant = "");   /**< Setup all the sensors */
 	uint8_t update();
   void setAnalogEnablePin(uint8_t i); /**< Power on/off the analog circuitry */
   int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
