@@ -153,11 +153,15 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 				if (input == EmotiBitFactoryTest::MSG_START_CHAR)
 				{
 					String msg = Serial.readStringUntil(EmotiBitFactoryTest::MSG_TERM_CHAR);
+					Serial.print("Barcode msg: ");
+					Serial.println(msg);
 					String msgTypeTag = msg.substring(0, 2);
 					if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::EMOTIBIT_BARCODE))
 					{
 						EmotiBitPacket::getPacketElement(msg, barcode.rawCode, 3);
 						barcodeReceived = true;
+						Serial.print("barcode.rawCode: ");
+						Serial.println(barcode.rawCode);
 					}
 					else
 					{
@@ -288,6 +292,14 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	{
 		// parse the barcode
 		EmotiBitFactoryTest::parseBarcode(&barcode);
+		Serial.print("barcode: ");
+		Serial.println(barcode.rawCode);
+		Serial.print("sku: ");
+		Serial.println(barcode.sku);
+		Serial.print("hwVersion: ");
+		Serial.println(barcode.hwVersion);
+		Serial.print("emotibitSerialNumber: ");
+		Serial.println(barcode.emotibitSerialNumber);
 
 		bool hwValidation, skuValidation = false;
 		if (emotiBitVersionController.validateBarcodeInfo(*(_EmotiBit_i2c), barcode, hwValidation, skuValidation))

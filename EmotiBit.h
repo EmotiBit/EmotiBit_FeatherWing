@@ -49,7 +49,9 @@ public:
 	};
 
 
-  String firmware_version = "1.5.2.feat-variantInfo.0";
+
+  String firmware_version = "1.5.4";
+
 
 
 	TestingMode testingMode = TestingMode::NONE;
