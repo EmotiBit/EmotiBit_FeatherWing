@@ -99,8 +99,10 @@ void EmotiBit::bmm150ReadTrimRegisters()
 	bmm150TrimData.dig_xyz1 = (uint16_t)(temp_msb | trim_xy1xy2[4]);
 }
 
-uint8_t EmotiBit::setup(size_t bufferCapacity)
+uint8_t EmotiBit::setup(String firmwareVariant)
 {
+	// Capture the calling ino firmware_variant information
+	firmware_variant = firmwareVariant;
 
 #ifdef ARDUINO_FEATHER_ESP32
 	esp_bt_controller_disable();
@@ -122,6 +124,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	uint32_t now = millis();
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
+	Serial.print("firmware_variant: ");
+	Serial.println(firmware_variant);
 	while (!Serial.available() && millis() - now < 2000)
 	{
 	}
@@ -360,6 +364,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.println(EmotiBitVersionController::getHardwareVersion(_hwVersion));
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
+	Serial.print("firmware_variant: ");
+	Serial.println(firmware_variant);
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, firmware_version.c_str());
@@ -2507,6 +2513,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("feather_version", _featherVersion);
 		infos[i]->set("feather_wifi_mac_addr", getFeatherMacAddress());
 		infos[i]->set("firmware_version", firmware_version);
+		infos[i]->set("firmware_variant", firmware_variant);
 		infos[i]->set("created_at", datetimeString);
 		if (root.printTo(file) == 0) {
 #ifdef DEBUG
@@ -4120,6 +4127,8 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		{
 			Serial.print("Firmware version: ");
 			Serial.println(firmware_version);
+			Serial.print("firmware_variant: ");
+			Serial.println(firmware_variant);
 		}
 		else if (c == '|')
 		{
@@ -4503,7 +4512,10 @@ void EmotiBit::printEmotiBitInfo()
 	Serial.print("\"firmware_version\":\"");
 	Serial.print(firmware_version);
 	Serial.println("\",");
-
+	
+	Serial.print("\"firmware_variant\":\"");
+	Serial.print(firmware_variant);
+	Serial.println("\",");
 	Serial.println("}}]");
 }
 
