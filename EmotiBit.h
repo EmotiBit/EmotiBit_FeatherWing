@@ -48,7 +48,11 @@ public:
 		length
 	};
 
-  String firmware_version = "1.4.1.feat-bufferLimitTest.2.feat-100HzPPG.2";
+
+
+  String firmware_version = "1.5.4";
+
+
 
 	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = false;
@@ -414,7 +418,7 @@ public:
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;
 
-	void setupFailed(const String failureMode);
+	void setupFailed(const String failureMode, int buttonPin = -1);
 	bool setupSdCard();
 	void updateButtonPress();
 	void sleep(bool i2cSetupComplete = true);
@@ -442,6 +446,7 @@ public:
 	void sendData();
 	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented
 	void writeSerialData(EmotiBit::DataType t);
+	void printEmotiBitInfo();
 	
 
 	/**
@@ -494,8 +499,8 @@ public:
 	void processFactoryTestMessages();
 	/**
 	* Test to assess buffer overflow duration limits
-	* @param maxTestDuration Total duration of test to assess overflows
-	* @param delayInterval Interval to poll buffers and print results
+	* @param maxTestDuration Total duration (in mS) of test to assess overflows
+	* @param delayInterval Interval (in mS) to poll buffers and print results
 	* @param humanReadable Boolean to switch between commas and carriage returns for human readability
 	*/
 	void bufferOverflowTest(unsigned int maxTestDuration = 5000, unsigned int delayInterval = 100, bool humanReadable = true);
@@ -507,7 +512,13 @@ public:
 
 	
   EmotiBit();
-  uint8_t setup(size_t bufferCapacity = 64);   /**< Setup all the sensors */
+	
+	/*!
+		@brief Setup of all things EmotiBit
+		@param String firmwareVariant typically passes name of .ino file for traceability
+		@return 0 if successful, otherwise error code [ToDo: Add setup error codes]
+	*/
+  uint8_t setup(String firmwareVariant = "");   /**< Setup all the sensors */
 	uint8_t update();
   void setAnalogEnablePin(uint8_t i); /**< Power on/off the analog circuitry */
   int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
@@ -566,6 +577,7 @@ private:
 	String _sourceId = "EmotiBit FeatherWing";
 	String emotiBitSku;
 	String emotibitDeviceId = "";
+	String firmware_variant = "";
 	uint32_t emotibitSerialNumber;
 	uint8_t _imuFifoFrameLen = 0; // in bytes
 	const uint8_t _maxImuFifoFrameLen = 40; // in bytes

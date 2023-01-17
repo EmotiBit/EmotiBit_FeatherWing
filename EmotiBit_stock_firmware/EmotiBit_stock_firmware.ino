@@ -33,7 +33,11 @@ void setup()
 	Serial.println("Serial started");
 	delay(2000);	// short delay to allow user to connect to serial, if desired
 
-	emotibit.setup();
+	// Capture the calling ino into firmware_variant information
+	String inoFilename = __FILE__;
+	inoFilename = (inoFilename.substring((inoFilename.indexOf(".")), (inoFilename.lastIndexOf("\\")) + 1));
+
+	emotibit.setup(inoFilename);
 
 	// Attach callback functions
 	emotibit.attachShortButtonPress(&onShortButtonPress);

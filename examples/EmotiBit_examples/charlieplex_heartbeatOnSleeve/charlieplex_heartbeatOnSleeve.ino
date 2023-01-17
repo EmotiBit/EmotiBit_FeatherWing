@@ -35,7 +35,7 @@ void onShortButtonPress()
 
 void onLongButtonPress()
 {
-	emotibit.hibernate();
+	emotibit.sleep();
 }
 
 void setup() 
@@ -44,7 +44,12 @@ void setup()
 	Serial.println("Serial started");
 	delay(2000);	// short delay to allow user to connect to serial, if desired
 
-	emotibit.setup();
+	// Capture the calling ino into firmware_variant information
+	String inoFilename = __FILE__;
+	inoFilename = (inoFilename.substring((inoFilename.indexOf(".")), (inoFilename.lastIndexOf("\\")) + 1));
+
+	emotibit.setup(inoFilename);
+
 	// Attach callback functions
 	emotibit.attachShortButtonPress(&onShortButtonPress);
 	emotibit.attachLongButtonPress(&onLongButtonPress);
@@ -75,9 +80,9 @@ void loop()
 			for (size_t i = 0; i < dataAvailable && i < dataSize; i++)
 			{
 				// Note that dataAvailable can be larger than dataSize
-				Serial.print(data[i]); Serial.print("\t");
+				//Serial.print(data[i]); Serial.print("\t");
 				threshold = filter_lp2.filter(data[i]);
-				Serial.println(threshold); //Serial.print("\t");
+				//Serial.println(threshold); //Serial.print("\t");
 				if (data[i] > threshold)
 				{
 					// light up heart emoji

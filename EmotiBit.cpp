@@ -99,8 +99,10 @@ void EmotiBit::bmm150ReadTrimRegisters()
 	bmm150TrimData.dig_xyz1 = (uint16_t)(temp_msb | trim_xy1xy2[4]);
 }
 
-uint8_t EmotiBit::setup(size_t bufferCapacity)
+uint8_t EmotiBit::setup(String firmwareVariant)
 {
+	// Capture the calling ino firmware_variant information
+	firmware_variant = firmwareVariant;
 
 #ifdef ARDUINO_FEATHER_ESP32
 	esp_bt_controller_disable();
@@ -110,7 +112,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 
 	EmotiBitVersionController emotiBitVersionController;
 	//EmotiBitUtilities::printFreeRAM("Begining of setup", 1);
-	Serial.print("I2C data pin:"); Serial.println(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN);
+	Serial.print("I2C data pin: "); Serial.println(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN);
 	Serial.print("I2C clk pin: "); Serial.println(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
 	Serial.print("hibernate pin: "); Serial.println(EmotiBitVersionController::HIBERNATE_PIN);
 	Serial.print("chip sel pin: "); Serial.println(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN);
@@ -122,6 +124,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	uint32_t now = millis();
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
+	Serial.print("firmware_variant: ");
+	Serial.println(firmware_variant);
 	while (!Serial.available() && millis() - now < 2000)
 	{
 	}
@@ -149,11 +153,15 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 				if (input == EmotiBitFactoryTest::MSG_START_CHAR)
 				{
 					String msg = Serial.readStringUntil(EmotiBitFactoryTest::MSG_TERM_CHAR);
+					Serial.print("Barcode msg: ");
+					Serial.println(msg);
 					String msgTypeTag = msg.substring(0, 2);
 					if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::EMOTIBIT_BARCODE))
 					{
 						EmotiBitPacket::getPacketElement(msg, barcode.rawCode, 3);
 						barcodeReceived = true;
+						Serial.print("barcode.rawCode: ");
+						Serial.println(barcode.rawCode);
 					}
 					else
 					{
@@ -170,6 +178,25 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 			Serial.read();
 		}
 	}
+	// Added initPinMapping(UNKOWN) to perform basic pin measurements before isEmotiBitReady is successful
+	emotiBitVersionController.initPinMapping(EmotiBitVersionController::EmotiBitVersion::UNKNOWN);
+	// Test code to assess pin states
+	//const int nTestPins = 3;
+	//int testPins[nTestPins] =
+	//{
+	//	emotiBitVersionController.getAssignedPin(EmotiBitPinName::BMI_INT1),
+	//	emotiBitVersionController.getAssignedPin(EmotiBitPinName::BMM_INT),
+	//	emotiBitVersionController.getAssignedPin(EmotiBitPinName::PPG_INT)
+	//};
+	//for (int t = 0; t < nTestPins; t++)
+	//{
+	//	pinMode(testPins[t], INPUT);
+	//	Serial.print("Pin ");
+	//	Serial.print(t);
+	//	Serial.print(": ");
+	//	Serial.println(digitalRead(testPins[t]));
+	//}
+
 	if (emotiBitVersionController.isEmotiBitReady())
 	{
 		Serial.println("EmotiBit ready");
@@ -194,7 +221,18 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		// make sure the pin DRV strength is set to sink appropriate current
 		digitalWrite(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, LOW);
 		// Not putting EmotiBit to sleep helps with the FW installer process
-		setupFailed("SD-Card not detected");
+
+		// Test code to assess pin states
+		//for (int t = 0; t < nTestPins; t++)
+		//{
+		//	pinMode(testPins[t], INPUT);
+		//	Serial.print("Pin ");
+		//	Serial.print(t);
+		//	Serial.print(": ");
+		//	Serial.println(digitalRead(testPins[t]));
+		//}
+
+		setupFailed("SD-Card not detected", emotiBitVersionController.getAssignedPin(EmotiBitPinName::EMOTIBIT_BUTTON));
 	}
 	bool status = true;
 	if (_EmotiBit_i2c != nullptr)
@@ -202,7 +240,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 		delete(_EmotiBit_i2c);
 	}
 #ifdef ADAFRUIT_FEATHER_M0
-	Serial.print("Setting up I2C For M0...");
+	Serial.println("Setting up I2C For M0...");
 	_EmotiBit_i2c = new TwoWire(&sercom1, EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
 	_EmotiBit_i2c->begin();
 	// ToDo: detect if i2c init fails
@@ -210,7 +248,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	pinPeripheral(EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN, PIO_SERCOM);
 #elif defined ARDUINO_FEATHER_ESP32
 	_EmotiBit_i2c = new TwoWire(1);
-	Serial.print("Setting up I2C For ESP32...");
+	Serial.println("Setting up I2C For ESP32...");
 	status = _EmotiBit_i2c->begin(EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
 	if (status)
 	{
@@ -222,8 +260,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	}
 #endif
 	uint32_t i2cRate = 100000;
-	Serial.print("Setting clock to");
-	Serial.print(i2cRate);
+	Serial.print("Setting clock to ");
+	Serial.println(i2cRate);
 	_EmotiBit_i2c->setClock(i2cRate);
 
 	if (testingMode == TestingMode::FACTORY_TEST)
@@ -254,6 +292,14 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	{
 		// parse the barcode
 		EmotiBitFactoryTest::parseBarcode(&barcode);
+		Serial.print("barcode: ");
+		Serial.println(barcode.rawCode);
+		Serial.print("sku: ");
+		Serial.println(barcode.sku);
+		Serial.print("hwVersion: ");
+		Serial.println(barcode.hwVersion);
+		Serial.print("emotibitSerialNumber: ");
+		Serial.println(barcode.emotibitSerialNumber);
 
 		bool hwValidation, skuValidation = false;
 		if (emotiBitVersionController.validateBarcodeInfo(*(_EmotiBit_i2c), barcode, hwValidation, skuValidation))
@@ -318,6 +364,8 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	Serial.println(EmotiBitVersionController::getHardwareVersion(_hwVersion));
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
+	Serial.print("firmware_variant: ");
+	Serial.println(firmware_variant);
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, firmware_version.c_str());
@@ -884,6 +932,7 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 	WiFi.setPins(8, 7, 4, 2);
 	WiFi.lowPowerMode();
 #endif
+	printEmotiBitInfo();
 	// turn BLUE on to signify we are trying to connect to WiFi
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 	led.send();
@@ -1089,11 +1138,32 @@ uint8_t EmotiBit::setup(size_t bufferCapacity)
 } // Setup
 
 
-void EmotiBit::setupFailed(const String failureMode)
+void EmotiBit::setupFailed(const String failureMode, int buttonPin)
 {
+	if (buttonPin > -1)
+	{
+		pinMode(buttonPin, INPUT);
+	}
+	bool buttonState = false;
 	uint32_t timeSinceLastPrint = millis();
 	while (1)
 	{
+		// NOTE: The button press check doesn't work on EmotiBit v02 because DVDD is not enabled
+		if (buttonPin > -1 && digitalRead(buttonPin))
+		{
+			
+			if (buttonState == false)
+			{
+				Serial.println("**** Button Press Detected (DVDD is Working) ****");
+				// return;
+			}
+			buttonState = true;
+		}
+		else
+		{
+			buttonState = false;
+		}
+
 		// not using delay to keep the CPU acitve from serial pings from host computer
 		if (millis() - timeSinceLastPrint > 1000)
 		{
@@ -1497,76 +1567,41 @@ void EmotiBit::updateButtonPress()
 
 uint8_t EmotiBit::update()
 {
-	static uint16_t serialPrevAvailable = Serial.available();
-	if (Serial.available() > serialPrevAvailable)
-	{
-		// There's new data available on serial
-		// Print to show we're alive
-		//Serial.print(Serial.available());
-		//Serial.print(':');
-		//Serial.print(serialPrevAvailable);
-		//Serial.print(">");
-		//Serial.println(Serial.peek());
-
-		Serial.println("[{\"info\":{");
-				
-		Serial.print("\"source_id\":\"");
-		Serial.print(_sourceId);
-		Serial.println("\",");
-
-		Serial.print("\"hardware_version\":\"");
-		Serial.print(EmotiBitVersionController::getHardwareVersion(_hwVersion));
-		Serial.println("\",");
-
-		Serial.print("\"sku\":\"");
-		Serial.print(emotiBitSku);
-		Serial.println("\",");
-
-		Serial.print("\"device_id\":\"");
-		Serial.print(emotibitDeviceId);
-		Serial.println("\",");
-
-		Serial.print("\"feather_version\":\"");
-		Serial.print(_featherVersion);
-		Serial.println("\",");
-
-		Serial.print("\"feather_wifi_mac_addr\":\"");
-		Serial.print(getFeatherMacAddress());
-		Serial.println("\",");
-
-		Serial.print("\"firmware_version\":\"");
-		Serial.print(firmware_version);
-		Serial.println("\",");
-
-		Serial.println("}}]");
-	}
-	serialPrevAvailable = Serial.available();
-
-	if (_debugMode)
-	{
-		static String debugPackets;
-		processDebugInputs(debugPackets, _outDataPacketCounter);
-		_outDataPackets += debugPackets;
-		debugPackets = "";
-		if (_serialData != DataType::length)
-		{
-			writeSerialData(_serialData);
-		}
-	}
-	else if (testingMode == TestingMode::FACTORY_TEST)
+	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		processFactoryTestMessages();
 	}
-	else
-	{
-		// if not in debug mode
-		while (Serial.available() > 0)
+	else 
+	{	
+		// Print out EmotiBit info when serial available && not FACTORY_TEST
+		static uint16_t serialPrevAvailable = Serial.available();
+		if (Serial.available() > serialPrevAvailable)
 		{
-			Serial.read();
+			printEmotiBitInfo();
 		}
-		serialPrevAvailable = 0; // set Previously available to 0
+		serialPrevAvailable = Serial.available();
+		
+		if (_debugMode)
+		{
+			static String debugPackets;
+			processDebugInputs(debugPackets, _outDataPacketCounter);
+			_outDataPackets += debugPackets;
+			debugPackets = "";
+			if (_serialData != DataType::length)
+			{
+				writeSerialData(_serialData);
+			}
+		}
+		else
+		{
+			// if not in debug mode
+			while (Serial.available() > 0)
+			{
+				Serial.read();
+			}
+			serialPrevAvailable = 0; // set Previously available to 0
+		}
 	}
-
 
 	// Handle updating WiFi connction + syncing
 	_emotiBitWiFi.updateStatus(); // asynchronous WiFi.status() update
@@ -2490,6 +2525,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]->set("feather_version", _featherVersion);
 		infos[i]->set("feather_wifi_mac_addr", getFeatherMacAddress());
 		infos[i]->set("firmware_version", firmware_version);
+		infos[i]->set("firmware_variant", firmware_variant);
 		infos[i]->set("created_at", datetimeString);
 		if (root.printTo(file) == 0) {
 #ifdef DEBUG
@@ -4103,6 +4139,8 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		{
 			Serial.print("Firmware version: ");
 			Serial.println(firmware_version);
+			Serial.print("firmware_variant: ");
+			Serial.println(firmware_variant);
 		}
 		else if (c == '|')
 		{
@@ -4454,3 +4492,42 @@ void EmotiBit::bufferOverflowTest(unsigned int maxTestDuration, unsigned int del
 		totalDuration = millis() - startTime;
 	}
 }
+
+void EmotiBit::printEmotiBitInfo()
+{
+	Serial.println("[{\"info\":{");
+			
+	Serial.print("\"source_id\":\"");
+	Serial.print(_sourceId);
+	Serial.println("\",");
+
+	Serial.print("\"hardware_version\":\"");
+	Serial.print(EmotiBitVersionController::getHardwareVersion(_hwVersion));
+	Serial.println("\",");
+
+	Serial.print("\"sku\":\"");
+	Serial.print(emotiBitSku);
+	Serial.println("\",");
+
+	Serial.print("\"device_id\":\"");
+	Serial.print(emotibitDeviceId);
+	Serial.println("\",");
+
+	Serial.print("\"feather_version\":\"");
+	Serial.print(_featherVersion);
+	Serial.println("\",");
+
+	Serial.print("\"feather_wifi_mac_addr\":\"");
+	Serial.print(getFeatherMacAddress());
+	Serial.println("\",");
+
+	Serial.print("\"firmware_version\":\"");
+	Serial.print(firmware_version);
+	Serial.println("\",");
+	
+	Serial.print("\"firmware_variant\":\"");
+	Serial.print(firmware_variant);
+	Serial.println("\",");
+	Serial.println("}}]");
+}
+
