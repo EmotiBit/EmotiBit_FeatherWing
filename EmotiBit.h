@@ -54,7 +54,7 @@ public:
 
 
 
-	TestingMode testingMode = TestingMode::CHRONIC;
+	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 #if defined (ARDUINO_FEATHER_ESP32)
 	const uint8_t DEBUG_OUT_PIN_0 = 26;

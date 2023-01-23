@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include "EmotiBit.h"
 
 #define SerialUSB SERIAL_PORT_USBVIRTUAL // Required to work in Visual Micro / Visual Studio IDE
