@@ -99,10 +99,14 @@ void EmotiBit::bmm150ReadTrimRegisters()
 	bmm150TrimData.dig_xyz1 = (uint16_t)(temp_msb | trim_xy1xy2[4]);
 }
 
-uint8_t EmotiBit::setup(String firmwareVariant)
+uint8_t EmotiBit::setup(/*String firmwareVariant*/)
 {
-	// Capture the calling ino firmware_variant information
-	firmware_variant = firmwareVariant;
+	// Update firmware_variant information
+#ifdef EMOTIBIT_PPG_100HZ 
+	firmware_variant = "EmotiBit_stock_firmware_PPG_100Hz";
+#else
+	firmware_variant = "EmotiBit_stock_firmware";
+#endif
 
 #ifdef ARDUINO_FEATHER_ESP32
 	esp_bt_controller_disable();
@@ -4464,6 +4468,7 @@ void EmotiBit::bufferOverflowTest(unsigned int maxTestDuration, unsigned int del
 {
 	unsigned long startTime = millis();
 	unsigned int totalDuration = millis() - startTime;
+	unsigned int timeFirstOverflow = 0;
 
 	Serial.println("Results format:");
 	Serial.print("totalDuration");
@@ -4484,6 +4489,9 @@ void EmotiBit::bufferOverflowTest(unsigned int maxTestDuration, unsigned int del
 			Serial.print(dataDoubleBuffers[(uint8_t)d]->capacity(DoubleBufferFloat::BufferSelector::IN));
 			Serial.print(", ");
 			Serial.print(dataDoubleBuffers[(uint8_t)d]->getOverflowCount(DoubleBufferFloat::BufferSelector::IN));
+			// if an overflow is detected on any stream, record the time of overflow
+			if(timeFirstOverflow == 0 && dataDoubleBuffers[(uint8_t)d]->getOverflowCount(DoubleBufferFloat::BufferSelector::IN))
+				timeFirstOverflow = totalDuration;
 
 			humanReadable ? Serial.println("") : Serial.print(", ");
 		}
@@ -4491,6 +4499,7 @@ void EmotiBit::bufferOverflowTest(unsigned int maxTestDuration, unsigned int del
 		delay(delayInterval);
 		totalDuration = millis() - startTime;
 	}
+	Serial.print("~Time @first overflow: "); Serial.println(timeFirstOverflow);
 }
 
 void EmotiBit::printEmotiBitInfo()

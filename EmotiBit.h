@@ -50,11 +50,11 @@ public:
 
 
 
-  String firmware_version = "1.5.4.feat-100HzPPG.0";
+  String firmware_version = "1.5.4.feat-100HzPPG.2";
 
 
 
-	TestingMode testingMode = TestingMode::NONE;
+	TestingMode testingMode = TestingMode::CHRONIC;
 	const bool DIGITAL_WRITE_DEBUG = false;
 #if defined (ARDUINO_FEATHER_ESP32)
 	const uint8_t DEBUG_OUT_PIN_0 = 26;
@@ -518,7 +518,7 @@ public:
 		@param String firmwareVariant typically passes name of .ino file for traceability
 		@return 0 if successful, otherwise error code [ToDo: Add setup error codes]
 	*/
-  uint8_t setup(String firmwareVariant = "");   /**< Setup all the sensors */
+  uint8_t setup(/*String firmwareVariant = ""*/);   /**< Setup all the sensors */
 	uint8_t update();
   void setAnalogEnablePin(uint8_t i); /**< Power on/off the analog circuitry */
   int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
