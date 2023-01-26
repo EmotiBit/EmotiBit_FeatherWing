@@ -1,5 +1,20 @@
-
+# Visual studio
 .vs/slnx.sqlite
 .vs/ProjectSettings.json
 .vs/EmotiBit_FeatherWing/v15/Browse.VC.opendb
 .vs/EmotiBit_FeatherWing/v15/Browse.VC.db
+**/.vs
+**/*.sln
+**/*.vcxProj*
+
+# Visual micro
+**/__vm
+
+
+# PlatformIO
+**/.pio
+**/.vscode
+**/lib
+**/include
+**/test
+**/Release
