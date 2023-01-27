@@ -538,7 +538,7 @@ uint8_t EmotiBit::setup(/*String firmwareVariant*/)
 	{
 		samplesAveraged.thermopile = (float)samplingRates.thermopile / 7.5f;
 	}
-	samplesAveraged.battery = (float) BASE_SAMPLING_FREQ / (float) BATTERY_SAMPLING_DIV / 1.f;
+	samplesAveraged.battery = (float) BASE_SAMPLING_FREQ / (float) BATTERY_SAMPLING_DIV / (0.2f);
 	setSamplesAveraged(samplesAveraged);
 	Serial.println("\nSet Samples averaged:");
 	// setup LED DRIVER

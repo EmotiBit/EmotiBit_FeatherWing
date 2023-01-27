@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.5.4.feat-100HzPPG.2";
+  String firmware_version = "1.5.4.feat-100HzPPG.3";
 
 
 
@@ -308,7 +308,15 @@ public:
 #elif defined(ADAFRUIT_FEATHER_M0)
 	const uint32_t CPU_HZ = 48000000; // In Hz
 #endif
-
+	
+	
+	/*
+	* Dev notes on understanding sampling rates
+	* If a sampling rate can be set for a sensor, it is done so in the sensor settigns.
+	* The Firmware reads data from the sensor @BASE_SAMPLING_FREQ/{SENSOR}_SAMPLING_DIV Hz
+	* further, the recorded samples may be avaraged, as set by EmotiBit::SamplesAveraged struct.
+	* So, net, the sampling rate of the data channel is BASE_SAMPLING_FREQ/{DATATYPE}_SAMPLING_DIV/SamplesAveraged.{DATATYPE}
+	*/ 
 	// ToDo: Make sampling variables changeable
 #define BASE_SAMPLING_FREQ 150
 #define LED_REFRESH_DIV 10
@@ -318,7 +326,7 @@ public:
 #define TEMPERATURE_0_SAMPLING_DIV 10
 #define THERMOPILE_SAMPLING_DIV 20 	// TODO: This should change according to the rate set on the thermopile begin function 
 #define IMU_SAMPLING_DIV 2
-#define BATTERY_SAMPLING_DIV 10
+#define BATTERY_SAMPLING_DIV 50
 #define DUMMY_ISR_DIV 10
 
 	struct TimerLoopOffset
