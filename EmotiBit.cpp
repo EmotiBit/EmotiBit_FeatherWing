@@ -99,13 +99,13 @@ void EmotiBit::bmm150ReadTrimRegisters()
 	bmm150TrimData.dig_xyz1 = (uint16_t)(temp_msb | trim_xy1xy2[4]);
 }
 
-uint8_t EmotiBit::setup(/*String firmwareVariant*/)
+uint8_t EmotiBit::setup(String firmwareVariant)
 {
 	// Update firmware_variant information
-#ifdef EMOTIBIT_PPG_100HZ 
-	firmware_variant = "EmotiBit_stock_firmware_PPG_100Hz";
-#else
-	firmware_variant = "EmotiBit_stock_firmware";
+	firmware_variant = firmwareVariant;
+	// ToDo: find a way to extract variant string from build flag
+#ifdef EMOTIBIT_PPG_100HZ
+	firmware_variant = firmware_variant + "_PPG_100Hz";
 #endif
 
 #ifdef ARDUINO_FEATHER_ESP32
