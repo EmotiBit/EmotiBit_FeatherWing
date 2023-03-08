@@ -27,7 +27,7 @@ uint8_t EmotiBitWiFi::begin(int32_t timeout, uint8_t maxAttemptsPerCred, uint16_
 		}
 		else
 		{
-			wifiStatus = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, maxAttemptsPerCred, attemptDelay);
+			wifiStatus = begin(credentials[currentCredential], maxAttemptsPerCred, attemptDelay);
 			if (wifiStatus == WL_CONNECTED) {
 				break;
 			}
@@ -51,7 +51,7 @@ uint8_t EmotiBitWiFi::begin(int32_t timeout, uint8_t maxAttemptsPerCred, uint16_
 //	return WL_CONNECT_FAILED;
 //}
 
-uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxAttempts, uint16_t attemptDelay)
+uint8_t EmotiBitWiFi::begin(const Credential credential, uint8_t maxAttempts, uint16_t attemptDelay)
 {
 	uint8_t wifiStatus = status();
 	int8_t attempt = 1;
@@ -76,18 +76,49 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 			return wifiStatus;
 		}
 		Serial.print("Attempting to connect to SSID: ");
-		Serial.println(ssid);
+		Serial.println(credential.ssid);
 		// ToDo: Add WEP support
 		_wifiOff = false;
 		unsigned long beginDuration = millis();
-		if (pass.equals(""))
+		if (credential.pass.equals(""))
 		{
 			// assume open network if password is empty
-			wifiStatus = WiFi.begin(ssid.c_str());
+			wifiStatus = WiFi.begin(credential.ssid.c_str());
 		}
 		else
 		{
-			wifiStatus = WiFi.begin(ssid.c_str(), pass.c_str());
+			if (credential.userid != "")
+			{
+#ifdef ARDUINO_FEATHER_ESP32
+				// enterprise WiFi
+				String username = "";
+				if (credential.username.equals(""))
+				{
+					// If username is blank, user userid as user-name
+					username = credential.userid;
+				}
+				else
+				{
+					username = credential.username;
+				}
+				// uncomment for debugging
+				Serial.print("trying enterprise WiFi: "); 
+				Serial.print("-SSID:"); Serial.print(credential.ssid);
+				Serial.print(" -userid:"); Serial.print(credential.userid);
+				Serial.print(" -username:"); Serial.print(username);
+				Serial.print(" -pass:"); Serial.println(credential.pass);
+				WiFi.begin(credential.ssid.c_str(), WPA2_AUTH_PEAP, credential.userid.c_str(), username.c_str(), credential.pass.c_str());
+#else
+				// do nothing. Enterprise support only for ESP32
+				Serial.print("Skipping Enterprise SSID: "); Serial.println(credential.ssid);
+				Serial.println("Enterprise WiFi is supported only for ESP32");
+#endif
+			}
+			else
+			{
+				// personal WiFi
+				wifiStatus = WiFi.begin(credential.ssid.c_str(), credential.pass.c_str());
+			}
 		}
 		Serial.print("WiFi.begin() duration = ");
 		Serial.println(millis() - beginDuration);
@@ -195,7 +226,7 @@ int8_t EmotiBitWiFi::updateWiFi()
 			Serial.println(WIFI_BEGIN_ATTEMPT_DELAY);
 			unsigned long beginTime = millis();
 			//Serial.println(lostWifiTime);               //uncomment for debugging
-			wifiStatus = begin(credentials[currentCredential].ssid, credentials[currentCredential].pass, 1, 100);
+			wifiStatus = begin(credentials[currentCredential], 1, 100);
 			Serial.print("updateWiFi() Total WiFi.begin() = ");
 			Serial.println(millis() - beginTime);
 			wifiReconnectAttempts++;
@@ -673,12 +704,14 @@ void EmotiBitWiFi::printWiFiStatus() {
 	Serial.println(" dBm");
 }
 
-int8_t EmotiBitWiFi::addCredential(const String &ssid, const String &password)
+int8_t EmotiBitWiFi::addCredential(const String &ssid, const String &userid, const String &username, const String &password)
 {
 	if (numCredentials < MAX_CREDENTIALS)
 	{
 		credentials[numCredentials].ssid = ssid;
 		credentials[numCredentials].pass = password;
+		credentials[numCredentials].userid = userid;
+		credentials[numCredentials].username = username;
 		numCredentials++;
 	}
 	// ToDo: implement logic to determine return val

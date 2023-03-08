@@ -36,6 +36,7 @@
 #elif defined ARDUINO_FEATHER_ESP32
 #include <WiFi.h>
 #include <esp_wifi.h>
+#include "esp_wpa2.h" //wpa2 library for connections to Enterprise networks
 #endif
 #include <WiFiUdp.h>
 #include "EmotiBitComms.h"
@@ -46,6 +47,8 @@ public:
 	struct Credential
 	{
 		String ssid = "";
+		String userid = "";
+		String username = "";
 		String pass = "";
 	};
 	static const uint8_t MAX_CREDENTIALS = 12;
@@ -105,7 +108,7 @@ public:
 	//int8_t setup();
 	uint8_t begin(int32_t timeout = 61500, uint8_t maxAttemptsPerCred = 2, uint16_t attemptDelay = 3000);
 	//uint8_t begin(uint8_t credentialIndex, uint8_t maxAttempts = 10, uint16_t attemptDelay = 1000);
-	uint8_t begin(const String &ssid, const String &pass, uint8_t maxAttempts = 10, uint16_t attemptDelay = 3000);
+	uint8_t begin(const Credential credential, uint8_t maxAttempts = 10, uint16_t attemptDelay = 3000);
 	void end();
 	int8_t updateWiFi();
 	int8_t connect(const IPAddress &hostIp, const String &connectPayload);
@@ -123,7 +126,7 @@ public:
 	String createPongPacket();
 	void setTimeSyncInterval(const uint32_t &interval);
 	void setAdvertisingInterval(const uint32_t &interval);
-	int8_t addCredential(const String &ssid, const String &password);
+	int8_t addCredential(const String &ssid, const String &userid, const String &username, const String &password);
 	void printWiFiStatus();
 	uint8_t listNetworks();
 	bool isConnected();

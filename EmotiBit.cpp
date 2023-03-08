@@ -3488,7 +3488,7 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 
 	if (!root.success()) {
 		Serial.println(F("Failed to parse config file"));
-		setupFailed("Failed to parse Config fie contents");
+		setupFailed("Failed to parse Config file contents");
 		return false;
 	}
 
@@ -3499,10 +3499,21 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 	Serial.println(configSize);
 	for (size_t i = 0; i < configSize; i++) {
 		String ssid = root["WifiCredentials"][i]["ssid"] | "";
+		String userid = root["WifiCredentials"][i]["userid"] | "";
+		String username = root["WifiCredentials"][i]["username"] | "";
 		String pass = root["WifiCredentials"][i]["password"] | "";
 		Serial.print("Adding SSID: ");
-		Serial.print(ssid); Serial.println(" - " + pass);
-		_emotiBitWiFi.addCredential( ssid, pass);
+		Serial.print(ssid); 
+		if (!userid.equals(""))
+		{
+			Serial.print(" -userid:"); Serial.print(userid);
+			if (!username.equals(""))
+			{
+				Serial.print(" -username:"); Serial.print(username);
+			}
+		}
+		Serial.println(" -pass:" + pass);
+		_emotiBitWiFi.addCredential( ssid, userid, username, pass);
 		//Serial.println(ssid);
 		//Serial.println(pass);
 	}
