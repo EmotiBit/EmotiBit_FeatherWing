@@ -3278,7 +3278,7 @@ void EmotiBit::processHeartRate()
 		interBeatSampleCount++;
 		// the heart rate algorithm can be found in: EmotiBit_MAX30101/src/heartRate.cpp
 		int16_t tempIirFiltData = 0;
-		bool isBeat = checkForBeat(int32_t(filteredPpg), tempIirFiltData);
+		bool isBeat = checkForBeat(int32_t(filteredPpg), tempIirFiltData, true);
 		if (isBeat)
 		{
 			// beat detected
