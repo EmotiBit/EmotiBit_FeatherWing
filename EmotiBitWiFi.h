@@ -141,6 +141,14 @@ public:
 	@Brief Returns the status of Arduino WiFi.status()
 	@param If update = false the fn returns the last interrupt-safe value stored by updateStatus()
 	@return Value of WiFi.status() or WL_DISCONNECTED if WiFi is OFF
+  @note
+  0	WL_IDLE_STATUS	temporary status assigned when WiFi.begin() is called
+  1	WL_NO_SSID_AVAIL	 when no SSID are available
+  2	WL_SCAN_COMPLETED	scan networks is completed
+  3	WL_CONNECTED	when connected to a WiFi network
+  4	WL_CONNECT_FAILED	when the connection fails for all the attempts
+  5	WL_CONNECTION_LOST	when the connection is lost
+  6	WL_DISCONNECTED	when disconnected from a network
 	*/
 	uint8_t status(bool update = true);
 

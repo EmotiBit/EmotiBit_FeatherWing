@@ -937,7 +937,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 	led.send();
 	// ToDo: There is no catch right now for timeout. In case of timeout, EmotiBit still continues to complete setup() and proceed to update()
-	_emotiBitWiFi.begin(-1, 1);
+	_emotiBitWiFi.begin(-1, 1, 20000);
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 	led.send();
 	if (testingMode == TestingMode::FACTORY_TEST)

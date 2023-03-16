@@ -66,7 +66,7 @@ uint8_t EmotiBitWiFi::begin(const Credential credential, uint8_t maxAttempts, ui
 #if defined(ARDUINO_FEATHER_ESP32)
 	WiFi.waitForConnectResult(attemptDelay);
 #else
-	WiFi.setTimeout(attemptDelay);
+  WiFi.setTimeout(attemptDelay);
 #endif
 
 	while (wifiStatus != WL_CONNECTED) 
@@ -107,7 +107,14 @@ uint8_t EmotiBitWiFi::begin(const Credential credential, uint8_t maxAttempts, ui
 				Serial.print(" -userid:"); Serial.print(credential.userid);
 				Serial.print(" -username:"); Serial.print(username);
 				Serial.print(" -pass:"); Serial.println(credential.pass);
-				WiFi.begin(credential.ssid.c_str(), WPA2_AUTH_PEAP, credential.userid.c_str(), username.c_str(), credential.pass.c_str());
+        WiFi.disconnect(true);      
+        WiFi.mode(WIFI_STA); //init wifi mode
+        esp_wifi_sta_wpa2_ent_set_identity((uint8_t *)credential.userid.c_str(), credential.userid.length());
+        esp_wifi_sta_wpa2_ent_set_username((uint8_t *)username.c_str(), username.length());
+        esp_wifi_sta_wpa2_ent_set_password((uint8_t *)credential.pass.c_str(), credential.pass.length());
+        esp_wifi_sta_wpa2_ent_enable();
+        wifiStatus = WiFi.begin(credential.ssid.c_str());
+				//WiFi.begin(credential.ssid.c_str(), WPA2_AUTH_PEAP, credential.userid.c_str(), username.c_str(), credential.pass.c_str());
 #else
 				// do nothing. Enterprise support only for ESP32
 				Serial.print("Skipping Enterprise SSID: "); Serial.println(credential.ssid);
@@ -124,9 +131,10 @@ uint8_t EmotiBitWiFi::begin(const Credential credential, uint8_t maxAttempts, ui
 		Serial.println(millis() - beginDuration);
 		wifiStatus = status();
 		_needsAdvertisingBegin = true;
-		while((wifiStatus == WL_IDLE_STATUS) && (millis() - beginDuration < attemptDelay)); // This is necessary for ESP32 unless callback is utilized
+		//while((wifiStatus == WL_IDLE_STATUS) && (millis() - beginDuration < attemptDelay)) // This is necessary for ESP32 unless callback is utilized
+    while((wifiStatus == WL_IDLE_STATUS || wifiStatus == WL_DISCONNECTED) && (millis() - beginDuration < attemptDelay)) // This is necessary for ESP32 unless callback is utilized
 		{
-			delay(attemptDelay / 5);
+			delay(attemptDelay / 10);
 			wifiStatus = status();
 		}
 		Serial.print("WiFi.status() = ");
