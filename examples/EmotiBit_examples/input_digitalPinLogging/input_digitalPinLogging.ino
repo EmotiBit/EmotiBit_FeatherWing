@@ -92,12 +92,12 @@ void loop()
 	//Serial.println("emotibit.update()");
 	emotibit.update();
   
-  while(syncPulse.eventCounter > 0)
+  while(inputEvent.eventCounter > 0)
 	{
-		float data = syncPulse.data;
+		float data = inputEvent.data;
     // ToDo: consider adding EmotiBitPacket::TypeTag::DIGITAL_INPUT_0
-		emotibit.addPacket(syncPulse.timestamp, "D0", &data, 1);	// See EmotiBitPacket for available TypeTags https://github.com/EmotiBit/EmotiBit_XPlat_Utils/blob/master/src/EmotiBitPacket.cpp// 
-		syncPulse.eventCounter--;
+		emotibit.addPacket(inputEvent.timestamp, "D0", &data, 1);	// See EmotiBitPacket for available TypeTags https://github.com/EmotiBit/EmotiBit_XPlat_Utils/blob/master/src/EmotiBitPacket.cpp// 
+		inputEvent.eventCounter--;
 
 		Serial.print("D0: ");
 		Serial.println((int) data);
