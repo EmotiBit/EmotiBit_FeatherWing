@@ -4523,10 +4523,19 @@ void EmotiBit::printEmotiBitInfo()
 	Serial.print("\"firmware_version\":\"");
 	Serial.print(firmware_version);
 	Serial.println("\",");
-	
-	Serial.print("\"firmware_variant\":\"");
+  
+  Serial.print("\"firmware_variant\":\"");
 	Serial.print(firmware_variant);
 	Serial.println("\",");
+  
+  if (_emotiBitWiFi.status() == WL_CONNECTED)
+  {
+    IPAddress ip = WiFi.localIP();
+    Serial.print("\"ip_address\":\"");
+    Serial.print(ip);
+    Serial.println("\"");
+  }
+  
 	Serial.println("}}]");
 }
 
