@@ -1,4 +1,4 @@
-# Digit Input Pin Logging
+# Digital Input Pin Logging
 
 # Instructions for use
 - Wire up an input to the specified pin 
