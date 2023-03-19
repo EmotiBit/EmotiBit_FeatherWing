@@ -97,6 +97,8 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		{
 			delay(attemptDelay / 5);
 			wifiStatus = status();
+      Serial.print("WiFi.status() = ");
+      Serial.print(wifiStatus);
 		}
 		Serial.print("WiFi.status() = ");
 		Serial.print(wifiStatus);
