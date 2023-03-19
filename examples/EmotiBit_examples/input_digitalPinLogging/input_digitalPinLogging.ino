@@ -1,4 +1,7 @@
+#include <mutex>
 #include "EmotiBit.h"
+
+std::mutex eventMtx; // mutex to protect collisions storing/reading DIO events
 
 #if defined ARDUINO_FEATHER_ESP32
 const int digitalInputPin = 33;	// Pin on which to read digital input
@@ -9,7 +12,7 @@ const int digitalInputPin = 10;	// Pin on which to read digital input
 
 struct InputEvent
 {
-	// ToDo: This should be put in a templated ring buffer
+	// ToDo: This should be put in a templated fifo or ring buffer
 	unsigned long long timestamp;
 	float data;
 	unsigned int eventCounter;	// hack to capture number of events without a buffer
@@ -46,6 +49,7 @@ void onLongButtonPress()
 void digitalInputChange()
 {
 	// ToDo: consider debouncing
+  std::lock_guard<std::mutex> lck(eventMtx);
 	inputEvent.timestamp = millis();
 	inputEvent.data = digitalRead(digitalInputPin);
 	inputEvent.eventCounter++;
@@ -92,16 +96,19 @@ void loop()
 	//Serial.println("emotibit.update()");
 	emotibit.update();
   
-  while(inputEvent.eventCounter > 0)
-	{
-		float data = inputEvent.data;
-    // ToDo: consider adding EmotiBitPacket::TypeTag::DIGITAL_INPUT_0
-		emotibit.addPacket(inputEvent.timestamp, "D0", &data, 1);	// See EmotiBitPacket for available TypeTags https://github.com/EmotiBit/EmotiBit_XPlat_Utils/blob/master/src/EmotiBitPacket.cpp// 
-		inputEvent.eventCounter--;
+  {
+    std::lock_guard<std::mutex> lck(eventMtx);
+    while(inputEvent.eventCounter > 0)
+    {
+      float data = inputEvent.data;
+      // ToDo: consider adding EmotiBitPacket::TypeTag::DIGITAL_INPUT_0
+      emotibit.addPacket(inputEvent.timestamp, "D0", &data, 1);	// See EmotiBitPacket for available TypeTags https://github.com/EmotiBit/EmotiBit_XPlat_Utils/blob/master/src/EmotiBitPacket.cpp// 
+      inputEvent.eventCounter--;
 
-		Serial.print("D0: ");
-		Serial.println((int) data);
-	}
+      Serial.print("D0: ");
+      Serial.println((int) data);
+    }
+  }
 
 	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::PPG_GREEN, &data[0], dataSize);
 	if (dataAvailable > 0)

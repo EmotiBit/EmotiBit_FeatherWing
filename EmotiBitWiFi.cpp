@@ -93,7 +93,7 @@ uint8_t EmotiBitWiFi::begin(const String &ssid, const String &pass, uint8_t maxA
 		Serial.println(millis() - beginDuration);
 		wifiStatus = status();
 		_needsAdvertisingBegin = true;
-		while((wifiStatus == WL_IDLE_STATUS) && (millis() - beginDuration < attemptDelay)); // This is necessary for ESP32 unless callback is utilized
+		while((wifiStatus == WL_IDLE_STATUS || wifiStatus == WL_DISCONNECTED) && (millis() - beginDuration < attemptDelay)) // This is necessary for ESP32 unless callback is utilized
 		{
 			delay(attemptDelay / 5);
 			wifiStatus = status();
