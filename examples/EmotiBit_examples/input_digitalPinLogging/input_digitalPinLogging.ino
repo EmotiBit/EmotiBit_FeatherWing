@@ -1,17 +1,12 @@
-#include <mutex>
 #include "EmotiBit.h"
 
-std::mutex eventMtx; // mutex to protect collisions storing/reading DIO events
-
+bool pinStatus; // stores digital pin status to detect changes
 #if defined ARDUINO_FEATHER_ESP32
 const int digitalInputPin = 33;	// Pin on which to read digital input
 #endif
 #ifdef ADAFRUIT_FEATHER_M0
 const int digitalInputPin = 10;	// Pin on which to read digital input
 #endif
-
-// ToDo: use a templated ring buffer instead of DoubleBufferFloat
-DoubleBufferFloat dioEvents = DoubleBufferFloat(2); // Size determines max events per loop cycle
 
 #define SerialUSB SERIAL_PORT_USBVIRTUAL // Required to work in Visual Micro / Visual Studio IDE
 const uint32_t SERIAL_BAUD = 2000000; //115200
@@ -38,12 +33,6 @@ void onShortButtonPress()
 void onLongButtonPress()
 {
 	emotibit.sleep();
-}
-
-void digitalInputChange()
-{
-	// ToDo: consider debouncing
-  dioEvents.push_back(digitalRead(digitalInputPin));
 }
 
 void setup() 
@@ -76,10 +65,10 @@ void setup()
 	//	- separate ino/bin (present method)
 	//	- reading field from SD card
 	//	- control message from EmotiBit Oscilloscope
-	Serial.print("Attaching interrupt to digital pin ");
+	Serial.print("INPUT_PULLDOWN to digital pin ");
 	Serial.println(digitalInputPin);
 	pinMode(digitalInputPin, INPUT_PULLDOWN);
-	attachInterrupt(digitalPinToInterrupt(digitalInputPin), digitalInputChange, CHANGE);
+	//attachInterrupt(digitalPinToInterrupt(digitalInputPin), digitalInputChange, CHANGE); // Interrupt seems to crash ESP32
 }
 
 void loop()
@@ -88,16 +77,17 @@ void loop()
 	emotibit.update();
   
   // Handle DIO event data
-  float * dioData;
-  uint32_t dioTimestamp;
-  size_t nDio = dioEvents.getData(&dioData, &dioTimestamp);
-  for (int i = 0; i < nDio; i++)
+  bool temp = digitalRead(digitalInputPin);
+  if (pinStatus != temp)
   {
+    // Pin change detected
+    pinStatus = temp;
+    float dioData = (float) pinStatus; // cast pin status to a float for compatibility with addPacket
     // ToDo: consider adding EmotiBitPacket::TypeTag::DIGITAL_INPUT_0
-    emotibit.addPacket(dioTimestamp, "D0", dioData, 1);	// See EmotiBitPacket for available TypeTags https://github.com/EmotiBit/EmotiBit_XPlat_Utils/blob/master/src/EmotiBitPacket.cpp// 
+    emotibit.addPacket(millis(), "D0", &dioData, 1);	// See EmotiBitPacket for available TypeTags https://github.com/EmotiBit/EmotiBit_XPlat_Utils/blob/master/src/EmotiBitPacket.cpp// 
 
     Serial.print("D0: ");
-    Serial.println((int) dioData[i]);
+    Serial.println((int) dioData);
   }
 
   // Grab some EmotiBit sensor data and do something with it!
