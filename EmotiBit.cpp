@@ -172,6 +172,14 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 					break;
 			}
 		}
+    else if (input == 'R')
+		{
+      // restart ESP
+      #ifdef ARDUINO_FEATHER_ESP32
+      Serial.println("\n\**** nRESTARTING MCU ****\n\n");
+      ESP.restart();
+      #endif
+    }
 		// remove any other char in the buffer before proceeding
 		while (Serial.available())
 		{
