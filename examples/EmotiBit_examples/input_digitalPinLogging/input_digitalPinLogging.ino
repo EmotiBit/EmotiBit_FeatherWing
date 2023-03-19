@@ -10,14 +10,8 @@ const int digitalInputPin = 33;	// Pin on which to read digital input
 const int digitalInputPin = 10;	// Pin on which to read digital input
 #endif
 
-struct InputEvent
-{
-	// ToDo: This should be put in a templated fifo or ring buffer
-	unsigned long long timestamp;
-	float data;
-	unsigned int eventCounter;	// hack to capture number of events without a buffer
-};
-volatile struct InputEvent inputEvent;
+// ToDo: use a templated ring buffer instead of DoubleBufferFloat
+DoubleBufferFloat dioEvents = DoubleBufferFloat(2); // Size determines max events per loop cycle
 
 #define SerialUSB SERIAL_PORT_USBVIRTUAL // Required to work in Visual Micro / Visual Studio IDE
 const uint32_t SERIAL_BAUD = 2000000; //115200
@@ -49,10 +43,7 @@ void onLongButtonPress()
 void digitalInputChange()
 {
 	// ToDo: consider debouncing
-  std::lock_guard<std::mutex> lck(eventMtx);
-	inputEvent.timestamp = millis();
-	inputEvent.data = digitalRead(digitalInputPin);
-	inputEvent.eventCounter++;
+  dioEvents.push_back(digitalRead(digitalInputPin));
 }
 
 void setup() 
@@ -96,20 +87,20 @@ void loop()
 	//Serial.println("emotibit.update()");
 	emotibit.update();
   
+  // Handle DIO event data
+  float * dioData;
+  uint32_t dioTimestamp;
+  size_t nDio = dioEvents.getData(&dioData, &dioTimestamp);
+  for (int i = 0; i < nDio; i++)
   {
-    std::lock_guard<std::mutex> lck(eventMtx);
-    while(inputEvent.eventCounter > 0)
-    {
-      float data = inputEvent.data;
-      // ToDo: consider adding EmotiBitPacket::TypeTag::DIGITAL_INPUT_0
-      emotibit.addPacket(inputEvent.timestamp, "D0", &data, 1);	// See EmotiBitPacket for available TypeTags https://github.com/EmotiBit/EmotiBit_XPlat_Utils/blob/master/src/EmotiBitPacket.cpp// 
-      inputEvent.eventCounter--;
+    // ToDo: consider adding EmotiBitPacket::TypeTag::DIGITAL_INPUT_0
+    emotibit.addPacket(dioTimestamp, "D0", dioData, 1);	// See EmotiBitPacket for available TypeTags https://github.com/EmotiBit/EmotiBit_XPlat_Utils/blob/master/src/EmotiBitPacket.cpp// 
 
-      Serial.print("D0: ");
-      Serial.println((int) data);
-    }
+    Serial.print("D0: ");
+    Serial.println((int) dioData[i]);
   }
 
+  // Grab some EmotiBit sensor data and do something with it!
 	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::PPG_GREEN, &data[0], dataSize);
 	if (dataAvailable > 0)
 	{
