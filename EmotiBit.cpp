@@ -3503,6 +3503,7 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 		Serial.print("Adding SSID: ");
 		Serial.print(ssid); Serial.println(" - " + pass);
 		_emotiBitWiFi.addCredential( ssid, pass);
+		_emotiBitWiFi.setDeviceId(emotibitDeviceId); // pass the EmotiBit Device ID to emotibitWiFi instance
 		//Serial.println(ssid);
 		//Serial.println(pass);
 	}

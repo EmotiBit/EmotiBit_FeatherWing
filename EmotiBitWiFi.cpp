@@ -3,6 +3,10 @@
 #include <driver/source/nmasic.h>
 #endif
 
+void EmotiBitWiFi::setDeviceId(const String emotibitDeviceId)
+{
+	_emotibitDeviceId = emotibitDeviceId;
+}
 uint8_t EmotiBitWiFi::begin(int32_t timeout, uint8_t maxAttemptsPerCred, uint16_t attemptDelay)
 {
 	uint8_t wifiStatus = status();
@@ -277,6 +281,10 @@ int8_t EmotiBitWiFi::processAdvertising()
 				outMessage += EmotiBitPacket::PayloadLabel::DATA_PORT;
 				outMessage += ",";
 				outMessage += _dataPort;
+				outMessage += ",";
+				outMessage += EmotiBitPacket::PayloadLabel::DEVICE_ID;
+				outMessage += ",";
+				outMessage += _emotibitDeviceId;
 				outMessage += EmotiBitPacket::PACKET_DELIMITER_CSV;
 				sendMessage = true;
 			}

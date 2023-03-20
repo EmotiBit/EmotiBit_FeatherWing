@@ -48,6 +48,7 @@ public:
 		String ssid = "";
 		String pass = "";
 	};
+	String _emotibitDeviceId = "";
 	static const uint8_t MAX_CREDENTIALS = 12;
 	Credential credentials[MAX_CREDENTIALS];
 	uint8_t currentCredential = 0;
@@ -128,6 +129,7 @@ public:
 	uint8_t listNetworks();
 	bool isConnected();
 	bool isOff();
+	void setDeviceId(const String emotibitDeviceId);
 
 	/*!
 	@Brief Reads and stores WiFi.status() for access in interrupts
