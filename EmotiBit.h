@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.5.4.feat-100HzPPG.10";
+  String firmware_version = "1.5.4.feat-100HzPPG.11";
 
 
 
