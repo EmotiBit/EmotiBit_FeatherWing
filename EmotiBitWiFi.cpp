@@ -726,7 +726,10 @@ int8_t EmotiBitWiFi::addCredential(const String &ssid, const String &userid, con
 		credentials[numCredentials].username = username;
 		numCredentials++;
 	}
-	// ToDo: implement logic to determine return val
+	else
+	{
+		return -1;
+	}
 	return 0;
 }
 

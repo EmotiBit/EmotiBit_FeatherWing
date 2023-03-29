@@ -3517,7 +3517,7 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 	size_t configSize;
 	// Copy values from the JsonObject to the Config
 	configSize = root.get<JsonVariant>("WifiCredentials").as<JsonArray>().size();
-	Serial.print("WiFi network List Size: ");
+	Serial.print("Number of network credentials found in config file: ");
 	Serial.println(configSize);
 	for (size_t i = 0; i < configSize; i++) {
 		String ssid = root["WifiCredentials"][i]["ssid"] | "";
@@ -3534,10 +3534,20 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 				Serial.print(" -username:"); Serial.print(username);
 			}
 		}
-		Serial.println(" -pass:" + pass);
-		_emotiBitWiFi.addCredential( ssid, userid, username, pass);
-		//Serial.println(ssid);
-		//Serial.println(pass);
+		Serial.print(" -pass:" + pass);
+		if (_emotiBitWiFi.addCredential(ssid, userid, username, pass) < 0)
+		{
+			// Number of credentials exceeded max allowed
+			Serial.println("...failed to add credential");
+			Serial.println("***Credential storage capacity exceeded***");
+			Serial.print("Ignoring credentials beginning: "); Serial.println(ssid);
+			break;
+		}
+		else
+		{
+			Serial.println("... success");
+		}
+
 	}
 
 	//strlcpy(config.hostname,                   // <- destination
