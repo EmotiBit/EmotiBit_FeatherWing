@@ -63,6 +63,11 @@ uint8_t EmotiBitWiFi::begin(const Credential credential, uint8_t maxAttempts, ui
 	}
 #endif
 
+#ifdef ARDUINO_FEATHER_ESP32
+	// Call a WiFi.disconnect() before beginning any wifi connect sequences
+	WiFi.disconnect(true);
+#endif
+
 #if defined(ARDUINO_FEATHER_ESP32)
 	WiFi.waitForConnectResult(attemptDelay);
 #else
@@ -107,7 +112,6 @@ uint8_t EmotiBitWiFi::begin(const Credential credential, uint8_t maxAttempts, ui
 				Serial.print(" -userid:"); Serial.print(credential.userid);
 				Serial.print(" -username:"); Serial.print(username);
 				Serial.print(" -pass:"); Serial.println(credential.pass);
-        WiFi.disconnect(true);      
         WiFi.mode(WIFI_STA); //init wifi mode
         esp_wifi_sta_wpa2_ent_set_identity((uint8_t *)credential.userid.c_str(), credential.userid.length());
         esp_wifi_sta_wpa2_ent_set_username((uint8_t *)username.c_str(), username.length());

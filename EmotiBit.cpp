@@ -133,7 +133,25 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	{
 		char input;
 		input = Serial.read();
-		if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
+		if (input == 'R')
+		{
+			Serial.println("Software restart called.");
+			Serial.print("restarting in ");
+			int restartCountDown = 3;
+			while (restartCountDown)
+			{
+				Serial.print(restartCountDown); Serial.print(", ");
+				delay(1000);
+				restartCountDown--;
+			}
+			// software reset the MCU
+#ifdef ARDUINO_FEATHER_ESP32
+			ESP.restart();
+#elif defined ADAFRUIT_FEATHER_M0
+			NVIC_SystemReset();
+#endif
+		}
+		else if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
 		{
 			uint32_t waitStarForBarcode = millis();
 			testingMode = TestingMode::FACTORY_TEST;
@@ -171,6 +189,10 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 				if (millis() - waitStarForBarcode > 3000)
 					break;
 			}
+		}
+		else
+		{
+			// do nothing. Junk input.
 		}
 		// remove any other char in the buffer before proceeding
 		while (Serial.available())
