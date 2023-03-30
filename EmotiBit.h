@@ -50,11 +50,11 @@ public:
 
 
 
-  String firmware_version = "1.5.4.feat-100HzPPG.11";
+  String firmware_version = "1.5.4.feat-100HzPPG.12";
 
 
 
-	TestingMode testingMode = TestingMode::CHRONIC;
+	TestingMode testingMode = TestingMode::NONE;
 	const bool DIGITAL_WRITE_DEBUG = false;
 #if defined (ARDUINO_FEATHER_ESP32)
 	const uint8_t DEBUG_OUT_PIN_0 = 26;
