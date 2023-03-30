@@ -496,7 +496,10 @@ public:
 	String getFeatherMacAddress();
 	String getHardwareVersion();
 	int detectEmotiBitVersion();
-
+	/*!
+	 * @brief Function to perform a software reset on the MCU
+	 */
+	void restartMcu();
 	// ----------- END ino refactoring ---------------
 
 	

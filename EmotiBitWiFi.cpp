@@ -829,3 +829,8 @@ void EmotiBitWiFi::checkWiFi101FirmwareVersion()
 	Serial.println(latestFv);
 }
 #endif
+
+uint8_t EmotiBitWiFi::getNumCredentials()
+{
+	return numCredentials;
+}

@@ -153,4 +153,10 @@ public:
 	uint8_t status(bool update = true);
 
 	void checkWiFi101FirmwareVersion();
+
+	/*!
+	 * @brief Returns number of credentials loaded from the SD Card
+	 * @return Number of credentials loaded from the SD-Card (<= MAX_CREDENTIALS)
+	 */
+	uint8_t getNumCredentials();
 };

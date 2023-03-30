@@ -135,21 +135,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		input = Serial.read();
 		if (input == 'R')
 		{
-			Serial.println("Software restart called.");
-			Serial.print("restarting in ");
-			int restartCountDown = 3;
-			while (restartCountDown)
-			{
-				Serial.print(restartCountDown); Serial.print(", ");
-				delay(1000);
-				restartCountDown--;
-			}
-			// software reset the MCU
-#ifdef ARDUINO_FEATHER_ESP32
-			ESP.restart();
-#elif defined ADAFRUIT_FEATHER_M0
-			NVIC_SystemReset();
-#endif
+			restartMcu();
 		}
 		else if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
 		{
@@ -958,8 +944,15 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	// turn BLUE on to signify we are trying to connect to WiFi
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 	led.send();
-	// ToDo: There is no catch right now for timeout. In case of timeout, EmotiBit still continues to complete setup() and proceed to update()
-	_emotiBitWiFi.begin(-1, 1, 20000);
+	uint16_t attemptDelay = 20000;  // in mS. ESP32 has been observed to take >10 seconds to resolve an enterprise connection
+	uint8_t maxAttemptsPerCred = 1;
+	uint32_t timeout = attemptDelay * maxAttemptsPerCred * _emotiBitWiFi.getNumCredentials() * 2; // Try cycling through all credentials at least 2x before giving up and trying a restart
+	_emotiBitWiFi.begin(timeout, maxAttemptsPerCred, attemptDelay);
+	if (_emotiBitWiFi.status(false) != WL_CONNECTED)
+	{ 
+		// Could not connect to network. software restart and begin setup again.
+		restartMcu();
+	}
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 	led.send();
 	if (testingMode == TestingMode::FACTORY_TEST)
@@ -4571,3 +4564,13 @@ void EmotiBit::printEmotiBitInfo()
 	Serial.println("}}]");
 }
 
+void EmotiBit::restartMcu()
+{
+	Serial.println("Restarting MCU");
+	delay(1000);
+#ifdef ARDUINO_FEATHER_ESP32
+	ESP.restart();
+#elif defined ADAFRUIT_FEATHER_M0
+	NVIC_SystemReset();
+#endif
+}
