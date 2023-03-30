@@ -136,7 +136,7 @@ uint8_t EmotiBitWiFi::begin(const Credential credential, uint8_t maxAttempts, ui
 		wifiStatus = status();
 		_needsAdvertisingBegin = true;
 		//while((wifiStatus == WL_IDLE_STATUS) && (millis() - beginDuration < attemptDelay)) // This is necessary for ESP32 unless callback is utilized
-    while((wifiStatus == WL_IDLE_STATUS || wifiStatus == WL_DISCONNECTED) && (millis() - beginDuration < attemptDelay)) // This is necessary for ESP32 unless callback is utilized
+    while((wifiStatus != WL_CONNECTED) && (millis() - beginDuration < attemptDelay)) // This is necessary for ESP32 unless callback is utilized
 		{
 			delay(attemptDelay / 10);
 			wifiStatus = status();
