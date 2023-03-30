@@ -947,7 +947,18 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	uint16_t attemptDelay = 20000;  // in mS. ESP32 has been observed to take >10 seconds to resolve an enterprise connection
 	uint8_t maxAttemptsPerCred = 1;
 	uint32_t timeout = attemptDelay * maxAttemptsPerCred * _emotiBitWiFi.getNumCredentials() * 2; // Try cycling through all credentials at least 2x before giving up and trying a restart
-	_emotiBitWiFi.begin(timeout, maxAttemptsPerCred, attemptDelay);
+	if (_emotiBitWiFi.isEnterpriseNetworkListed())
+	{
+		// enterprise network is listed in network credential list.
+		// restart MCU after timeout
+		_emotiBitWiFi.begin(timeout, maxAttemptsPerCred, attemptDelay);
+	}
+	else
+	{
+		// only personal networks listed in credentials list.
+		// keep trying to connect to networks without any timeout
+		_emotiBitWiFi.begin(-1, maxAttemptsPerCred, attemptDelay);
+	}
 	if (_emotiBitWiFi.status(false) != WL_CONNECTED)
 	{ 
 		// Could not connect to network. software restart and begin setup again.

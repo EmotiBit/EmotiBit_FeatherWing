@@ -159,4 +159,10 @@ public:
 	 * @return Number of credentials loaded from the SD-Card (<= MAX_CREDENTIALS)
 	 */
 	uint8_t getNumCredentials();
+
+	/*!
+	 * @brief Function to check if an enterprise network is listed among the network credentials
+	   @return true is enterprise network is listed, else false
+	 */
+	bool isEnterpriseNetworkListed();
 };

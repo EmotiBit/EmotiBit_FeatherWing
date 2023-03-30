@@ -834,3 +834,16 @@ uint8_t EmotiBitWiFi::getNumCredentials()
 {
 	return numCredentials;
 }
+
+bool EmotiBitWiFi::isEnterpriseNetworkListed()
+{
+	for (uint8_t i = 0; i < getNumCredentials(); i++)
+	{
+		if (!credentials[i].userid.equals(""))
+		{
+			// enterprise network present in credential list
+			return true;
+		}
+	}
+	return false;
+}
