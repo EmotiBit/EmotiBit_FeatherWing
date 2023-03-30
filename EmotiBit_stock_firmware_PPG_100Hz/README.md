@@ -16,8 +16,8 @@ Adequately buffering 100Hz PPG uses a LOT more RAM on the device. On the `Feathe
 
 - Note
   - If you wish to compile from source, then you will need to install and compile using platform IO.
-    - See our instructions here. [ToDo] Add a link once documentation has been merged to master.
+    - See our instructions [here](https://github.com/EmotiBit/EmotiBit_Docs/blob/master/Keep_emotibit_up_to_date.md#Building-firmware-using-PlatformIO).
     - We are still testing our process and support for platformIO, so we recommend building from source only if you are experienced with embedded system workflows. 
 
 ### Software settings
-- Replace `ofxOscilloscopeSettings.xml` with provided file. Alternatively, you can find the instructions in our documentation to update the existing file accordingly.
+- Replace `ofxOscilloscopeSettings.xml` with provided file. Alternatively, you can find the instructions in our [documentation](https://github.com/EmotiBit/EmotiBit_Docs/blob/master/Working_with_emotibit_data.md#emotibit-oscilloscope-display-settings) to update the existing file accordingly.
