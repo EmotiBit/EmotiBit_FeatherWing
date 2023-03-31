@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.6.0.feat-espEnterpriseWiFi.4";
+  String firmware_version = "1.7.0";
 
 
 
