@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.6.0";
+  String firmware_version = "1.7.0";
 
 
 
@@ -515,7 +515,10 @@ public:
 	String getFeatherMacAddress();
 	String getHardwareVersion();
 	int detectEmotiBitVersion();
-
+	/*!
+	 * @brief Function to perform a software reset on the MCU
+	 */
+	void restartMcu();
 	// ----------- END ino refactoring ---------------
 
 	

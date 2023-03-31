@@ -137,7 +137,11 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	{
 		char input;
 		input = Serial.read();
-		if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
+		if (input == 'R')
+		{
+			restartMcu();
+		}
+		else if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
 		{
 			uint32_t waitStarForBarcode = millis();
 			testingMode = TestingMode::FACTORY_TEST;
@@ -175,6 +179,10 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 				if (millis() - waitStarForBarcode > 3000)
 					break;
 			}
+		}
+		else
+		{
+			// do nothing. Junk input.
 		}
 		// remove any other char in the buffer before proceeding
 		while (Serial.available())
@@ -940,8 +948,26 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	// turn BLUE on to signify we are trying to connect to WiFi
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 	led.send();
-	// ToDo: There is no catch right now for timeout. In case of timeout, EmotiBit still continues to complete setup() and proceed to update()
-	_emotiBitWiFi.begin(-1, 1);
+	uint16_t attemptDelay = 20000;  // in mS. ESP32 has been observed to take >10 seconds to resolve an enterprise connection
+	uint8_t maxAttemptsPerCred = 1;
+	uint32_t timeout = attemptDelay * maxAttemptsPerCred * _emotiBitWiFi.getNumCredentials() * 2; // Try cycling through all credentials at least 2x before giving up and trying a restart
+	if (_emotiBitWiFi.isEnterpriseNetworkListed())
+	{
+		// enterprise network is listed in network credential list.
+		// restart MCU after timeout
+		_emotiBitWiFi.begin(timeout, maxAttemptsPerCred, attemptDelay);
+	}
+	else
+	{
+		// only personal networks listed in credentials list.
+		// keep trying to connect to networks without any timeout
+		_emotiBitWiFi.begin(-1, maxAttemptsPerCred, attemptDelay);
+	}
+	if (_emotiBitWiFi.status(false) != WL_CONNECTED)
+	{ 
+		// Could not connect to network. software restart and begin setup again.
+		restartMcu();
+	}
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 	led.send();
 	if (testingMode == TestingMode::FACTORY_TEST)
@@ -3519,23 +3545,44 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 
 	if (!root.success()) {
 		Serial.println(F("Failed to parse config file"));
-		setupFailed("Failed to parse Config fie contents");
+		setupFailed("Failed to parse Config file contents");
 		return false;
 	}
 
 	size_t configSize;
 	// Copy values from the JsonObject to the Config
 	configSize = root.get<JsonVariant>("WifiCredentials").as<JsonArray>().size();
-	Serial.print("WiFi network List Size: ");
+	Serial.print("Number of network credentials found in config file: ");
 	Serial.println(configSize);
 	for (size_t i = 0; i < configSize; i++) {
 		String ssid = root["WifiCredentials"][i]["ssid"] | "";
+		String userid = root["WifiCredentials"][i]["userid"] | "";
+		String username = root["WifiCredentials"][i]["username"] | "";
 		String pass = root["WifiCredentials"][i]["password"] | "";
 		Serial.print("Adding SSID: ");
-		Serial.print(ssid); Serial.println(" - " + pass);
-		_emotiBitWiFi.addCredential( ssid, pass);
-		//Serial.println(ssid);
-		//Serial.println(pass);
+		Serial.print(ssid); 
+		if (!userid.equals(""))
+		{
+			Serial.print(" -userid:"); Serial.print(userid);
+			if (!username.equals(""))
+			{
+				Serial.print(" -username:"); Serial.print(username);
+			}
+		}
+		Serial.print(" -pass:" + pass);
+		if (_emotiBitWiFi.addCredential(ssid, userid, username, pass) < 0)
+		{
+			// Number of credentials exceeded max allowed
+			Serial.println("...failed to add credential");
+			Serial.println("***Credential storage capacity exceeded***");
+			Serial.print("Ignoring credentials beginning: "); Serial.println(ssid);
+			break;
+		}
+		else
+		{
+			Serial.println("... success");
+		}
+
 	}
 
 	//strlcpy(config.hostname,                   // <- destination
@@ -4548,10 +4595,29 @@ void EmotiBit::printEmotiBitInfo()
 	Serial.print("\"firmware_version\":\"");
 	Serial.print(firmware_version);
 	Serial.println("\",");
-	
-	Serial.print("\"firmware_variant\":\"");
+  
+  Serial.print("\"firmware_variant\":\"");
 	Serial.print(firmware_variant);
 	Serial.println("\",");
+  
+  if (_emotiBitWiFi.status() == WL_CONNECTED)
+  {
+    IPAddress ip = WiFi.localIP();
+    Serial.print("\"ip_address\":\"");
+    Serial.print(ip);
+    Serial.println("\"");
+  }
+  
 	Serial.println("}}]");
 }
 
+void EmotiBit::restartMcu()
+{
+	Serial.println("Restarting MCU");
+	delay(1000);
+#ifdef ARDUINO_FEATHER_ESP32
+	ESP.restart();
+#elif defined ADAFRUIT_FEATHER_M0
+	NVIC_SystemReset();
+#endif
+}
