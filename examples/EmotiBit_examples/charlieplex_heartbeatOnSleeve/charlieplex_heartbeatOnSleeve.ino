@@ -6,7 +6,7 @@ Working principle:
 filtered signal is used as a hreshold to light up the attached charlieplex.
 */
 #include "EmotiBit.h"
-#include "EmojiBit.h"
+#include "EmotiBitEmoji.h"
 #define SerialUSB SERIAL_PORT_USBVIRTUAL // Required to work in Visual Micro / Visual Studio IDE
 const uint32_t SERIAL_BAUD = 2000000; //115200
 
@@ -16,7 +16,7 @@ float data[dataSize];
 DigitalFilter filter_lp2(DigitalFilter::FilterType::IIR_LOWPASS, 25, 0.075);
 
 // Initializing Charlieplex wing
-EmojiBit matrix = EmojiBit();
+EmotibitEmoji matrix = EmotibitEmoji();
 
 void onShortButtonPress()
 {

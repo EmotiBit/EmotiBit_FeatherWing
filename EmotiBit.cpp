@@ -101,8 +101,12 @@ void EmotiBit::bmm150ReadTrimRegisters()
 
 uint8_t EmotiBit::setup(String firmwareVariant)
 {
-	// Capture the calling ino firmware_variant information
+	// Update firmware_variant information
 	firmware_variant = firmwareVariant;
+	// ToDo: find a way to extract variant string from build flag
+#ifdef EMOTIBIT_PPG_100HZ
+	firmware_variant = firmware_variant + "_PPG_100Hz";
+#endif
 
 #ifdef ARDUINO_FEATHER_ESP32
 	esp_bt_controller_disable();
@@ -133,7 +137,11 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	{
 		char input;
 		input = Serial.read();
-		if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
+		if (input == 'R')
+		{
+			restartMcu();
+		}
+		else if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
 		{
 			uint32_t waitStarForBarcode = millis();
 			testingMode = TestingMode::FACTORY_TEST;
@@ -542,7 +550,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	{
 		samplesAveraged.thermopile = (float)samplingRates.thermopile / 7.5f;
 	}
-	samplesAveraged.battery = (float) BASE_SAMPLING_FREQ / (float) BATTERY_SAMPLING_DIV / 1.f;
+	samplesAveraged.battery = (float) BASE_SAMPLING_FREQ / (float) BATTERY_SAMPLING_DIV / (0.2f);
 	setSamplesAveraged(samplesAveraged);
 	Serial.println("\nSet Samples averaged:");
 	// setup LED DRIVER
@@ -944,8 +952,26 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	// turn BLUE on to signify we are trying to connect to WiFi
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
 	led.send();
-	// ToDo: There is no catch right now for timeout. In case of timeout, EmotiBit still continues to complete setup() and proceed to update()
-	_emotiBitWiFi.begin(-1, 1);
+	uint16_t attemptDelay = 20000;  // in mS. ESP32 has been observed to take >10 seconds to resolve an enterprise connection
+	uint8_t maxAttemptsPerCred = 1;
+	uint32_t timeout = attemptDelay * maxAttemptsPerCred * _emotiBitWiFi.getNumCredentials() * 2; // Try cycling through all credentials at least 2x before giving up and trying a restart
+	if (_emotiBitWiFi.isEnterpriseNetworkListed())
+	{
+		// enterprise network is listed in network credential list.
+		// restart MCU after timeout
+		_emotiBitWiFi.begin(timeout, maxAttemptsPerCred, attemptDelay);
+	}
+	else
+	{
+		// only personal networks listed in credentials list.
+		// keep trying to connect to networks without any timeout
+		_emotiBitWiFi.begin(-1, maxAttemptsPerCred, attemptDelay);
+	}
+	if (_emotiBitWiFi.status(false) != WL_CONNECTED)
+	{ 
+		// Could not connect to network. software restart and begin setup again.
+		restartMcu();
+	}
 	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 	led.send();
 	if (testingMode == TestingMode::FACTORY_TEST)
@@ -1092,6 +1118,18 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		attachToCore(&ReadSensors, this);
 #endif
 	}
+
+	Serial.println("");
+#if defined(ARDUINO_FEATHER_ESP32)
+	Serial.println("HUZZAH32 Feather detected.");
+#endif
+#if defined(ADAFRUIT_FEATHER_M0)
+	Serial.println("Feather M0 detected.");
+#endif
+#if defined(EMOTIBIT_PPG_100HZ)
+	Serial.println("100Hz PPG activated. Ensure correct settings in ofxOscilloscopeSettings.xml are used to correctly visualize live data.");
+#endif
+	Serial.println("");
 
 	Serial.println("Switch to EmotiBit Oscilloscope to stream Data");
 	
@@ -3246,22 +3284,32 @@ void EmotiBit::processHeartRate()
 	uint32_t timestamp;
 	static uint16_t interBeatSampleCount = 0;
 	static uint8_t basisSignal = (uint8_t)DataType::PPG_INFRARED;
-	static DigitalFilter heartRateFilter(DigitalFilter::FilterType::IIR_LOWPASS, _samplingRates.ppg, 0.5);
+	static DigitalFilter heartRateFilter(DigitalFilter::FilterType::IIR_LOWPASS, 25, 1);  // heartbeat is signal with a variable "sampling rate". We are choosing a hardcoded "sampling freq." of 25 to reduce noise.
 	static DigitalFilter ppgSensorHighpass(DigitalFilter::FilterType::IIR_HIGHPASS, _samplingRates.ppg, 1); // to remove respiration artifact. filter frequency selected empirically
 	const static size_t APERIODIC_DATA_LEN = 1;  //used in packet header
 	const static float timePeriod = (1.f / _samplingRates.ppg) * 1000; // in mS
 	float interBeatInterval = 0; // in mS
 	float heartRate; // in bpm
-	static const int hrAlgoDcOffset = 100000; // randomly chosen to add offset to filtered ppgData. HR algo needs a DC offset to work
 	dataSize = dataDoubleBuffers[basisSignal]->getData(&data, &timestamp, false);
+	// uncomment to store intermediate data processing variables
+	/*
+	static float respIirFiltData[20]; // buffer to hold IIR filtered data (removed respiration)
+	static float iirFiltData[20]; // buffer to hold FIR filtered data (removed respiration)
+	for(uint8_t i=0;i<20;i++)
+ 	{
+		//respIirFiltData[i] = 0; // init buffer to 0 on every pass
+		iirFiltData[i] = 0;
+	} */
 	for (uint16_t i = 0; i < dataSize; i++)
 	{
 		// filter ppg data to remove respiration artifact
 		float filteredPpg = ppgSensorHighpass.filter(data[i]);
+		//respIirFiltData[i] = filteredPpg;
 		interBeatSampleCount++;
 		// the heart rate algorithm can be found in: EmotiBit_MAX30101/src/heartRate.cpp
-		// Note: the algorithm also has its own FIR
-		if (checkForBeat(filteredPpg + hrAlgoDcOffset))
+		int16_t tempIirFiltData = 0;
+		bool isBeat = checkForBeat(int32_t(filteredPpg), tempIirFiltData, true);
+		if (isBeat)
 		{
 			// beat detected
 			// calculate IBI
@@ -3281,8 +3329,13 @@ void EmotiBit::processHeartRate()
 			// reset interBeatCount
 			interBeatSampleCount = 0;
 		}
+		//iirFiltData[i] = (float)tempIirFiltData;
 	}
-
+	// uncomment to add intermediates to the output message
+	//const char* IIR_FILT_TYPETAG = "RM\0"; //respiration removed
+	//addPacket(timestamp, IIR_FILT_TYPETAG, respIirFiltData, dataSize, true);
+	//const char* FIR_FILT_DATA = "FF\0"; //fir filtered
+	//addPacket(timestamp, FIR_FILT_DATA, iirFiltData, dataSize, true);
 }
 
 void EmotiBit::processData()
@@ -3496,23 +3549,44 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 
 	if (!root.success()) {
 		Serial.println(F("Failed to parse config file"));
-		setupFailed("Failed to parse Config fie contents");
+		setupFailed("Failed to parse Config file contents");
 		return false;
 	}
 
 	size_t configSize;
 	// Copy values from the JsonObject to the Config
 	configSize = root.get<JsonVariant>("WifiCredentials").as<JsonArray>().size();
-	Serial.print("WiFi network List Size: ");
+	Serial.print("Number of network credentials found in config file: ");
 	Serial.println(configSize);
 	for (size_t i = 0; i < configSize; i++) {
 		String ssid = root["WifiCredentials"][i]["ssid"] | "";
+		String userid = root["WifiCredentials"][i]["userid"] | "";
+		String username = root["WifiCredentials"][i]["username"] | "";
 		String pass = root["WifiCredentials"][i]["password"] | "";
 		Serial.print("Adding SSID: ");
-		Serial.print(ssid); Serial.println(" - " + pass);
-		_emotiBitWiFi.addCredential( ssid, pass);
-		//Serial.println(ssid);
-		//Serial.println(pass);
+		Serial.print(ssid); 
+		if (!userid.equals(""))
+		{
+			Serial.print(" -userid:"); Serial.print(userid);
+			if (!username.equals(""))
+			{
+				Serial.print(" -username:"); Serial.print(username);
+			}
+		}
+		Serial.print(" -pass:" + pass);
+		if (_emotiBitWiFi.addCredential(ssid, userid, username, pass) < 0)
+		{
+			// Number of credentials exceeded max allowed
+			Serial.println("...failed to add credential");
+			Serial.println("***Credential storage capacity exceeded***");
+			Serial.print("Ignoring credentials beginning: "); Serial.println(ssid);
+			break;
+		}
+		else
+		{
+			Serial.println("... success");
+		}
+
 	}
 
 	//strlcpy(config.hostname,                   // <- destination
@@ -4460,6 +4534,7 @@ void EmotiBit::bufferOverflowTest(unsigned int maxTestDuration, unsigned int del
 {
 	unsigned long startTime = millis();
 	unsigned int totalDuration = millis() - startTime;
+	unsigned int timeFirstOverflow = 0;
 
 	Serial.println("Results format:");
 	Serial.print("totalDuration");
@@ -4480,6 +4555,9 @@ void EmotiBit::bufferOverflowTest(unsigned int maxTestDuration, unsigned int del
 			Serial.print(dataDoubleBuffers[(uint8_t)d]->capacity(DoubleBufferFloat::BufferSelector::IN));
 			Serial.print(", ");
 			Serial.print(dataDoubleBuffers[(uint8_t)d]->getOverflowCount(DoubleBufferFloat::BufferSelector::IN));
+			// if an overflow is detected on any stream, record the time of overflow
+			if(timeFirstOverflow == 0 && dataDoubleBuffers[(uint8_t)d]->getOverflowCount(DoubleBufferFloat::BufferSelector::IN))
+				timeFirstOverflow = totalDuration;
 
 			humanReadable ? Serial.println("") : Serial.print(", ");
 		}
@@ -4487,6 +4565,7 @@ void EmotiBit::bufferOverflowTest(unsigned int maxTestDuration, unsigned int del
 		delay(delayInterval);
 		totalDuration = millis() - startTime;
 	}
+	Serial.print("~Time @first overflow: "); Serial.println(timeFirstOverflow);
 }
 
 void EmotiBit::printEmotiBitInfo()
@@ -4520,10 +4599,29 @@ void EmotiBit::printEmotiBitInfo()
 	Serial.print("\"firmware_version\":\"");
 	Serial.print(firmware_version);
 	Serial.println("\",");
-	
-	Serial.print("\"firmware_variant\":\"");
+  
+  Serial.print("\"firmware_variant\":\"");
 	Serial.print(firmware_variant);
 	Serial.println("\",");
+  
+  if (_emotiBitWiFi.status() == WL_CONNECTED)
+  {
+    IPAddress ip = WiFi.localIP();
+    Serial.print("\"ip_address\":\"");
+    Serial.print(ip);
+    Serial.println("\"");
+  }
+  
 	Serial.println("}}]");
 }
 
+void EmotiBit::restartMcu()
+{
+	Serial.println("Restarting MCU");
+	delay(1000);
+#ifdef ARDUINO_FEATHER_ESP32
+	ESP.restart();
+#elif defined ADAFRUIT_FEATHER_M0
+	NVIC_SystemReset();
+#endif
+}
