@@ -36,6 +36,7 @@
 #elif defined ARDUINO_FEATHER_ESP32
 #include <WiFi.h>
 #include <esp_wifi.h>
+#include "esp_wpa2.h" //wpa2 library for connections to Enterprise networks
 #endif
 #include <WiFiUdp.h>
 #include "EmotiBitComms.h"
@@ -46,6 +47,8 @@ public:
 	struct Credential
 	{
 		String ssid = "";
+		String userid = "";
+		String username = "";
 		String pass = "";
 	};
 	String _emotibitDeviceId = "";
@@ -80,7 +83,7 @@ public:
 	static const uint8_t SUCCESS = 0;
 	static const uint8_t FAIL = -1;
 	static const uint16_t MAX_SEND_LEN = 512;							// messages longer than this will be broken up into multiple sends
-	static const uint32_t WIFI_BEGIN_ATTEMPT_DELAY = 5000;// Duration to wait after WiFi lost before attempting to reconnect
+	static const uint32_t WIFI_BEGIN_ATTEMPT_DELAY = 20000;// Duration to wait after WiFi lost before attempting to reconnect
 	static const uint32_t WIFI_BEGIN_SWITCH_CRED = 300000;// Set to 30000 for debug, 300000 for Release
 	static const uint32_t SETUP_TIMEOUT = 61500;          // Enough time to run through list of network credentials twice
 	static const uint8_t MAX_WIFI_CONNECT_HISTORY = 20;		// NO. of wifi connectivity status to remember
@@ -106,7 +109,7 @@ public:
 	//int8_t setup();
 	uint8_t begin(int32_t timeout = 61500, uint8_t maxAttemptsPerCred = 2, uint16_t attemptDelay = 3000);
 	//uint8_t begin(uint8_t credentialIndex, uint8_t maxAttempts = 10, uint16_t attemptDelay = 1000);
-	uint8_t begin(const String &ssid, const String &pass, uint8_t maxAttempts = 10, uint16_t attemptDelay = 3000);
+	uint8_t begin(const Credential credential, uint8_t maxAttempts = 10, uint16_t attemptDelay = 3000);
 	void end();
 	int8_t updateWiFi();
 	int8_t connect(const IPAddress &hostIp, const String &connectPayload);
@@ -124,7 +127,7 @@ public:
 	String createPongPacket();
 	void setTimeSyncInterval(const uint32_t &interval);
 	void setAdvertisingInterval(const uint32_t &interval);
-	int8_t addCredential(const String &ssid, const String &password);
+	int8_t addCredential(const String &ssid, const String &userid, const String &username, const String &password);
 	void printWiFiStatus();
 	uint8_t listNetworks();
 	bool isConnected();
@@ -140,8 +143,28 @@ public:
 	@Brief Returns the status of Arduino WiFi.status()
 	@param If update = false the fn returns the last interrupt-safe value stored by updateStatus()
 	@return Value of WiFi.status() or WL_DISCONNECTED if WiFi is OFF
+  @note
+  0	WL_IDLE_STATUS	temporary status assigned when WiFi.begin() is called
+  1	WL_NO_SSID_AVAIL	 when no SSID are available
+  2	WL_SCAN_COMPLETED	scan networks is completed
+  3	WL_CONNECTED	when connected to a WiFi network
+  4	WL_CONNECT_FAILED	when the connection fails for all the attempts
+  5	WL_CONNECTION_LOST	when the connection is lost
+  6	WL_DISCONNECTED	when disconnected from a network
 	*/
 	uint8_t status(bool update = true);
 
 	void checkWiFi101FirmwareVersion();
+
+	/*!
+	 * @brief Returns number of credentials loaded from the SD Card
+	 * @return Number of credentials loaded from the SD-Card (<= MAX_CREDENTIALS)
+	 */
+	uint8_t getNumCredentials();
+
+	/*!
+	 * @brief Function to check if an enterprise network is listed among the network credentials
+	   @return true is enterprise network is listed, else false
+	 */
+	bool isEnterpriseNetworkListed();
 };
