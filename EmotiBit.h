@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.7.1";
+  String firmware_version = "1.7.1.feat-txEmotibitSrNum.1";
 
 
 
