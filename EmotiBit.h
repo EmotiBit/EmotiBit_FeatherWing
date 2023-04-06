@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.7.0.hotfix-wifiConnectionAttemptDelay";
+  String firmware_version = "1.7.1";
 
 
 
