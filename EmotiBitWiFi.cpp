@@ -139,8 +139,13 @@ uint8_t EmotiBitWiFi::begin(const Credential credential, uint8_t maxAttempts, ui
 		Serial.println(millis() - beginDuration);
 		wifiStatus = status();
 		_needsAdvertisingBegin = true;
-		//while((wifiStatus == WL_IDLE_STATUS) && (millis() - beginDuration < attemptDelay)) // This is necessary for ESP32 unless callback is utilized
-    while((wifiStatus == WL_IDLE_STATUS || wifiStatus == WL_DISCONNECTED) && (millis() - beginDuration < attemptDelay)) // This is necessary for ESP32 unless callback is utilized
+		bool checkForDisconnected = false;  //< Boolean to control behaviour of connection status check.
+#ifdef ARDUINO_FEATHER_ESP32
+		checkForDisconnected = true;
+#endif
+		// only check for WL_DISCONNECTED if board is ESP. It is because of how WiFi library on ESP handles a connection failure.
+		// ToDo: reconsider this logic if support for new board (apart from M0 or ESP32) is added
+    	while((wifiStatus == WL_IDLE_STATUS || (checkForDisconnected && wifiStatus == WL_DISCONNECTED)) && (millis() - beginDuration < attemptDelay)) // This is necessary for ESP32 unless callback is utilized
 		{
 			delay(attemptDelay / 10);
 			wifiStatus = status();
