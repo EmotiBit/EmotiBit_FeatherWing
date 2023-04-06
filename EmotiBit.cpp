@@ -3582,6 +3582,7 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 		{
 			Serial.println("... success");
 		}
+		_emotiBitWiFi.setDeviceId(emotibitDeviceId);
 
 	}
 
