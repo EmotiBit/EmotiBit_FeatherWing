@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.7.0";
+  String firmware_version = "1.8.0.fix-improveHr.1";
 
 
 
