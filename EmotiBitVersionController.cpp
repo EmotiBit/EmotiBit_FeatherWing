@@ -335,7 +335,7 @@ bool EmotiBitVersionController::isEmotiBitReady()
 		delay(100);
 		// ToDo: Think about adding battery voltage measurement here as well
 		_initMappingSystemConstants(vregEnablePinLogic);
-		if (SD.begin(SD_CARD_CHIP_SEL_PIN))
+		if (SD.begin(SD_CARD_CHIP_SEL_PIN, SD_SCK_MHZ(12)))
 		{
 			SD.end();
 			return true;
@@ -351,7 +351,7 @@ bool EmotiBitVersionController::isEmotiBitReady()
 		delay(100);
 		// ToDo: Think about adding battery voltage measurement here as well
 		_initMappingSystemConstants(vregEnablePinLogic);
-		if (SD.begin(SD_CARD_CHIP_SEL_PIN))
+		if (SD.begin(SD_CARD_CHIP_SEL_PIN, SD_SCK_MHZ(12)))
 		{
 			return true;
 		}

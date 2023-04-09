@@ -1216,7 +1216,7 @@ bool EmotiBit::setupSdCard()
 #if defined ARDUINO_FEATHER_ESP32
 		if (SD.begin(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN, SPI, 10000000)) // 10MHz works with 40MHz CPU, 20Mhz does NOT
 #else
-		if (SD.begin(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN))
+		if (SD.begin(EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN, SD_SCK_MHZ(12)))
 #endif
 		{
 			success = true;
