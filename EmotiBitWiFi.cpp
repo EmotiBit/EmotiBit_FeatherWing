@@ -149,8 +149,6 @@ uint8_t EmotiBitWiFi::begin(const Credential credential, uint8_t maxAttempts, ui
 		{
 			delay(attemptDelay / 10);
 			wifiStatus = status();
-      Serial.print("WiFi.status() = ");
-      Serial.print(wifiStatus);
 		}
 		Serial.print("WiFi.status() = ");
 		Serial.print(wifiStatus);
