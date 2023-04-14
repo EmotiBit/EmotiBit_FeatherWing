@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include "EmotiBit.h"
 
 bool pinStatus; // stores digital pin status to detect changes
@@ -42,9 +43,13 @@ void setup()
 	delay(2000);	// short delay to allow user to connect to serial, if desired
 
 	// Capture the calling ino into firmware_variant information
-	String inoFilename = __FILE__;
-	inoFilename = (inoFilename.substring((inoFilename.indexOf(".")), (inoFilename.lastIndexOf("\\")) + 1));
-
+	String inoFilename = __FILE__;  // returns absolute path of ino file
+	inoFilename.replace("/","\\");  // conform to standard directory separator
+	// extract filename only if directory separator found in absolute path
+	if(inoFilename.lastIndexOf("\\") != -1)
+	{
+		inoFilename = inoFilename.substring((inoFilename.lastIndexOf("\\")) + 1,(inoFilename.indexOf(".")));
+	}
 	emotibit.setup(inoFilename);
 
 	// Attach callback functions
