@@ -525,125 +525,109 @@ bool EmotiBitEda::writeInfoJson(File &jsonFile)
 	const uint16_t bufferSize = 1024;
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
-		infos[i]->set("name", "ElectrodermalActivity");
-		infos[i]->set("type", "ElectrodermalActivity");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("EA");
-		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", _constants.samplingRate);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "microsiemens");
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("eda_series_resistance", _constants.edaSeriesResistance);
-		setups[i]->set("adc_bits", _constants.adcBits);
-		setups[i]->set("enable_digital_filter", _constants.enableDigitalFilter);
-		setups[i]->set("samples_averaged", _edlOversampBuffer->capacity());
-		setups[i]->set("oversampling_rate", _edlOversampBuffer->capacity() * _constants.samplingRate);
+		infos[i] = root.createNestedObject("info");
+		infos[i]["name"] = "ElectrodermalActivity";
+		infos[i]["type"] = "ElectrodermalActivity";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("EA");
+		infos[i]["channel_count"] = 1;
+		infos[i]["nominal_srate"] = _constants.samplingRate;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "microsiemens";
+		setups[i] = infos[i].createNestedObject("setup");
+		setups[i]["eda_series_resistance"] = _constants.edaSeriesResistance;
+		setups[i]["adc_bits"] = _constants.adcBits;
+		setups[i]["enable_digital_filter"] = _constants.enableDigitalFilter;
+		setups[i]["samples_averaged"] = _edlOversampBuffer->capacity();
+		setups[i]["oversampling_rate"] = _edlOversampBuffer->capacity() * _constants.samplingRate;
 		if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 		{
-			setups[i]->set("eda_transform_slope", _constants_v4_plus.edaTransformSlope);
-			setups[i]->set("eda_transform_intercept", _constants_v4_plus.edaTransformIntercept);
+			setups[i]["eda_transform_slope"] = _constants_v4_plus.edaTransformSlope;
+			setups[i]["eda_transform_intercept"] = _constants_v4_plus.edaTransformIntercept;
 		} 
 		else
 		{
-			setups[i]->set("voltage_reference_1", _constants_v2_v3.vRef1);
-			setups[i]->set("voltage_reference_2", _constants_v2_v3.vRef2);
-			setups[i]->set("EDA_feedback_amp_resistance", _constants_v2_v3.feedbackAmpR);
-			setups[i]->set("EDR_amplification", _constants_v2_v3.edrAmplification);
-			setups[i]->set("EDA_crossover_filter_frequency", _constants_v2_v3.crossoverFilterFreq);
-			setups[i]->set("VCC", _constants_v2_v3.vcc);
-			setups[i]->set("ISR_ADC_offset_correction", _constants_v2_v3.isrOffsetCorr);
+			setups[i]["voltage_reference_1"] = _constants_v2_v3.vRef1;
+			setups[i]["voltage_reference_2"] = _constants_v2_v3.vRef2;
+			setups[i]["EDA_feedback_amp_resistance"] = _constants_v2_v3.feedbackAmpR;
+			setups[i]["EDR_amplification"] = _constants_v2_v3.edrAmplification;
+			setups[i]["EDA_crossover_filter_frequency"] = _constants_v2_v3.crossoverFilterFreq;
+			setups[i]["VCC"] = _constants_v2_v3.vcc;
+			setups[i]["ISR_ADC_offset_correction"] = _constants_v2_v3.isrOffsetCorr;
 		}
 
-		if (root.printTo(jsonFile) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		serializeJson(jsonDoc, jsonFile);
 	}
 	jsonFile.print(",");
 	// Skin Coductance Response Amplitude
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
-		infos[i]->set("name", "SkinConductanceResponseAmplitude");
-		infos[i]->set("type", "ElectrodermalActivity");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add(EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_AMPLITUDE);
-		infos[i]->set("channel_count", 1);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "microsiemens");
-		if (root.printTo(jsonFile) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i] = root.createNestedObject("info");
+		infos[i]["name"] = "SkinConductanceResponseAmplitude";
+		infos[i]["type"] = "ElectrodermalActivity";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add(EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_AMPLITUDE);
+		infos[i]["channel_count"] = 1;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "microsiemens";
+		serializeJson(jsonDoc, jsonFile);
 	}
 	jsonFile.print(",");
 	// Skin Coductance Response Frequency
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
-		infos[i]->set("name", "SkinConductanceResponseFrequency");
-		infos[i]->set("type", "ElectrodermalActivity");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add(EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_FREQ);
-		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", _constants.samplingRate / _constants.EDA_SAMPLES_PER_SCR_FREQ_OUTPUT);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "count/min");
-		if (root.printTo(jsonFile) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i] = root.createNestedObject("info");
+		infos[i]["name"] = "SkinConductanceResponseFrequency";
+		infos[i]["type"] = "ElectrodermalActivity";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add(EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_FREQ);
+		infos[i]["channel_count"] = 1;
+		infos[i]["nominal_srate"] = _constants.samplingRate / _constants.EDA_SAMPLES_PER_SCR_FREQ_OUTPUT;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "count/min";
+		serializeJson(jsonDoc, jsonFile);
 	}
 	jsonFile.print(",");
 	// Skin Coductance Response Rise Time
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
-		infos[i]->set("name", "SkinConductanceResponseRiseTime");
-		infos[i]->set("type", "ElectrodermalActivity");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add(EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_RISE_TIME);
-		infos[i]->set("channel_count", 1);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "secs");
-		if (root.printTo(jsonFile) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i] = root.createNestedObject("info");
+		infos[i]["name"] = "SkinConductanceResponseRiseTime";
+		infos[i]["type"] = "ElectrodermalActivity";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add(EmotiBitPacket::TypeTag::SKIN_CONDUCTANCE_RESPONSE_RISE_TIME);
+		infos[i]["channel_count"] = 1;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "secs";
+		serializeJson(jsonDoc, jsonFile);
 	}
 	return true;
 }
