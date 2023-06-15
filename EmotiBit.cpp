@@ -3511,7 +3511,7 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 	Serial.println(configSize);
 	for (size_t i = 0; i < configSize; i++) {
 		String ssid = jsonDoc["WifiCredentials"][i]["ssid"].as<String>();
-		String userid = jsonDoc["WifiCredentials"][i]["userid"];
+		String userid = jsonDoc["WifiCredentials"][i]["userid"].as<String>();
 		String username = jsonDoc["WifiCredentials"][i]["username"].as<String>();
 		String pass = jsonDoc["WifiCredentials"][i]["password"].as<String>();
 		Serial.print("Adding SSID: ");
