@@ -3510,25 +3510,13 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 	Serial.print("Number of network credentials found in config file: ");
 	Serial.println(configSize);
 	for (size_t i = 0; i < configSize; i++) {
-		String ssid = jsonDoc["WifiCredentials"][i]["ssid"].as<String>();
-		String userid = jsonDoc["WifiCredentials"][i]["userid"].as<String>();
-		String username = jsonDoc["WifiCredentials"][i]["username"].as<String>();
-		String pass = jsonDoc["WifiCredentials"][i]["password"].as<String>();
+		String ssid = jsonDoc["WifiCredentials"][i]["ssid"] | "";  // See implementation example: https://arduinojson.org/v6/api/jsonvariant/or/
+		String userid = jsonDoc["WifiCredentials"][i]["userid"] | "";
+		String username = jsonDoc["WifiCredentials"][i]["username"] | "";
+		String pass = jsonDoc["WifiCredentials"][i]["password"] | "";
+
 		Serial.print("Adding SSID: ");
 		Serial.print(ssid);
-
-		if (ssid.equals("null")){
-			ssid="";
-		}
-		if (userid.equals("null")){
-			userid="";
-		}
-		if (username.equals("null")){
-			username="";
-		}
-		if (pass.equals("null")){
-			pass="";
-		}
 
 		if (!userid.equals(""))
 		{
@@ -3539,6 +3527,7 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 			}
 		}
 		Serial.print(" -pass:" + pass);
+		
 		if (_emotiBitWiFi.addCredential(ssid, userid, username, pass) < 0)
 		{
 			// Number of credentials exceeded max allowed
@@ -3549,11 +3538,11 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 		}
 		else
 		{
-			Serial.println("... success");
+			Serial.println(" ... success");
 		}
-		_emotiBitWiFi.setDeviceId(emotibitDeviceId);
 
 	}
+	_emotiBitWiFi.setDeviceId(emotibitDeviceId);
 
 	//strlcpy(config.hostname,                   // <- destination
 	//	root["hostname"] | "example.com",  // <- source
