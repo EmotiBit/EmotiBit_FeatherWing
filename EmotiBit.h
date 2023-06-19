@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.8.1.fix-JsonLibUpdate.2";
+  String firmware_version = "2.0.0";
 
 
 
