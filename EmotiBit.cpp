@@ -2538,149 +2538,132 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 
 	{
 		// Write basic EmotiBit info
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
-		infos[i]->set("name", "EmotiBitData");
-		infos[i]->set("type", "Multimodal");
-		infos[i]->set("source_id", _sourceId);
-		infos[i]->set("hardware_version", hardware_version);
-		infos[i]->set("sku", emotiBitSku);
-		infos[i]->set("device_id", emotibitDeviceId);
-		infos[i]->set("feather_version", _featherVersion);
-		infos[i]->set("feather_wifi_mac_addr", getFeatherMacAddress());
-		infos[i]->set("firmware_version", firmware_version);
-		infos[i]->set("firmware_variant", firmware_variant);
-		infos[i]->set("created_at", datetimeString);
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i] = root.createNestedObject("info");
+		infos[i]["name"] = "EmotiBitData";
+		infos[i]["type"] = "Multimodal";
+		infos[i]["source_id"] = _sourceId;
+		infos[i]["hardware_version"] = hardware_version;
+		infos[i]["sku"] = emotiBitSku;
+		infos[i]["device_id"] = emotibitDeviceId;
+		infos[i]["feather_version"] = _featherVersion;
+		infos[i]["feather_wifi_mac_addr"] = getFeatherMacAddress();
+		infos[i]["firmware_version"] = firmware_version;
+		infos[i]["firmware_variant"] = firmware_variant;
+		infos[i]["created_at"] = datetimeString;
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		//JsonArray& root = jsonBuffer.createArray();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 
 		// ToDo: Use EmotiBitPacket::TypeTag rather than fallable constants to set typeTags
 
 		// Accelerometer
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Accelerometer");
-		infos[i]->set("type", "Accelerometer");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("AX");
-		typeTags[i]->add("AY");
-		typeTags[i]->add("AZ");
-		infos[i]->set("channel_count", 3);
-		infos[i]->set("nominal_srate", _samplingRates.accelerometer);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "g");
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("range", _accelerometerRange);
-		setups[i]->set("acc_bwp", imuSettings.acc_bwp);
-		setups[i]->set("acc_us", imuSettings.acc_us);
-
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i]["name"] = "Accelerometer";
+		infos[i]["type"] = "Accelerometer";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("AX");
+		typeTags[i].add("AY");
+		typeTags[i].add("AZ");
+		infos[i]["channel_count"] = 3;
+		infos[i]["nominal_srate"] = _samplingRates.accelerometer;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "g";
+		setups[i] = infos[i].createNestedObject("setup");
+		setups[i]["range"] = _accelerometerRange;
+		setups[i]["acc_bwp"] = imuSettings.acc_bwp;
+		setups[i]["acc_us"] = imuSettings.acc_us;
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		//JsonArray& root = jsonBuffer.createArray();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 
 		// Gyroscope
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Gyroscope");
-		infos[i]->set("type", "Gyroscope");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("GX");
-		typeTags[i]->add("GY");
-		typeTags[i]->add("GZ");
-		infos[i]->set("channel_count", 3);
-		infos[i]->set("nominal_srate", _samplingRates.gyroscope);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "degrees/second");
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("range", _gyroRange);
-		setups[i]->set("gyr_bwp", imuSettings.gyr_bwp);
-		setups[i]->set("gyr_us", imuSettings.gyr_us);
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i]["name"] = "Gyroscope";
+		infos[i]["type"] = "Gyroscope";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("GX");
+		typeTags[i].add("GY");
+		typeTags[i].add("GZ");
+		infos[i]["channel_count"] = 3;
+		infos[i]["nominal_srate"] = _samplingRates.gyroscope;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "degrees/second";
+		setups[i] = infos[i].createNestedObject("setup");
+		setups[i]["range"] = _gyroRange;
+		setups[i]["gyr_bwp"] = imuSettings.gyr_bwp;
+		setups[i]["gyr_us"] = imuSettings.gyr_us;
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		//JsonArray& root = jsonBuffer.createArray();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 
 		// Magnetometer
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Magnetometer");
-		infos[i]->set("type", "Magnetometer");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("MX");
-		typeTags[i]->add("MY");
-		typeTags[i]->add("MZ");
-		infos[i]->set("channel_count", 3);
-		infos[i]->set("nominal_srate", _samplingRates.magnetometer);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "microhenries");
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i]["name"] = "Magnetometer";
+		infos[i]["type"] = "Magnetometer";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("MX");
+		typeTags[i].add("MY");
+		typeTags[i].add("MZ");
+		infos[i]["channel_count"] = 3;
+		infos[i]["nominal_srate"] = _samplingRates.magnetometer;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "microhenries";
+		setups[i] = infos[i].createNestedObject("setup");
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
@@ -2693,260 +2676,232 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 	{
 		{
 			// Parse the root object
-			StaticJsonBuffer<bufferSize> jsonBuffer;
-			JsonObject &root = jsonBuffer.createObject();
+			StaticJsonDocument<bufferSize> jsonDoc;
+			JsonObject root = jsonDoc.to<JsonObject>();
 			//JsonArray& root = jsonBuffer.createArray();
 			const uint8_t nInfo = 1;
 			//JsonObject* indices[nInfo];
-			JsonObject* infos[nInfo];
-			JsonArray* typeTags[nInfo];
-			JsonObject* setups[nInfo];
+			JsonObject infos[nInfo];
+			JsonArray typeTags[nInfo];
+			JsonObject setups[nInfo];
 			uint8_t i = 0;
-			infos[i] = &(root.createNestedObject("info"));
+			infos[i] = root.createNestedObject("info");
 			// Humidity0
 			//i++;
 			//indices[i] = &(root.createNestedObject());
 			//infos[i] = &(indices[i]->createNestedObject("info"));
-			infos[i]->set("name", "Humidity0");
-			infos[i]->set("type", "Humidity");
-			typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-			typeTags[i]->add("H0");
-			infos[i]->set("channel_count", 1);
-			infos[i]->set("nominal_srate", _samplingRates.humidity / _samplesAveraged.humidity);
-			infos[i]->set("channel_format", "float");
-			infos[i]->set("units", "Percent");
-			setups[i] = &(infos[i]->createNestedObject("setup"));
-			setups[i]->set("resolution", "RESOLUTION_H11_T11");
-			setups[i]->set("samples_averaged", _samplesAveraged.humidity);
-			setups[i]->set("oversampling_rate", _samplingRates.humidity);
-			if (root.printTo(file) == 0) {
-#ifdef DEBUG
-				Serial.println(F("Failed to write to file"));
-#endif
-			}
+			infos[i]["name"] = "Humidity0";
+			infos[i]["type"] = "Humidity";
+			typeTags[i] = infos[i].createNestedArray("typeTags");
+			typeTags[i].add("H0");
+			infos[i]["channel_count"] = 1;
+			infos[i]["nominal_srate"] = _samplingRates.humidity / _samplesAveraged.humidity;
+			infos[i]["channel_format"] = "float";
+			infos[i]["units"] = "Percent";
+			setups[i] = infos[i].createNestedObject("setup");
+			setups[i]["resolution"] = "RESOLUTION_H11_T11";
+			setups[i]["samples_averaged"] = _samplesAveraged.humidity;
+			setups[i]["oversampling_rate"] = _samplingRates.humidity;
+			serializeJson(jsonDoc, file);
 		}
 
 		file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
 		{
 			// Parse the root object
-			StaticJsonBuffer<bufferSize> jsonBuffer;
-			JsonObject &root = jsonBuffer.createObject();
+			StaticJsonDocument<bufferSize> jsonDoc;
+			JsonObject root = jsonDoc.to<JsonObject>();
 			//JsonArray& root = jsonBuffer.createArray();
 			const uint8_t nInfo = 1;
 			//JsonObject* indices[nInfo];
-			JsonObject* infos[nInfo];
-			JsonArray* typeTags[nInfo];
-			JsonObject* setups[nInfo];
+			JsonObject infos[nInfo];
+			JsonArray typeTags[nInfo];
+			JsonObject setups[nInfo];
 			uint8_t i = 0;
-			infos[i] = &(root.createNestedObject("info"));
+			infos[i] = root.createNestedObject("info");
 			// Temperature0
 			//i++;
 			//indices[i] = &(root.createNestedObject());
 			//infos[i] = &(indices[i]->createNestedObject("info"));
-			infos[i]->set("name", "Temperature0");
-			infos[i]->set("type", "Temperature");
-			typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-			typeTags[i]->add("T0");
-			infos[i]->set("channel_count", 1);
-			infos[i]->set("nominal_srate", _samplingRates.temperature / _samplesAveraged.temperature);
-			infos[i]->set("channel_format", "float");
-			infos[i]->set("units", "degrees celcius");
-			infos[i]->set("sensor_part_number", "Si7013");
-			infos[i]->set("sensor_serial_number_a", tempHumiditySensor.sernum_a);
-			infos[i]->set("sensor_serial_number_b", tempHumiditySensor.sernum_b);
-			setups[i] = &(infos[i]->createNestedObject("setup"));
-			setups[i]->set("resolution", "RESOLUTION_H11_T11");
-			setups[i]->set("samples_averaged", _samplesAveraged.temperature);
-			setups[i]->set("oversampling_rate", _samplingRates.temperature);
-			if (root.printTo(file) == 0) {
-#ifdef DEBUG
-				Serial.println(F("Failed to write to file"));
-#endif
-			}
+			infos[i]["name"] = "Temperature0";
+			infos[i]["type"] = "Temperature";
+			typeTags[i] = infos[i].createNestedArray("typeTags");
+			typeTags[i].add("T0");
+			infos[i]["channel_count"] = 1;
+			infos[i]["nominal_srate"] = _samplingRates.temperature / _samplesAveraged.temperature;
+			infos[i]["channel_format"] = "float";
+			infos[i]["units"] = "degrees celcius";
+			infos[i]["sensor_part_number"] = "Si7013";
+			infos[i]["sensor_serial_number_a"] = tempHumiditySensor.sernum_a;
+			infos[i]["sensor_serial_number_b"] = tempHumiditySensor.sernum_b;
+			setups[i] = infos[i].createNestedObject("setup");
+			setups[i]["resolution"] = "RESOLUTION_H11_T11";
+			setups[i]["samples_averaged"] = _samplesAveraged.temperature;
+			setups[i]["oversampling_rate"] = _samplingRates.temperature;
+			serializeJson(jsonDoc, file);
 		}
 		file.print(","); // Doing some manual printing to chunk JSON and save RAM
 	}
 	
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		//JsonArray& root = jsonBuffer.createArray();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 		// Temperature0
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Temperature1");
-		infos[i]->set("type", "Temperature");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("T1");
-		infos[i]->set("channel_count", 1);
-		infos[i]->set("nominal_srate", _samplingRates.temperature_1 / _samplesAveraged.temperature_1);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "degrees celcius");
-		infos[i]->set("sensor_part_number", "MAX30101");
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("samples_averaged", _samplesAveraged.temperature_1);
-		setups[i]->set("oversampling_rate", _samplingRates.temperature_1);
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i]["name"] = "Temperature1";
+		infos[i]["type"] = "Temperature";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("T1");
+		infos[i]["channel_count"] = 1;
+		infos[i]["nominal_srate"] = _samplingRates.temperature_1 / _samplesAveraged.temperature_1;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "degrees celcius";
+		infos[i]["sensor_part_number"] = "MAX30101";
+		setups[i] = infos[i].createNestedObject("setup");
+		setups[i]["samples_averaged"] = _samplesAveraged.temperature_1;
+		setups[i]["oversampling_rate"] = _samplingRates.temperature_1;
+		serializeJson(jsonDoc, file);
 	}
 	
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		//JsonArray& root = jsonBuffer.createArray();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 
 		// thermopile
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "Thermopile");
-		infos[i]->set("type", "Temperature");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("TH");
-		infos[i]->set("channel_count", 1);
+		infos[i]["name"] = "Thermopile";
+		infos[i]["type"] = "Temperature";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("TH");
+		infos[i]["channel_count"] = 1;
 		if (thermopileMode == MODE_CONTINUOUS)
 		{
-			infos[i]->set("nominal_srate", thermopileFs);
+			infos[i]["nominal_srate"] = thermopileFs;
 		}
 		else
 		{
-			infos[i]->set("nominal_srate", _samplingRates.thermopile / _samplesAveraged.thermopile);
+			infos[i]["nominal_srate"] = _samplingRates.thermopile / _samplesAveraged.thermopile;
 		}
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "degrees celcius");
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("samples_averaged", _samplesAveraged.thermopile);
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "degrees celcius";
+		setups[i] = infos[i].createNestedObject("setup");
+		setups[i]["samples_averaged"] = _samplesAveraged.thermopile;
 		if (thermopileMode == MODE_CONTINUOUS)
 		{
-			infos[i]->set("oversampling_rate", thermopileFs);
+			infos[i]["oversampling_rate"] = thermopileFs;
 		}
 		else
 		{
-			setups[i]->set("oversampling_rate", _samplingRates.thermopile);
+			setups[i]["oversampling_rate"] = _samplingRates.thermopile;
 		}
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		//JsonArray& root = jsonBuffer.createArray();
 		const uint8_t nInfo = 1;
 		//JsonObject* indices[nInfo];
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
+		infos[i] = root.createNestedObject("info");
 
 		// PPG
 		//i++;
 		//indices[i] = &(root.createNestedObject());
 		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]->set("name", "PPG");
-		infos[i]->set("type", "PPG");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add("PI");
-		typeTags[i]->add("PR");
-		typeTags[i]->add("PG");
-		infos[i]->set("channel_count", 3);
-		infos[i]->set("nominal_srate", ppgSettings.sampleRate / ppgSettings.sampleAverage);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "raw units");
-		setups[i] = &(infos[i]->createNestedObject("setup"));
-		setups[i]->set("LED_power_level", ppgSettings.ledPowerLevel);
-		setups[i]->set("samples_averaged", ppgSettings.sampleAverage);
-		setups[i]->set("LED_mode", ppgSettings.ledMode);
-		setups[i]->set("oversampling_rate", ppgSettings.sampleRate);
-		setups[i]->set("pulse_width", ppgSettings.pulseWidth);
-		setups[i]->set("ADC_range", ppgSettings.adcRange);
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i]["name"] = "PPG";
+		infos[i]["type"] = "PPG";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add("PI");
+		typeTags[i].add("PR");
+		typeTags[i].add("PG");
+		infos[i]["channel_count"] = 3;
+		infos[i]["nominal_srate"] = ppgSettings.sampleRate / ppgSettings.sampleAverage;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "raw units";
+		setups[i] = infos[i].createNestedObject("setup");
+		setups[i]["LED_power_level"] = ppgSettings.ledPowerLevel;
+		setups[i]["samples_averaged"] = ppgSettings.sampleAverage;
+		setups[i]["LED_mode"] = ppgSettings.ledMode;
+		setups[i]["oversampling_rate"] = ppgSettings.sampleRate;
+		setups[i]["pulse_width"] = ppgSettings.pulseWidth;
+		setups[i]["ADC_range"] = ppgSettings.adcRange;
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 	// Heart Rate
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
-		infos[i]->set("name", "HeartRate");
-		infos[i]->set("type", "PPG");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add(EmotiBitPacket::TypeTag::HEART_RATE);
-		infos[i]->set("channel_count", 1);
-		infos[i]->set("channel_format", "int");
-		infos[i]->set("units", "bpm");
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i] = root.createNestedObject("info");
+		infos[i]["name"] = "HeartRate";
+		infos[i]["type"] = "PPG";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add(EmotiBitPacket::TypeTag::HEART_RATE);
+		infos[i]["channel_count"] = 1;
+		infos[i]["channel_format"] = "int";
+		infos[i]["units"] = "bpm";
+		serializeJson(jsonDoc, file);
 	}
 
 	file.print(","); // Doing some manual printing to chunk JSON and save RAM
 	// interBeat interval
 	{
 		// Parse the root object
-		StaticJsonBuffer<bufferSize> jsonBuffer;
-		JsonObject &root = jsonBuffer.createObject();
+		StaticJsonDocument<bufferSize> jsonDoc;
+		JsonObject root = jsonDoc.to<JsonObject>();
 		const uint8_t nInfo = 1;
-		JsonObject* infos[nInfo];
-		JsonArray* typeTags[nInfo];
-		JsonObject* setups[nInfo];
+		JsonObject infos[nInfo];
+		JsonArray typeTags[nInfo];
+		JsonObject setups[nInfo];
 		uint8_t i = 0;
-		infos[i] = &(root.createNestedObject("info"));
-		infos[i]->set("name", "InterBeatInterval");
-		infos[i]->set("type", "PPG");
-		typeTags[i] = &(infos[i]->createNestedArray("typeTags"));
-		typeTags[i]->add(EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL);
-		infos[i]->set("channel_count", 1);
-		infos[i]->set("channel_format", "float");
-		infos[i]->set("units", "mS");
-		if (root.printTo(file) == 0) {
-#ifdef DEBUG
-			Serial.println(F("Failed to write to file"));
-#endif
-		}
+		infos[i] = root.createNestedObject("info");
+		infos[i]["name"] = "InterBeatInterval";
+		infos[i]["type"] = "PPG";
+		typeTags[i] = infos[i].createNestedArray("typeTags");
+		typeTags[i].add(EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL);
+		infos[i]["channel_count"] = 1;
+		infos[i]["channel_format"] = "float";
+		infos[i]["units"] = "mS";
+		serializeJson(jsonDoc, file);
 	}
 	file.print("]"); // Doing some manual printing to chunk JSON and save RAM
 
@@ -3538,12 +3493,12 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 	// Don't forget to change the capacity to match your JSON document.
 	// Use arduinojson.org/assistant to compute the capacity.
 	//StaticJsonBuffer<1024> jsonBuffer;
-	StaticJsonBuffer<1024> jsonBuffer;
+	StaticJsonDocument<1024> jsonDoc;
 
 	// Parse the root object
-	JsonObject &root = jsonBuffer.parseObject(file);
+	DeserializationError error = deserializeJson(jsonDoc, file);
 
-	if (!root.success()) {
+	if (error) {
 		Serial.println(F("Failed to parse config file"));
 		setupFailed("Failed to parse Config file contents");
 		return false;
@@ -3551,16 +3506,18 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 
 	size_t configSize;
 	// Copy values from the JsonObject to the Config
-	configSize = root.get<JsonVariant>("WifiCredentials").as<JsonArray>().size();
+	configSize = jsonDoc["WifiCredentials"].size(); 
 	Serial.print("Number of network credentials found in config file: ");
 	Serial.println(configSize);
 	for (size_t i = 0; i < configSize; i++) {
-		String ssid = root["WifiCredentials"][i]["ssid"] | "";
-		String userid = root["WifiCredentials"][i]["userid"] | "";
-		String username = root["WifiCredentials"][i]["username"] | "";
-		String pass = root["WifiCredentials"][i]["password"] | "";
+		String ssid = jsonDoc["WifiCredentials"][i]["ssid"] | "";  // See implementation example: https://arduinojson.org/v6/api/jsonvariant/or/
+		String userid = jsonDoc["WifiCredentials"][i]["userid"] | "";
+		String username = jsonDoc["WifiCredentials"][i]["username"] | "";
+		String pass = jsonDoc["WifiCredentials"][i]["password"] | "";
+
 		Serial.print("Adding SSID: ");
-		Serial.print(ssid); 
+		Serial.print(ssid);
+
 		if (!userid.equals(""))
 		{
 			Serial.print(" -userid:"); Serial.print(userid);
@@ -3570,6 +3527,7 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 			}
 		}
 		Serial.print(" -pass:" + pass);
+		
 		if (_emotiBitWiFi.addCredential(ssid, userid, username, pass) < 0)
 		{
 			// Number of credentials exceeded max allowed
@@ -3580,11 +3538,11 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 		}
 		else
 		{
-			Serial.println("... success");
+			Serial.println(" ... success");
 		}
-		_emotiBitWiFi.setDeviceId(emotibitDeviceId);
 
 	}
+	_emotiBitWiFi.setDeviceId(emotibitDeviceId);
 
 	//strlcpy(config.hostname,                   // <- destination
 	//	root["hostname"] | "example.com",  // <- source
@@ -4600,7 +4558,13 @@ void EmotiBit::printEmotiBitInfo()
   Serial.print("\"firmware_variant\":\"");
 	Serial.print(firmware_variant);
 	Serial.println("\",");
-  
+
+#ifdef ADAFRUIT_FEATHER_M0
+	Serial.print("\"free_memory\":\"");
+	Serial.print(String(freeMemory(), DEC));
+	Serial.println("\",");
+#endif
+
   if (_emotiBitWiFi.status() == WL_CONNECTED)
   {
     IPAddress ip = WiFi.localIP();
