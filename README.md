@@ -14,3 +14,4 @@
   - EmotiBit_ADS1X15:`2.2.0+EmotiBit.0.0.1` 
   - EmotiBit_MAX30101:`2.0.3` 
   - EmotiBit_External_EEPROM:`1.0.5+EmotiBit.0.0.1`
+  - ArduinoJson: `6.21.2`
