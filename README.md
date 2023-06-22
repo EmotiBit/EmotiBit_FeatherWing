@@ -2,12 +2,6 @@
 ### Getting Started
   - See https://github.com/EmotiBit/EmotiBit_Docs/blob/master/Getting_Started.md
 
-# Changelog
-  - Updated EmotiBit FeatherWing code to work with library ArduinoJson version 6.21.2 from version 5.13.5. 
-
-# PRs referenced
-  - Updated from ArduinoJson 5 to latest - https://github.com/EmotiBit/EmotiBit_FeatherWing/pull/278 
-
 # Compatibility
   - EmotiBit_EmojiLib:`0.0.1` 
   - EmotiBit_NCP5623:`0.0.4` 
