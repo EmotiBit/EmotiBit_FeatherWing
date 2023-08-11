@@ -1,6 +1,9 @@
 # EmotiBit FeatherWing
-### Getting Started
+### Getting Started with EmotiBit
   - See https://github.com/EmotiBit/EmotiBit_Docs/blob/master/Getting_Started.md
+
+### Compile from source
+- Check out our [documentation on setting up Arduino IDE or platformIO](https://github.com/EmotiBit/EmotiBit_Docs/blob/master/Keep_emotibit_up_to_date.md#keeping-emotibit-up-to-date)
 
 # Compatibility
   - EmotiBit_EmojiLib:`0.0.1` 
