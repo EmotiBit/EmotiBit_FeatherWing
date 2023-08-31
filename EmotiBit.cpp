@@ -4632,6 +4632,17 @@ void EmotiBit::setupFailedConfigMode(const String failureMode, int buttonPin)
 	}
 }
 
+// New function for parsing recieved packet
+/*
+	Plan is to loop through string starting at @ to the , and set tag to this value
+	then assign value from , to ~ to payload.
+*/
+void EmotiBit::ParseSdCardPacket(String c, String* tag, String* payload)
+{
+	
+	Serial.println(c);
+}
+
 void EmotiBit::processWifiConfigInputs()
 {
 	Serial.println("Successfully entered config mode.");
@@ -4641,8 +4652,10 @@ void EmotiBit::processWifiConfigInputs()
 		{
 			// Using readString() to receive packets
 			String c = Serial.readString();
+			String tag, payload;
 
 			// Need parser to parse @ and ~ here
+			ParseSdCardPacket(c, &tag, &payload);
 
 			if (c == EmotiBitPacket::TypeTag::WIFI_ADD){
 				Serial.println("WA recieved");

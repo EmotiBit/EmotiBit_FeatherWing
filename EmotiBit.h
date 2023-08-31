@@ -520,6 +520,7 @@ public:
 	 */
 	void restartMcu();
 	void processWifiConfigInputs();
+	void ParseSdCardPacket(String c, String* tag, String* payload);
 	void setupFailedConfigMode(const String failureMode, int buttonPin = -1);
 	// ----------- END ino refactoring ---------------
 
