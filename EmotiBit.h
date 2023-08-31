@@ -68,7 +68,7 @@ public:
 
 	const bool DC_DO_V2 = true;
 
-	bool _debugMode = false;
+	bool _debugMode = true;
 	bool dummyIsrWithDelay = false;
 	uint32_t targetFileSyncDelay = 1;
 	struct ReadSensorsDurationMax
@@ -519,6 +519,8 @@ public:
 	 * @brief Function to perform a software reset on the MCU
 	 */
 	void restartMcu();
+	void processWifiConfigInputs();
+	void setupFailedConfigMode(const String failureMode, int buttonPin = -1);
 	// ----------- END ino refactoring ---------------
 
 	

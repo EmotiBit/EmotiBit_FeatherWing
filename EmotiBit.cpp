@@ -1266,7 +1266,7 @@ bool EmotiBit::setupSdCard()
 		Serial.println("Create a file 'config.txt' with the following JSON:");
 		Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
 		// ToDo: verify if we need a separate case for FACTORY_TEST. We should always have a config file, since FACTORY TEST is a controlled environment
-		setupFailed("Config file not found");
+		setupFailedConfigMode("Config file not found");
 	}
 
 	return true;
@@ -4585,4 +4585,78 @@ void EmotiBit::restartMcu()
 #elif defined ADAFRUIT_FEATHER_M0
 	NVIC_SystemReset();
 #endif
+}
+
+
+void EmotiBit::setupFailedConfigMode(const String failureMode, int buttonPin)
+{
+	if (buttonPin > -1)
+	{
+		pinMode(buttonPin, INPUT);
+	}
+	bool buttonState = false;
+	uint32_t timeSinceLastPrint = millis();
+	while (1)
+	{
+		// NOTE: The button press check doesn't work on EmotiBit v02 because DVDD is not enabled
+		if (buttonPin > -1 && digitalRead(buttonPin))
+		{
+			
+			if (buttonState == false)
+			{
+				Serial.println("**** Button Press Detected (DVDD is Working) ****");
+				// return;
+			}
+			buttonState = true;
+		}
+		else
+		{
+			buttonState = false;
+		}
+
+		// not using delay to keep the CPU acitve from serial pings from host computer
+		if (millis() - timeSinceLastPrint > 1000)
+		{
+			Serial.println("Setup failed: " + failureMode);
+			Serial.println("Press \"C\" to enter config mode.");
+			timeSinceLastPrint = millis();
+		}
+		if (Serial.available() >= 0)
+		{
+			char c = Serial.read();
+			if (c == 'C') 
+			{
+				processWifiConfigInputs();
+			}
+		}
+	}
+}
+
+void EmotiBit::processWifiConfigInputs()
+{
+	Serial.println("Successfully entered config mode.");
+	while (1) 
+	{
+		if (Serial.available())
+		{
+			// Using readString() to receive packets
+			String c = Serial.readString();
+
+			// Need parser to parse @ and ~ here
+
+			if (c == EmotiBitPacket::TypeTag::WIFI_ADD){
+				Serial.println("WA recieved");
+			}
+
+			// Replace string with actual type tag
+			else if (c == EmotiBitPacket::TypeTag::WIFI_DELETE){
+				Serial.println("WD");
+			}
+
+			// Replace String with actual type tag
+			else if (c == EmotiBitPacket::TypeTag::EMOTIBIT_RESET){
+				Serial.println("ER");
+			} 
+		}
+	}
 }
