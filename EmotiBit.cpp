@@ -1,4 +1,5 @@
 #include "EmotiBit.h"
+#include "EmotiBitSerial.h"
 #include <math.h>
 
 //FlashStorage(samdFlashStorage, SamdStorageAdcValues);
@@ -1167,8 +1168,8 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	return 0;
 } // Setup
 
-
-void EmotiBit::setupFailed(const String failureMode, int buttonPin)
+// ToDo: we may need to create "fail states" to control activating parts of this function. Adding parameters in function signature does not scale
+void EmotiBit::setupFailed(const String failureMode, int buttonPin, bool configFileError)
 {
 	if (buttonPin > -1)
 	{
@@ -1199,7 +1200,23 @@ void EmotiBit::setupFailed(const String failureMode, int buttonPin)
 		{
 			Serial.println("Setup failed: " + failureMode);
 			timeSinceLastPrint = millis();
+			if (configFileError)
+			{
+				Serial.println("Press \"C\" to enter config mode.");
+			}
 		}
+		if (configFileError)
+		{
+			if (Serial.available() >= 0)
+			{
+				char c = Serial.read();
+				if (c == 'C') 
+				{
+					processWifiConfigInputs();
+				}
+			}
+		}
+
 	}
 }
 bool EmotiBit::setupSdCard()
@@ -1259,6 +1276,7 @@ bool EmotiBit::setupSdCard()
 #endif
 
 	}
+	// proceed to parse config file
 	Serial.print(F("\nLoading configuration file: "));
 	Serial.println(_configFilename);
 	if (!loadConfigFile(_configFilename)) {
@@ -1266,9 +1284,39 @@ bool EmotiBit::setupSdCard()
 		Serial.println("Create a file 'config.txt' with the following JSON:");
 		Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
 		// ToDo: verify if we need a separate case for FACTORY_TEST. We should always have a config file, since FACTORY TEST is a controlled environment
-		setupFailedConfigMode("Config file not found");
+		setupFailed("Config file not found", -1, true);
 	}
-
+	
+	// After loading file, wait for user to possibly add cred
+	// Flush serial buffer to remove old serial messages
+	while(Serial.available())
+	{
+		Serial.read();
+	}
+	const int timeout = 5000; // in mS
+	uint32_t startTime = millis(); 
+	uint32_t messageTime = millis();
+	bool waitComplete = false;
+	while(!waitComplete)
+	{
+		if(Serial.available())
+		{
+			if(Serial.read() == 'C')
+			{
+				// Serial Prompt to enter WiFi Config mode
+				processWifiConfigInputs();
+			}
+		}
+		if(millis() - messageTime > 1000)
+		{
+			messageTime = millis();
+			Serial.println("Enter C to edit WiFi creds in config file");
+		}
+		if(millis() - startTime > 5000)
+		{
+			waitComplete = true;
+		}
+	}
 	return true;
 
 }
@@ -3500,7 +3548,7 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 
 	if (error) {
 		Serial.println(F("Failed to parse config file"));
-		setupFailed("Failed to parse Config file contents");
+		setupFailed("Failed to parse Config file contents", -1, true);
 		return false;
 	}
 
@@ -4587,89 +4635,205 @@ void EmotiBit::restartMcu()
 #endif
 }
 
-
-void EmotiBit::setupFailedConfigMode(const String failureMode, int buttonPin)
-{
-	if (buttonPin > -1)
-	{
-		pinMode(buttonPin, INPUT);
-	}
-	bool buttonState = false;
-	uint32_t timeSinceLastPrint = millis();
-	while (1)
-	{
-		// NOTE: The button press check doesn't work on EmotiBit v02 because DVDD is not enabled
-		if (buttonPin > -1 && digitalRead(buttonPin))
-		{
-			
-			if (buttonState == false)
-			{
-				Serial.println("**** Button Press Detected (DVDD is Working) ****");
-				// return;
-			}
-			buttonState = true;
-		}
-		else
-		{
-			buttonState = false;
-		}
-
-		// not using delay to keep the CPU acitve from serial pings from host computer
-		if (millis() - timeSinceLastPrint > 1000)
-		{
-			Serial.println("Setup failed: " + failureMode);
-			Serial.println("Press \"C\" to enter config mode.");
-			timeSinceLastPrint = millis();
-		}
-		if (Serial.available() >= 0)
-		{
-			char c = Serial.read();
-			if (c == 'C') 
-			{
-				processWifiConfigInputs();
-			}
-		}
-	}
-}
-
-// New function for parsing recieved packet
-/*
-	Plan is to loop through string starting at @ to the , and set tag to this value
-	then assign value from , to ~ to payload.
-*/
-void EmotiBit::ParseSdCardPacket(String c, String* tag, String* payload)
-{
-	
-	Serial.println(c);
-}
-
 void EmotiBit::processWifiConfigInputs()
 {
 	Serial.println("Successfully entered config mode.");
+	// Send EmotiBit Firmware version to host
+	EmotiBitSerial::sendMessage(EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, firmware_version);
 	while (1) 
 	{
 		if (Serial.available())
 		{
-			// Using readString() to receive packets
-			String c = Serial.readString();
-			String tag, payload;
-
-			// Need parser to parse @ and ~ here
-			ParseSdCardPacket(c, &tag, &payload);
-
-			if (c == EmotiBitPacket::TypeTag::WIFI_ADD){
-				Serial.println("WA recieved");
+			String msg = Serial.readStringUntil('~'); // is ~ is not present, readStringUntil() break after timeout
+			msg += "~";
+			String typetag, payload;
+			bool serialParsed = EmotiBitSerial::parseSerialMessage(msg, typetag, payload);
+			if(serialParsed)
+			{
+				if (typetag.compareTo(EmotiBitPacket::TypeTag::WIFI_ADD) == 0)
+				{
+					String ssid, password, username, userid;
+					// config file is not present. Create file and add cred.
+					StaticJsonDocument<256> inputJson;
+					DeserializationError error = deserializeJson(inputJson, payload);
+					if(error)
+					{
+						// user input cannot be parsed
+						Serial.println("Try again. Cannot parse JSON input.");
+						Serial.println("Expected format: WA,{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}");
+						EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::WIFI_ADD);
+					}
+					else
+					{
+						// user input parsed correctly	
+						ssid = inputJson["ssid"] | "";
+						password = inputJson["password"] | "";
+						username = inputJson["username"] | "";
+						userid = inputJson["userid"] | "";
+						Serial.println("Parsed output: ");
+						Serial.println("ssid: " + ssid);
+						Serial.println("password: " + password);
+						Serial.println("username: " + username);
+						Serial.println("userid: " + userid);						
+						// Open config.txt
+						File file;
+						StaticJsonDocument<1024> configAsJson;
+						DeserializationError parseError;
+						bool fileExists = false, fileParses = false;
+						fileExists = SD.exists(_configFilename);
+						if(fileExists)  // ToDo: Handle any change for ESP
+						{
+							// config file present!
+							Serial.println("config file exists. Appending to file.");
+							file = SD.open(_configFilename);
+							parseError = deserializeJson(configAsJson, file); // ToDo: Handle max creds exceeded.
+							file.close();
+							if(!parseError)
+							{
+								// file parsed successfully
+								// configAsJson.set("WifiCredentials");
+								
+								JsonObject cred = configAsJson["WifiCredentials"].createNestedObject();
+								cred["ssid"] = ssid;
+								cred["password"] = password;
+								if(userid.compareTo("") != 0)
+								{
+									cred["userid"] = userid;
+								}
+								if(username.compareTo("") != 0)
+								{
+									cred["username"] = username;
+								}
+								
+							}
+							else
+							{
+								// existing file parse failed
+								// remove existing file. A new file will be created with the creds added
+								Serial.println("existing config file parse failed. Removing file.");
+								SD.remove(_configFilename);
+							}				
+						}
+						if(!fileExists || parseError)
+						{
+							Serial.println("config file does not exist. creating new file");
+							// create new file
+							configAsJson.clear();
+							JsonArray wifiCreds = configAsJson.createNestedArray("WifiCredentials");
+							JsonObject cred = wifiCreds.createNestedObject();
+							cred["ssid"] = ssid;
+							cred["password"] = password;
+							if (userid.compareTo("") != 0)
+							{
+								cred["userid"] = userid;
+							}
+							if (username.compareTo("") != 0)
+							{
+								cred["username"] = username;
+							}
+						}
+						// write updated JSON to file
+						// ToDo: Hanlde any write differences for ESP32
+						file = SD.open(_configFilename, O_WRITE);
+						if(file)
+						{
+							if( serializeJson(configAsJson, file) == 0)
+							{
+								Serial.println("Failed to write to file");
+							}
+							file.close();
+							EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::ACK, EmotiBitPacket::TypeTag::WIFI_ADD);
+						}
+						else
+						{
+							Serial.println("Failed to open file");
+							EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::WIFI_ADD);
+						}
+						// read file contents
+						Serial.println("Updated file contents:");
+						file = SD.open(_configFilename);
+						configAsJson.clear();
+						error = deserializeJson(configAsJson, file);
+						serializeJsonPretty(configAsJson, Serial);
+						file.close();
+						Serial.println();
+					}
+				}
+				// Replace string with actual type tag
+				else if (typetag.compareTo(EmotiBitPacket::TypeTag::WIFI_DELETE) == 0)
+				{
+					//Serial.println("WD");
+					StaticJsonDocument<1024> configAsJson;
+					File file = SD.open(_configFilename);
+					if(!file)
+					{
+						Serial.println("config file does not exist. Delete not allowed");
+						EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
+						continue;
+					}
+					// File found!
+					DeserializationError error = deserializeJson(configAsJson, file);
+					if(error)
+					{
+						Serial.println("Cannot parse JSON file. Aborting delete");
+						EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
+						continue;
+					}
+					else
+					{
+						// file can be parsed!
+						file.close();
+						if(payload.compareTo("") != 0)
+						{
+							// delete requested credential
+							Serial.print("Deleting entry: " + payload);
+							int deleteIndex = payload.toInt();  // ToDo: handle invalid input
+							
+							if(deleteIndex < configAsJson["WifiCredentials"].size())
+							{
+								configAsJson["WifiCredentials"].remove(deleteIndex);
+								file = SD.open(_configFilename, O_WRITE);
+								serializeJsonPretty(configAsJson, file);
+								file.close();
+								EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::ACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
+							}
+							else
+							{
+								Serial.print("Out of bounds delete. Enter a valid choice");
+								EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
+							}
+						}
+						else
+						{
+							// send list of existing credentials
+							if(configAsJson["WifiCredentials"].size())
+							{
+								for(int i = 0; i < configAsJson["WifiCredentials"].size(); i++ )
+								{
+									Serial.print(i); Serial.print(". " + configAsJson["WifiCredentials"][i]["ssid"].as<String>());
+									Serial.println();
+								}
+							}
+							else
+							{
+								Serial.println("Config file has no creds.");
+							}
+							EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::ACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
+						}
+					}
+				}
+				else if (typetag.compareTo(EmotiBitPacket::TypeTag::RESET) == 0)
+				{
+					Serial.println("RS received");
+					EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::ACK, EmotiBitPacket::TypeTag::RESET);
+					restartMcu();
+				} 
 			}
-
-			// Replace string with actual type tag
-			else if (c == EmotiBitPacket::TypeTag::WIFI_DELETE){
-				Serial.println("WD");
+			else
+			{
+				Serial.println(" not a valid serial message. Expecting @TYPETAG,PAYLOAD~");
 			}
-
-			// Replace String with actual type tag
-			else if (c == EmotiBitPacket::TypeTag::EMOTIBIT_RESET){
-				Serial.println("ER");
-			} 
+			
 		}
 	}
 }

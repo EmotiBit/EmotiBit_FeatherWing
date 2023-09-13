@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.9.0";
+  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.8";
 
 
 
@@ -68,7 +68,7 @@ public:
 
 	const bool DC_DO_V2 = true;
 
-	bool _debugMode = true;
+	bool _debugMode = false;
 	bool dummyIsrWithDelay = false;
 	uint32_t targetFileSyncDelay = 1;
 	struct ReadSensorsDurationMax
@@ -426,7 +426,7 @@ public:
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;
 
-	void setupFailed(const String failureMode, int buttonPin = -1);
+	void setupFailed(const String failureMode, int buttonPin = -1, bool configFileError = false);
 	bool setupSdCard();
 	void updateButtonPress();
 	void sleep(bool i2cSetupComplete = true);
@@ -520,8 +520,6 @@ public:
 	 */
 	void restartMcu();
 	void processWifiConfigInputs();
-	void ParseSdCardPacket(String c, String* tag, String* payload);
-	void setupFailedConfigMode(const String failureMode, int buttonPin = -1);
 	// ----------- END ino refactoring ---------------
 
 	
