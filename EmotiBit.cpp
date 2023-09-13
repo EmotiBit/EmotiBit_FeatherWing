@@ -473,10 +473,20 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 			}
 #endif
 		}
-		else
+		else if (input == 'C')
+		{
+			Serial.println("Wifi Credential edit mode");
+			setupSdCard(false);
+			processWifiConfigInputs();
+		}
+		else if (input == 'D')
 		{
 			_debugMode = true;
 			Serial.println("\nENTERING DEBUG MODE\n");
+		}
+		else
+		{
+			Serial.println("invalid serial input");
 		}
 
 	}
@@ -1219,7 +1229,7 @@ void EmotiBit::setupFailed(const String failureMode, int buttonPin, bool configF
 
 	}
 }
-bool EmotiBit::setupSdCard()
+bool EmotiBit::setupSdCard(bool loadConfig)
 {
 
 	Serial.print("\nInitializing SD card...");
@@ -1276,45 +1286,17 @@ bool EmotiBit::setupSdCard()
 #endif
 
 	}
-	// proceed to parse config file
-	Serial.print(F("\nLoading configuration file: "));
-	Serial.println(_configFilename);
-	if (!loadConfigFile(_configFilename)) {
-		Serial.println("SD card configuration file parsing failed.");
-		Serial.println("Create a file 'config.txt' with the following JSON:");
-		Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
-		// ToDo: verify if we need a separate case for FACTORY_TEST. We should always have a config file, since FACTORY TEST is a controlled environment
-		setupFailed("Config file not found", -1, true);
-	}
-	
-	// After loading file, wait for user to possibly add cred
-	// Flush serial buffer to remove old serial messages
-	while(Serial.available())
+	if(loadConfig)
 	{
-		Serial.read();
-	}
-	const int timeout = 5000; // in mS
-	uint32_t startTime = millis(); 
-	uint32_t messageTime = millis();
-	bool waitComplete = false;
-	while(!waitComplete)
-	{
-		if(Serial.available())
-		{
-			if(Serial.read() == 'C')
-			{
-				// Serial Prompt to enter WiFi Config mode
-				processWifiConfigInputs();
-			}
-		}
-		if(millis() - messageTime > 1000)
-		{
-			messageTime = millis();
-			Serial.println("Enter C to edit WiFi creds in config file");
-		}
-		if(millis() - startTime > 5000)
-		{
-			waitComplete = true;
+		// proceed to parse config file
+		Serial.print(F("\nLoading configuration file: "));
+		Serial.println(_configFilename);
+		if (!loadConfigFile(_configFilename)) {
+			Serial.println("SD card configuration file parsing failed.");
+			Serial.println("Create a file 'config.txt' with the following JSON:");
+			Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
+			// ToDo: verify if we need a separate case for FACTORY_TEST. We should always have a config file, since FACTORY TEST is a controlled environment
+			setupFailed("Config file not found", -1, true);
 		}
 	}
 	return true;
@@ -4691,20 +4673,26 @@ void EmotiBit::processWifiConfigInputs()
 							if(!parseError)
 							{
 								// file parsed successfully
-								// configAsJson.set("WifiCredentials");
-								
-								JsonObject cred = configAsJson["WifiCredentials"].createNestedObject();
-								cred["ssid"] = ssid;
-								cred["password"] = password;
-								if(userid.compareTo("") != 0)
+								if(configAsJson["WifiCredentials"].size() >= EmotiBitWiFi::getMaxNumCredentialAllowed())
 								{
-									cred["userid"] = userid;
+									Serial.println("Config file already has max num allowed creds. Please delete before adding");
+									EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::WIFI_ADD);
+									continue;
 								}
-								if(username.compareTo("") != 0)
+								else
 								{
-									cred["username"] = username;
+									JsonObject cred = configAsJson["WifiCredentials"].createNestedObject();
+									cred["ssid"] = ssid;
+									cred["password"] = password;
+									if(userid.compareTo("") != 0)
+									{
+										cred["userid"] = userid;
+									}
+									if(username.compareTo("") != 0)
+									{
+										cred["username"] = username;
+									}
 								}
-								
 							}
 							else
 							{

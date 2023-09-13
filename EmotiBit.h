@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.8";
+  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.9";
 
 
 
@@ -427,7 +427,7 @@ public:
 	bool startBufferOverflowTest = false;
 
 	void setupFailed(const String failureMode, int buttonPin = -1, bool configFileError = false);
-	bool setupSdCard();
+	bool setupSdCard(bool loadConfig = true);
 	void updateButtonPress();
 	void sleep(bool i2cSetupComplete = true);
 	void startTimer(int frequencyHz);
@@ -519,6 +519,9 @@ public:
 	 * @brief Function to perform a software reset on the MCU
 	 */
 	void restartMcu();
+	/*!
+	 * @brief Function to edit WiFi credentials in config file using serial input.
+	 */
 	void processWifiConfigInputs();
 	// ----------- END ino refactoring ---------------
 
