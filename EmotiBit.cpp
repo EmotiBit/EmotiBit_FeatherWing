@@ -4617,6 +4617,8 @@ void EmotiBit::restartMcu()
 #endif
 }
 
+
+// ToDo: This function can probably be moved to another class/file. The only dependency on EmotiBit class is _configFilename
 void EmotiBit::processWifiConfigInputs()
 {
 	Serial.println("Successfully entered config file edit mode.");
