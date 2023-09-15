@@ -4619,7 +4619,7 @@ void EmotiBit::restartMcu()
 
 void EmotiBit::processWifiConfigInputs()
 {
-	Serial.println("Successfully entered config mode.");
+	Serial.println("Successfully entered config file edit mode.");
 	// Send EmotiBit Firmware version to host
 	EmotiBitSerial::sendMessage(EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, firmware_version);
 	while (1) 
@@ -4632,6 +4632,18 @@ void EmotiBit::processWifiConfigInputs()
 			bool serialParsed = EmotiBitSerial::parseSerialMessage(msg, typetag, payload);
 			if(serialParsed)
 			{
+				File file;
+				StaticJsonDocument<1024> configAsJson;
+				DeserializationError parseError;
+				bool fileExists = false, fileParses = false;
+				fileExists = SD.exists(_configFilename);
+				if(fileExists)
+				{
+					file = SD.open(_configFilename);
+					parseError = deserializeJson(configAsJson, file); 
+					file.close();
+				}
+
 				if (typetag.compareTo(EmotiBitPacket::TypeTag::WIFI_ADD) == 0)
 				{
 					String ssid, password, username, userid;
@@ -4657,19 +4669,11 @@ void EmotiBit::processWifiConfigInputs()
 						Serial.println("password: " + password);
 						Serial.println("username: " + username);
 						Serial.println("userid: " + userid);						
-						// Open config.txt
-						File file;
-						StaticJsonDocument<1024> configAsJson;
-						DeserializationError parseError;
-						bool fileExists = false, fileParses = false;
-						fileExists = SD.exists(_configFilename);
-						if(fileExists)  // ToDo: Handle any change for ESP
+						
+						if(fileExists)
 						{
 							// config file present!
 							Serial.println("config file exists. Appending to file.");
-							file = SD.open(_configFilename);
-							parseError = deserializeJson(configAsJson, file); // ToDo: Handle max creds exceeded.
-							file.close();
 							if(!parseError)
 							{
 								// file parsed successfully
@@ -4721,11 +4725,14 @@ void EmotiBit::processWifiConfigInputs()
 							}
 						}
 						// write updated JSON to file
-						// ToDo: Hanlde any write differences for ESP32
-						file = SD.open(_configFilename, O_WRITE);
+#if defined ARDUINO_FEATHER_ESP32
+						file = SD.open(_configFilename, FILE_WRITE);
+#else 
+						file = SD.open(_configFilename, O_CREAT | O_WRITE);
+#endif
 						if(file)
 						{
-							if( serializeJson(configAsJson, file) == 0)
+							if( serializeJsonPretty(configAsJson, file) == 0)
 							{
 								Serial.println("Failed to write to file");
 							}
@@ -4750,18 +4757,13 @@ void EmotiBit::processWifiConfigInputs()
 				// Replace string with actual type tag
 				else if (typetag.compareTo(EmotiBitPacket::TypeTag::WIFI_DELETE) == 0)
 				{
-					//Serial.println("WD");
-					StaticJsonDocument<1024> configAsJson;
-					File file = SD.open(_configFilename);
-					if(!file)
+					if(!fileExists)
 					{
-						Serial.println("config file does not exist. Delete not allowed");
+						Serial.println("config file does not exist. Aborting delete");
 						EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
 						continue;
 					}
-					// File found!
-					DeserializationError error = deserializeJson(configAsJson, file);
-					if(error)
+					if(parseError)
 					{
 						Serial.println("Cannot parse JSON file. Aborting delete");
 						EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
@@ -4770,56 +4772,84 @@ void EmotiBit::processWifiConfigInputs()
 					else
 					{
 						// file can be parsed!
-						file.close();
 						if(payload.compareTo("") != 0)
 						{
 							// delete requested credential
-							Serial.print("Deleting entry: " + payload);
-							int deleteIndex = payload.toInt();  // ToDo: handle invalid input
+							int deleteIndex = payload.toInt();
+							if(deleteIndex == 0 && payload.compareTo("0") != 0)
+							{
+								// toInt() tried to convert invalid string and returned 0 by default
+								Serial.println("invalid option. Please be careful to avoid blank spaces.");
+								EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
+								continue;
+							}
+							Serial.println("Deleting entry: " + String(deleteIndex));
 							
 							if(deleteIndex < configAsJson["WifiCredentials"].size())
 							{
 								configAsJson["WifiCredentials"].remove(deleteIndex);
-								file = SD.open(_configFilename, O_WRITE);
+								SD.remove(_configFilename);
+#if defined ARDUINO_FEATHER_ESP32
+								file = SD.open(_configFilename, FILE_WRITE);
+#else 
+								file = SD.open(_configFilename, O_CREAT | O_WRITE);
+#endif
 								serializeJsonPretty(configAsJson, file);
 								file.close();
 								EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::ACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
 							}
 							else
 							{
-								Serial.print("Out of bounds delete. Enter a valid choice");
+								Serial.println("Out of bounds delete. Enter a valid choice");
 								EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
 							}
 						}
 						else
 						{
 							// send list of existing credentials
-							if(configAsJson["WifiCredentials"].size())
-							{
-								for(int i = 0; i < configAsJson["WifiCredentials"].size(); i++ )
-								{
-									Serial.print(i); Serial.print(". " + configAsJson["WifiCredentials"][i]["ssid"].as<String>());
-									Serial.println();
-								}
-							}
-							else
-							{
-								Serial.println("Config file has no creds.");
-							}
-							EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::ACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
+							Serial.println("Delete needs a parameter. Call LS to get current credential list.");
+							EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
 						}
 					}
 				}
+				else if (typetag.compareTo(EmotiBitPacket::TypeTag::LIST) == 0)
+				{
+					if(!fileExists)
+					{
+						Serial.println("config file does not exist.");
+						EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::LIST);
+						continue;
+					}
+					if(parseError)
+					{
+						Serial.println("Cannot parse config file. Aborting LIST");
+						EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::LIST);
+						continue;
+					}
+					if(configAsJson["WifiCredentials"].size())
+					{
+						for(int i = 0; i < configAsJson["WifiCredentials"].size(); i++ )
+						{
+							Serial.print(i); Serial.print(". " + configAsJson["WifiCredentials"][i]["ssid"].as<String>());
+							Serial.println();
+						}
+					}
+					else
+					{
+						Serial.println("Config file has no creds.");
+					}
+					EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::ACK, EmotiBitPacket::TypeTag::LIST);
+
+				}
 				else if (typetag.compareTo(EmotiBitPacket::TypeTag::RESET) == 0)
 				{
-					Serial.println("RS received");
 					EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::ACK, EmotiBitPacket::TypeTag::RESET);
 					restartMcu();
 				} 
 			}
 			else
 			{
-				Serial.println(" not a valid serial message. Expecting @TYPETAG,PAYLOAD~");
+				Serial.println("not a valid serial message. Expecting @TYPETAG,PAYLOAD~");
 			}
 			
 		}

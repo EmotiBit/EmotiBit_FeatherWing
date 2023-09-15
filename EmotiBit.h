@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.9";
+  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.13";
 
 
 
@@ -519,8 +519,16 @@ public:
 	 * @brief Function to perform a software reset on the MCU
 	 */
 	void restartMcu();
+	
 	/*!
 	 * @brief Function to edit WiFi credentials in config file using serial input.
+	 *
+	 * Use this function to Add or Delete credentials from SD-Card.
+	 * Typetag WA (WiFi-Add) is used to add credentials. 
+	 *     Syntax: @WA,{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}~
+	 * Tyeptag WD (WiFi-Delete) is used to delete credentials.
+	 *     Syntax: @WD,<cred_number>~ to delte cred. 
+	 * Typetag LS (LIST) lists current credentials
 	 */
 	void processWifiConfigInputs();
 	// ----------- END ino refactoring ---------------
