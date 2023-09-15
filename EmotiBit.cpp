@@ -4831,6 +4831,7 @@ void EmotiBit::processWifiConfigInputs()
 						for(int i = 0; i < configAsJson["WifiCredentials"].size(); i++ )
 						{
 							Serial.print(i); Serial.print(". " + configAsJson["WifiCredentials"][i]["ssid"].as<String>());
+							Serial.print(" : "); Serial.print(configAsJson["WifiCredentials"][i]["password"].as<String>());
 							Serial.println();
 						}
 					}
