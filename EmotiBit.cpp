@@ -281,10 +281,19 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::I2C_COMM_INIT, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 	}
-	Serial.print("Initializing NVM controller: ");
-	if (_emotibitNvmController.init(*_EmotiBit_i2c))
+	bool skipNvmInit = false;
+	if(!emotiBitVersionController.checkForExternalVersionDefinition(_hwVersion, emotiBitSku, emotibitSerialNumber, emotibitDeviceId, acquireData))
 	{
-		Serial.println("success");
+		Serial.println("Hardware version not defined externally. Extracting version from device");
+	}
+	else
+	{
+		skipNvmInit = true;
+	}
+
+	Serial.print("Initializing NVM controller: ");
+	if (_emotibitNvmController.init(*_EmotiBit_i2c, skipNvmInit))
+	{
 		if (testingMode == TestingMode::FACTORY_TEST)
 		{
 			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::EMOTIBIT_STORAGE, EmotiBitFactoryTest::TypeTag::TEST_PASS);
@@ -347,12 +356,15 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 			sleep(false);
 		}
 	}
-
-	if (!emotiBitVersionController.getEmotiBitVariantInfo(_emotibitNvmController, _hwVersion, emotiBitSku, emotibitSerialNumber, emotibitDeviceId))
+	
+	if((int)_hwVersion == (int)EmotiBitVersionController::EmotiBitVersion::UNKNOWN)
 	{
-		if (!emotiBitVersionController.detectVariantFromHardware(*(_EmotiBit_i2c), _hwVersion, emotiBitSku))
+	if (!emotiBitVersionController.getEmotiBitVariantInfo(_emotibitNvmController, _hwVersion, emotiBitSku, emotibitSerialNumber, emotibitDeviceId, acquireData))
 		{
-			setupFailed("CANNOT IDENTIFY HARDWARE");
+			if (!emotiBitVersionController.detectVariantFromHardware(*(_EmotiBit_i2c), _hwVersion, emotiBitSku))
+			{
+				setupFailed("CANNOT IDENTIFY HARDWARE");
+			}
 		}
 	}
 	// device ID for V3 and lower will be updated after Temp/Humidity sensor is setup below
@@ -560,32 +572,10 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	samplesAveraged.battery = (float) BASE_SAMPLING_FREQ / (float) BATTERY_SAMPLING_DIV / (0.2f);
 	setSamplesAveraged(samplesAveraged);
 	Serial.println("\nSet Samples averaged:");
+	
 	// setup LED DRIVER
-	Serial.print("Initializing NCP5623....");
-	// ToDo: add a success or fail return statement for LED driver
-	status = led.begin(*_EmotiBit_i2c);
-	if (status)
-	{
-		// check if the LED current level is valid.
-		if (_emotiBitSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT] > 0)
-		{
-			led.setCurrent(_emotiBitSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT]);
-		}
-		led.setLEDpwm((uint8_t)Led::RED, 8);
-		led.setLEDpwm((uint8_t)Led::BLUE, 8);
-		led.setLEDpwm((uint8_t)Led::YELLOW, 8);
-		led.setLED(uint8_t(EmotiBit::Led::RED), false);
-		led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
-		led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-		led.send();
-		chipBegun.NCP5623 = true;
-		if (testingMode == TestingMode::FACTORY_TEST)
-		{
-			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::LED_CONTROLLER, EmotiBitFactoryTest::TypeTag::TEST_PASS);
-		}
-		Serial.println("Completed");
-	}
-	else
+	status = _ledController.init(_hwVersion, *_EmotiBit_i2c, _emotiBitSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT]);
+	if (!status)
 	{
 		Serial.println("Failed");
 		if (testingMode == TestingMode::FACTORY_TEST)
@@ -595,181 +585,197 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 			setupFailed("LED CONTROLLER");
 		}
 	}
-	
-	//// Setup PPG sensor
-	Serial.print("Initializing MAX30101....");
-	// Initialize sensor
-	while (ppgSensor.begin(*_EmotiBit_i2c) == false) // reads the part number to confirm device
-	{
-		if (testingMode == TestingMode::FACTORY_TEST)
-		{
-			// FAIL
-		}
-		Serial.println("MAX30101 was not found. Please check wiring/power. ");
-		_EmotiBit_i2c->flush();
-		_EmotiBit_i2c->endTransmission();
-		_EmotiBit_i2c->clearWriteError();
-		_EmotiBit_i2c->end();
-		static uint32_t hibernateTimer = millis();
-		if (millis() - hibernateTimer > 2000)
-		{
-			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::PPG_SENSOR, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-			Serial.println(factoryTestSerialOutput);
-			setupFailed("PPG");
-		}
-	}
-	ppgSensor.wakeUp();
-	ppgSensor.softReset();
-
-	ppgSensor.setup(
-		ppgSettings.ledPowerLevel,
-		ppgSettings.sampleAverage,
-		ppgSettings.ledMode,
-		ppgSettings.sampleRate,
-		ppgSettings.pulseWidth,
-		ppgSettings.adcRange
-	);
-	ppgSensor.enableDIETEMPRDY(); //Enable the temp ready interrupt. This is required to read die temperatures. Refer datasheet.
-	ppgSensor.check();
-	chipBegun.MAX30101 = true;
-	if (testingMode == TestingMode::FACTORY_TEST)
-	{
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::PPG_SENSOR, EmotiBitFactoryTest::TypeTag::TEST_PASS);
-	}
-	Serial.println("Completed");
-
-	// Setup IMU
-	Serial.print("Initializing BMI160+BMM150.... ");
-	status = BMI160.begin(BMI160GenClass::I2C_MODE, *_EmotiBit_i2c);
-	if (status)
-	{
-		uint8_t dev_id = BMI160.getDeviceID();
-		Serial.print("DEVICE ID: ");
-		Serial.print(dev_id, HEX);
-		if (testingMode == TestingMode::FACTORY_TEST)
-		{
-			// Add PASS
-			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ACCEL_GYRO, EmotiBitFactoryTest::TypeTag::TEST_PASS);
-			// ToDo: add the device ID
-			String id = String(dev_id, HEX);
-			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::IMU_ID, id.c_str());
-		}
-
-		// Accelerometer
-		_accelerometerRange = 8;
-		BMI160.setAccelerometerRange(_accelerometerRange);
-		BMI160.setAccelDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
-		//BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_25HZ);
-		BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_100HZ);
-
-		// Gyroscope
-		_gyroRange = 1000;
-		BMI160.setGyroRange(_gyroRange);
-		BMI160.setGyroDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
-		//BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_25HZ);
-		BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_100HZ);
-
-		// Magnetometer
-		BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR, BMM150_BASED_I2C_MASK); // I2C MAG
-		delay(BMI160_AUX_COM_DELAY);
-		//initially load into setup mode to read trim values
-		BMI160.setRegister(BMI160_MAG_IF_1, BMI160_MANUAL_MODE_EN_MSK, BMI160_MANUAL_MODE_EN_MSK);
-		delay(BMI160_AUX_COM_DELAY);
-		EmotiBit::bmm150ReadTrimRegisters();
-
-		BMI160.setRegister(BMI160_MAG_IF_2, BMM150_DATA_REG); // ADD_BMM_DATA
-		delay(BMI160_AUX_COM_DELAY);
-		//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OPMODE_REG); // ADD_BMM_MEASURE
-		//delay(BMI160_AUX_COM_DELAY);
-
-		// Following example at https://github.com/BoschSensortec/BMI160_driver#auxiliary-fifo-data-parsing 
-
-		// Put the BMM150 in normal mode (may or may not be necessary if putting in force mode later)
-		// BMI160.setRegister(BMM150_OPMODE_REG, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
-		//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
-
-		//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_NORMAL_MODE);
-		BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_NORMAL_MODE, BMM150_OP_MODE_BIT, BMM150_OP_MODE_LEN);
-		BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
-		delay(BMI160_AUX_COM_DELAY);
-
-		// Already done in setup
-		///* Set BMM150 repetitions for X/Y-Axis */
-		//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_LOWPOWER_REPXY);             //Added for BMM150 Support
-		//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_XY_REP_REG);                 //Added for BMM150 Support
-		//delay(BMI160_AUX_COM_DELAY);
-
-		///* Set BMM150 repetitions for Z-Axis */
-		//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_LOWPOWER_REPXY);              //Added for BMM150 Support
-		//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_Z_REP_REG);                  //Added for BMM150 Support
-		//delay(BMI160_AUX_COM_DELAY);
-
-		//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_25HZ);
-		BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ, BMM150_DATA_RATE_BIT, BMM150_DATA_RATE_LEN);
-		BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
-		delay(BMI160_AUX_COM_DELAY);
-
-		//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_FORCED_MODE);
-		BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_FORCED_MODE, BMM150_OP_MODE_BIT, BMM150_OP_MODE_LEN);
-		BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
-		delay(BMI160_AUX_COM_DELAY);
-
-
-		// Setup the BMI160 AUX
-		// Set the auto mode address
-		BMI160.setRegister(BMI160_MAG_IF_2, BMM150_DATA_X_LSB);
-		delay(BMI160_AUX_COM_DELAY);
-
-		// Set the AUX ODR
-		BMI160.setMagRate(BMI160MagRate::BMI160_MAG_RATE_100HZ);
-
-		// Disable manual mode (i.e. enable auto mode)
-		BMI160.setRegister(BMI160_MAG_IF_1, BMI160_DISABLE, BMI160_MANUAL_MODE_EN_MSK);
-
-		// Set the burst length
-		BMI160.setRegister(BMI160_MAG_IF_1, BMI160_AUX_READ_BURST_MSK, BMI160_AUX_READ_BURST_MSK); // MAG data mode 8 byte burst
-		delay(BMI160_AUX_COM_DELAY);
-
-		// Bosch code sets the I2C register again here for an unknown reason
-		BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR, BMM150_BASED_I2C_MASK); // I2C MAG
-		delay(BMI160_AUX_COM_DELAY);
-
-		// Setup the FIFO
-		BMI160.setAccelFIFOEnabled(true);
-		_imuFifoFrameLen += 6;
-		BMI160.setGyroFIFOEnabled(true);
-		_imuFifoFrameLen += 6;
-		BMI160.setMagFIFOEnabled(true);
-		_imuFifoFrameLen += 8;
-		BMI160.setFIFOHeaderModeEnabled(false);
-		if (_imuFifoFrameLen > _maxImuFifoFrameLen)
-		{
-			// ToDo: handle _imuFifoFrameLen > _maxImuFifoFrameLen
-			Serial.println("UNHANDLED CASE: _imuFifoFrameLen > _maxImuFifoFrameLen");
-			while (true);
-		}
-		chipBegun.BMI160 = true;
-		chipBegun.BMM150 = true;
-	}
 	else
 	{
+		chipBegun.NCP5623 = true;
 		if (testingMode == TestingMode::FACTORY_TEST)
 		{
-			// Add FAIL
-			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ACCEL_GYRO, EmotiBitFactoryTest::TypeTag::TEST_FAIL);		
-			Serial.println(factoryTestSerialOutput);
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::LED_CONTROLLER, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 		}
-		setupFailed("IMU");
 	}
-	if ((int)_hwVersion == (int)EmotiBitVersionController::EmotiBitVersion::V03B)
+	if(acquireData.ppg)
 	{
-		_enableDigitalFilter.mx = true;
-		_enableDigitalFilter.my = true;
-		_enableDigitalFilter.mz = true;
-		Serial.println("Enabling digital filtering for magnetometer");
+		//// Setup PPG sensor
+		Serial.print("Initializing MAX30101....");
+		// Initialize sensor
+		while (ppgSensor.begin(*_EmotiBit_i2c) == false) // reads the part number to confirm device
+		{
+			if (testingMode == TestingMode::FACTORY_TEST)
+			{
+				// FAIL
+			}
+			Serial.println("MAX30101 was not found. Please check wiring/power. ");
+			_EmotiBit_i2c->flush();
+			_EmotiBit_i2c->endTransmission();
+			_EmotiBit_i2c->clearWriteError();
+			_EmotiBit_i2c->end();
+			static uint32_t hibernateTimer = millis();
+			if (millis() - hibernateTimer > 2000)
+			{
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::PPG_SENSOR, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+				Serial.println(factoryTestSerialOutput);
+				setupFailed("PPG");
+			}
+		}
+		ppgSensor.wakeUp();
+		ppgSensor.softReset();
+
+		ppgSensor.setup(
+			ppgSettings.ledPowerLevel,
+			ppgSettings.sampleAverage,
+			ppgSettings.ledMode,
+			ppgSettings.sampleRate,
+			ppgSettings.pulseWidth,
+			ppgSettings.adcRange
+		);
+		if(acquireData.tempPpg)
+		{
+			ppgSensor.enableDIETEMPRDY(); //Enable the temp ready interrupt. This is required to read die temperatures. Refer datasheet.
+			ppgSensor.check();
+		}
+		chipBegun.MAX30101 = true;
+		if (testingMode == TestingMode::FACTORY_TEST)
+		{
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::PPG_SENSOR, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+		}
+		Serial.println("Completed");
 	}
-	
-	Serial.println(" ... Completed");
+
+	if(acquireData.imu)
+	{
+		// Setup IMU
+		Serial.print("Initializing BMI160+BMM150.... ");
+		status = BMI160.begin(BMI160GenClass::I2C_MODE, *_EmotiBit_i2c);
+		if (status)
+		{
+			uint8_t dev_id = BMI160.getDeviceID();
+			Serial.print("DEVICE ID: ");
+			Serial.print(dev_id, HEX);
+			if (testingMode == TestingMode::FACTORY_TEST)
+			{
+				// Add PASS
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ACCEL_GYRO, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+				// ToDo: add the device ID
+				String id = String(dev_id, HEX);
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::IMU_ID, id.c_str());
+			}
+
+			// Accelerometer
+			_accelerometerRange = 8;
+			BMI160.setAccelerometerRange(_accelerometerRange);
+			BMI160.setAccelDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
+			//BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_25HZ);
+			BMI160.setAccelRate(BMI160AccelRate::BMI160_ACCEL_RATE_100HZ);
+
+			// Gyroscope
+			_gyroRange = 1000;
+			BMI160.setGyroRange(_gyroRange);
+			BMI160.setGyroDLPFMode(BMI160DLPFMode::BMI160_DLPF_MODE_NORM);
+			//BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_25HZ);
+			BMI160.setGyroRate(BMI160GyroRate::BMI160_GYRO_RATE_100HZ);
+
+			// Magnetometer
+			BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR, BMM150_BASED_I2C_MASK); // I2C MAG
+			delay(BMI160_AUX_COM_DELAY);
+			//initially load into setup mode to read trim values
+			BMI160.setRegister(BMI160_MAG_IF_1, BMI160_MANUAL_MODE_EN_MSK, BMI160_MANUAL_MODE_EN_MSK);
+			delay(BMI160_AUX_COM_DELAY);
+			EmotiBit::bmm150ReadTrimRegisters();
+
+			BMI160.setRegister(BMI160_MAG_IF_2, BMM150_DATA_REG); // ADD_BMM_DATA
+			delay(BMI160_AUX_COM_DELAY);
+			//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OPMODE_REG); // ADD_BMM_MEASURE
+			//delay(BMI160_AUX_COM_DELAY);
+
+			// Following example at https://github.com/BoschSensortec/BMI160_driver#auxiliary-fifo-data-parsing 
+
+			// Put the BMM150 in normal mode (may or may not be necessary if putting in force mode later)
+			// BMI160.setRegister(BMM150_OPMODE_REG, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
+			//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ | BMM150_NORMAL_MODE);
+
+			//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_NORMAL_MODE);
+			BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_NORMAL_MODE, BMM150_OP_MODE_BIT, BMM150_OP_MODE_LEN);
+			BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
+			delay(BMI160_AUX_COM_DELAY);
+
+			// Already done in setup
+			///* Set BMM150 repetitions for X/Y-Axis */
+			//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_LOWPOWER_REPXY);             //Added for BMM150 Support
+			//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_XY_REP_REG);                 //Added for BMM150 Support
+			//delay(BMI160_AUX_COM_DELAY);
+
+			///* Set BMM150 repetitions for Z-Axis */
+			//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_LOWPOWER_REPXY);              //Added for BMM150 Support
+			//BMI160.setRegister(BMI160_MAG_IF_3, BMM150_Z_REP_REG);                  //Added for BMM150 Support
+			//delay(BMI160_AUX_COM_DELAY);
+
+			//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_DATA_RATE_25HZ);
+			BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_DATA_RATE_10HZ, BMM150_DATA_RATE_BIT, BMM150_DATA_RATE_LEN);
+			BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
+			delay(BMI160_AUX_COM_DELAY);
+
+			//BMI160.setRegister(BMI160_MAG_IF_4, BMM150_FORCED_MODE);
+			BMI160.reg_write_bits(BMI160_MAG_IF_4, BMM150_FORCED_MODE, BMM150_OP_MODE_BIT, BMM150_OP_MODE_LEN);
+			BMI160.setRegister(BMI160_MAG_IF_3, BMM150_OP_MODE_ADDR);
+			delay(BMI160_AUX_COM_DELAY);
+
+
+			// Setup the BMI160 AUX
+			// Set the auto mode address
+			BMI160.setRegister(BMI160_MAG_IF_2, BMM150_DATA_X_LSB);
+			delay(BMI160_AUX_COM_DELAY);
+
+			// Set the AUX ODR
+			BMI160.setMagRate(BMI160MagRate::BMI160_MAG_RATE_100HZ);
+
+			// Disable manual mode (i.e. enable auto mode)
+			BMI160.setRegister(BMI160_MAG_IF_1, BMI160_DISABLE, BMI160_MANUAL_MODE_EN_MSK);
+
+			// Set the burst length
+			BMI160.setRegister(BMI160_MAG_IF_1, BMI160_AUX_READ_BURST_MSK, BMI160_AUX_READ_BURST_MSK); // MAG data mode 8 byte burst
+			delay(BMI160_AUX_COM_DELAY);
+
+			// Bosch code sets the I2C register again here for an unknown reason
+			BMI160.setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR, BMM150_BASED_I2C_MASK); // I2C MAG
+			delay(BMI160_AUX_COM_DELAY);
+
+			// Setup the FIFO
+			BMI160.setAccelFIFOEnabled(true);
+			_imuFifoFrameLen += 6;
+			BMI160.setGyroFIFOEnabled(true);
+			_imuFifoFrameLen += 6;
+			BMI160.setMagFIFOEnabled(true);
+			_imuFifoFrameLen += 8;
+			BMI160.setFIFOHeaderModeEnabled(false);
+			if (_imuFifoFrameLen > _maxImuFifoFrameLen)
+			{
+				// ToDo: handle _imuFifoFrameLen > _maxImuFifoFrameLen
+				Serial.println("UNHANDLED CASE: _imuFifoFrameLen > _maxImuFifoFrameLen");
+				while (true);
+			}
+			chipBegun.BMI160 = true;
+			chipBegun.BMM150 = true;
+		}
+		else
+		{
+			if (testingMode == TestingMode::FACTORY_TEST)
+			{
+				// Add FAIL
+				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ACCEL_GYRO, EmotiBitFactoryTest::TypeTag::TEST_FAIL);		
+				Serial.println(factoryTestSerialOutput);
+			}
+			setupFailed("IMU");
+		}
+		if ((int)_hwVersion == (int)EmotiBitVersionController::EmotiBitVersion::V03B)
+		{
+			_enableDigitalFilter.mx = true;
+			_enableDigitalFilter.my = true;
+			_enableDigitalFilter.mz = true;
+			Serial.println("Enabling digital filtering for magnetometer");
+		}
+		
+		Serial.println(" ... Completed");
+	}
 	// ToDo: Add interrupts to accurately record timing of data capture
 
 	//BMI160.detachInterrupt();
@@ -890,32 +896,35 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	}
 #endif
 
-	// Setup EDA
-	Serial.println("\nInitializing EDA... ");
-	if (emotibitEda.setup(_hwVersion, _samplingRates.eda / ((float)_samplesAveraged.eda), &eda, &edl, &edr, _EmotiBit_i2c, &edlBuffer, &edrBuffer))
+	if(acquireData.eda)
 	{
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_PASS);
-		Serial.println("Completed");
-	}
-	else
-	{
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-		Serial.println(factoryTestSerialOutput);
-		Serial.println("failed");
-	}
-	Serial.println("\nLoading EDA calibration... ");
-	if (emotibitEda.stageCalibLoad(&_emotibitNvmController, true))
-	{
-		Serial.println("Completed");
-	}
-	else
-	{
-		Serial.println("failed");
-	}
+		// Setup EDA
+		Serial.println("\nInitializing EDA... ");
+		if (emotibitEda.setup(_hwVersion, _samplingRates.eda / ((float)_samplesAveraged.eda), &eda, &edl, &edr, _EmotiBit_i2c, &edlBuffer, &edrBuffer))
+		{
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+			Serial.println("Completed");
+		}
+		else
+		{
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::ADC_INIT, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+			Serial.println(factoryTestSerialOutput);
+			Serial.println("failed");
+		}
+		Serial.println("\nLoading EDA calibration... ");
+		if (emotibitEda.stageCalibLoad(&_emotibitNvmController, true))
+		{
+			Serial.println("Completed");
+		}
+		else
+		{
+			Serial.println("failed");
+		}
 
 
-	// Sensor setup complete
-	Serial.println("Sensor setup complete");
+		// Sensor setup complete
+		Serial.println("Sensor setup complete");
+	}
 
 	// EDL Filter Parameters
 	//edaCrossoverFilterFreq = emotiBitVersionController.getMathConstant(MathConstants::EDA_CROSSOVER_FILTER_FREQ);
@@ -931,16 +940,16 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		_edlDigFiltAlpha = pow(M_E, -2.f * PI * edaCrossoverFilterFreq / (_samplingRates.eda / _samplesAveraged.eda));
 	}
 	*/
-	led.setLED(uint8_t(EmotiBit::Led::RED), true);
-	led.send();
+	_ledController.setState(EmotiBitLedController::Led::RECORDING, true);
+	_ledController.update();
 	status = setupSdCard();
 	if (status)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SD_CARD, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 		// Give a brief delay to signify to the user "config file is being loaded"
 		delay(2000);
-		led.setLED(uint8_t(EmotiBit::Led::RED), false);
-		led.send();
+		_ledController.setState(EmotiBitLedController::Led::RECORDING, false);
+		_ledController.update();
 	}
 	// ToDo: verify if this else is ever reached.
 	else
@@ -957,8 +966,8 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 #endif
 	printEmotiBitInfo();
 	// turn BLUE on to signify we are trying to connect to WiFi
-	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-	led.send();
+	_ledController.setState(EmotiBitLedController::Led::WIFI, true);
+	_ledController.update();
 	uint16_t attemptDelay = 20000;  // in mS. ESP32 has been observed to take >10 seconds to resolve an enterprise connection
 	uint8_t maxAttemptsPerCred = 1;
 	uint32_t timeout = attemptDelay * maxAttemptsPerCred * _emotiBitWiFi.getNumCredentials() * 2; // Try cycling through all credentials at least 2x before giving up and trying a restart
@@ -979,8 +988,8 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		// Could not connect to network. software restart and begin setup again.
 		restartMcu();
 	}
-	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
-	led.send();
+	_ledController.setState(EmotiBitLedController::Led::WIFI, false);
+	_ledController.update();
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		// Add Pass or fail
@@ -3164,9 +3173,9 @@ void EmotiBit::readSensors()
 					if (buttonPressed)
 					{
 						// Turn on the LEDs when the button is pressed
-						led.setLED(uint8_t(EmotiBit::Led::RED), true);
-						led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-						led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+						_ledController.setState(EmotiBitLedController::Led::RECORDING, true);
+						_ledController.setState(EmotiBitLedController::Led::WIFI, true);
+						_ledController.setState(EmotiBitLedController::Led::BATTERY, true);
 					}
 					else
 					{
@@ -3175,7 +3184,7 @@ void EmotiBit::readSensors()
 						{
 							// Connected to oscilloscope
 							// turn LED on
-							led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+							_ledController.setState(EmotiBitLedController::Led::WIFI, true);
 						}
 						else
 						{
@@ -3192,11 +3201,11 @@ void EmotiBit::readSensors()
 								unsigned long timeNow = millis();
 								if (timeNow - wifiConnBlinkTimer < onTime)
 								{
-									led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+									_ledController.setState(EmotiBitLedController::Led::WIFI, true);
 								}
 								else if (timeNow - wifiConnBlinkTimer < totalTime)
 								{
-									led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+									_ledController.setState(EmotiBitLedController::Led::WIFI, false);
 								}
 								else
 								{
@@ -3207,18 +3216,18 @@ void EmotiBit::readSensors()
 							{
 								// not connected to wifi
 								// turn LED off
-								led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+								_ledController.setState(EmotiBitLedController::Led::WIFI, false);
 							}
 						}
 
 						// Battery LED
 						if (battIndicationSeq)
 						{
-							led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+							_ledController.setState(EmotiBitLedController::Led::BATTERY, true);
 						}
 						else
 						{
-							led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+							_ledController.setState(EmotiBitLedController::Led::BATTERY, false);
 						}
 
 						// Recording status LED
@@ -3227,17 +3236,17 @@ void EmotiBit::readSensors()
 							static uint32_t recordBlinkDuration = millis();
 							if (millis() - recordBlinkDuration >= 500)
 							{
-								led.setLED(uint8_t(EmotiBit::Led::RED), !led.getLED(uint8_t(EmotiBit::Led::RED)));
+								_ledController.setState(EmotiBitLedController::Led::RECORDING, !_ledController.getState(EmotiBitLedController::Led::RECORDING));
 								recordBlinkDuration = millis();
 							}
 						}
-						else if (!_sdWrite && led.getLED(uint8_t(EmotiBit::Led::RED)) == true)
+						else if (!_sdWrite && _ledController.getState(EmotiBitLedController::Led::RECORDING) == true)
 						{
-							led.setLED(uint8_t(EmotiBit::Led::RED), false);
+							_ledController.setState(EmotiBitLedController::Led::RECORDING, false);
 						}
 					}
 				}
-				led.send();
+				_ledController.update();
 			}
 			ledCounter++;
 
@@ -3344,7 +3353,10 @@ void EmotiBit::processData()
 			{
 				// EDA is a prototype for a controller model going forward
 				// In the future, processData() functions will be added to a linked list for iteration
-				emotibitEda.processData();
+				if(acquireData.eda)
+				{
+					emotibitEda.processData();
+				}
 			}
 			else if ((uint8_t)EmotiBit::DataType::EDL == t)
 			{
@@ -3356,7 +3368,10 @@ void EmotiBit::processData()
 			}
 			else if ((uint8_t)EmotiBit::DataType::THERMOPILE == t)
 			{
-				processThermopileData();
+				if(acquireData.thermopile)
+				{
+					processThermopileData();
+				}
 			}
 			else
 			{
@@ -4284,27 +4299,27 @@ void EmotiBit::processFactoryTestMessages()
 		Serial.println(msgTypeTag);
 		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_ON))
 		{
-			led.setLED((uint8_t)EmotiBit::Led::RED, true);
+			_ledController.setState(EmotiBitLedController::Led::RECORDING, true);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_OFF))
 		{
-			led.setLED((uint8_t)EmotiBit::Led::RED, false);
+			_ledController.setState(EmotiBitLedController::Led::RECORDING, false);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_ON))
 		{
-			led.setLED((uint8_t)EmotiBit::Led::BLUE, true);
+			_ledController.setState(EmotiBitLedController::Led::WIFI, true);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_OFF))
 		{
-			led.setLED((uint8_t)EmotiBit::Led::BLUE, false);
+			_ledController.setState(EmotiBitLedController::Led::WIFI, false);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_ON))
 		{
-			led.setLED((uint8_t)EmotiBit::Led::YELLOW, true);
+			_ledController.setState(EmotiBitLedController::Led::BATTERY, true);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_OFF))
 		{
-			led.setLED((uint8_t)EmotiBit::Led::YELLOW, false);
+			_ledController.setState(EmotiBitLedController::Led::BATTERY, false);
 		}
 		else if (msgTypeTag.equals(EmotiBitPacket::TypeTag::MODE_HIBERNATE))
 		{

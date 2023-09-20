@@ -77,6 +77,7 @@ enum class VregEnablePinLogic
 	ACTIVE_HIGH
 };
 
+
 class EmotiBitVersionController
 {
 public: 	
@@ -105,6 +106,7 @@ public:
 		V03B = 5,
 		V04A = 6,
 		V05C = 7,
+		AGAVE_REVB = 8,
 		length
 	};
 
@@ -112,6 +114,20 @@ public:
 		bool isSi7013Present;
 		bool isEepromPresent;
 		bool isThermopilePresent;
+	};
+
+	struct AcquireData 
+	{
+	bool eda = true;
+	bool tempHumidity = true;
+	bool thermopile = true;
+	bool imu = true;
+	bool ppg = true;
+	bool tempPpg = true;
+	bool debug = false;
+	bool battery = true;
+	bool heartRate = true; // Note: we may want to move this to a separarte flag someday, for controlling derivative signals
+	bool edrMetrics = true;
 	};
 
 private:
@@ -211,7 +227,7 @@ public:
 		@param emotibitSerialNumber the EmotiBit Number read from the version(for V4+ only)
 		@return returns True, if Variant information successfully retrieved from the NVM, else False
 	*/
-	bool getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode);
+	bool getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode, AcquireData &acquireData);
 	
 	/*!
 		@brief fallback function to detect version from HW, if variant information not stored in NVM
@@ -247,5 +263,7 @@ public:
 		@brief Prints all pin mappings on the screen
 	*/
 	void echoPinMapping();
+
+	bool checkForExternalVersionDefinition(EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode, AcquireData &acquireData);
 };
 #endif

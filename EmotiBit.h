@@ -12,7 +12,7 @@
 #include <EmotiBit_Si7013.h>
 #include <BMI160Gen.h>
 #include <MAX30105.h>
-#include <EmotiBit_NCP5623.h>
+#include <EmotiBitLedController.h>
 #include <SparkFun_MLX90632_Arduino_Library.h>
 #include "DoubleBufferFloat.h"
 #include <ArduinoJson.h>
@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.14";
+  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.14.feat-boardversionControl.0";
 
 
 
@@ -245,12 +245,6 @@ public:
   	TIME_FILESYNC  //time taken for file syncing
   };
 
-  //TODO: Make enum classs for led's
-  enum class Led {
-	  RED = 1,
-	  BLUE,
-	  YELLOW
-  };
 
   enum class BattLevel {
 	  THRESHOLD_HIGH = 50, // Set thresholds for changing led indication on board for battery
@@ -276,7 +270,7 @@ public:
 	PPGSettings ppgSettings;
 	IMUSettings imuSettings;
 	MAX30105 ppgSensor;
-	NCP5623 led;
+	EmotiBitLedController _ledController;
 	MLX90632 thermopile;
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
@@ -363,18 +357,7 @@ public:
 	//	uint8_t battery = 0;
 	//} timerLoopOffset;	// Sets initial value of sampling counters
 
-	struct AcquireData {
-		bool eda = true;
-		bool tempHumidity = true;
-		bool thermopile = true;
-		bool imu = true;
-		bool ppg = true;
-		bool tempPpg = true;
-		bool debug = false;
-		bool battery = true;
-		bool heartRate = true; // Note: we may want to move this to a separarte flag someday, for controlling derivative signals
-		bool edrMetrics = true;
-	} acquireData;
+ 	EmotiBitVersionController::AcquireData acquireData;
 
 	struct ChipBegun {
 		bool SI7013 = false;
@@ -589,7 +572,7 @@ private:
 	uint8_t _adcBits;
 	float _accelerometerRange; // supported values: 2, 4, 8, 16 (G)
 	float _gyroRange; // supported values: 125, 250, 500, 1000, 2000 (degrees/second)
-	EmotiBitVersionController::EmotiBitVersion _hwVersion;
+	EmotiBitVersionController::EmotiBitVersion _hwVersion = EmotiBitVersionController::EmotiBitVersion::UNKNOWN;
 #if defined(ARDUINO_FEATHER_ESP32)
 	String _featherVersion = "Adafruit Feather HUZZAH32";
 #elif defined(ADAFRUIT_FEATHER_M0)

@@ -29,32 +29,40 @@
 
 #include "EmotiBitNvmController.h"
 
-bool EmotiBitNvmController::init(TwoWire &emotibit_i2c)
+bool EmotiBitNvmController::init(TwoWire &emotibit_i2c, bool skipInit)
 {
-
-	if (emotibitEeprom.begin(EMOTIBIT_EEPROM_I2C_ADDRESS, emotibit_i2c))
+	if(skipInit)
 	{
-		emotibitEepromSettings.capacityBytes = 256; // in bytes
-		emotibitEepromSettings.pageSizeBytes = 16; // in bytes
-		emotibitEeprom.setMemorySize(emotibitEepromSettings.capacityBytes);
-		emotibitEeprom.setPageSize(emotibitEepromSettings.pageSizeBytes);
-		writeState = State::IDLE;
-		readState = State::IDLE;
-		_nvmType = NvmType::EEPROM;
+		Serial.println("Check skipped.");
 		return true;
 	}
-
-	if (si7013.setup(emotibit_i2c))
+	else
 	{
-		writeState = State::IDLE;
-		readState = State::IDLE;
-		_nvmType = NvmType::OTP;
-		return true;
+		if (emotibitEeprom.begin(EMOTIBIT_EEPROM_I2C_ADDRESS, emotibit_i2c))
+		{
+			emotibitEepromSettings.capacityBytes = 256; // in bytes
+			emotibitEepromSettings.pageSizeBytes = 16; // in bytes
+			emotibitEeprom.setMemorySize(emotibitEepromSettings.capacityBytes);
+			emotibitEeprom.setPageSize(emotibitEepromSettings.pageSizeBytes);
+			writeState = State::IDLE;
+			readState = State::IDLE;
+			_nvmType = NvmType::EEPROM;
+			Serial.println("success");
+			return true;
+		}
+
+		if (si7013.setup(emotibit_i2c))
+		{
+			writeState = State::IDLE;
+			readState = State::IDLE;
+			_nvmType = NvmType::OTP;
+			Serial.println("success");
+			return true;
+		}
+
+		_nvmType = NvmType::UNKNOWN;
+		return false;
 	}
-
-	_nvmType = NvmType::UNKNOWN;
-	return false;
-
 }
 
 uint8_t EmotiBitNvmController::stageToWrite(DataType datatype, uint8_t datatypeVersion, uint32_t dataSize, uint8_t* data, bool autoSync, bool enableValidateWrite)

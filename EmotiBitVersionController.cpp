@@ -67,6 +67,10 @@ const char* EmotiBitVersionController::getHardwareVersion(EmotiBitVersion versio
 	{
 		return "V05c\0";
 	}
+	else if (version == EmotiBitVersion::AGAVE_REVB)
+	{
+		return "AGAVE_REVB\0";
+	}
 	else
 	{
 		return "NA\0";
@@ -471,8 +475,9 @@ bool EmotiBitVersionController::writeVariantInfoToNvm(EmotiBitNvmController &emo
 	}
 }
 
-bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode)
+bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode, AcquireData &acquireData)
 {
+
 	uint8_t* nvmData;
 	uint8_t datatypeVersion;
 	uint32_t dataSize;
@@ -532,6 +537,7 @@ bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitNvmController &em
 		Serial.print("Failed to read Variant Info. Error Code: "); Serial.println(status);
 		return false;
 	}
+
 }
 
 void EmotiBitVersionController::updateVersionParameterTable(TwoWire &emotibit_i2c, EmotiBitHardwareParameterTable &hardwareParameterTable)
@@ -632,4 +638,24 @@ bool EmotiBitVersionController::detectVariantFromHardware(TwoWire &emotibit_i2c,
 		}
 	}
 	
+}
+
+
+bool EmotiBitVersionController::checkForExternalVersionDefinition(EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode, AcquireData &acquireData)
+{
+#ifdef EXT_BOARD_DEFINED
+#ifdef AGAVE_REVB_V01C
+	Serial.println("Agave revb v01c defined in project files");
+	hwVersion = EmotiBitVersion::AGAVE_REVB;
+	sku = "v01C";
+	emotibitSerialNumber = 01;
+	barcode = "Agave RevB"; // this is the device ID in EmotiBit
+	acquireData.eda = false;
+	acquireData.edrMetrics = false;
+	acquireData.tempHumidity = false;
+	acquireData.thermopile = false;
+	return true;
+#endif
+#endif
+	return false;
 }

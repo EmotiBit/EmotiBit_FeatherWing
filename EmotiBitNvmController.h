@@ -131,7 +131,7 @@ public:
 		@param emotiBit_i2c I2C instance being used by EmotiBit to talk to sensors.
 		@return True if successful, otherwise false.
 	*/
-	bool init(TwoWire &emotiBit_i2c);
+	bool init(TwoWire &emotiBit_i2c, bool skipInit);
 
 	/*
 		@brief Updates the write buffer with data that will be written to the NVM.
