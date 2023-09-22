@@ -77,7 +77,17 @@ enum class VregEnablePinLogic
 	ACTIVE_HIGH
 };
 
-
+struct InitControllers
+{
+	bool eda = true;
+	bool tempHumidity = true;
+	bool thermopile = true;
+	bool imuAccGyro = true;
+	bool imuMag = true;
+	bool ppg = true;
+	bool tempPpg = true;
+	bool battery = true;
+};
 class EmotiBitVersionController
 {
 public: 	
@@ -116,19 +126,6 @@ public:
 		bool isThermopilePresent;
 	};
 
-	struct AcquireData 
-	{
-	bool eda = true;
-	bool tempHumidity = true;
-	bool thermopile = true;
-	bool imu = true;
-	bool ppg = true;
-	bool tempPpg = true;
-	bool debug = false;
-	bool battery = true;
-	bool heartRate = true; // Note: we may want to move this to a separarte flag someday, for controlling derivative signals
-	bool edrMetrics = true;
-	};
 
 private:
 	static const int _MAX_EMOTIBIT_PIN_COUNT = 28;
@@ -227,7 +224,7 @@ public:
 		@param emotibitSerialNumber the EmotiBit Number read from the version(for V4+ only)
 		@return returns True, if Variant information successfully retrieved from the NVM, else False
 	*/
-	bool getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode, AcquireData &acquireData);
+	bool getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode, InitControllers &initControllers);
 	
 	/*!
 		@brief fallback function to detect version from HW, if variant information not stored in NVM
@@ -264,6 +261,6 @@ public:
 	*/
 	void echoPinMapping();
 
-	bool checkForExternalVersionDefinition(EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode, AcquireData &acquireData);
+	bool checkForExternalVersionDefinition(EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode, InitControllers &initControllers);
 };
 #endif

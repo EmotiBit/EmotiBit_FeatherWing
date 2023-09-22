@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.14.feat-boardversionControl.0";
+  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.14.feat-boardversionControl.1";
 
 
 
@@ -357,7 +357,22 @@ public:
 	//	uint8_t battery = 0;
 	//} timerLoopOffset;	// Sets initial value of sampling counters
 
- 	EmotiBitVersionController::AcquireData acquireData;
+ 	struct AcquireData 
+	{
+	bool eda = true;
+	bool tempHumidity = true;
+	bool thermopile = true;
+	bool imuAccGyro = true;
+	bool imuMag = true;
+	bool ppg = true;
+	bool tempPpg = true;
+	bool debug = false;
+	bool battery = true;
+	bool heartRate = true; // Note: we may want to move this to a separarte flag someday, for controlling derivative signals
+	bool edrMetrics = true;
+	}acquireData;
+
+	InitControllers _initControllers;
 
 	struct ChipBegun {
 		bool SI7013 = false;
@@ -527,7 +542,7 @@ public:
   uint8_t setup(String firmwareVariant = "");   /**< Setup all the sensors */
 	uint8_t update();
   void setAnalogEnablePin(uint8_t i); /**< Power on/off the analog circuitry */
-  int8_t updateIMUData();                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
+  int8_t updateIMUData(bool acquireAccGyro, bool chipBegunMag, bool acquireMag);                /**< Read any available IMU data from the sensor FIFO into the inputBuffers */
 	int8_t updatePPGData();                /**< Read any available PPG data from the sensor FIFO into the inputBuffers */
 	int8_t updateTempHumidityData();       /**< Read any available temperature and humidity data into the inputBuffers */
 	int8_t updatePpgTempData();			/**< Read any available temp data from PPG into buffer*/

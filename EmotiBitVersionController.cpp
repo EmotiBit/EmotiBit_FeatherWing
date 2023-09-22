@@ -475,7 +475,7 @@ bool EmotiBitVersionController::writeVariantInfoToNvm(EmotiBitNvmController &emo
 	}
 }
 
-bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode, AcquireData &acquireData)
+bool EmotiBitVersionController::getEmotiBitVariantInfo(EmotiBitNvmController &emotiBitNvmController, EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode, InitControllers &initControllers)
 {
 
 	uint8_t* nvmData;
@@ -641,7 +641,7 @@ bool EmotiBitVersionController::detectVariantFromHardware(TwoWire &emotibit_i2c,
 }
 
 
-bool EmotiBitVersionController::checkForExternalVersionDefinition(EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode, AcquireData &acquireData)
+bool EmotiBitVersionController::checkForExternalVersionDefinition(EmotiBitVersion &hwVersion, String &sku, uint32_t &emotibitSerialNumber, String &barcode, InitControllers &initControllers)
 {
 #ifdef EXT_BOARD_DEFINED
 #ifdef AGAVE_REVB_V01C
@@ -650,10 +650,10 @@ bool EmotiBitVersionController::checkForExternalVersionDefinition(EmotiBitVersio
 	sku = "v01C";
 	emotibitSerialNumber = 01;
 	barcode = "Agave RevB"; // this is the device ID in EmotiBit
-	acquireData.eda = false;
-	acquireData.edrMetrics = false;
-	acquireData.tempHumidity = false;
-	acquireData.thermopile = false;
+	initControllers.eda = false;
+	initControllers.tempHumidity = false;
+	initControllers.thermopile = false;
+	initControllers.imuMag = false;
 	return true;
 #endif
 #endif
