@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.14.feat-boardversionControl.1";
+  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.14.feat-boardversionControl.2";
 
 
 

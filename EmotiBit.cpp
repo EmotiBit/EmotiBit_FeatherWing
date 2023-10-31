@@ -2033,7 +2033,7 @@ int8_t EmotiBit::updateIMUData(bool acquireAccGyro, bool chipBegunMag, bool acqu
 			bytesToRead = 0;
 		}
 	}
-	Serial.print("bytesToRead= "); Serial.println(bytesToRead);
+	//Serial.print("bytesToRead= "); Serial.println(bytesToRead);
 
 	bool imuBufferFull = false;
 	uint16_t nFrames = 1;
