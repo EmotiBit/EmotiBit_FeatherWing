@@ -653,7 +653,7 @@ bool EmotiBitVersionController::checkForExternalVersionDefinition(EmotiBitVersio
 	initControllers.eda = false;
 	initControllers.tempHumidity = false;
 	initControllers.thermopile = false;
-	initControllers.imuMag = false;
+	initControllers.imuMag = true;
 	return true;
 #endif
 #endif
