@@ -2708,121 +2708,11 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]["created_at"] = datetimeString;
 		serializeJson(jsonDoc, file);
 	}
-
-	file.print(","); // Doing some manual printing to chunk JSON and save RAM
-
+	
+	if(acquireData.imuAccGyro)
 	{
-		// Parse the root object
-		StaticJsonDocument<bufferSize> jsonDoc;
-		JsonObject root = jsonDoc.to<JsonObject>();
-		//JsonArray& root = jsonBuffer.createArray();
-		const uint8_t nInfo = 1;
-		//JsonObject* indices[nInfo];
-		JsonObject infos[nInfo];
-		JsonArray typeTags[nInfo];
-		JsonObject setups[nInfo];
-		uint8_t i = 0;
-		infos[i] = root.createNestedObject("info");
+		file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
-		// ToDo: Use EmotiBitPacket::TypeTag rather than fallable constants to set typeTags
-
-		// Accelerometer
-		//indices[i] = &(root.createNestedObject());
-		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]["name"] = "Accelerometer";
-		infos[i]["type"] = "Accelerometer";
-		typeTags[i] = infos[i].createNestedArray("typeTags");
-		typeTags[i].add("AX");
-		typeTags[i].add("AY");
-		typeTags[i].add("AZ");
-		infos[i]["channel_count"] = 3;
-		infos[i]["nominal_srate"] = _samplingRates.accelerometer;
-		infos[i]["channel_format"] = "float";
-		infos[i]["units"] = "g";
-		setups[i] = infos[i].createNestedObject("setup");
-		setups[i]["range"] = _accelerometerRange;
-		setups[i]["acc_bwp"] = imuSettings.acc_bwp;
-		setups[i]["acc_us"] = imuSettings.acc_us;
-		serializeJson(jsonDoc, file);
-	}
-
-	file.print(","); // Doing some manual printing to chunk JSON and save RAM
-
-	{
-		// Parse the root object
-		StaticJsonDocument<bufferSize> jsonDoc;
-		JsonObject root = jsonDoc.to<JsonObject>();
-		//JsonArray& root = jsonBuffer.createArray();
-		const uint8_t nInfo = 1;
-		//JsonObject* indices[nInfo];
-		JsonObject infos[nInfo];
-		JsonArray typeTags[nInfo];
-		JsonObject setups[nInfo];
-		uint8_t i = 0;
-		infos[i] = root.createNestedObject("info");
-
-		// Gyroscope
-		//i++;
-		//indices[i] = &(root.createNestedObject());
-		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]["name"] = "Gyroscope";
-		infos[i]["type"] = "Gyroscope";
-		typeTags[i] = infos[i].createNestedArray("typeTags");
-		typeTags[i].add("GX");
-		typeTags[i].add("GY");
-		typeTags[i].add("GZ");
-		infos[i]["channel_count"] = 3;
-		infos[i]["nominal_srate"] = _samplingRates.gyroscope;
-		infos[i]["channel_format"] = "float";
-		infos[i]["units"] = "degrees/second";
-		setups[i] = infos[i].createNestedObject("setup");
-		setups[i]["range"] = _gyroRange;
-		setups[i]["gyr_bwp"] = imuSettings.gyr_bwp;
-		setups[i]["gyr_us"] = imuSettings.gyr_us;
-		serializeJson(jsonDoc, file);
-	}
-
-	file.print(","); // Doing some manual printing to chunk JSON and save RAM
-
-	{
-		// Parse the root object
-		StaticJsonDocument<bufferSize> jsonDoc;
-		JsonObject root = jsonDoc.to<JsonObject>();
-		//JsonArray& root = jsonBuffer.createArray();
-		const uint8_t nInfo = 1;
-		//JsonObject* indices[nInfo];
-		JsonObject infos[nInfo];
-		JsonArray typeTags[nInfo];
-		JsonObject setups[nInfo];
-		uint8_t i = 0;
-		infos[i] = root.createNestedObject("info");
-
-		// Magnetometer
-		//i++;
-		//indices[i] = &(root.createNestedObject());
-		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]["name"] = "Magnetometer";
-		infos[i]["type"] = "Magnetometer";
-		typeTags[i] = infos[i].createNestedArray("typeTags");
-		typeTags[i].add("MX");
-		typeTags[i].add("MY");
-		typeTags[i].add("MZ");
-		infos[i]["channel_count"] = 3;
-		infos[i]["nominal_srate"] = _samplingRates.magnetometer;
-		infos[i]["channel_format"] = "float";
-		infos[i]["units"] = "microhenries";
-		setups[i] = infos[i].createNestedObject("setup");
-		serializeJson(jsonDoc, file);
-	}
-
-	file.print(","); // Doing some manual printing to chunk JSON and save RAM
-
-	emotibitEda.writeInfoJson(file);
-
-	file.print(","); // Doing some manual printing to chunk JSON and save RAM
-
-	if ((int)_hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
-	{
 		{
 			// Parse the root object
 			StaticJsonDocument<bufferSize> jsonDoc;
@@ -2835,27 +2725,189 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 			JsonObject setups[nInfo];
 			uint8_t i = 0;
 			infos[i] = root.createNestedObject("info");
-			// Humidity0
-			//i++;
+
+			// ToDo: Use EmotiBitPacket::TypeTag rather than fallable constants to set typeTags
+
+			// Accelerometer
 			//indices[i] = &(root.createNestedObject());
 			//infos[i] = &(indices[i]->createNestedObject("info"));
-			infos[i]["name"] = "Humidity0";
-			infos[i]["type"] = "Humidity";
+			infos[i]["name"] = "Accelerometer";
+			infos[i]["type"] = "Accelerometer";
 			typeTags[i] = infos[i].createNestedArray("typeTags");
-			typeTags[i].add("H0");
-			infos[i]["channel_count"] = 1;
-			infos[i]["nominal_srate"] = _samplingRates.humidity / _samplesAveraged.humidity;
+			typeTags[i].add("AX");
+			typeTags[i].add("AY");
+			typeTags[i].add("AZ");
+			infos[i]["channel_count"] = 3;
+			infos[i]["nominal_srate"] = _samplingRates.accelerometer;
 			infos[i]["channel_format"] = "float";
-			infos[i]["units"] = "Percent";
+			infos[i]["units"] = "g";
 			setups[i] = infos[i].createNestedObject("setup");
-			setups[i]["resolution"] = "RESOLUTION_H11_T11";
-			setups[i]["samples_averaged"] = _samplesAveraged.humidity;
-			setups[i]["oversampling_rate"] = _samplingRates.humidity;
+			setups[i]["range"] = _accelerometerRange;
+			setups[i]["acc_bwp"] = imuSettings.acc_bwp;
+			setups[i]["acc_us"] = imuSettings.acc_us;
 			serializeJson(jsonDoc, file);
 		}
 
 		file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
+		{
+			// Parse the root object
+			StaticJsonDocument<bufferSize> jsonDoc;
+			JsonObject root = jsonDoc.to<JsonObject>();
+			//JsonArray& root = jsonBuffer.createArray();
+			const uint8_t nInfo = 1;
+			//JsonObject* indices[nInfo];
+			JsonObject infos[nInfo];
+			JsonArray typeTags[nInfo];
+			JsonObject setups[nInfo];
+			uint8_t i = 0;
+			infos[i] = root.createNestedObject("info");
+
+			// Gyroscope
+			//i++;
+			//indices[i] = &(root.createNestedObject());
+			//infos[i] = &(indices[i]->createNestedObject("info"));
+			infos[i]["name"] = "Gyroscope";
+			infos[i]["type"] = "Gyroscope";
+			typeTags[i] = infos[i].createNestedArray("typeTags");
+			typeTags[i].add("GX");
+			typeTags[i].add("GY");
+			typeTags[i].add("GZ");
+			infos[i]["channel_count"] = 3;
+			infos[i]["nominal_srate"] = _samplingRates.gyroscope;
+			infos[i]["channel_format"] = "float";
+			infos[i]["units"] = "degrees/second";
+			setups[i] = infos[i].createNestedObject("setup");
+			setups[i]["range"] = _gyroRange;
+			setups[i]["gyr_bwp"] = imuSettings.gyr_bwp;
+			setups[i]["gyr_us"] = imuSettings.gyr_us;
+			serializeJson(jsonDoc, file);
+		}
+	}
+	if(acquireData.imuMag)
+	{
+		file.print(","); // Doing some manual printing to chunk JSON and save RAM
+
+		{
+			// Parse the root object
+			StaticJsonDocument<bufferSize> jsonDoc;
+			JsonObject root = jsonDoc.to<JsonObject>();
+			//JsonArray& root = jsonBuffer.createArray();
+			const uint8_t nInfo = 1;
+			//JsonObject* indices[nInfo];
+			JsonObject infos[nInfo];
+			JsonArray typeTags[nInfo];
+			JsonObject setups[nInfo];
+			uint8_t i = 0;
+			infos[i] = root.createNestedObject("info");
+
+			// Magnetometer
+			//i++;
+			//indices[i] = &(root.createNestedObject());
+			//infos[i] = &(indices[i]->createNestedObject("info"));
+			infos[i]["name"] = "Magnetometer";
+			infos[i]["type"] = "Magnetometer";
+			typeTags[i] = infos[i].createNestedArray("typeTags");
+			typeTags[i].add("MX");
+			typeTags[i].add("MY");
+			typeTags[i].add("MZ");
+			infos[i]["channel_count"] = 3;
+			infos[i]["nominal_srate"] = _samplingRates.magnetometer;
+			infos[i]["channel_format"] = "float";
+			infos[i]["units"] = "microhenries";
+			setups[i] = infos[i].createNestedObject("setup");
+			serializeJson(jsonDoc, file);
+		}
+	}
+	
+	if(acquireData.eda)
+	{
+		file.print(","); // Doing some manual printing to chunk JSON and save RAM
+		Serial.println("EDA");
+
+		emotibitEda.writeInfoJson(file);
+	}
+	
+	
+	
+
+	if ((int)_hwVersion < (int)EmotiBitVersionController::EmotiBitVersion::V04A)
+	{
+		if(acquireData.tempHumidity)
+		{
+			file.print(","); // Doing some manual printing to chunk JSON and save RAM
+			{
+				// Parse the root object
+				StaticJsonDocument<bufferSize> jsonDoc;
+				JsonObject root = jsonDoc.to<JsonObject>();
+				//JsonArray& root = jsonBuffer.createArray();
+				const uint8_t nInfo = 1;
+				//JsonObject* indices[nInfo];
+				JsonObject infos[nInfo];
+				JsonArray typeTags[nInfo];
+				JsonObject setups[nInfo];
+				uint8_t i = 0;
+				infos[i] = root.createNestedObject("info");
+				// Humidity0
+				//i++;
+				//indices[i] = &(root.createNestedObject());
+				//infos[i] = &(indices[i]->createNestedObject("info"));
+				infos[i]["name"] = "Humidity0";
+				infos[i]["type"] = "Humidity";
+				typeTags[i] = infos[i].createNestedArray("typeTags");
+				typeTags[i].add("H0");
+				infos[i]["channel_count"] = 1;
+				infos[i]["nominal_srate"] = _samplingRates.humidity / _samplesAveraged.humidity;
+				infos[i]["channel_format"] = "float";
+				infos[i]["units"] = "Percent";
+				setups[i] = infos[i].createNestedObject("setup");
+				setups[i]["resolution"] = "RESOLUTION_H11_T11";
+				setups[i]["samples_averaged"] = _samplesAveraged.humidity;
+				setups[i]["oversampling_rate"] = _samplingRates.humidity;
+				serializeJson(jsonDoc, file);
+			}
+
+			file.print(","); // Doing some manual printing to chunk JSON and save RAM
+
+			{
+				// Parse the root object
+				StaticJsonDocument<bufferSize> jsonDoc;
+				JsonObject root = jsonDoc.to<JsonObject>();
+				//JsonArray& root = jsonBuffer.createArray();
+				const uint8_t nInfo = 1;
+				//JsonObject* indices[nInfo];
+				JsonObject infos[nInfo];
+				JsonArray typeTags[nInfo];
+				JsonObject setups[nInfo];
+				uint8_t i = 0;
+				infos[i] = root.createNestedObject("info");
+				// Temperature0
+				//i++;
+				//indices[i] = &(root.createNestedObject());
+				//infos[i] = &(indices[i]->createNestedObject("info"));
+				infos[i]["name"] = "Temperature0";
+				infos[i]["type"] = "Temperature";
+				typeTags[i] = infos[i].createNestedArray("typeTags");
+				typeTags[i].add("T0");
+				infos[i]["channel_count"] = 1;
+				infos[i]["nominal_srate"] = _samplingRates.temperature / _samplesAveraged.temperature;
+				infos[i]["channel_format"] = "float";
+				infos[i]["units"] = "degrees celcius";
+				infos[i]["sensor_part_number"] = "Si7013";
+				infos[i]["sensor_serial_number_a"] = tempHumiditySensor.sernum_a;
+				infos[i]["sensor_serial_number_b"] = tempHumiditySensor.sernum_b;
+				setups[i] = infos[i].createNestedObject("setup");
+				setups[i]["resolution"] = "RESOLUTION_H11_T11";
+				setups[i]["samples_averaged"] = _samplesAveraged.temperature;
+				setups[i]["oversampling_rate"] = _samplingRates.temperature;
+				serializeJson(jsonDoc, file);
+			}
+		}
+	}
+	
+	if(acquireData.tempPpg)
+	{
+		file.print(","); // Doing some manual printing to chunk JSON and save RAM
 		{
 			// Parse the root object
 			StaticJsonDocument<bufferSize> jsonDoc;
@@ -2872,185 +2924,158 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 			//i++;
 			//indices[i] = &(root.createNestedObject());
 			//infos[i] = &(indices[i]->createNestedObject("info"));
-			infos[i]["name"] = "Temperature0";
+			infos[i]["name"] = "Temperature1";
 			infos[i]["type"] = "Temperature";
 			typeTags[i] = infos[i].createNestedArray("typeTags");
-			typeTags[i].add("T0");
+			typeTags[i].add("T1");
 			infos[i]["channel_count"] = 1;
-			infos[i]["nominal_srate"] = _samplingRates.temperature / _samplesAveraged.temperature;
+			infos[i]["nominal_srate"] = _samplingRates.temperature_1 / _samplesAveraged.temperature_1;
 			infos[i]["channel_format"] = "float";
 			infos[i]["units"] = "degrees celcius";
-			infos[i]["sensor_part_number"] = "Si7013";
-			infos[i]["sensor_serial_number_a"] = tempHumiditySensor.sernum_a;
-			infos[i]["sensor_serial_number_b"] = tempHumiditySensor.sernum_b;
+			infos[i]["sensor_part_number"] = "MAX30101";
 			setups[i] = infos[i].createNestedObject("setup");
-			setups[i]["resolution"] = "RESOLUTION_H11_T11";
-			setups[i]["samples_averaged"] = _samplesAveraged.temperature;
-			setups[i]["oversampling_rate"] = _samplingRates.temperature;
+			setups[i]["samples_averaged"] = _samplesAveraged.temperature_1;
+			setups[i]["oversampling_rate"] = _samplingRates.temperature_1;
 			serializeJson(jsonDoc, file);
 		}
+	}
+	if(acquireData.thermopile)
+	{
 		file.print(","); // Doing some manual printing to chunk JSON and save RAM
+
+		{
+			// Parse the root object
+			StaticJsonDocument<bufferSize> jsonDoc;
+			JsonObject root = jsonDoc.to<JsonObject>();
+			//JsonArray& root = jsonBuffer.createArray();
+			const uint8_t nInfo = 1;
+			//JsonObject* indices[nInfo];
+			JsonObject infos[nInfo];
+			JsonArray typeTags[nInfo];
+			JsonObject setups[nInfo];
+			uint8_t i = 0;
+			infos[i] = root.createNestedObject("info");
+
+			// thermopile
+			//i++;
+			//indices[i] = &(root.createNestedObject());
+			//infos[i] = &(indices[i]->createNestedObject("info"));
+			infos[i]["name"] = "Thermopile";
+			infos[i]["type"] = "Temperature";
+			typeTags[i] = infos[i].createNestedArray("typeTags");
+			typeTags[i].add("TH");
+			infos[i]["channel_count"] = 1;
+			if (thermopileMode == MODE_CONTINUOUS)
+			{
+				infos[i]["nominal_srate"] = thermopileFs;
+			}
+			else
+			{
+				infos[i]["nominal_srate"] = _samplingRates.thermopile / _samplesAveraged.thermopile;
+			}
+			infos[i]["channel_format"] = "float";
+			infos[i]["units"] = "degrees celcius";
+			setups[i] = infos[i].createNestedObject("setup");
+			setups[i]["samples_averaged"] = _samplesAveraged.thermopile;
+			if (thermopileMode == MODE_CONTINUOUS)
+			{
+				infos[i]["oversampling_rate"] = thermopileFs;
+			}
+			else
+			{
+				setups[i]["oversampling_rate"] = _samplingRates.thermopile;
+			}
+			serializeJson(jsonDoc, file);
+		}
 	}
 	
+	if(acquireData.ppg)
 	{
-		// Parse the root object
-		StaticJsonDocument<bufferSize> jsonDoc;
-		JsonObject root = jsonDoc.to<JsonObject>();
-		//JsonArray& root = jsonBuffer.createArray();
-		const uint8_t nInfo = 1;
-		//JsonObject* indices[nInfo];
-		JsonObject infos[nInfo];
-		JsonArray typeTags[nInfo];
-		JsonObject setups[nInfo];
-		uint8_t i = 0;
-		infos[i] = root.createNestedObject("info");
-		// Temperature0
-		//i++;
-		//indices[i] = &(root.createNestedObject());
-		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]["name"] = "Temperature1";
-		infos[i]["type"] = "Temperature";
-		typeTags[i] = infos[i].createNestedArray("typeTags");
-		typeTags[i].add("T1");
-		infos[i]["channel_count"] = 1;
-		infos[i]["nominal_srate"] = _samplingRates.temperature_1 / _samplesAveraged.temperature_1;
-		infos[i]["channel_format"] = "float";
-		infos[i]["units"] = "degrees celcius";
-		infos[i]["sensor_part_number"] = "MAX30101";
-		setups[i] = infos[i].createNestedObject("setup");
-		setups[i]["samples_averaged"] = _samplesAveraged.temperature_1;
-		setups[i]["oversampling_rate"] = _samplingRates.temperature_1;
-		serializeJson(jsonDoc, file);
-	}
-	
-	file.print(","); // Doing some manual printing to chunk JSON and save RAM
+		file.print(","); // Doing some manual printing to chunk JSON and save RAM
 
-	{
-		// Parse the root object
-		StaticJsonDocument<bufferSize> jsonDoc;
-		JsonObject root = jsonDoc.to<JsonObject>();
-		//JsonArray& root = jsonBuffer.createArray();
-		const uint8_t nInfo = 1;
-		//JsonObject* indices[nInfo];
-		JsonObject infos[nInfo];
-		JsonArray typeTags[nInfo];
-		JsonObject setups[nInfo];
-		uint8_t i = 0;
-		infos[i] = root.createNestedObject("info");
+		{
+			// Parse the root object
+			StaticJsonDocument<bufferSize> jsonDoc;
+			JsonObject root = jsonDoc.to<JsonObject>();
+			//JsonArray& root = jsonBuffer.createArray();
+			const uint8_t nInfo = 1;
+			//JsonObject* indices[nInfo];
+			JsonObject infos[nInfo];
+			JsonArray typeTags[nInfo];
+			JsonObject setups[nInfo];
+			uint8_t i = 0;
+			infos[i] = root.createNestedObject("info");
 
-		// thermopile
-		//i++;
-		//indices[i] = &(root.createNestedObject());
-		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]["name"] = "Thermopile";
-		infos[i]["type"] = "Temperature";
-		typeTags[i] = infos[i].createNestedArray("typeTags");
-		typeTags[i].add("TH");
-		infos[i]["channel_count"] = 1;
-		if (thermopileMode == MODE_CONTINUOUS)
-		{
-			infos[i]["nominal_srate"] = thermopileFs;
+			// PPG
+			//i++;
+			//indices[i] = &(root.createNestedObject());
+			//infos[i] = &(indices[i]->createNestedObject("info"));
+			infos[i]["name"] = "PPG";
+			infos[i]["type"] = "PPG";
+			typeTags[i] = infos[i].createNestedArray("typeTags");
+			typeTags[i].add("PI");
+			typeTags[i].add("PR");
+			typeTags[i].add("PG");
+			infos[i]["channel_count"] = 3;
+			infos[i]["nominal_srate"] = ppgSettings.sampleRate / ppgSettings.sampleAverage;
+			infos[i]["channel_format"] = "float";
+			infos[i]["units"] = "raw units";
+			setups[i] = infos[i].createNestedObject("setup");
+			setups[i]["LED_power_level"] = ppgSettings.ledPowerLevel;
+			setups[i]["samples_averaged"] = ppgSettings.sampleAverage;
+			setups[i]["LED_mode"] = ppgSettings.ledMode;
+			setups[i]["oversampling_rate"] = ppgSettings.sampleRate;
+			setups[i]["pulse_width"] = ppgSettings.pulseWidth;
+			setups[i]["ADC_range"] = ppgSettings.adcRange;
+			serializeJson(jsonDoc, file);
 		}
-		else
-		{
-			infos[i]["nominal_srate"] = _samplingRates.thermopile / _samplesAveraged.thermopile;
-		}
-		infos[i]["channel_format"] = "float";
-		infos[i]["units"] = "degrees celcius";
-		setups[i] = infos[i].createNestedObject("setup");
-		setups[i]["samples_averaged"] = _samplesAveraged.thermopile;
-		if (thermopileMode == MODE_CONTINUOUS)
-		{
-			infos[i]["oversampling_rate"] = thermopileFs;
-		}
-		else
-		{
-			setups[i]["oversampling_rate"] = _samplingRates.thermopile;
-		}
-		serializeJson(jsonDoc, file);
 	}
 
-	file.print(","); // Doing some manual printing to chunk JSON and save RAM
-
+	if(acquireData.heartRate)
 	{
-		// Parse the root object
-		StaticJsonDocument<bufferSize> jsonDoc;
-		JsonObject root = jsonDoc.to<JsonObject>();
-		//JsonArray& root = jsonBuffer.createArray();
-		const uint8_t nInfo = 1;
-		//JsonObject* indices[nInfo];
-		JsonObject infos[nInfo];
-		JsonArray typeTags[nInfo];
-		JsonObject setups[nInfo];
-		uint8_t i = 0;
-		infos[i] = root.createNestedObject("info");
+		file.print(","); // Doing some manual printing to chunk JSON and save RAM
+		// Heart Rate
+		{
+			// Parse the root object
+			StaticJsonDocument<bufferSize> jsonDoc;
+			JsonObject root = jsonDoc.to<JsonObject>();
+			const uint8_t nInfo = 1;
+			JsonObject infos[nInfo];
+			JsonArray typeTags[nInfo];
+			JsonObject setups[nInfo];
+			uint8_t i = 0;
+			infos[i] = root.createNestedObject("info");
+			infos[i]["name"] = "HeartRate";
+			infos[i]["type"] = "PPG";
+			typeTags[i] = infos[i].createNestedArray("typeTags");
+			typeTags[i].add(EmotiBitPacket::TypeTag::HEART_RATE);
+			infos[i]["channel_count"] = 1;
+			infos[i]["channel_format"] = "int";
+			infos[i]["units"] = "bpm";
+			serializeJson(jsonDoc, file);
+		}
 
-		// PPG
-		//i++;
-		//indices[i] = &(root.createNestedObject());
-		//infos[i] = &(indices[i]->createNestedObject("info"));
-		infos[i]["name"] = "PPG";
-		infos[i]["type"] = "PPG";
-		typeTags[i] = infos[i].createNestedArray("typeTags");
-		typeTags[i].add("PI");
-		typeTags[i].add("PR");
-		typeTags[i].add("PG");
-		infos[i]["channel_count"] = 3;
-		infos[i]["nominal_srate"] = ppgSettings.sampleRate / ppgSettings.sampleAverage;
-		infos[i]["channel_format"] = "float";
-		infos[i]["units"] = "raw units";
-		setups[i] = infos[i].createNestedObject("setup");
-		setups[i]["LED_power_level"] = ppgSettings.ledPowerLevel;
-		setups[i]["samples_averaged"] = ppgSettings.sampleAverage;
-		setups[i]["LED_mode"] = ppgSettings.ledMode;
-		setups[i]["oversampling_rate"] = ppgSettings.sampleRate;
-		setups[i]["pulse_width"] = ppgSettings.pulseWidth;
-		setups[i]["ADC_range"] = ppgSettings.adcRange;
-		serializeJson(jsonDoc, file);
-	}
-
-	file.print(","); // Doing some manual printing to chunk JSON and save RAM
-	// Heart Rate
-	{
-		// Parse the root object
-		StaticJsonDocument<bufferSize> jsonDoc;
-		JsonObject root = jsonDoc.to<JsonObject>();
-		const uint8_t nInfo = 1;
-		JsonObject infos[nInfo];
-		JsonArray typeTags[nInfo];
-		JsonObject setups[nInfo];
-		uint8_t i = 0;
-		infos[i] = root.createNestedObject("info");
-		infos[i]["name"] = "HeartRate";
-		infos[i]["type"] = "PPG";
-		typeTags[i] = infos[i].createNestedArray("typeTags");
-		typeTags[i].add(EmotiBitPacket::TypeTag::HEART_RATE);
-		infos[i]["channel_count"] = 1;
-		infos[i]["channel_format"] = "int";
-		infos[i]["units"] = "bpm";
-		serializeJson(jsonDoc, file);
-	}
-
-	file.print(","); // Doing some manual printing to chunk JSON and save RAM
-	// interBeat interval
-	{
-		// Parse the root object
-		StaticJsonDocument<bufferSize> jsonDoc;
-		JsonObject root = jsonDoc.to<JsonObject>();
-		const uint8_t nInfo = 1;
-		JsonObject infos[nInfo];
-		JsonArray typeTags[nInfo];
-		JsonObject setups[nInfo];
-		uint8_t i = 0;
-		infos[i] = root.createNestedObject("info");
-		infos[i]["name"] = "InterBeatInterval";
-		infos[i]["type"] = "PPG";
-		typeTags[i] = infos[i].createNestedArray("typeTags");
-		typeTags[i].add(EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL);
-		infos[i]["channel_count"] = 1;
-		infos[i]["channel_format"] = "float";
-		infos[i]["units"] = "mS";
-		serializeJson(jsonDoc, file);
+		file.print(","); // Doing some manual printing to chunk JSON and save RAM
+		// interBeat interval
+		{
+			// Parse the root object
+			StaticJsonDocument<bufferSize> jsonDoc;
+			JsonObject root = jsonDoc.to<JsonObject>();
+			const uint8_t nInfo = 1;
+			JsonObject infos[nInfo];
+			JsonArray typeTags[nInfo];
+			JsonObject setups[nInfo];
+			uint8_t i = 0;
+			infos[i] = root.createNestedObject("info");
+			infos[i]["name"] = "InterBeatInterval";
+			infos[i]["type"] = "PPG";
+			typeTags[i] = infos[i].createNestedArray("typeTags");
+			typeTags[i].add(EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL);
+			infos[i]["channel_count"] = 1;
+			infos[i]["channel_format"] = "float";
+			infos[i]["units"] = "mS";
+			serializeJson(jsonDoc, file);
+		}
 	}
 	file.print("]"); // Doing some manual printing to chunk JSON and save RAM
 
