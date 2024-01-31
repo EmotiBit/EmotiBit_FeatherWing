@@ -131,6 +131,8 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	Serial.println(firmware_version);
 	Serial.print("firmware_variant: ");
 	Serial.println(firmware_variant);
+	
+	// Wait for possible factory test init prompt
 	while (!Serial.available() && millis() - now < 2000)
 	{
 	}
@@ -138,11 +140,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	{
 		char input;
 		input = Serial.read();
-		if (input == 'R')
-		{
-			restartMcu();
-		}
-		else if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
+		if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
 		{
 			uint32_t waitStarForBarcode = millis();
 			testingMode = TestingMode::FACTORY_TEST;
@@ -459,6 +457,10 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		}
 	}
 	now = millis();
+	
+	// prompt for serial input
+	Serial.println("Enter C to enter WiFi config edit mode (Add/ Delete WiFi creds)");
+
 	while (!Serial.available() && millis() - now < 2000)
 	{
 	}
@@ -496,6 +498,10 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		{
 			_debugMode = true;
 			Serial.println("\nENTERING DEBUG MODE\n");
+		}
+		else if (input == 'R')
+		{
+			restartMcu();
 		}
 		else
 		{
@@ -4778,9 +4784,17 @@ void EmotiBit::restartMcu()
 // ToDo: This function can probably be moved to another class/file. The only dependency on EmotiBit class is _configFilename
 void EmotiBit::processWifiConfigInputs()
 {
-	Serial.println("Successfully entered config file edit mode.");
+	Serial.println("\nSuccessfully entered config file edit mode.");
 	// Send EmotiBit Firmware version to host
 	EmotiBitSerial::sendMessage(EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, firmware_version);
+	// instructions
+	Serial.println("Options available:");
+	Serial.println("1. Add a wifi credential. Usage: @WA,{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}~");
+	Serial.println("  - Replace SSSS with network name and PPPP with network password");
+	Serial.println("2. List wifi credentials. Usage: @LS,~");
+	Serial.println("3. Delete Wifi Credential. Usage: @WD,<credential number>~");
+	Serial.println("  - use List option to get a wifi list. Then use the number in the list to delete that credential");
+
 	while (1) 
 	{
 		if (Serial.available())
@@ -4826,8 +4840,8 @@ void EmotiBit::processWifiConfigInputs()
 						Serial.println("Parsed output: ");
 						Serial.println("ssid: " + ssid);
 						Serial.println("password: " + password);
-						Serial.println("username: " + username);
-						Serial.println("userid: " + userid);						
+						username.compareTo("")!= 0 ? Serial.println("username: " + username) : Serial.println();
+						userid.compareTo("")!= 0 ? Serial.println("userid: " + userid) : Serial.println();
 						
 						if(fileExists)
 						{
@@ -4942,10 +4956,11 @@ void EmotiBit::processWifiConfigInputs()
 								EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
 								continue;
 							}
-							Serial.println("Deleting entry: " + String(deleteIndex));
 							
 							if(deleteIndex < configAsJson["WifiCredentials"].size())
 							{
+								Serial.print("Deleting entry: " + String(deleteIndex) + ". "); 
+								Serial.println(configAsJson["WifiCredentials"][deleteIndex]["ssid"].as<String>());
 								configAsJson["WifiCredentials"].remove(deleteIndex);
 								SD.remove(_configFilename);
 #if defined ARDUINO_FEATHER_ESP32
@@ -4981,22 +4996,25 @@ void EmotiBit::processWifiConfigInputs()
 					}
 					if(parseError)
 					{
-						Serial.println("Cannot parse config file. Aborting LIST");
+						Serial.println("Cannot parse config file. Aborting LIST.");
 						EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::LIST);
 						continue;
 					}
 					if(configAsJson["WifiCredentials"].size())
 					{
+						Serial.println("##################################");
+						Serial.println("config file credetials:");
 						for(int i = 0; i < configAsJson["WifiCredentials"].size(); i++ )
 						{
 							Serial.print(i); Serial.print(". " + configAsJson["WifiCredentials"][i]["ssid"].as<String>());
 							Serial.print(" : "); Serial.print(configAsJson["WifiCredentials"][i]["password"].as<String>());
 							Serial.println();
 						}
+						Serial.println("##################################");
 					}
 					else
 					{
-						Serial.println("Config file has no creds.");
+						Serial.println("config file has no credentials. Try WA to add credential first.");
 					}
 					EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::ACK, EmotiBitPacket::TypeTag::LIST);
 
