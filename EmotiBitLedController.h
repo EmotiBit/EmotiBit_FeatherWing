@@ -18,6 +18,7 @@ public:
     NCP5623 ncp;
 
     bool init(EmotiBitVersionController::EmotiBitVersion hwVersion, TwoWire &_i2c, int driverCurrent);
+    uint8_t getNcpMappedLed(Led led);
     void setState(Led led, bool state);
     bool getState(Led led);
     bool update();

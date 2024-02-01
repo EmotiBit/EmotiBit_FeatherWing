@@ -44,6 +44,24 @@ bool EmotiBitLedController::init(EmotiBitVersionController::EmotiBitVersion hwVe
 
 }
 
+uint8_t EmotiBitLedController::getNcpMappedLed(Led led)
+{
+    int ncpLed;
+    if(led == Led::RECORDING)
+    {
+        ncpLed = 1;
+    }
+    else if (led == Led::WIFI)
+    {
+        ncpLed = 2;
+    }
+    else if (led == Led::BATTERY)
+    {
+        ncpLed = 3;
+    }
+    return ncpLed;
+}
+
 void EmotiBitLedController::setState(Led led, bool state)
 {
     if((int)_hwVersion  == (int)EmotiBitVersionController::EmotiBitVersion::AGAVE_REVB)
@@ -57,20 +75,8 @@ void EmotiBitLedController::setState(Led led, bool state)
     }
     else
     {
-        int ncpLed;
-        if(led == Led::RECORDING)
-        {
-            ncpLed = 1;
-        }
-        else if (led == Led::WIFI)
-        {
-            ncpLed = 2;
-        }
-        else if (led == Led::BATTERY)
-        {
-            ncpLed = 3;
-        }
-        ncp.setLED(ncpLed, state);
+        // if EmotiBit, update LED using NCp driver
+        ncp.setLED(getNcpMappedLed(led), state);
     }
 }
 
@@ -95,5 +101,12 @@ bool EmotiBitLedController::update()
 
 bool EmotiBitLedController::getState(Led led)
 {
-    return _ledState[led];
+    if((int)_hwVersion  == (int)EmotiBitVersionController::EmotiBitVersion::AGAVE_REVB)
+    {
+        return _ledState[led];
+    }
+    else
+    {
+        return ncp.getLED(getNcpMappedLed(led));
+    }
 }
