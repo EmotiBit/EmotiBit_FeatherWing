@@ -550,6 +550,10 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	}
 	
 	Serial.println("\nSensor setup:");
+	_initControllers.eda = false;
+	_initControllers.tempHumidity = false;
+	_initControllers.thermopile = false;
+	_initControllers.imuMag = false;
 
 	// setup sampling rates
 	EmotiBit::SamplingRates samplingRates;
@@ -876,42 +880,50 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	// ToDo: replace this with initController bool comparison
 	if (emotiBitSku.equals(EmotiBitVariants::EMOTIBIT_SKU_MD))
 	{
-		// Thermopile
-		Serial.print("Initializing MLX90632... ");
-		MLX90632::status returnError; // Required as a parameter for begin() function in the MLX library 
-		status = thermopile.begin(deviceAddress.MLX, *_EmotiBit_i2c, returnError);
-		if (status)
+		if(_initControllers.thermopile)
 		{
-			if (testingMode == TestingMode::FACTORY_TEST)
+			// Thermopile
+			Serial.print("Initializing MLX90632... ");
+			MLX90632::status returnError; // Required as a parameter for begin() function in the MLX library 
+			status = thermopile.begin(deviceAddress.MLX, *_EmotiBit_i2c, returnError);
+			if (status)
 			{
-				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+				if (testingMode == TestingMode::FACTORY_TEST)
+				{
+					EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+				}
+				Serial.println("Success");
+				thermopile.setMeasurementRate(thermopileFs);
+				thermopile.setMode(thermopileMode);
+				uint8_t thermMode = thermopile.getMode();
+				if (thermMode == MODE_CONTINUOUS)
+				{
+					Serial.print("MODE_CONTINUOUS");
+				}
+				if (thermMode == MODE_STEP)
+				{
+					Serial.print("MODE_STEP");
+				}
+				if (thermMode == MODE_SLEEP)
+				{
+					Serial.print("MODE_SLEEP");
+				}
+				chipBegun.MLX90632 = true;
 			}
-			Serial.println("Success");
-			thermopile.setMeasurementRate(thermopileFs);
-			thermopile.setMode(thermopileMode);
-			uint8_t thermMode = thermopile.getMode();
-			if (thermMode == MODE_CONTINUOUS)
+			else
 			{
-				Serial.print("MODE_CONTINUOUS");
+				if (testingMode == TestingMode::FACTORY_TEST)
+				{
+					EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
+				}
+				Serial.println("Failed");
+				setupFailed("THERMOPILE");
 			}
-			if (thermMode == MODE_STEP)
-			{
-				Serial.print("MODE_STEP");
-			}
-			if (thermMode == MODE_SLEEP)
-			{
-				Serial.print("MODE_SLEEP");
-			}
-			chipBegun.MLX90632 = true;
 		}
 		else
 		{
-			if (testingMode == TestingMode::FACTORY_TEST)
-			{
-				EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::THERMOPILE, EmotiBitFactoryTest::TypeTag::TEST_FAIL);
-			}
-			Serial.println("Failed");
-			setupFailed("THERMOPILE");
+			// ToDo: This should be off by default
+			acquireData.thermopile = false;
 		}
 	}
 	else
@@ -1236,6 +1248,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		Serial.println("**********************************************************");
 	}
 	// ToDo: implement logic to determine return val
+	esp_sleep_enable_timer_wakeup(10 * 1000000); //light sleep for 10 seconds
 	return 0;
 } // Setup
 
@@ -1781,7 +1794,9 @@ uint8_t EmotiBit::update()
 			processData();
 
 			// Send data to SD card and over wireless
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, HIGH); // measure sendData time
 			sendData();
+			if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, LOW);
 
 			if (startBufferOverflowTest)
 			{
@@ -1933,7 +1948,6 @@ int8_t EmotiBit::updateThermopileData() {
 #ifdef DEBUG_THERM_UPDATE
 	Serial.println("updateThermopileData");
 #endif
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, HIGH);
 	// Thermopile
 	int8_t status = 0;
 	uint32_t timestamp;
@@ -1988,7 +2002,6 @@ int8_t EmotiBit::updateThermopileData() {
 	}
 	
 	_thermReadFinishedTime = micros();
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, LOW);
 	return status;
 }
 

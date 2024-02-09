@@ -52,6 +52,17 @@ void setup()
 void loop()
 {
 	//Serial.println("emotibit.update()");
+	// uncomment to make EmotiBit sleep every 10 secs for 10 seconds
+	static uint32_t sleepTime = millis();
+	if(millis() - sleepTime > 20000)
+	{
+		sleepTime = millis(); // record time of sleep
+		digitalWrite(7, LOW);
+		digitalWrite(8, LOW);
+		// sleep
+		esp_light_sleep_start(); // timer defined in end of setup will wake it up after 10 secs
+	}
+	
 	emotibit.update();
 
 	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::PPG_GREEN, &data[0], dataSize);

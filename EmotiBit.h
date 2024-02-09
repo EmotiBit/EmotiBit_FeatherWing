@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.15.feat-boardversionControl.6";
+  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.15.feat-boardversionControl.6.test-recordCrash.0";
 
 
 	TestingMode testingMode = TestingMode::NONE;
