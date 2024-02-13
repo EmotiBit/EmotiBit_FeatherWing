@@ -4,6 +4,15 @@
 //#define DEBUG_BUFFER
 //#define TEST_OVERFLOW
 
+// Default network and storage configurations for File transfer, FTP mode for EmotiBit
+// For more information, check out SimpleFTPServer/FtpServerKey.h
+/* #ifdef ARDUINO_FEATHER_ESP32
+    #define DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32 		NETWORK_ESP32
+    #define DEFAULT_STORAGE_TYPE_ESP32 					5  //STORAGE_SD
+#endif */
+// ToDo: Once we unlock FTP server on SAMD, add default configurations here for Feather M0
+
+
 #ifndef _EMOTIBIT_H_
 #define _EMOTIBIT_H_
 
@@ -35,6 +44,7 @@
 #include "EmotiBitVariants.h"
 #include "EmotiBitNvmController.h"
 #include "heartRate.h"
+#include "FileTransferManager.h"
 
 class EmotiBit {
   
@@ -50,12 +60,12 @@ public:
 
 
 
-  String firmware_version = "1.9.0";
+  String firmware_version = "1.9.0.feat-FtpServer.1";
 
 
 
 	TestingMode testingMode = TestingMode::NONE;
-	const bool DIGITAL_WRITE_DEBUG = false;
+	const bool DIGITAL_WRITE_DEBUG = true;
 #if defined (ARDUINO_FEATHER_ESP32)
 	const uint8_t DEBUG_OUT_PIN_0 = 26;
 	const uint8_t DEBUG_OUT_PIN_1 = 33;
@@ -280,6 +290,7 @@ public:
 	MLX90632 thermopile;
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
+	FileTransferManager _fileTransferManager;
 
 	int _emotiBitSystemConstants[(int)SystemConstants::length];
 	float adcRes;
