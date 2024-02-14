@@ -545,8 +545,8 @@ bool EmotiBitEda::writeInfoJson(File &jsonFile)
 		setups[i]["eda_series_resistance"] = _constants.edaSeriesResistance;
 		setups[i]["adc_bits"] = _constants.adcBits;
 		setups[i]["enable_digital_filter"] = _constants.enableDigitalFilter;
-		setups[i]["samples_averaged"] = _edlOversampBuffer->capacity();
-		setups[i]["oversampling_rate"] = _edlOversampBuffer->capacity() * _constants.samplingRate;
+		if(_edlOversampBuffer) setups[i]["samples_averaged"] = _edlOversampBuffer->capacity();
+		if(_edlOversampBuffer) setups[i]["oversampling_rate"] = _edlOversampBuffer->capacity() * _constants.samplingRate;
 		if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 		{
 			setups[i]["eda_transform_slope"] = _constants_v4_plus.edaTransformSlope;
