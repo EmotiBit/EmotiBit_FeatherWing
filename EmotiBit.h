@@ -4,15 +4,6 @@
 //#define DEBUG_BUFFER
 //#define TEST_OVERFLOW
 
-// Default network and storage configurations for File transfer, FTP mode for EmotiBit
-// For more information, check out SimpleFTPServer/FtpServerKey.h
-/* #ifdef ARDUINO_FEATHER_ESP32
-    #define DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32 		NETWORK_ESP32
-    #define DEFAULT_STORAGE_TYPE_ESP32 					5  //STORAGE_SD
-#endif */
-// ToDo: Once we unlock FTP server on SAMD, add default configurations here for Feather M0
-
-
 #ifndef _EMOTIBIT_H_
 #define _EMOTIBIT_H_
 
