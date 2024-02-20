@@ -13,11 +13,10 @@
     BSD license, all text here must be included in any redistribution
 */
 /**************************************************************************/
-
+#ifndef FILE_TRANSFER_MANAGER_H
+#define FILE_TRANSFER_MANAGER_H
 #include <SimpleFTPServer.h>
 #include <String.h>
-#include <WiFi.h>
-#include <SD.h>
 
 class FileTransferManager
 {
@@ -82,3 +81,4 @@ class FileTransferManager
     void handleTransfer();
 
 };
+#endif
