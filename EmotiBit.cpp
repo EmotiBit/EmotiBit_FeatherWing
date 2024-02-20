@@ -1622,10 +1622,12 @@ uint8_t EmotiBit::update()
 					// Stop ISR
 					timerStop(timer);
 					// turn OFF leds
+					// ToDo: Move this out of the #ifdef block. This behavior should be consistant across all Feathers.
 					led.setLED(uint8_t(EmotiBit::Led::RED), false);
 					led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
 					led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
 					led.send();
+					// ToDo: Consider is this should be implemented outside the #ifdef block. Should FileTransferManager handle the MCU specific stuff?
 					_fileTransferManager.handleTransfer();
 				}
 				else
