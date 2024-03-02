@@ -1672,6 +1672,7 @@ uint8_t EmotiBit::update()
 	static uint32_t dataSendTimer = millis();
 	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
 	{
+		_freeToSleep = false;
 		dataSendTimer = millis();
 		if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, HIGH);
 
@@ -1701,6 +1702,7 @@ uint8_t EmotiBit::update()
 			}
 		}
 		if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, LOW);
+		_freeToSleep = true;
 	}
 
 	// Hibernate after writing data
@@ -4508,7 +4510,16 @@ void ReadSensors(void *pvParameters)
 				Serial.println("EmotiBit is nullptr");
 			}
 			//vTaskSuspend(NULL);
-			vTaskDelay(pdMS_TO_TICKS(1));
+			if(myEmotiBit->_freeToSleep && myEmotiBit->_emotiBitWiFi._wifiOff)
+			{
+				esp_sleep_enable_timer_wakeup(6000); // every 6.6mS to maintain 150Hz sampling
+				esp_light_sleep_start(); // start light sleep
+			}
+			else
+			{
+				vTaskDelay(pdMS_TO_TICKS(1));
+			}
+			//vTaskDelay(pdMS_TO_TICKS(1));
 		}
 		
 	}
