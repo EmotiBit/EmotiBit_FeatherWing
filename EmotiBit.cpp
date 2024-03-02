@@ -5,7 +5,7 @@
 
 EmotiBit* myEmotiBit = nullptr;
 void(*onInterruptCallback)(void);
-
+SemaphoreHandle_t _xMutex;
 #ifdef ARDUINO_FEATHER_ESP32
 TaskHandle_t EmotiBitDataAcquisition;
 hw_timer_t * timer = NULL;
@@ -1099,17 +1099,17 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		startTimer(BASE_SAMPLING_FREQ);
 #elif defined ARDUINO_FEATHER_ESP32
 		// setup timer
-		timer = timerBegin(0, 80, true); // timer ticks with APB timer, which runs at 80MHz. This setting makes the timer tick every 1uS
+		//timer = timerBegin(0, 80, true); // timer ticks with APB timer, which runs at 80MHz. This setting makes the timer tick every 1uS
 
 		// Attach onTimer function to our timer.
-		timerAttachInterrupt(timer, &onTimer, true);
+		//timerAttachInterrupt(timer, &onTimer, true);
 
 		// Set alarm to call onTimer function (value in microseconds).
 		// Repeat the alarm (third parameter)
-		timerAlarmWrite(timer, 1000000 / BASE_SAMPLING_FREQ, true);
+		//timerAlarmWrite(timer, 1000000 / BASE_SAMPLING_FREQ, true);
 
 		// Start an alarm
-		timerAlarmEnable(timer);
+		//timerAlarmEnable(timer);
 
 		attachToCore(&ReadSensors, this);
 #endif
@@ -1597,6 +1597,7 @@ void EmotiBit::updateButtonPress()
 
 uint8_t EmotiBit::update()
 {
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, HIGH);
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		processFactoryTestMessages();
@@ -1671,7 +1672,7 @@ uint8_t EmotiBit::update()
 	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
 	{
 		dataSendTimer = millis();
-
+		if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, HIGH);
 
 
 		if (_sendTestData)
@@ -1698,6 +1699,7 @@ uint8_t EmotiBit::update()
 				bufferOverflowTest();
 			}
 		}
+		if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, LOW);
 	}
 
 	// Hibernate after writing data
@@ -1729,7 +1731,7 @@ uint8_t EmotiBit::update()
 			sleep();
 		}
 	}
-	
+	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, LOW);
 	// ToDo: implement logic to determine return val
 	return 0;
 }
@@ -1842,7 +1844,7 @@ int8_t EmotiBit::updateThermopileData() {
 #ifdef DEBUG_THERM_UPDATE
 	Serial.println("updateThermopileData");
 #endif
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, HIGH);
+	
 	// Thermopile
 	int8_t status = 0;
 	uint32_t timestamp;
@@ -1871,12 +1873,11 @@ int8_t EmotiBit::updateThermopileData() {
 #endif
 			if (thermStatus == MLX90632::status::SENSOR_SUCCESS)
 			{
-				if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, HIGH);
+				
 				timestamp = millis();
 				status = status | therm0AMB.push_back(AMB, &(timestamp));
 				status = status | therm0Sto.push_back(Sto, &(timestamp));
 				thermopile.startRawSensorValues(thermStatus);
-				if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, LOW);
 			}
 			else
 			{
@@ -1897,7 +1898,7 @@ int8_t EmotiBit::updateThermopileData() {
 	}
 	
 	_thermReadFinishedTime = micros();
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, LOW);
+	
 	return status;
 }
 
@@ -2234,8 +2235,11 @@ bool EmotiBit::processThermopileData()
 	
 	// Swap buffers with minimal delay to avoid size mismatch
 	unsigned long int swapStart = micros();
+	//xSemaphoreTake( _xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
 	therm0AMB.swap();
 	therm0Sto.swap();
+	//xSemaphoreGive( _xMutex );
+
 	unsigned long int swapEnd = micros();
 	//Serial.println("swap: " + String(swapEnd - swapStart));
 	
@@ -2287,7 +2291,9 @@ bool EmotiBit::processThermopileData()
 		// if dummy data was stored
 		if (dataAMB[i] == -2 && dataSto[i] == -2)
 		{
+			//xSemaphoreTake( _xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
 			dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->swap();
+			//xSemaphoreGive( _xMutex );
 			return true;
 			//return dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->getData(data, timestamp);
 		}
@@ -2351,7 +2357,9 @@ bool EmotiBit::processThermopileData()
 			therm0Sto.getOverflowCount(DoubleBufferFloat::BufferSelector::OUT)
 		)
 	);
+	//xSemaphoreTake( _xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->swap();
+	//xSemaphoreGive( _xMutex );
 	// ToDo: implement logic to determine return val
 	return true;
 }
@@ -3330,7 +3338,9 @@ void EmotiBit::processData()
 			}
 			else
 			{
+				//xSemaphoreTake( _xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
 				dataDoubleBuffers[t]->swap();
+				//xSemaphoreGive( _xMutex );
 				//Serial.print(String(t) + ",");
 			}
 		}
@@ -4420,9 +4430,9 @@ void attachToCore(void(*readFunction)(void*), EmotiBit*e)
 		"EmotiBitDataAcquisition",     /* name of task. */
 		10000,       /* Stack size of task */
 		NULL,        /* parameter of the task */
-		configMAX_PRIORITIES - 1,           /* priority of the task */
+		5,           /* priority of the task */
 		&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
-		1);          /* pin task to core 0 */
+		0);          /* pin task to core 0 */
 	delay(500);
 }
 
@@ -4445,18 +4455,26 @@ void ReadSensors()
 void ReadSensors(void *pvParameters)
 {
 	Serial.print("The data acquisition is executing on core: "); Serial.println(xPortGetCoreID());
+	uint32_t timeLast = micros();
 	while (1) // the function assigned to the second core should never return
 	{
-		if (myEmotiBit != nullptr)
+		if(micros() - timeLast > 6666)
 		{
-			myEmotiBit->readSensors();
-
+			timeLast = micros();
+			if (myEmotiBit != nullptr)
+			{
+				//xSemaphoreTake( myEmotiBit->_xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
+				myEmotiBit->readSensors();
+				//xSemaphoreGive( myEmotiBit->_xMutex );
+			}
+			else
+			{
+				Serial.println("EmotiBit is nullptr");
+			}
+			//vTaskSuspend(NULL);
+			vTaskDelay(pdMS_TO_TICKS(1));
 		}
-		else
-		{
-			Serial.println("EmotiBit is nullptr");
-		}
-		vTaskSuspend(NULL);
+		
 	}
 
 }
