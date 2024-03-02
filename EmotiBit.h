@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.9.0.feat-2Core";
+  String firmware_version = "1.9.0.feat-2Core.0";
 
 
 
@@ -425,6 +425,7 @@ public:
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;
+	bool _freeToSleep = false;
 	
 
 	void setupFailed(const String failureMode, int buttonPin = -1);
@@ -686,7 +687,8 @@ void ReadSensors();
 void onTimer();
 void attachToCore(void(*readFunction)(void*), EmotiBit*e = nullptr);
 void ReadSensors(void* pvParameters);
-
+void Process(void* pvParameters);
+void attachProcessToCore(void(*readFunction)(void*));
 #endif
 
 

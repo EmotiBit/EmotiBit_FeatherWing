@@ -1112,6 +1112,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		//timerAlarmEnable(timer);
 
 		attachToCore(&ReadSensors, this);
+		attachProcessToCore(&Process);
 #endif
 	}
 
@@ -4421,6 +4422,21 @@ void onTimer() {
 
 #ifdef ARDUINO_FEATHER_ESP32
 
+void attachProcessToCore(void(*readFunction)(void*))
+{
+	//attachEmotiBit(e);
+	// assigning readSensors to second core
+	xTaskCreatePinnedToCore(
+		*readFunction,   /* Task function. */
+		"EmotiBitDataProcess",     /* name of task. */
+		32000,       /* Stack size of task */
+		NULL,        /* parameter of the task */
+		1,           /* priority of the task */
+		NULL,      /* Task handle to keep track of created task */
+		0);          /* pin task to core 0 */
+	delay(500);
+}
+
 void attachToCore(void(*readFunction)(void*), EmotiBit*e)
 {
 	attachEmotiBit(e);
@@ -4430,9 +4446,9 @@ void attachToCore(void(*readFunction)(void*), EmotiBit*e)
 		"EmotiBitDataAcquisition",     /* name of task. */
 		10000,       /* Stack size of task */
 		NULL,        /* parameter of the task */
-		5,           /* priority of the task */
+		configMAX_PRIORITIES - 1,           /* priority of the task */
 		&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
-		0);          /* pin task to core 0 */
+		1);          /* pin task to core 0 */
 	delay(500);
 }
 
@@ -4452,6 +4468,26 @@ void ReadSensors()
 	}
 }
 #elif defined ARDUINO_FEATHER_ESP32
+void Process(void *pvParameter)
+{
+	Serial.print("The data process is executing on core: "); Serial.println(xPortGetCoreID());
+	while(1)
+	{
+		if (myEmotiBit != nullptr)
+		{
+			//xSemaphoreTake( myEmotiBit->_xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
+			myEmotiBit->update();
+			//xSemaphoreGive( myEmotiBit->_xMutex );
+		}
+		else
+		{
+			Serial.println("EmotiBit is nullptr");
+		}
+		//vTaskSuspend(NULL);
+		vTaskDelay(pdMS_TO_TICKS(1));
+	}
+}
+
 void ReadSensors(void *pvParameters)
 {
 	Serial.print("The data acquisition is executing on core: "); Serial.println(xPortGetCoreID());
