@@ -2956,7 +2956,7 @@ void EmotiBit::readSensors()
 #ifdef DEBUG_GET_DATA
 	Serial.println("readSensors()");
 #endif // DEBUG
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_0, HIGH);
+	
 
 	static unsigned long readSensorsBegin = micros();
 	if (_debugMode)
@@ -3236,7 +3236,7 @@ void EmotiBit::readSensors()
 	}
 	if (acquireData.debug) pushData(EmotiBit::DataType::DEBUG, micros() - readSensorsBegin); // Add readSensors processing duration to debugBuffer
 
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_0, LOW);
+	
 }
 
 void EmotiBit::processHeartRate()
@@ -4502,7 +4502,9 @@ void ReadSensors(void *pvParameters)
 			if (myEmotiBit != nullptr)
 			{
 				//xSemaphoreTake( myEmotiBit->_xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
+				if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_0, HIGH);
 				myEmotiBit->readSensors();
+				if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_0, LOW);
 				//xSemaphoreGive( myEmotiBit->_xMutex );
 			}
 			else
@@ -4512,8 +4514,10 @@ void ReadSensors(void *pvParameters)
 			//vTaskSuspend(NULL);
 			if(myEmotiBit->_freeToSleep && myEmotiBit->_emotiBitWiFi._wifiOff)
 			{
-				esp_sleep_enable_timer_wakeup(6000); // every 6.6mS to maintain 150Hz sampling
+				esp_sleep_enable_timer_wakeup(4500); // every 6.6mS to maintain 150Hz sampling
+				//if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_0, HIGH);
 				esp_light_sleep_start(); // start light sleep
+				//if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_0, LOW);
 			}
 			else
 			{
