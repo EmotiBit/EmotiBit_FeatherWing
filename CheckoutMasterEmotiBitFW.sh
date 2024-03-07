@@ -1,20 +1,19 @@
-eval $(ssh-agent -s)
-ssh-add ~/.ssh/id_rsa
-cd ../EmotiBit_FeatherWing
-git checkout master
-cd ../EmotiBit_BMI160
-git checkout master
-cd ../EmotiBit_MAX30101
-git checkout master
-cd ../EmotiBit_MLX90632
-git checkout master
-cd ../EmotiBit_NCP5623
-git checkout master
-cd ../EmotiBit_SI7013
-git checkout master
-cd ../EmotiBit_XPlat_Utils
-git checkout master
-cd ../EmotiBit_External_EEPROM
-git checkout master
-cd ../EmotiBit_ADS1X15
-git checkout master
+f="EmotiBit_FeatherWing_depends.txt"
+script_name=$(basename "$0")
+echo "**** $script_name ****"
+echo "Script to read dependency list from $f and checkout master branch for all repos"
+echo "ToDo: read/parse depends directly from library.properties"
+
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+readarray -t repos < $f
+echo “${repos[@]}”
+for i in ${repos[@]}
+do
+  echo "-- $i --"
+  c="cd ../$i"
+  echo $c
+  pwd
+  eval "$c"
+  git checkout master
+done
