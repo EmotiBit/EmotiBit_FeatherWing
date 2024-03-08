@@ -5,10 +5,10 @@
 
 EmotiBit* myEmotiBit = nullptr;
 void(*onInterruptCallback)(void);
-SemaphoreHandle_t _xMutex;
 #ifdef ARDUINO_FEATHER_ESP32
 TaskHandle_t EmotiBitDataAcquisition;
 hw_timer_t * timer = NULL;
+SemaphoreHandle_t _xMutex;
 #endif
 
 EmotiBit::EmotiBit() 
@@ -1110,7 +1110,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 
 		// Start an alarm
 		//timerAlarmEnable(timer);
-
+		_xMutex = xSemaphoreCreateMutex();
 		attachToCore(&ReadSensors, this);
 		attachProcessToCore(&Process);
 #endif
@@ -2239,10 +2239,14 @@ bool EmotiBit::processThermopileData()
 	
 	// Swap buffers with minimal delay to avoid size mismatch
 	unsigned long int swapStart = micros();
-	//xSemaphoreTake( _xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
+	#ifdef ARDUINO_FEATHER_ESP32 
+	xSemaphoreTake( _xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
+	#endif
 	therm0AMB.swap();
 	therm0Sto.swap();
-	//xSemaphoreGive( _xMutex );
+	#ifdef ARDUINO_FEATHER_ESP32 
+	xSemaphoreGive( _xMutex );
+	#endif
 
 	unsigned long int swapEnd = micros();
 	//Serial.println("swap: " + String(swapEnd - swapStart));
@@ -2295,9 +2299,13 @@ bool EmotiBit::processThermopileData()
 		// if dummy data was stored
 		if (dataAMB[i] == -2 && dataSto[i] == -2)
 		{
-			//xSemaphoreTake( _xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
+			#ifdef ARDUINO_FEATHER_ESP32 
+			xSemaphoreTake( _xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
+			#endif
 			dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->swap();
-			//xSemaphoreGive( _xMutex );
+			#ifdef ARDUINO_FEATHER_ESP32
+			xSemaphoreGive( _xMutex );
+			#endif
 			return true;
 			//return dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->getData(data, timestamp);
 		}
@@ -2361,9 +2369,13 @@ bool EmotiBit::processThermopileData()
 			therm0Sto.getOverflowCount(DoubleBufferFloat::BufferSelector::OUT)
 		)
 	);
-	//xSemaphoreTake( _xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
+	#ifdef ARDUINO_FEATHER_ESP32 
+	xSemaphoreTake( _xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
+	#endif
 	dataDoubleBuffers[(uint8_t)EmotiBit::DataType::THERMOPILE]->swap();
-	//xSemaphoreGive( _xMutex );
+	#ifdef ARDUINO_FEATHER_ESP32 
+	xSemaphoreGive( _xMutex );
+	#endif
 	// ToDo: implement logic to determine return val
 	return true;
 }
@@ -3342,9 +3354,13 @@ void EmotiBit::processData()
 			}
 			else
 			{
-				//xSemaphoreTake( _xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
+				#ifdef ARDUINO_FEATHER_ESP32 
+				xSemaphoreTake( _xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
+				#endif
 				dataDoubleBuffers[t]->swap();
-				//xSemaphoreGive( _xMutex );
+				#ifdef ARDUINO_FEATHER_ESP32
+				xSemaphoreGive( _xMutex );
+				#endif
 				//Serial.print(String(t) + ",");
 			}
 		}
@@ -4478,9 +4494,7 @@ void Process(void *pvParameter)
 	{
 		if (myEmotiBit != nullptr)
 		{
-			//xSemaphoreTake( myEmotiBit->_xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
 			myEmotiBit->update();
-			//xSemaphoreGive( myEmotiBit->_xMutex );
 		}
 		else
 		{
@@ -4503,11 +4517,11 @@ void ReadSensors(void *pvParameters)
 			timeLast = micros();
 			if (myEmotiBit != nullptr)
 			{
-				//xSemaphoreTake( myEmotiBit->_xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
+				xSemaphoreTake( _xMutex, portMAX_DELAY ); // ToDo: look into implications of portAX_DELAY
 				if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_0, HIGH);
 				myEmotiBit->readSensors();
 				if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_0, LOW);
-				//xSemaphoreGive( myEmotiBit->_xMutex );
+				xSemaphoreGive( _xMutex );
 			}
 			else
 			{
