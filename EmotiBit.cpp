@@ -1219,7 +1219,7 @@ void EmotiBit::setupFailed(const String failureMode, int buttonPin, bool configF
 			timeSinceLastPrint = millis();
 			if (configFileError)
 			{
-				Serial.println("Press \"C\" to enter config mode.");
+				Serial.println("Press \"C\" to add/update cofig file.");
 			}
 		}
 		if (configFileError)
