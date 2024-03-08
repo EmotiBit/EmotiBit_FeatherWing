@@ -52,9 +52,10 @@ void setup()
 void loop()
 {
 	//Serial.println("emotibit.update()");
-	emotibit.update();
+	//emotibit.update();
 	//vTaskDelete(NULL);
 	
+	// gets run when acquisitoin gives a delay
 	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::PPG_GREEN, &data[0], dataSize);
 	if (dataAvailable > 0)
 	{
