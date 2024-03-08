@@ -35,6 +35,7 @@
 #include "EmotiBitVariants.h"
 #include "EmotiBitNvmController.h"
 #include "heartRate.h"
+#include "EmotiBitConfigManager.h"
 
 class EmotiBit {
   
@@ -50,7 +51,7 @@ public:
 
 
 
-  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.15";
+  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.16";
 
 
 
@@ -280,6 +281,7 @@ public:
 	MLX90632 thermopile;
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
+	EmotiBitConfigManager _emotibitConfigManager;
 
 	int _emotiBitSystemConstants[(int)SystemConstants::length];
 	float adcRes;
@@ -520,17 +522,7 @@ public:
 	 */
 	void restartMcu();
 	
-	/*!
-	 * @brief Function to edit WiFi credentials in config file using serial input.
-	 *
-	 * Use this function to Add or Delete credentials from SD-Card.
-	 * Typetag WA (WiFi-Add) is used to add credentials. 
-	 *     Syntax: @WA,{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}~
-	 * Tyeptag WD (WiFi-Delete) is used to delete credentials.
-	 *     Syntax: @WD,<cred_number>~ to delte cred. 
-	 * Typetag LS (LIST) lists current credentials
-	 */
-	void processWifiConfigInputs();
+	
 	// ----------- END ino refactoring ---------------
 
 	
