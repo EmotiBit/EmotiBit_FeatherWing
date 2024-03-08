@@ -52,10 +52,9 @@ void setup()
 void loop()
 {
 	//Serial.println("emotibit.update()");
-	//emotibit.update();
-	vTaskDelete(NULL);
-	/*
-
+	emotibit.update();
+	//vTaskDelete(NULL);
+	
 	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::PPG_GREEN, &data[0], dataSize);
 	if (dataAvailable > 0)
 	{
@@ -72,5 +71,5 @@ void loop()
 			}
 		}
 	}
-	*/
+	
 }

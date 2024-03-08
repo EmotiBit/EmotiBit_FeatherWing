@@ -1112,7 +1112,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		//timerAlarmEnable(timer);
 
 		attachToCore(&ReadSensors, this);
-		attachProcessToCore(&Process);
+		//attachProcessToCore(&Process);
 #endif
 	}
 
@@ -1598,7 +1598,7 @@ void EmotiBit::updateButtonPress()
 
 uint8_t EmotiBit::update()
 {
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, HIGH);
+	
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		processFactoryTestMessages();
@@ -1667,15 +1667,15 @@ uint8_t EmotiBit::update()
 	// NOTE:: An older firmware, v1.2.86 needs to be used to write EDA correction values to V3 (OTP) and below.
 	// Newer FW version can read both NVMs (EEPROM and OTP), but only have write ability for EEPROM
 
-
+	
 	// Handle data buffer reading and sending
 	static uint32_t dataSendTimer = millis();
 	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
 	{
+		
 		_freeToSleep = false;
 		dataSendTimer = millis();
-		if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, HIGH);
-
+		
 
 		if (_sendTestData)
 		{
@@ -1701,7 +1701,7 @@ uint8_t EmotiBit::update()
 				bufferOverflowTest();
 			}
 		}
-		if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_2, LOW);
+		
 		_freeToSleep = true;
 	}
 
@@ -1734,7 +1734,7 @@ uint8_t EmotiBit::update()
 			sleep();
 		}
 	}
-	if (DIGITAL_WRITE_DEBUG) digitalWrite(DEBUG_OUT_PIN_1, LOW);
+	
 	// ToDo: implement logic to determine return val
 	return 0;
 }
@@ -4433,9 +4433,9 @@ void attachProcessToCore(void(*readFunction)(void*))
 		"EmotiBitDataProcess",     /* name of task. */
 		32000,       /* Stack size of task */
 		NULL,        /* parameter of the task */
-		1,           /* priority of the task */
+		tskIDLE_PRIORITY,           /* priority of the task */
 		NULL,      /* Task handle to keep track of created task */
-		0);          /* pin task to core 0 */
+		1);          /* pin task to core 0 */
 	delay(500);
 }
 
@@ -4494,6 +4494,7 @@ void ReadSensors(void *pvParameters)
 {
 	Serial.print("The data acquisition is executing on core: "); Serial.println(xPortGetCoreID());
 	uint32_t timeLast = micros();
+	uint32_t timeLastProcess_ms = millis();
 	while (1) // the function assigned to the second core should never return
 	{
 		if(micros() - timeLast > 6666)
@@ -4512,16 +4513,27 @@ void ReadSensors(void *pvParameters)
 				Serial.println("EmotiBit is nullptr");
 			}
 			//vTaskSuspend(NULL);
-			if(myEmotiBit->_freeToSleep && myEmotiBit->_emotiBitWiFi._wifiOff)
+			if(millis() - timeLastProcess_ms > 50)
 			{
-				esp_sleep_enable_timer_wakeup(4500); // every 6.6mS to maintain 150Hz sampling
-				//if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_0, HIGH);
-				esp_light_sleep_start(); // start light sleep
-				//if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_0, LOW);
+				// every 50mS, run the process task
+				if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_1, HIGH);
+				timeLastProcess_ms = millis();
+				vTaskDelay(pdMS_TO_TICKS(1));// give update some time
+				if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_1, LOW);
 			}
 			else
 			{
-				vTaskDelay(pdMS_TO_TICKS(1));
+				if(myEmotiBit->_freeToSleep && myEmotiBit->_emotiBitWiFi._wifiOff)
+				{
+					esp_sleep_enable_timer_wakeup(4500); // every 6.6mS to maintain 150Hz sampling
+					//if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_0, HIGH);
+					esp_light_sleep_start(); // start light sleep
+					//if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_0, LOW);
+				}
+				else
+				{
+					vTaskDelay(pdMS_TO_TICKS(1));
+				}
 			}
 			//vTaskDelay(pdMS_TO_TICKS(1));
 		}
