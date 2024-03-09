@@ -52,7 +52,7 @@ public:
 
 
   // 1.9.0.feat-2Core.1 - update and acquisition on core 1. WiFi on core 0
-  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.16.feat-boardversionControl.6.test-recordCrash.0.feat-FtpServer.1.fix-emotibitEda.1.feat-2Core.3.test-agaveMergeAll.0";
+  String firmware_version = "1.9.0.agave-alpha.1";
 
 
 	TestingMode testingMode = TestingMode::NONE;
