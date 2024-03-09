@@ -1726,18 +1726,24 @@ uint8_t EmotiBit::update()
 				{
 					// Stop ISR
 					//timerStop(timer);
-					
+					vTaskSuspend(EmotiBitDataAcquisition); // suspend the Acquisition task
 					// turn OFF leds
 					// ToDo: Move this out of the #ifdef block. This behavior should be consistant across all Feathers.
-					_ledController.setState(EmotiBitLedController::Led::RECORDING, true);
-					_ledController.setState(EmotiBitLedController::Led::WIFI, true);
-					_ledController.setState(EmotiBitLedController::Led::BATTERY, true);
+					_ledController.setState(EmotiBitLedController::Led::RECORDING, false);
+					_ledController.setState(EmotiBitLedController::Led::WIFI, false);
+					_ledController.setState(EmotiBitLedController::Led::BATTERY, false);
 					_ledController.update();
 					_fileTransferManager.begin();
 					// ToDo: Consider is this should be implemented outside the #ifdef block. Should FileTransferManager handle the MCU specific stuff?
+					uint32_t lastDelay = millis();
 					while(1)
 					{
 						_fileTransferManager.handleTransfer();
+						if(millis() - lastDelay > 3000)
+						{
+							lastDelay = millis();
+							vTaskDelay(pdMS_TO_TICKS(10));
+						}
 					}
 				}
 				else
