@@ -1727,7 +1727,8 @@ uint8_t EmotiBit::update()
 				if(!_sdWrite) // if not writing to SD card
 				{
 					// Stop ISR
-					timerStop(timer);
+					//timerStop(timer);
+					
 					// turn OFF leds
 					// ToDo: Move this out of the #ifdef block. This behavior should be consistant across all Feathers.
 					_ledController.setState(EmotiBitLedController::Led::RECORDING, true);
