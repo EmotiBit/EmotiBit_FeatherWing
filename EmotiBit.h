@@ -52,7 +52,7 @@ public:
 
 
   // 1.9.0.feat-2Core.1 - update and acquisition on core 1. WiFi on core 0
-  String firmware_version = "1.9.0.agave-alpha.2";
+  String firmware_version = "1.9.0.agave-alpha.3";
 
 
 	TestingMode testingMode = TestingMode::NONE;
@@ -366,7 +366,7 @@ public:
 	bool tempHumidity = true;
 	bool thermopile = true;
 	bool imuAccGyro = true;
-	bool imuMag = true;
+	bool imuMag = false;
 	bool ppg = true;
 	bool tempPpg = true;
 	bool debug = false;
