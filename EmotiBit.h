@@ -52,7 +52,7 @@ public:
 
 
 
-  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.16.feat-boardversionControl.6.test-recordCrash.0.feat-FtpServer.1.fix-emotibitEda.1";
+  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.16.feat-boardversionControl.6.test-recordCrash.0.feat-FtpServer.1.fix-emotibitEda.1.test-agaveMergeAll.0";
 
 
 	TestingMode testingMode = TestingMode::NONE;

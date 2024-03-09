@@ -1256,7 +1256,6 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		Serial.println("**********************************************************");
 	}
 	// ToDo: implement logic to determine return val
-	esp_sleep_enable_timer_wakeup(10 * 1000000); //light sleep for 10 seconds
 	return 0;
 } // Setup
 
@@ -1728,10 +1727,10 @@ uint8_t EmotiBit::update()
 					timerStop(timer);
 					// turn OFF leds
 					// ToDo: Move this out of the #ifdef block. This behavior should be consistant across all Feathers.
-					led.setLED(uint8_t(EmotiBit::Led::RED), false);
-					led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
-					led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-					led.send();
+					_ledController.setState(EmotiBitLedController::Led::RECORDING, true);
+					_ledController.setState(EmotiBitLedController::Led::WIFI, true);
+					_ledController.setState(EmotiBitLedController::Led::BATTERY, true);
+					_ledController.update();
 					// ToDo: Consider is this should be implemented outside the #ifdef block. Should FileTransferManager handle the MCU specific stuff?
 					_fileTransferManager.handleTransfer();
 				}
