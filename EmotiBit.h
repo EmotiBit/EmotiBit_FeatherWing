@@ -51,8 +51,8 @@ public:
 	};
 
 
-
-  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.16.feat-boardversionControl.6.test-recordCrash.0.feat-FtpServer.1.fix-emotibitEda.1.test-agaveMergeAll.0";
+  // 1.9.0.feat-2Core.1 - update and acquisition on core 1. WiFi on core 0
+  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.16.feat-boardversionControl.6.test-recordCrash.0.feat-FtpServer.1.fix-emotibitEda.1.feat-2Core.3.test-agaveMergeAll.0";
 
 
 	TestingMode testingMode = TestingMode::NONE;
@@ -426,6 +426,8 @@ public:
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;
+	bool _freeToSleep = false;
+	
 
 	void setupFailed(const String failureMode, int buttonPin = -1, bool configFileError = false);
 	bool setupSdCard(bool loadConfig = true);
@@ -676,6 +678,7 @@ private:
 
 	const uint8_t SCOPE_TEST_PIN = A0;
 	bool scopeTestPinOn = false;
+	
 
 };
 
@@ -687,6 +690,8 @@ void ReadSensors();
 void onTimer();
 void attachToCore(void(*readFunction)(void*), EmotiBit*e = nullptr);
 void ReadSensors(void* pvParameters);
+void Update(void* pvParameters);
+void attachUpdateToCore(void(*readFunction)(void*));
 #endif
 
 
