@@ -50,7 +50,7 @@ public:
 
 
   // 1.9.0.feat-2Core.1 - update and acquisition on core 1. WiFi on core 0
-  String firmware_version = "1.9.0.feat-2Core.2";
+  String firmware_version = "1.9.0.feat-2Core.3";
 
 
 
@@ -687,8 +687,8 @@ void ReadSensors();
 void onTimer();
 void attachToCore(void(*readFunction)(void*), EmotiBit*e = nullptr);
 void ReadSensors(void* pvParameters);
-void Process(void* pvParameters);
-void attachProcessToCore(void(*readFunction)(void*));
+void Update(void* pvParameters);
+void attachUpdateToCore(void(*readFunction)(void*));
 #endif
 
 

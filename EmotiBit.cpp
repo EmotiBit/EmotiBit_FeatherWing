@@ -1098,6 +1098,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		//Serial.println("Starting interrupts");
 		startTimer(BASE_SAMPLING_FREQ);
 #elif defined ARDUINO_FEATHER_ESP32
+		// ToDo: remove timer setup once 2 core functionality is verified.
 		// setup timer
 		//timer = timerBegin(0, 80, true); // timer ticks with APB timer, which runs at 80MHz. This setting makes the timer tick every 1uS
 
@@ -1112,7 +1113,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		//timerAlarmEnable(timer);
 		_xMutex = xSemaphoreCreateMutex();
 		attachToCore(&ReadSensors, this);
-		attachProcessToCore(&Process);
+		attachUpdateToCore(&Update);
 #endif
 	}
 
@@ -4434,6 +4435,7 @@ void attachToInterruptTC3(void(*readFunction)(void), EmotiBit* e)
 }
 
 #elif defined ARDUINO_FEATHER_ESP32
+// ToDo: remove this once 2 core functionality is verified.
 void onTimer() {
 	vTaskResume(EmotiBitDataAcquisition);
 }
@@ -4441,7 +4443,7 @@ void onTimer() {
 
 #ifdef ARDUINO_FEATHER_ESP32
 
-void attachProcessToCore(void(*readFunction)(void*))
+void attachUpdateToCore(void(*readFunction)(void*))
 {
 	//attachEmotiBit(e);
 	// assigning readSensors to second core
@@ -4467,7 +4469,7 @@ void attachToCore(void(*readFunction)(void*), EmotiBit*e)
 		NULL,        /* parameter of the task */
 		configMAX_PRIORITIES - 1,           /* priority of the task */
 		&EmotiBitDataAcquisition,      /* Task handle to keep track of created task */
-		1);          /* pin task to core 0 */
+		1);          /* pin task to core 1 */
 	delay(500);
 }
 
@@ -4487,9 +4489,9 @@ void ReadSensors()
 	}
 }
 #elif defined ARDUINO_FEATHER_ESP32
-void Process(void *pvParameter)
+void Update(void *pvParameter)
 {
-	Serial.print("The data process is executing on core: "); Serial.println(xPortGetCoreID());
+	Serial.print("Update is executing on core: "); Serial.println(xPortGetCoreID());
 	while(1)
 	{
 		if (myEmotiBit != nullptr)
@@ -4501,18 +4503,19 @@ void Process(void *pvParameter)
 			Serial.println("EmotiBit is nullptr");
 		}
 		//vTaskSuspend(NULL);
-		vTaskDelay(pdMS_TO_TICKS(1));
+		vTaskDelay(pdMS_TO_TICKS(1));  // Delay added to give time to IDLE task
 	}
 }
 
 void ReadSensors(void *pvParameters)
 {
 	Serial.print("The data acquisition is executing on core: "); Serial.println(xPortGetCoreID());
+	int BASE_TIME_PERIOD = (int)((float) 1000000 / (float) BASE_SAMPLING_FREQ);
 	uint32_t timeLast = micros();
 	//uint32_t timeLastProcess_ms = millis(); // if update runs on the same core as acquisition
 	while (1) // the function assigned to the second core should never return
 	{
-		if(micros() - timeLast > 6666)
+		if(micros() - timeLast > BASE_TIME_PERIOD)
 		{
 			timeLast = micros();
 			if (myEmotiBit != nullptr)
@@ -4541,23 +4544,25 @@ void ReadSensors(void *pvParameters)
 				if(myEmotiBit->_freeToSleep && myEmotiBit->_emotiBitWiFi._wifiOff)
 				{
 					int sleepTime;
-					uint32_t wakeupTimebuffer = 600; // takes cpu 600uS to wake up
-					if((timeLast + 6666) - micros() > wakeupTimebuffer) // more than a 1mS away from next acquisition pulse
+					// ToDo: get more accurate buffer time
+					uint32_t wakeupTimebuffer = 600; // Empirically derived estimate. Time taken by CPU to wake up
+					// ToDo: move this into a calculateSleepTime() function
+					if((timeLast + BASE_TIME_PERIOD) - micros() > wakeupTimebuffer) // calculate time to sleep
 					{
-						sleepTime = (int)(timeLast + 6666) - (int)micros() - (int)wakeupTimebuffer;
-						//Serial.print("sleeping for(uS): "); Serial.println(sleepTime);
+						sleepTime = (int)(timeLast + BASE_TIME_PERIOD) - (int)micros() - (int)wakeupTimebuffer;
 					} 
+
 					if(sleepTime > wakeupTimebuffer)
 					{
+						// only sleep if we can wake up in time
 						esp_sleep_enable_timer_wakeup(sleepTime); // every 6.6mS to maintain 150Hz sampling
-						//if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_0, HIGH);
 						esp_light_sleep_start(); // start light sleep
-						//if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_0, LOW);
 					}
 				}
 				else
 				{
-					vTaskDelay(pdMS_TO_TICKS(1));
+					// ToDo: Schedule time give to idle task. Check min time before watchdog timer is activated.
+					vTaskDelay(pdMS_TO_TICKS(1));  // if not sleeping, give time to IDLE task
 				}
 			//}
 			//vTaskDelay(pdMS_TO_TICKS(1));
