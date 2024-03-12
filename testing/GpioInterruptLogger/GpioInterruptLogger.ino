@@ -53,7 +53,7 @@ void getData(DoubleBufferFloat *buf_us, DoubleBufferFloat *buf_ms, String pin)
   Serial.println("getting data");
   #endif
   dataAvailableuS = buf_us->getData(&us_timeData, &tu, false);
-  dataAvailablemiS = buf_ms->getData(&ms_timeData, &tm, false);
+  dataAvailablemS = buf_ms->getData(&ms_timeData, &tm, false);
   #ifdef DEBUG_SERIAL
   Serial.println("got data");
   #endif
