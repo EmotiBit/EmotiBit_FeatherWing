@@ -649,7 +649,7 @@ bool EmotiBitVersionController::checkForExternalVersionDefinition(EmotiBitVersio
 	hwVersion = EmotiBitVersion::AGAVE_REVB;
 	sku = "v01C";
 	emotibitSerialNumber = 01;
-	barcode = "Agave RevB"; // this is the device ID in EmotiBit
+	barcode = ""; // this is the device ID in EmotiBit. Leaving it empty to that devices can be identified by IP on the Oscilloscope
 	initControllers.eda = false;
 	initControllers.tempHumidity = false;
 	initControllers.thermopile = false;

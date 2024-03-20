@@ -329,10 +329,15 @@ int8_t EmotiBitWiFi::processAdvertising()
 				outMessage += EmotiBitPacket::PayloadLabel::DATA_PORT;
 				outMessage += ",";
 				outMessage += _dataPort;
-				outMessage += ",";
-				outMessage += EmotiBitPacket::PayloadLabel::DEVICE_ID;
-				outMessage += ",";
-				outMessage += _emotibitDeviceId;
+				// ToDo: Solve for device ID for Agave Board. Since Agave boards currently do not have a NVM, we need a way to store HW specific identifier
+				// device ID set to "" for Agave Boards
+				if(!_emotibitDeviceId.equals(""))
+				{
+					outMessage += ",";
+					outMessage += EmotiBitPacket::PayloadLabel::DEVICE_ID;
+					outMessage += ",";
+					outMessage += _emotibitDeviceId;
+				}
 				outMessage += EmotiBitPacket::PACKET_DELIMITER_CSV;
 				sendMessage = true;
 			}
