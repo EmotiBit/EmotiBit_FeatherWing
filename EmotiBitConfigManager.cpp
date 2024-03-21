@@ -141,7 +141,7 @@ void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, Stri
 							{
 								cred["username"] = username;
 							}
-							bool status = EmotiBitConfigManager::createNewConfigFile(configFilename, file, configAsJson);
+							bool status = createNewConfigFile(configFilename, file, configAsJson);
 							if (!status)
 							{
 								// error messages are printed in the called function
@@ -172,7 +172,7 @@ void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, Stri
 								{
 									cred["username"] = username;
 								}
-								bool status = EmotiBitConfigManager::createNewConfigFile(configFilename, file, configAsJson);
+								bool status = createNewConfigFile(configFilename, file, configAsJson);
 								if (!status)
 								{
 									// error messages are printed in the called function
@@ -229,7 +229,7 @@ void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, Stri
 								Serial.println(configAsJson["WifiCredentials"][deleteIndex]["ssid"].as<String>());
 								configAsJson["WifiCredentials"].remove(deleteIndex);
 								SD.remove(configFilename);
-								bool status = EmotiBitConfigManager::createNewConfigFile(configFilename, file, configAsJson);
+								bool status = createNewConfigFile(configFilename, file, configAsJson);
 								if(status)
 								{
 									EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::ACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
