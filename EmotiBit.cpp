@@ -125,7 +125,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	barcode.rawCode = "";
 	String factoryTestSerialOutput;
 	factoryTestSerialOutput.reserve(150);
-	factoryTestSerialOutput += EmotiBitFactoryTest::MSG_START_CHAR;
+	factoryTestSerialOutput += EmotiBitSerial::MSG_START_CHAR;
 	uint32_t now = millis();
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
@@ -140,15 +140,20 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	{
 		char input;
 		input = Serial.read();
-		if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
+		if (input == EmotiBitSerial::Inputs::RESET)
+		{
+			// provision to reset added to enable connection to enterprise wifi. weird quirk in enterprise wifi connection. Seeehttps://github.com/EmotiBit/EmotiBit_FeatherWing/pull/250
+			restartMcu();
+		}
+		else if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
 		{
 			uint32_t waitStarForBarcode = millis();
 			testingMode = TestingMode::FACTORY_TEST;
 			String ackString;
-			ackString += EmotiBitFactoryTest::MSG_START_CHAR;
+			ackString += EmotiBitSerial::MSG_START_CHAR;
 			EmotiBitFactoryTest::updateOutputString(ackString, EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, firmware_version.c_str());
 			ackString = ackString.substring(0, ackString.length() - 1);
-			ackString += EmotiBitFactoryTest::MSG_TERM_CHAR;
+			ackString += EmotiBitSerial::MSG_TERM_CHAR;
 			Serial.print(ackString);
 
 			Serial.println("\nEntered FACTORY TEST MODE");
@@ -157,9 +162,9 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 			{
 				char input;
 				input = Serial.read();
-				if (input == EmotiBitFactoryTest::MSG_START_CHAR)
+				if (input == EmotiBitSerial::MSG_START_CHAR)
 				{
-					String msg = Serial.readStringUntil(EmotiBitFactoryTest::MSG_TERM_CHAR);
+					String msg = Serial.readStringUntil(EmotiBitSerial::MSG_TERM_CHAR);
 					Serial.print("Barcode msg: ");
 					Serial.println(msg);
 					String msgTypeTag = msg.substring(0, 2);
@@ -446,7 +451,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	now = millis();
 	
 	// prompt for serial input
-	Serial.println("Enter C to enter WiFi config edit mode (Add/ Delete WiFi creds)");
+	Serial.println("Enter " + String(EmotiBitSerial::Inputs::CRED_UPDATE) + " to enter WiFi config edit mode (Add/ Delete WiFi creds)");
 
 	while (!Serial.available() && millis() - now < 2000)
 	{
@@ -459,7 +464,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		char input;
 		input = Serial.read();
 
-		if (input == 'A')
+		if (input == EmotiBitSerial::Inputs::ADC_CORRECTION_MODE)
 		{
 #ifdef ADAFRUIT_FEATHER_M0
 			AdcCorrection adcCorrection;
@@ -475,21 +480,17 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 			}
 #endif
 		}
-		else if (input == 'C')
+		else if (input == EmotiBitSerial::Inputs::CRED_UPDATE)
 		{
 			Serial.println("Wifi Credential edit mode");
 			setupSdCard(false);
 			// ToDo: Find a better name that highlights "updating through Serial".
 			_emotibitConfigManager.updateWiFiCredentials(firmware_version, _configFilename, EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN, EmotiBitWiFi::getMaxNumCredentialAllowed());
 		}
-		else if (input == 'D')
+		else if (input == EmotiBitSerial::Inputs::DEBUG_MODE)
 		{
 			_debugMode = true;
 			Serial.println("\nENTERING DEBUG MODE\n");
-		}
-		else if (input == 'R')
-		{
-			restartMcu();
 		}
 		else
 		{
@@ -1219,7 +1220,7 @@ void EmotiBit::setupFailed(const String failureMode, int buttonPin, bool configF
 			timeSinceLastPrint = millis();
 			if (configFileError)
 			{
-				Serial.println("Press \"C\" to add/update cofig file.");
+				Serial.println("Press \"" + String(EmotiBitSerial::Inputs::CRED_UPDATE) + "\" to add/update cofig file.");
 			}
 		}
 		if (configFileError)
@@ -1227,7 +1228,7 @@ void EmotiBit::setupFailed(const String failureMode, int buttonPin, bool configF
 			if (Serial.available() >= 0)
 			{
 				char c = Serial.read();
-				if (c == 'C') 
+				if (c == EmotiBitSerial::Inputs::CRED_UPDATE) 
 				{
 					_emotibitConfigManager.updateWiFiCredentials(firmware_version, _configFilename, EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN, EmotiBitWiFi::getMaxNumCredentialAllowed());
 				}
@@ -4283,10 +4284,10 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 
 void EmotiBit::processFactoryTestMessages() 
 {
-	if (Serial.available() > 0 && Serial.read() == EmotiBitFactoryTest::MSG_START_CHAR)
+	if (Serial.available() > 0 && Serial.read() == EmotiBitSerial::MSG_START_CHAR)
 	{
 		Serial.print("FactoryTestMessage: ");
-		String msg = Serial.readStringUntil(EmotiBitFactoryTest::MSG_TERM_CHAR);
+		String msg = Serial.readStringUntil(EmotiBitSerial::MSG_TERM_CHAR);
 		String msgTypeTag = msg.substring(0, 2);
 		Serial.println(msgTypeTag);
 		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_ON))

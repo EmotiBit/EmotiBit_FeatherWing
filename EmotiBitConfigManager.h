@@ -28,6 +28,14 @@ public:
     */
     bool init(uint8_t sdCsPin);
     /*! 
+    * @brief create a new config file from JsonDocument element
+    * @param configFilename Name of config file
+    * @param file instance of file that will handle file I/O
+    * @param configAsJson Json Element that holds credentials data
+    * @return returns true, is config file is successfully created.
+    */
+    bool createNewConfigFile(String configFilename, File& file, JsonDocument& configAsJson);
+    /*! 
     * @brief Function to update WiFi credentials over Serial.
     * @param emotibitFwVersion Current EmotiBit firmware version. Added for future compatibility for software-firmware handshaking
     * @param configFilename name of the config file on the SD card
