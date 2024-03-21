@@ -49,7 +49,7 @@ public:
 	};
 
 
-  // 1.9.0.feat-2Core.1 - update and acquisition on core 1. WiFi on core 0
+
   String firmware_version = "1.9.0.feat-2Core.4";
 
 
