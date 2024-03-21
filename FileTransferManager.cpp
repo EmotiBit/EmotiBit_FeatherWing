@@ -48,7 +48,14 @@ bool FileTransferManager::begin()
             Serial.print("On network: "); Serial.println(WiFi.SSID());
             Serial.print("FTP server started at IP: "); Serial.println(WiFi.localIP());
             Serial.println("Use a FTP client (Example FileZilla) to access EmotiBit file system.");
-
+            Serial.println("------- FileZilla Isstructions -------");
+            Serial.println("Go on Manage site --> New site. Set the parameters as shown below: ");
+            Serial.println("- Protocol = FTP");
+            Serial.println("- Select Use plain FTP (insecure)");
+            Serial.println("- Enter the login username and password, as set in the EmotiBit firmware");
+            Serial.println("- Under \"Trasfer settings\" tab > select maximun number of connection equal to 1");
+            Serial.println("Now you can connect to your EmotiBit(server)!");
+  
             // start FTP server
             ftpServer.begin(_ftpCreds.username.c_str(), _ftpCreds.password.c_str());
             return true;
@@ -105,17 +112,6 @@ void FileTransferManager::handleTransfer()
             }
             else
             {
-                /*
-                uint32_t timeNow = millis(); // use to keep serial active
-                const uint16_t PRINT_DELAY = 7000;  // time between serial prints. A way to keep serial active to represent on-going process 
-
-                if( (millis() - timeNow) > PRINT_DELAY)
-                {
-                    // print somehting on the serial every 10 secs
-                    Serial.print("FTP server active on "); Serial.println(WiFi.localIP());
-                    timeNow = millis();
-                }
-                */
                 // handleFTP requests. To get back to normal mode, press reset
                 ftpServer.handleFTP();
                 return;
