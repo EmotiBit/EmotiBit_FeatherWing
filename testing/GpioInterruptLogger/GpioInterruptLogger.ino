@@ -1,4 +1,23 @@
-// COde to read the timestamp of 1KHz wave
+/**
+ * @file GpioInterruptLogger
+ *
+ * @section description Description
+ * This example can be used to generate timestamps for external events.
+ * A timestamp in mS and uS is generated everytime an interrupt is triggered.
+ *
+ * @section circuit Circuit
+ * - This is written for Feather M0. Tested on Adafruit Feather M0.
+ * - Refer adafruit's documentation on pin details: https://learn.adafruit.com/adafruit-feather-m0-wifi-atwinc1500/pinouts
+ * - Use PIN_IN_1 and PIN_IN_2 as inputs to which external interrupt signals can be attached.
+ * - PIN_OUT_1 and PIN_OUT_2 toggle at half the frequeny input pins, respectively. (Useful if probing with an Digital Oscilloscope) 
+ * 
+ * @section author Author
+ * - Created by Nitin Nair for EmotiBit.
+ * 
+ */
+
+
+// ToDO: fix for Feather ESP32. Looks like the double buffer implementation is crashing for ESP32.
 //#define DEBUG_SERIAL
 #ifdef ARDUINO_FEATHER_ESP32
 #define PIN_IN_1 5
@@ -23,6 +42,8 @@ void IRAM_ATTR isr_pin1() {
   us_timeBuffer_IN1.push_back(micros());
   ms_timeBuffer_IN1.push_back(millis());
   digitalWrite(PIN_OUT_1, !digitalRead(PIN_OUT_1));  // toggle a pin everytime we get a rising edge. Half the freq of PIN_IN_1
+
+  // ToDo: implement logic for pin 2
 }
 #elif defined ADAFRUIT_FEATHER_M0
 void isr_pin1() {
@@ -64,6 +85,7 @@ void getData(DoubleBufferFloat *buf_us, DoubleBufferFloat *buf_ms, String pin)
     #endif
     for (uint8_t i = 0; i < dataAvailableuS; i++) 
     {
+      // ToDo: improve serial output pattern.
       String str = pin + ":" + String(ms_timeData[i]) + ":" + String(us_timeData[i])  ;
       Serial.println(str); 
     }
@@ -73,7 +95,6 @@ void getData(DoubleBufferFloat *buf_us, DoubleBufferFloat *buf_ms, String pin)
     Serial.print("dataAvailableuS: "); Serial.println(dataAvailableuS);
     Serial.print("dataAvailablemS: "); Serial.println(dataAvailablemS);
     Serial.println("mismatch in buffer lengths");
-    //while(1);
   }
 }
 void setup() {
