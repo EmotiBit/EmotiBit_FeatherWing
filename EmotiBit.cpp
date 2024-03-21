@@ -7,7 +7,6 @@ EmotiBit* myEmotiBit = nullptr;
 void(*onInterruptCallback)(void);
 #ifdef ARDUINO_FEATHER_ESP32
 TaskHandle_t EmotiBitDataAcquisition;
-hw_timer_t * timer = NULL;
 SemaphoreHandle_t _xMutex; ///< Semaphore to prevent concurrent access of double buffer between acquisition and update tasks 
 #endif
 
