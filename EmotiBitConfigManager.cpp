@@ -60,12 +60,12 @@ void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, Stri
 	EmotiBitSerial::sendMessage(EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, emotibitFwVersion);
 	// instructions
 	Serial.println("Options available:");
-	Serial.println("1. Add a wifi credential. Usage: @WA,{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}~");
+	Serial.println("1. Add a wifi credential. Send: @WA,{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}~");
 	Serial.println("  - Replace SSSS with network name and PPPP with network password");
-	Serial.println("2. List wifi credentials. Usage: @LS,~");
-	Serial.println("3. Delete Wifi Credential. Usage: @WD,<credential number>~");
+	Serial.println("2. List wifi credentials. Send: @LS~");
+	Serial.println("3. Delete Wifi Credential. Send: @WD,<credential number>~");
 	Serial.println("  - use List option to get a wifi list. Then use the number in the list to delete that credential");
-	Serial.println("4. Reset device. Usage @RS,~");
+	Serial.println("4. Reset device. Send @RS~");
 	Serial.println("  - Restart the device after editing config file");
 
 	while (1) 
@@ -241,7 +241,7 @@ void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, Stri
 							}
 							else
 							{
-								Serial.println("Out of bounds delete. Enter a valid choice");
+								Serial.println("Out of bounds delete. Enter a valid choice.");
 								EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::NACK, EmotiBitPacket::TypeTag::WIFI_DELETE);
 							}
 						}
@@ -269,7 +269,7 @@ void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, Stri
 					if(configAsJson["WifiCredentials"].size())
 					{
 						Serial.println("##################################");
-						Serial.println("config file credetials:");
+						Serial.println("config file credentials:");
 						for(int i = 0; i < configAsJson["WifiCredentials"].size(); i++ )
 						{
 							Serial.print(i); Serial.print(". " + configAsJson["WifiCredentials"][i]["ssid"].as<String>());
@@ -280,7 +280,7 @@ void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, Stri
 					}
 					else
 					{
-						Serial.println("config file has no credentials. Try WA to add credential first.");
+						Serial.println("Config file has no credentials. Try WA to add credential first.");
 					}
 					EmotiBitSerial::sendMessage(EmotiBitPacket::TypeTag::ACK, EmotiBitPacket::TypeTag::LIST);
 
@@ -299,7 +299,7 @@ void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, Stri
 			}
 			else
 			{
-				Serial.println("not a valid serial message. Expecting @TYPETAG,PAYLOAD~ OR @TYPETAG~");
+				Serial.println("Not a valid serial message. Expecting: @TYPETAG,PAYLOAD~ or @TYPETAG~");
 			}
 			
 		}
