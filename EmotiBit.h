@@ -50,7 +50,7 @@ public:
 
 
   // 1.9.0.feat-2Core.1 - update and acquisition on core 1. WiFi on core 0
-  String firmware_version = "1.9.0.feat-2Core.3";
+  String firmware_version = "1.9.0.feat-2Core.4";
 
 
 
@@ -684,8 +684,7 @@ void attachEmotiBit(EmotiBit*e = nullptr);
 void attachToInterruptTC3(void(*readFunction)(void), EmotiBit*e = nullptr);
 void ReadSensors();
 #elif defined ARDUINO_FEATHER_ESP32
-void onTimer();
-void attachToCore(void(*readFunction)(void*), EmotiBit*e = nullptr);
+void attachReadSensorsToCore(void(*readFunction)(void*), EmotiBit*e = nullptr);
 void ReadSensors(void* pvParameters);
 void Update(void* pvParameters);
 void attachUpdateToCore(void(*readFunction)(void*));

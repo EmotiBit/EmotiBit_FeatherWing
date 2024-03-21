@@ -8,7 +8,7 @@ void(*onInterruptCallback)(void);
 #ifdef ARDUINO_FEATHER_ESP32
 TaskHandle_t EmotiBitDataAcquisition;
 hw_timer_t * timer = NULL;
-SemaphoreHandle_t _xMutex;
+SemaphoreHandle_t _xMutex; ///< Semaphore to prevent concurrent access of double buffer between acquisition and update tasks 
 #endif
 
 EmotiBit::EmotiBit() 
@@ -1098,21 +1098,8 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		//Serial.println("Starting interrupts");
 		startTimer(BASE_SAMPLING_FREQ);
 #elif defined ARDUINO_FEATHER_ESP32
-		// ToDo: remove timer setup once 2 core functionality is verified.
-		// setup timer
-		//timer = timerBegin(0, 80, true); // timer ticks with APB timer, which runs at 80MHz. This setting makes the timer tick every 1uS
-
-		// Attach onTimer function to our timer.
-		//timerAttachInterrupt(timer, &onTimer, true);
-
-		// Set alarm to call onTimer function (value in microseconds).
-		// Repeat the alarm (third parameter)
-		//timerAlarmWrite(timer, 1000000 / BASE_SAMPLING_FREQ, true);
-
-		// Start an alarm
-		//timerAlarmEnable(timer);
 		_xMutex = xSemaphoreCreateMutex();
-		attachToCore(&ReadSensors, this);
+		attachReadSensorsToCore(&ReadSensors, this);
 		attachUpdateToCore(&Update);
 #endif
 	}
@@ -1674,7 +1661,7 @@ uint8_t EmotiBit::update()
 	if (millis() - dataSendTimer > DATA_SEND_INTERVAL)
 	{
 		if (myEmotiBit->DIGITAL_WRITE_DEBUG) digitalWrite(myEmotiBit->DEBUG_OUT_PIN_1, HIGH);
-		_freeToSleep = false;
+		_freeToSleep = false;  // Sending data involves writing to storage. Dont sleep cores when writing to storage.
 		dataSendTimer = millis();
 		
 
@@ -4435,18 +4422,11 @@ void attachToInterruptTC3(void(*readFunction)(void), EmotiBit* e)
 }
 
 #elif defined ARDUINO_FEATHER_ESP32
-// ToDo: remove this once 2 core functionality is verified.
-void onTimer() {
-	vTaskResume(EmotiBitDataAcquisition);
-}
-#endif
-
-#ifdef ARDUINO_FEATHER_ESP32
 
 void attachUpdateToCore(void(*readFunction)(void*))
 {
-	//attachEmotiBit(e);
-	// assigning readSensors to second core
+	// Creating a new task to run emotibit.update()
+	// Task runs on core 0, along with WiFi tasks.
 	xTaskCreatePinnedToCore(
 		*readFunction,   /* Task function. */
 		"EmotiBitDataProcess",     /* name of task. */
@@ -4458,10 +4438,11 @@ void attachUpdateToCore(void(*readFunction)(void*))
 	delay(500);
 }
 
-void attachToCore(void(*readFunction)(void*), EmotiBit*e)
+void attachReadSensorsToCore(void(*readFunction)(void*), EmotiBit*e)
 {
 	attachEmotiBit(e);
-	// assigning readSensors to second core
+	// Creating a new task to run data acquisition
+	// Task runs on core 1, along with main loop.
 	xTaskCreatePinnedToCore(
 		*readFunction,   /* Task function. */
 		"EmotiBitDataAcquisition",     /* name of task. */
@@ -4502,7 +4483,6 @@ void Update(void *pvParameter)
 		{
 			Serial.println("EmotiBit is nullptr");
 		}
-		//vTaskSuspend(NULL);
 		vTaskDelay(pdMS_TO_TICKS(1));  // Delay added to give time to IDLE task
 	}
 }
@@ -4512,8 +4492,7 @@ void ReadSensors(void *pvParameters)
 	Serial.print("The data acquisition is executing on core: "); Serial.println(xPortGetCoreID());
 	int BASE_TIME_PERIOD = (int)((float) 1000000 / (float) BASE_SAMPLING_FREQ);
 	uint32_t timeLast = micros();
-	//uint32_t timeLastProcess_ms = millis(); // if update runs on the same core as acquisition
-	while (1) // the function assigned to the second core should never return
+	while (1) // the function should never return, otherwise causes an exception in RTOS
 	{
 		if(micros() - timeLast > BASE_TIME_PERIOD)
 		{
@@ -4530,42 +4509,32 @@ void ReadSensors(void *pvParameters)
 			{
 				Serial.println("EmotiBit is nullptr");
 			}
-			//vTaskSuspend(NULL);
-			// if(millis() - timeLastProcess_ms > 50)
-			// {
-			// 	// every 50mS, run the process task
-				
-			// 	timeLastProcess_ms = millis();
-			// 	vTaskDelay(pdMS_TO_TICKS(1));// give update some time
-				
-			// }
-			// else
-			// {
-				if(myEmotiBit->_freeToSleep && myEmotiBit->_emotiBitWiFi._wifiOff)
-				{
-					int sleepTime;
-					// ToDo: get more accurate buffer time
-					uint32_t wakeupTimebuffer = 600; // Empirically derived estimate. Time taken by CPU to wake up
-					// ToDo: move this into a calculateSleepTime() function
-					if((timeLast + BASE_TIME_PERIOD) - micros() > wakeupTimebuffer) // calculate time to sleep
-					{
-						sleepTime = (int)(timeLast + BASE_TIME_PERIOD) - (int)micros() - (int)wakeupTimebuffer;
-					} 
 
-					if(sleepTime > wakeupTimebuffer)
-					{
-						// only sleep if we can wake up in time
-						esp_sleep_enable_timer_wakeup(sleepTime); // every 6.6mS to maintain 150Hz sampling
-						esp_light_sleep_start(); // start light sleep
-					}
-				}
-				else
+			if(myEmotiBit->_freeToSleep && myEmotiBit->_emotiBitWiFi._wifiOff)
+			{
+				int sleepTime;
+				// ToDo: get more accurate buffer time
+				uint32_t wakeupTimebuffer = 600; // in uS. Empirically derived estimate. Time taken by CPU to wake up
+				// ToDo: move this into a calculateSleepTime() function
+				if((timeLast + BASE_TIME_PERIOD) - micros() > wakeupTimebuffer) 
 				{
-					// ToDo: Schedule time give to idle task. Check min time before watchdog timer is activated.
-					vTaskDelay(pdMS_TO_TICKS(1));  // if not sleeping, give time to IDLE task
+					// calculate time to sleep
+					sleepTime = (int)(timeLast + BASE_TIME_PERIOD) - (int)micros() - (int)wakeupTimebuffer;
+				} 
+
+				if(sleepTime > wakeupTimebuffer)
+				{
+					// only sleep if we can wake up in time
+					esp_sleep_enable_timer_wakeup(sleepTime); // every 6.6mS to maintain 150Hz base sampling
+					esp_light_sleep_start(); // start light sleep
 				}
-			//}
-			//vTaskDelay(pdMS_TO_TICKS(1));
+			}
+			else
+			{
+				// ToDo: Schedule time give to idle task.
+				vTaskDelay(pdMS_TO_TICKS(1));  // if not sleeping, give time-slice to IDLE task
+			}
+
 		}
 		
 	}

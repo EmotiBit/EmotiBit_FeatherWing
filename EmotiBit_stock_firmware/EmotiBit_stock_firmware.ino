@@ -51,11 +51,13 @@ void setup()
 
 void loop()
 {
-	//Serial.println("emotibit.update()");
-	//emotibit.update();
+	// Main loop is attached to a different task spawned by default. In our current scheme, 
+	// main loop runs run when acquisitoin task pasuses by calling vTaskDelay()
 	
-	// gets run when acquisitoin gives a delay
-	// ToDo: assess time slice given to this task once ported to 2-core topology
+	// The update function has been moved to its separate task.
+	//emotibit.update(); 
+	
+	// ToDo: assess time slice given to this task once ported to 2-core 2-task architecture
 	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::PPG_GREEN, &data[0], dataSize);
 	if (dataAvailable > 0)
 	{
