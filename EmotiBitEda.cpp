@@ -261,7 +261,7 @@ uint8_t EmotiBitEda::readData()
 
 	if (_emotibitVersion >= EmotiBitVersionController::EmotiBitVersion::V04A)
 	{
-		if(_edlOversampBuffer == nullptr || _edlBuffer == nullptr) return 16; // BufferFloat::ERROR_PTR_NULL = 16. But, any non-zero value sohuld work.
+		if(_edlOversampBuffer == nullptr || _edlBuffer == nullptr) return (uint8_t) BufferFloat::ERROR_PTR_NULL; // BufferFloat::ERROR_PTR_NULL = 16. But, any non-zero value sohuld work.
 		// Code to debug missed conversions
 		//static uint16_t completed = 0;
 		//static uint16_t total = 0;
@@ -312,7 +312,7 @@ uint8_t EmotiBitEda::readData()
 	else
 	{
 		// Reads EDA data from ADC
-		if(_edlOversampBuffer == nullptr || _edrOversampBuffer == nullptr || _edlBuffer == nullptr || _edrBuffer == nullptr) return 16; // BufferFloat::ERROR_PTR_NULL = 16. But, any non-zero value sohuld work.
+		if(_edlOversampBuffer == nullptr || _edrOversampBuffer == nullptr || _edlBuffer == nullptr || _edrBuffer == nullptr) return (uint8_t) BufferFloat::ERROR_PTR_NULL; // BufferFloat::ERROR_PTR_NULL = 16. But, any non-zero value sohuld work.
 		// Check EDL and EDR voltages for saturation
 #if defined(ARDUINO_FEATHER_ESP32)
 		// analogReadMillis is much more accurate for ESP
@@ -389,7 +389,7 @@ bool EmotiBitEda::processData()
 	}
 	else
 	{
-		if(_edlBuffer == nullptr || _edrBuffer == nullptr || _edaBuffer == nullptr) return false;
+		if(_edlBuffer == nullptr || _edrBuffer == nullptr || _edaBuffer == nullptr || _edrOversampBuffer == nullptr) return false;
 		size_t n, edlN, edrN;
 		float *edlData, *edrData;
 		uint32_t edlTs, edrTs;
