@@ -50,14 +50,14 @@ public:
 
 
 
-  String firmware_version = "1.9.0";
+  String firmware_version = "1.9.0.feat-2Core.4";
 
 
 
 	TestingMode testingMode = TestingMode::NONE;
-	const bool DIGITAL_WRITE_DEBUG = false;
+	const bool DIGITAL_WRITE_DEBUG = true;
 #if defined (ARDUINO_FEATHER_ESP32)
-	const uint8_t DEBUG_OUT_PIN_0 = 26;
+	const uint8_t DEBUG_OUT_PIN_0 = 21;
 	const uint8_t DEBUG_OUT_PIN_1 = 33;
 	const uint8_t DEBUG_OUT_PIN_2 = 15;
 #elif defined (ADAFRUIT_FEATHER_M0)
@@ -425,6 +425,8 @@ public:
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;
+	bool _freeToSleep = false;
+	
 
 	void setupFailed(const String failureMode, int buttonPin = -1);
 	bool setupSdCard();
@@ -673,6 +675,7 @@ private:
 
 	const uint8_t SCOPE_TEST_PIN = A0;
 	bool scopeTestPinOn = false;
+	
 
 };
 
@@ -681,9 +684,10 @@ void attachEmotiBit(EmotiBit*e = nullptr);
 void attachToInterruptTC3(void(*readFunction)(void), EmotiBit*e = nullptr);
 void ReadSensors();
 #elif defined ARDUINO_FEATHER_ESP32
-void onTimer();
-void attachToCore(void(*readFunction)(void*), EmotiBit*e = nullptr);
+void attachReadSensorsToCore(void(*readFunction)(void*), EmotiBit*e = nullptr);
 void ReadSensors(void* pvParameters);
+void Update(void* pvParameters);
+void attachUpdateToCore(void(*readFunction)(void*));
 #endif
 
 
