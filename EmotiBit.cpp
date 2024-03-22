@@ -1317,13 +1317,7 @@ bool EmotiBit::setupSdCard(bool loadConfig)
 		// proceed to parse config file
 		Serial.print(F("\nLoading configuration file: "));
 		Serial.println(_configFilename);
-		if (!loadConfigFile(_configFilename)) {
-			Serial.println("SD card configuration file parsing failed.");
-			Serial.println("Create a file 'config.txt' with the following JSON:");
-			Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
-			// ToDo: verify if we need a separate case for FACTORY_TEST. We should always have a config file, since FACTORY TEST is a controlled environment
-			setupFailed("Config file not found", -1, true);
-		}
+		loadConfigFile(_configFilename);
 	}
 	return true;
 
@@ -3529,34 +3523,31 @@ void EmotiBit::sleep(bool i2cSetupComplete) {
 }
 
 // Loads the configuration from a file
-bool EmotiBit::loadConfigFile(const String &filename) {
-	// Open file for reading
-	File file = SD.open(filename);
-
-	if (!file) {
-		Serial.print("File ");
-		Serial.print(filename);
-		Serial.println(" not found");
-		return false;
-	}
-	
-	if (testingMode == TestingMode::ACUTE || testingMode == TestingMode::CHRONIC)
+bool EmotiBit::loadConfigFile(const String &filename) 
+{
+	if(!_emotibitConfigManager.init(&SD))
 	{
-		Serial.print("Parsing: ");
-		Serial.println(filename);
+		// could not initialize configManager
+		setupFailed("Failed to init configManager", -1, false);
+		return false;
 	}
 	// Allocate the memory pool on the stack.
 	// Don't forget to change the capacity to match your JSON document.
 	// Use arduinojson.org/assistant to compute the capacity.
-	//StaticJsonBuffer<1024> jsonBuffer;
 	StaticJsonDocument<1024> jsonDoc;
+	uint8_t status = _emotibitConfigManager.loadConfigFile(filename, jsonDoc);		
 
-	// Parse the root object
-	DeserializationError error = deserializeJson(jsonDoc, file);
-
-	if (error) {
-		Serial.println(F("Failed to parse config file"));
-		setupFailed("Failed to parse Config file contents", -1, true);
+	if (status) {
+		if(status == (uint8_t) EmotiBitConfigManager::Status::FILE_NOT_FOUND)
+		{
+			Serial.println("Create a file 'config.txt' with the following JSON:");
+			Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
+			setupFailed("Config file not found", -1, true);
+		}
+		else if (status == (uint8_t) EmotiBitConfigManager::Status::FILE_PARSE_FAIL)
+		{
+			setupFailed("Failed to parse Config file contents", -1, true);
+		}
 		return false;
 	}
 
@@ -3606,8 +3597,6 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 
 	// Close the file (File's destructor doesn't close the file)
 	// ToDo: Handle multiple credentials
-
-	file.close();
 	return true;
 }
 

@@ -28,6 +28,9 @@ uint8_t EmotiBitWiFi::begin(int32_t timeout, uint8_t maxAttemptsPerCred, uint16_
 		if (numCredentials == 0)
 		{
 			Serial.println("NO WIFI CREDENTIALS FOUND");
+			Serial.print("Please enter WiFi credentials in the config file");
+			// ToDo: add a patch here to redirect to enter credentials using serial
+			while(1);  // without a while(1), the code tries a % operation with numCredentials (see below), which is divide by 0 error. Crashed core
 		}
 		else
 		{

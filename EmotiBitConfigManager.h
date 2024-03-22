@@ -15,6 +15,12 @@
 class EmotiBitConfigManager
 {
 public:
+    enum Status{
+        OK = 0,
+        INIT_FAIL,
+        FILE_NOT_FOUND,
+        FILE_PARSE_FAIL
+    };
 #ifdef ARDUINO_FEATHER_ESP32
 	// SD is already defined in ESP32 
     fs::SDFS* SD;
@@ -34,14 +40,19 @@ public:
     bool init(SdFat* sd);
 #endif
     
-
-    
+    /*! 
+    * @brief function to load credentials from config file
+    * @param filename Name of config file
+    * @param jsonDoc Json Element that holds credentials data
+    * @return returns Status::OK, if config file was successfully parsed, else error
+    */
+    uint8_t loadConfigFile(const String &filename, JsonDocument& jsonDoc);
     /*! 
     * @brief create a new config file from JsonDocument element
     * @param configFilename Name of config file
     * @param file instance of file that will handle file I/O
     * @param configAsJson Json Element that holds credentials data
-    * @return returns true, is config file is successfully created.
+    * @return returns true, if config file is successfully created.
     */
     bool createNewConfigFile(String configFilename, File& file, JsonDocument& configAsJson);
     /*! 

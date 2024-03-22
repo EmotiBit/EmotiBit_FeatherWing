@@ -55,6 +55,29 @@ bool EmotiBitConfigManager::createNewConfigFile(String configFilename, File& fil
 	return true;
 }
 
+uint8_t EmotiBitConfigManager::loadConfigFile(const String &filename, JsonDocument& jsonDoc)
+{
+		// Open file for reading
+	File file = SD->open(filename);
+
+	if (!file) {
+		Serial.print("File ");
+		Serial.print(filename);
+		Serial.println(" not found");
+		return (uint8_t) Status::FILE_NOT_FOUND;
+	}
+
+	// Parse the root object
+	DeserializationError error = deserializeJson(jsonDoc, file);
+	file.close();
+
+	if (error) {
+		Serial.println(F("Failed to parse config file"));
+		return (uint8_t) Status::FILE_PARSE_FAIL;
+	}
+	return Status::OK;
+}
+
 void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, String configFilename, const uint8_t maxCreds)
 {
 	// Send EmotiBit Firmware version to host
