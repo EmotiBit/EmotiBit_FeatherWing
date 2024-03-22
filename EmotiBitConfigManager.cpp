@@ -1,12 +1,10 @@
 #include <EmotiBitConfigManager.h>
 
-bool EmotiBitConfigManager::init(uint8_t sdCsPin)
+#ifdef ARDUINO_FEATHER_ESP32
+bool EmotiBitConfigManager::init(fs::SDFS* sd)
 {
-#if defined ARDUINO_FEATHER_ESP32
-	if (SD.begin(sdCsPin, SPI, 10000000)) // 10MHz works with 40MHz CPU, 20Mhz does NOT
-#else
-	if (SD.begin(sdCsPin))
-#endif
+	SD = sd;
+	if(SD != nullptr)
 	{
 		return true;
 	}
@@ -15,14 +13,27 @@ bool EmotiBitConfigManager::init(uint8_t sdCsPin)
 		return false;
 	}
 }
-
+#else
+bool EmotiBitConfigManager::init(SdFat* sd)
+{
+	SD = sd;
+	if(SD != nullptr)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+#endif
 
 bool EmotiBitConfigManager::createNewConfigFile(String configFilename, File& file, JsonDocument& configAsJson)
 {
 #if defined ARDUINO_FEATHER_ESP32
-	file = SD.open(configFilename, FILE_WRITE);
+	file = SD->open(configFilename, FILE_WRITE);
 #else 
-	file = SD.open(configFilename, O_CREAT | O_WRITE);
+	file = SD->open(configFilename, O_CREAT | O_WRITE);
 #endif
 	if(file)
 	{
@@ -44,18 +55,8 @@ bool EmotiBitConfigManager::createNewConfigFile(String configFilename, File& fil
 	return true;
 }
 
-void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, String configFilename, uint8_t csPin, const uint8_t maxCreds)
+void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, String configFilename, const uint8_t maxCreds)
 {
-	Serial.println("\nSuccessfully entered config file edit mode.");
-	Serial.print("Initializing SD ...");
-	if(init(csPin))
-	{
-		Serial.println("Initialized");
-	}
-	else
-	{
-		Serial.println("Could not initialize SD card. Make sure battery and SD card are present");
-	}
 	// Send EmotiBit Firmware version to host
 	EmotiBitSerial::sendMessage(EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, emotibitFwVersion);
 	// instructions
@@ -82,17 +83,17 @@ void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, Stri
 				StaticJsonDocument<1024> configAsJson;
 				DeserializationError parseError;
 				bool fileExists = false, fileParses = false;
-				fileExists = SD.exists(configFilename);
+				fileExists = SD->exists(configFilename);
 				if(fileExists)
 				{
-					file = SD.open(configFilename);
+					file = SD->open(configFilename);
 					parseError = deserializeJson(configAsJson, file); 
 					file.close();
 					if(parseError)
 					{
 						// remove broken config file
 						Serial.println("Config file parse failed. Removing file.");
-						SD.remove(configFilename);
+						SD->remove(configFilename);
 						fileExists = false;
 					}
 				}
@@ -186,7 +187,7 @@ void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, Stri
 						}
 						// read file contents
 						Serial.println("Updated file contents:");
-						file = SD.open(configFilename);
+						file = SD->open(configFilename);
 						configAsJson.clear();
 						error = deserializeJson(configAsJson, file);
 						serializeJsonPretty(configAsJson, Serial);
@@ -228,7 +229,7 @@ void EmotiBitConfigManager::updateWiFiCredentials(String emotibitFwVersion, Stri
 								Serial.print("Deleting entry: " + String(deleteIndex) + ". "); 
 								Serial.println(configAsJson["WifiCredentials"][deleteIndex]["ssid"].as<String>());
 								configAsJson["WifiCredentials"].remove(deleteIndex);
-								SD.remove(configFilename);
+								SD->remove(configFilename);
 								bool status = createNewConfigFile(configFilename, file, configAsJson);
 								if(status)
 								{

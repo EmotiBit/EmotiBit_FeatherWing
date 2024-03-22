@@ -17,16 +17,25 @@ class EmotiBitConfigManager
 public:
 #ifdef ARDUINO_FEATHER_ESP32
 	// SD is already defined in ESP32 
-#else
-    // ToDo: conside passing pointer from EmotiBit.
-	SdFat SD;	// Use SdFat library
-#endif
+    fs::SDFS* SD;
     /*!
     * @brief initialize sd card
-    * @param sdCsPin Pin assigned as CS on EmotiBit
-    * @return true is initialization successful
+    * @param sd pointer to emotibit SD
+    * @return true if pointer initialized
     */
-    bool init(uint8_t sdCsPin);
+    bool init(fs::SDFS* sd);
+#else
+	SdFat* SD;	// Use SdFat library
+    /*!
+    * @brief initialize sd card
+    * @param sd pointer to emotibit SD
+    * @return true if pointer initialized
+    */
+    bool init(SdFat* sd);
+#endif
+    
+
+    
     /*! 
     * @brief create a new config file from JsonDocument element
     * @param configFilename Name of config file
@@ -41,7 +50,7 @@ public:
     * @param configFilename name of the config file on the SD card
     * @param maxCreds Maximum allowed credentials on the SD card
     */
-    void updateWiFiCredentials(String emotibitFwVersion, String configFilename, uint8_t csPin, const uint8_t maxCreds);
+    void updateWiFiCredentials(String emotibitFwVersion, String configFilename, const uint8_t maxCreds);
     // ToDo: In the future, we may want to update creds through WiFi, so this functio can act as a wrapper to call other functions that handle WiFi/serial process.
 };
 #endif

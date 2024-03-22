@@ -485,7 +485,16 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 			Serial.println("Wifi Credential edit mode");
 			setupSdCard(false);
 			// ToDo: Find a better name that highlights "updating through Serial".
-			_emotibitConfigManager.updateWiFiCredentials(firmware_version, _configFilename, EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN, EmotiBitWiFi::getMaxNumCredentialAllowed());
+			if(_emotibitConfigManager.init(&SD))
+			{
+				_emotibitConfigManager.updateWiFiCredentials(firmware_version, _configFilename, EmotiBitWiFi::getMaxNumCredentialAllowed());
+			}
+			else
+			{
+				// could not attach init EmotiBitConfigManager
+				Serial.println("EmotiBitConfigManager initialization failed. Skipped credential update.");
+
+			}
 		}
 		else if (input == EmotiBitSerial::Inputs::DEBUG_MODE)
 		{
@@ -1230,7 +1239,16 @@ void EmotiBit::setupFailed(const String failureMode, int buttonPin, bool configF
 				char c = Serial.read();
 				if (c == EmotiBitSerial::Inputs::CRED_UPDATE) 
 				{
-					_emotibitConfigManager.updateWiFiCredentials(firmware_version, _configFilename, EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN, EmotiBitWiFi::getMaxNumCredentialAllowed());
+					if(_emotibitConfigManager.init(&SD))
+					{
+						_emotibitConfigManager.updateWiFiCredentials(firmware_version, _configFilename, EmotiBitWiFi::getMaxNumCredentialAllowed());
+					}
+					else
+					{
+						// could not attach init EmotiBitConfigManager
+						Serial.println("EmotiBitConfigManager initialization failed. Skipped credential update.");
+
+					}
 				}
 			}
 		}
