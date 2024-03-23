@@ -50,7 +50,7 @@ public:
 
 
 
-  String firmware_version = "1.9.0";
+  String firmware_version = "1.9.0.fix-hrPrecision.0";
 
 
 
