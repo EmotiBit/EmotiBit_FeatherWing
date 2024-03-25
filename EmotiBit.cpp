@@ -125,7 +125,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	barcode.rawCode = "";
 	String factoryTestSerialOutput;
 	factoryTestSerialOutput.reserve(150);
-	factoryTestSerialOutput += EmotiBitFactoryTest::MSG_START_CHAR;
+	factoryTestSerialOutput += EmotiBitSerial::MSG_START_CHAR;
 	uint32_t now = millis();
 	Serial.print("Firmware version: ");
 	Serial.println(firmware_version);
@@ -140,15 +140,20 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	{
 		char input;
 		input = Serial.read();
-		if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
+		if (input == EmotiBitSerial::Inputs::RESET)
+		{
+			// provision to reset added to enable connection to enterprise wifi. weird quirk in enterprise wifi connection. Seeehttps://github.com/EmotiBit/EmotiBit_FeatherWing/pull/250
+			restartMcu();
+		}
+		else if (input == EmotiBitFactoryTest::INIT_FACTORY_TEST)
 		{
 			uint32_t waitStarForBarcode = millis();
 			testingMode = TestingMode::FACTORY_TEST;
 			String ackString;
-			ackString += EmotiBitFactoryTest::MSG_START_CHAR;
+			ackString += EmotiBitSerial::MSG_START_CHAR;
 			EmotiBitFactoryTest::updateOutputString(ackString, EmotiBitFactoryTest::TypeTag::FIRMWARE_VERSION, firmware_version.c_str());
 			ackString = ackString.substring(0, ackString.length() - 1);
-			ackString += EmotiBitFactoryTest::MSG_TERM_CHAR;
+			ackString += EmotiBitSerial::MSG_TERM_CHAR;
 			Serial.print(ackString);
 
 			Serial.println("\nEntered FACTORY TEST MODE");
@@ -157,9 +162,9 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 			{
 				char input;
 				input = Serial.read();
-				if (input == EmotiBitFactoryTest::MSG_START_CHAR)
+				if (input == EmotiBitSerial::MSG_START_CHAR)
 				{
-					String msg = Serial.readStringUntil(EmotiBitFactoryTest::MSG_TERM_CHAR);
+					String msg = Serial.readStringUntil(EmotiBitSerial::MSG_TERM_CHAR);
 					Serial.print("Barcode msg: ");
 					Serial.println(msg);
 					String msgTypeTag = msg.substring(0, 2);
@@ -459,7 +464,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	now = millis();
 	
 	// prompt for serial input
-	Serial.println("Enter C to enter WiFi config edit mode (Add/ Delete WiFi creds)");
+	Serial.println("Enter " + String(EmotiBitSerial::Inputs::CRED_UPDATE) + " to enter WiFi config edit mode (Add/ Delete WiFi creds)");
 
 	while (!Serial.available() && millis() - now < 2000)
 	{
@@ -472,7 +477,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		char input;
 		input = Serial.read();
 
-		if (input == 'A')
+		if (input == EmotiBitSerial::Inputs::ADC_CORRECTION_MODE)
 		{
 #ifdef ADAFRUIT_FEATHER_M0
 			AdcCorrection adcCorrection;
@@ -488,21 +493,26 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 			}
 #endif
 		}
-		else if (input == 'C')
+		else if (input == EmotiBitSerial::Inputs::CRED_UPDATE)
 		{
 			Serial.println("Wifi Credential edit mode");
 			setupSdCard(false);
 			// ToDo: Find a better name that highlights "updating through Serial".
-			_emotibitConfigManager.updateWiFiCredentials(firmware_version, _configFilename, EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN, EmotiBitWiFi::getMaxNumCredentialAllowed());
+			if(_emotibitConfigManager.init(&SD))
+			{
+				_emotibitConfigManager.updateWiFiCredentials(firmware_version, _configFilename, EmotiBitWiFi::getMaxNumCredentialAllowed());
+			}
+			else
+			{
+				// could not attach init EmotiBitConfigManager
+				Serial.println("EmotiBitConfigManager initialization failed. Skipped credential update.");
+
+			}
 		}
-		else if (input == 'D')
+		else if (input == EmotiBitSerial::Inputs::DEBUG_MODE)
 		{
 			_debugMode = true;
 			Serial.println("\nENTERING DEBUG MODE\n");
-		}
-		else if (input == 'R')
-		{
-			restartMcu();
 		}
 		else
 		{
@@ -1293,7 +1303,7 @@ void EmotiBit::setupFailed(const String failureMode, int buttonPin, bool configF
 			timeSinceLastPrint = millis();
 			if (configFileError)
 			{
-				Serial.println("Press \"C\" to add/update cofig file.");
+				Serial.println("Press \"" + String(EmotiBitSerial::Inputs::CRED_UPDATE) + "\" to add/update cofig file.");
 			}
 		}
 		if (configFileError)
@@ -1301,9 +1311,18 @@ void EmotiBit::setupFailed(const String failureMode, int buttonPin, bool configF
 			if (Serial.available() >= 0)
 			{
 				char c = Serial.read();
-				if (c == 'C') 
+				if (c == EmotiBitSerial::Inputs::CRED_UPDATE) 
 				{
-					_emotibitConfigManager.updateWiFiCredentials(firmware_version, _configFilename, EmotiBitVersionController::SD_CARD_CHIP_SEL_PIN, EmotiBitWiFi::getMaxNumCredentialAllowed());
+					if(_emotibitConfigManager.init(&SD))
+					{
+						_emotibitConfigManager.updateWiFiCredentials(firmware_version, _configFilename, EmotiBitWiFi::getMaxNumCredentialAllowed());
+					}
+					else
+					{
+						// could not attach init EmotiBitConfigManager
+						Serial.println("EmotiBitConfigManager initialization failed. Skipped credential update.");
+
+					}
 				}
 			}
 		}
@@ -1372,13 +1391,7 @@ bool EmotiBit::setupSdCard(bool loadConfig)
 		// proceed to parse config file
 		Serial.print(F("\nLoading configuration file: "));
 		Serial.println(_configFilename);
-		if (!loadConfigFile(_configFilename)) {
-			Serial.println("SD card configuration file parsing failed.");
-			Serial.println("Create a file 'config.txt' with the following JSON:");
-			Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
-			// ToDo: verify if we need a separate case for FACTORY_TEST. We should always have a config file, since FACTORY TEST is a controlled environment
-			setupFailed("Config file not found", -1, true);
-		}
+		loadConfigFile(_configFilename);
 	}
 	return true;
 
@@ -3748,34 +3761,31 @@ void EmotiBit::sleep(bool i2cSetupComplete) {
 }
 
 // Loads the configuration from a file
-bool EmotiBit::loadConfigFile(const String &filename) {
-	// Open file for reading
-	File file = SD.open(filename);
-
-	if (!file) {
-		Serial.print("File ");
-		Serial.print(filename);
-		Serial.println(" not found");
-		return false;
-	}
-	
-	if (testingMode == TestingMode::ACUTE || testingMode == TestingMode::CHRONIC)
+bool EmotiBit::loadConfigFile(const String &filename) 
+{
+	if(!_emotibitConfigManager.init(&SD))
 	{
-		Serial.print("Parsing: ");
-		Serial.println(filename);
+		// could not initialize configManager
+		setupFailed("Failed to init configManager", -1, false);
+		return false;
 	}
 	// Allocate the memory pool on the stack.
 	// Don't forget to change the capacity to match your JSON document.
 	// Use arduinojson.org/assistant to compute the capacity.
-	//StaticJsonBuffer<1024> jsonBuffer;
 	StaticJsonDocument<1024> jsonDoc;
+	uint8_t status = _emotibitConfigManager.loadConfigFile(filename, jsonDoc);		
 
-	// Parse the root object
-	DeserializationError error = deserializeJson(jsonDoc, file);
-
-	if (error) {
-		Serial.println(F("Failed to parse config file"));
-		setupFailed("Failed to parse Config file contents", -1, true);
+	if (status) {
+		if(status == (uint8_t) EmotiBitConfigManager::Status::FILE_NOT_FOUND)
+		{
+			Serial.println("Create a file 'config.txt' with the following JSON:");
+			Serial.println("{\"WifiCredentials\": [{\"ssid\":\"SSSS\",\"password\" : \"PPPP\"}]}");
+			setupFailed("Config file not found", -1, true);
+		}
+		else if (status == (uint8_t) EmotiBitConfigManager::Status::FILE_PARSE_FAIL)
+		{
+			setupFailed("Failed to parse Config file contents", -1, true);
+		}
 		return false;
 	}
 
@@ -3825,8 +3835,6 @@ bool EmotiBit::loadConfigFile(const String &filename) {
 
 	// Close the file (File's destructor doesn't close the file)
 	// ToDo: Handle multiple credentials
-
-	file.close();
 	return true;
 }
 
@@ -4528,10 +4536,10 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 
 void EmotiBit::processFactoryTestMessages() 
 {
-	if (Serial.available() > 0 && Serial.read() == EmotiBitFactoryTest::MSG_START_CHAR)
+	if (Serial.available() > 0 && Serial.read() == EmotiBitSerial::MSG_START_CHAR)
 	{
 		Serial.print("FactoryTestMessage: ");
-		String msg = Serial.readStringUntil(EmotiBitFactoryTest::MSG_TERM_CHAR);
+		String msg = Serial.readStringUntil(EmotiBitSerial::MSG_TERM_CHAR);
 		String msgTypeTag = msg.substring(0, 2);
 		Serial.println(msgTypeTag);
 		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_ON))
