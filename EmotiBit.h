@@ -51,12 +51,13 @@ public:
 
 
 
-  String firmware_version = "1.9.0.feat-FtpServer.1.fix-emotibitEda.2";
+
+  String firmware_version = "1.9.0.feat-FtpServer.3.fix-emotibitEda.2";
 
 
 
 	TestingMode testingMode = TestingMode::NONE;
-	const bool DIGITAL_WRITE_DEBUG = true;
+	const bool DIGITAL_WRITE_DEBUG = false;
 #if defined (ARDUINO_FEATHER_ESP32)
 	const uint8_t DEBUG_OUT_PIN_0 = 26;
 	const uint8_t DEBUG_OUT_PIN_1 = 33;
