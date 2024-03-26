@@ -49,11 +49,13 @@ bool FileTransferManager::begin()
             Serial.print("FTP server started at IP: "); Serial.println(WiFi.localIP());
             Serial.println("Use a FTP client (Example FileZilla) to access EmotiBit file system.");
             Serial.println("------- FileZilla Isstructions -------");
-            Serial.println("Go on Manage site --> New site. Set the parameters as shown below: ");
+            Serial.println("File > Site Manager > New site. Enter a name for the site and Set the parameters as shown below: ");
             Serial.println("- Protocol = FTP");
-            Serial.println("- Select Use plain FTP (insecure)");
-            Serial.println("- Enter the login username and password, as set in the EmotiBit firmware");
-            Serial.println("- Under \"Trasfer settings\" tab > select maximun number of connection equal to 1");
+            Serial.println("- Host = [enter the IP address printed above]");
+            Serial.println("- Encription = Select Use plain FTP (insecure)");
+            Serial.println("- Logon Type = Ask for password");
+            Serial.println("- Enter the login username and password (when prompted), as set in the EmotiBit firmware (default username=ftp, password=ftp)");
+            Serial.println("- Under \"Transfer settings\" tab > Check \"Limit number of simultaneous connections\". Select \"Maximun number of connections:\" equal to 1");
             Serial.println("Now you can connect to your EmotiBit(server)!");
   
             // start FTP server
