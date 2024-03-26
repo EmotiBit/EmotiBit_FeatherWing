@@ -53,7 +53,7 @@ public:
 
 
 
-  String firmware_version = "1.10.0.feat-FtpServer.4.fix-emotibitEda.2";
+  String firmware_version = "1.11.0";
 
 
 
