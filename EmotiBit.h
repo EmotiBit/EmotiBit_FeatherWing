@@ -36,6 +36,7 @@
 #include "EmotiBitNvmController.h"
 #include "heartRate.h"
 #include "FileTransferManager.h"
+#include "EmotiBitConfigManager.h"
 
 class EmotiBit {
   
@@ -52,7 +53,7 @@ public:
 
 
 
-  String firmware_version = "1.9.0.feat-FtpServer.4.fix-emotibitEda.2";
+  String firmware_version = "1.10.0.feat-FtpServer.4.fix-emotibitEda.2";
 
 
 
@@ -283,6 +284,7 @@ public:
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
 	FileTransferManager _fileTransferManager;
+	EmotiBitConfigManager _emotibitConfigManager;
 
 	int _emotiBitSystemConstants[(int)SystemConstants::length];
 	float adcRes;
@@ -429,8 +431,8 @@ public:
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;
 
-	void setupFailed(const String failureMode, int buttonPin = -1);
-	bool setupSdCard();
+	void setupFailed(const String failureMode, int buttonPin = -1, bool configFileError = false);
+	bool setupSdCard(bool loadConfig = true);
 	void updateButtonPress();
 	void sleep(bool i2cSetupComplete = true);
 	void startTimer(int frequencyHz);
@@ -522,6 +524,8 @@ public:
 	 * @brief Function to perform a software reset on the MCU
 	 */
 	void restartMcu();
+	
+	
 	// ----------- END ino refactoring ---------------
 
 	
