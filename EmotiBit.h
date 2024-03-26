@@ -35,6 +35,7 @@
 #include "EmotiBitVariants.h"
 #include "EmotiBitNvmController.h"
 #include "heartRate.h"
+#include "FileTransferManager.h"
 #include "EmotiBitConfigManager.h"
 
 class EmotiBit {
@@ -51,7 +52,8 @@ public:
 
 
 
-  String firmware_version = "1.9.0.feat-sdCardWiFiCredentials.18";
+
+  String firmware_version = "1.11.0";
 
 
 
@@ -281,6 +283,7 @@ public:
 	MLX90632 thermopile;
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
+	FileTransferManager _fileTransferManager;
 	EmotiBitConfigManager _emotibitConfigManager;
 
 	int _emotiBitSystemConstants[(int)SystemConstants::length];
