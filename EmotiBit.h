@@ -53,7 +53,8 @@ public:
 
 
 
-  String firmware_version = "1.11.0";
+  String firmware_version = "1.11.1";
+
 
 
 

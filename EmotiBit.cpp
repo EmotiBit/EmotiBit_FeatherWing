@@ -3363,7 +3363,7 @@ void EmotiBit::processHeartRate()
 
 			// Add packets to output
 			addPacket(beatTime, EmotiBitPacket::TypeTag::INTER_BEAT_INTERVAL, &interBeatInterval, APERIODIC_DATA_LEN);
-			addPacket(beatTime, EmotiBitPacket::TypeTag::HEART_RATE, &heartRate, APERIODIC_DATA_LEN);
+			addPacket(beatTime, EmotiBitPacket::TypeTag::HEART_RATE, &heartRate, APERIODIC_DATA_LEN, 2);
 				
 			// reset interBeatCount
 			interBeatSampleCount = 0;
