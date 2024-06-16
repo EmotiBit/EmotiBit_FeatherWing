@@ -1,6 +1,6 @@
 /*
 This example tests the LEDs on EmotiBit using the Led Controller class.
-The LEDs on EmotiBit should sequentially turn ON and then OFF.
+The LEDs on the EmotiBit can be toggled ON/OFF using serial prompts that leverage Factory test prompts.
 Tested with EmotiBit v5+Feather ESP32 Huzzah+EmotiBit_V5
 ToDo: Test with Feather M0
 */
@@ -37,7 +37,7 @@ void setup()
   }
 
 // setup i2c
-// ToDo: Add support for Feather M0 i2c
+// ToDo: Add support for Feather M0 i2
 #ifdef ADAFRUIT_FEATHER_M0
 	Serial.println("Setting up I2C For M0...");
 	_EmotiBit_i2c = new TwoWire(&sercom1, EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
@@ -84,52 +84,6 @@ void setup()
 		}
 	}
   
-  // chance to override version
-  uint32_t timeSinceWait = millis();
-  Serial.println("To override auto version detection, choose a version below. Press 0 to continue");
-  Serial.println("3. V3\n4. V4\n5. V5\n6. V6");
-  while(!Serial.available())
-  {
-    delay(1000);
-  }
-
-  if(Serial.available())
-  {
-    String input = Serial.readString();
-    forceHwVersion = input.toInt();
-    if(forceHwVersion == 0)
-    {
-      // do nothing
-    }
-    else if(forceHwVersion == 6)
-    {
-      hwVersion = EmotiBitVersionController::EmotiBitVersion::V06A;
-    }
-    else if (forceHwVersion == 5)
-    {
-      hwVersion = EmotiBitVersionController::EmotiBitVersion::V05C;
-    }
-    else if (forceHwVersion == 4)
-    {
-      // ToDo: consider if we even need older EmotiBit versions
-      hwVersion = EmotiBitVersionController::EmotiBitVersion::V04A;
-    }
-    else if (forceHwVersion == 3)
-    {
-      hwVersion = EmotiBitVersionController::EmotiBitVersion::V03B;
-    }
-    else
-    {
-      Serial.println("Invalid input. Reset and start again");
-      while(1);
-    }
-    if(forceHwVersion)
-    {
-      Serial.println("forcing hw version: " + String(EmotiBitVersionController::getHardwareVersion(hwVersion)));
-    }
-  }
-
-
   // setup ledcontroller
   if(emotibitLedController.begin(_EmotiBit_i2c, hwVersion))
   {
@@ -145,19 +99,44 @@ void setup()
 
 void loop()
 {
-  // sequential ON
-  emotibitLedController.setState(EmotiBitLedController::Led::RED, true, true);
-  delay(500);
-  emotibitLedController.setState(EmotiBitLedController::Led::BLUE, true, true);
-  delay(500);
-  emotibitLedController.setState(EmotiBitLedController::Led::YELLOW, true, true);
-  delay(500);
-  
-  // sequential OFF
-  emotibitLedController.setState(EmotiBitLedController::Led::RED, false, true);
-  delay(500);
-  emotibitLedController.setState(EmotiBitLedController::Led::BLUE, false, true);
-  delay(500);
-  emotibitLedController.setState(EmotiBitLedController::Led::YELLOW, false, true);
-  delay(500);
+  Serial.println("Enter one of the following into the Srial input to test LED response to Factory test commands");
+  Serial.println("@+R~");
+  Serial.println("@-R~");
+  Serial.println("@+B~");
+  Serial.println("@-B~");
+  Serial.println("@+Y~");
+  Serial.println("@-Y~");
+  while(!Serial.available());
+  // ToDo: Make the EmotiBit::processFactoryTestMessages reusable outside the emotibit class. This is a copy + modification to use the local lecController object.
+  if (Serial.available() > 0 && Serial.read() == EmotiBitSerial::MSG_START_CHAR)
+	{
+		Serial.print("FactoryTestMessage: ");
+		String msg = Serial.readStringUntil(EmotiBitSerial::MSG_TERM_CHAR);
+		String msgTypeTag = msg.substring(0, 2);
+		Serial.println(msgTypeTag);
+		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_ON))
+		{
+			emotibitLedController.setState(EmotiBitLedController::Led::RED, true, true);
+		}
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_OFF))
+		{
+			emotibitLedController.setState(EmotiBitLedController::Led::RED, false, true);
+		}
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_ON))
+		{
+			emotibitLedController.setState(EmotiBitLedController::Led::BLUE, true, true);
+		}
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_OFF))
+		{
+			emotibitLedController.setState(EmotiBitLedController::Led::BLUE, false, true);
+		}
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_ON))
+		{
+			emotibitLedController.setState(EmotiBitLedController::Led::YELLOW, true, true);
+		}
+		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_OFF))
+		{
+			emotibitLedController.setState(EmotiBitLedController::Led::YELLOW, false, true);
+		}
+  }
 }
