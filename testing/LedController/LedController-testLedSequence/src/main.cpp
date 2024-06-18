@@ -37,7 +37,6 @@ void setup()
   }
 
 // setup i2c
-// ToDo: Add support for Feather M0 i2c
 #ifdef ADAFRUIT_FEATHER_M0
 	Serial.println("Setting up I2C For M0...");
 	_EmotiBit_i2c = new TwoWire(&sercom1, EmotiBitVersionController::EMOTIBIT_I2C_DAT_PIN, EmotiBitVersionController::EMOTIBIT_I2C_CLK_PIN);
