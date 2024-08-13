@@ -66,7 +66,7 @@ public:
      * @brief Setup the LedController
      * @param emotibitI2c i2c instance on EmotiBit
      * @param hwVersion EmotiBit Hardware Version
-     * @return true is setup successful, else false
+     * @return true if setup successful, else false
     */
    bool begin(TwoWire* emotibitI2c, EmotiBitVersionController::EmotiBitVersion hwVersion);
 
@@ -87,24 +87,17 @@ public:
     bool getState(Led led);
     
     /*!
-     * @brief Function to update the LEDs with the internal LED state. Call with caution as it may involce communicating with the driver.
-              EmotiBit stock FW only allows I2C communication during ISR.
-     * @return true is successful, else false
+     * @brief Function to update the LEDs with the internal LED state. Call with caution as it may involve communicating with the driver.
+              EmotiBit stock FW only allows I2C communication ONLY DURING ISR. Communicating outside ISR may cause collision on the I2C line.
+     * @return true if successful, else false
     */
     bool update();
-    
-    /*!
-     * @brief function to get the LED mapping to the NCP driver outputs
-     * @param led led to get the mapping for
-     * @return Returns the NCP driver LED value
-    */
-    uint8_t getNcpMappedLed(Led led);
 
 private:
     /*!
      * @brief Function to communicate with the NCP5623 driver
      * @return true if successful, else false
     */
-    bool updateNcp();
+    bool _updateNcp();
 };
 #endif

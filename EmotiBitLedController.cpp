@@ -77,14 +77,15 @@ bool EmotiBitLedController::getState(Led led)
     return _ledStatus[(int)led].state;
 }
 
-bool EmotiBitLedController::updateNcp()
+bool EmotiBitLedController::_updateNcp()
 {
     // update the internal class of the driver
     for (uint8_t i = 0;i<Led::length;i++)
     {
         if(_ledStatus[i].isChanged)
         {
-            ncp5623.setLED(getNcpMappedLed((Led)i), _ledStatus[i].state);
+            // ToDo: implement bounds check when referencing array
+            ncp5623.setLED(ledToNcpMap[i], _ledStatus[i].state);
         }
     }
     
@@ -97,11 +98,5 @@ bool EmotiBitLedController::updateNcp()
 bool EmotiBitLedController::update()
 {
     // this will become version controlled if we change the LED driver on EmotiBit
-    return updateNcp();
-}
-
-uint8_t EmotiBitLedController::getNcpMappedLed(Led led)
-{
-    // ToDo: bounds check
-    return ledToNcpMap[(int)led];
+    return _updateNcp();
 }
