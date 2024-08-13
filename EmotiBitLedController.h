@@ -40,20 +40,23 @@ public:
     {
         bool state = false;
         bool isChanged = false;
-    }_ledStatus[Led::length];
+    } _ledStatus[Led::length];
     
     /*!
      * @brief Map LedController to NCP led numbers.
               The NCP led number are taken from the driver implementation.
     */
-    const uint8_t ledToNcpMap[Led::length] = { 1,  // Red
-                                    2,  // Blue
-                                    3}; // Yellow
+    const uint8_t ledToNcpMap[Led::length] = 
+                                    { 
+                                        1,  // Red
+                                        2,  // Blue
+                                        3   // Yellow
+                                    }; 
 
     struct SettingsNCP5623{
         uint8_t driverCurrent = 1;
         uint8_t pwmVal = 8;
-    }settingsNCP5623;
+    } settingsNCP5623;
     
     NCP5623 ncp5623;
 
@@ -82,12 +85,6 @@ public:
      * @return state of the LED can be true (ON) or false (OFF)
     */
     bool getState(Led led);
-
-    /*!
-     * @brief Function to communicate with the NCP5623 driver
-     * @return true is successful, else false
-    */
-    bool updateNcp();
     
     /*!
      * @brief Function to update the LEDs with the internal LED state. Call with caution as it may involce communicating with the driver.
@@ -102,5 +99,12 @@ public:
      * @return Returns the NCP driver LED value
     */
     uint8_t getNcpMappedLed(Led led);
+
+private:
+    /*!
+     * @brief Function to communicate with the NCP5623 driver
+     * @return true if successful, else false
+    */
+    bool updateNcp();
 };
 #endif
