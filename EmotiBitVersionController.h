@@ -105,6 +105,7 @@ public:
 		V03B = 5,
 		V04A = 6,
 		V05C = 7,
+		V06A = 8,
 		length
 	};
 

@@ -12,7 +12,7 @@
 #include <EmotiBit_Si7013.h>
 #include <BMI160Gen.h>
 #include <MAX30105.h>
-#include <EmotiBit_NCP5623.h>
+#include "EmotiBitLedController.h"
 #include <SparkFun_MLX90632_Arduino_Library.h>
 #include "DoubleBufferFloat.h"
 #include <ArduinoJson.h>
@@ -53,7 +53,7 @@ public:
 
 
 
-  String firmware_version = "1.11.1";
+  String firmware_version = "1.11.1.feat-LedController.1";
 
 
 
@@ -249,13 +249,6 @@ public:
   	TIME_FILESYNC  //time taken for file syncing
   };
 
-  //TODO: Make enum classs for led's
-  enum class Led {
-	  RED = 1,
-	  BLUE,
-	  YELLOW
-  };
-
   enum class BattLevel {
 	  THRESHOLD_HIGH = 50, // Set thresholds for changing led indication on board for battery
 	  //THRESHOLD_MED  = 15,
@@ -280,7 +273,7 @@ public:
 	PPGSettings ppgSettings;
 	IMUSettings imuSettings;
 	MAX30105 ppgSensor;
-	NCP5623 led;
+	EmotiBitLedController led;
 	MLX90632 thermopile;
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
@@ -387,7 +380,7 @@ public:
 		bool MAX30101 = false;
 		bool BMI160 = false;
 		bool BMM150 = false;
-		bool NCP5623 = false;
+		bool NCP5623 = false;  // ToDo: Move this setting to the LED controller
 		bool MLX90632 = false;
 	} chipBegun;
 	

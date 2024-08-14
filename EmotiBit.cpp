@@ -578,23 +578,11 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	setSamplesAveraged(samplesAveraged);
 	Serial.println("\nSet Samples averaged:");
 	// setup LED DRIVER
-	Serial.print("Initializing NCP5623....");
+	Serial.print("Initializing LedController....");
 	// ToDo: add a success or fail return statement for LED driver
-	status = led.begin(*_EmotiBit_i2c);
+	status = led.begin(_EmotiBit_i2c, _hwVersion);
 	if (status)
 	{
-		// check if the LED current level is valid.
-		if (_emotiBitSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT] > 0)
-		{
-			led.setCurrent(_emotiBitSystemConstants[(int)SystemConstants::LED_DRIVER_CURRENT]);
-		}
-		led.setLEDpwm((uint8_t)Led::RED, 8);
-		led.setLEDpwm((uint8_t)Led::BLUE, 8);
-		led.setLEDpwm((uint8_t)Led::YELLOW, 8);
-		led.setLED(uint8_t(EmotiBit::Led::RED), false);
-		led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
-		led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
-		led.send();
 		chipBegun.NCP5623 = true;
 		if (testingMode == TestingMode::FACTORY_TEST)
 		{
@@ -948,16 +936,14 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		_edlDigFiltAlpha = pow(M_E, -2.f * PI * edaCrossoverFilterFreq / (_samplingRates.eda / _samplesAveraged.eda));
 	}
 	*/
-	led.setLED(uint8_t(EmotiBit::Led::RED), true);
-	led.send();
+	led.setState(EmotiBitLedController::Led::RED, true,true);
 	status = setupSdCard();
 	if (status)
 	{
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::SD_CARD, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 		// Give a brief delay to signify to the user "config file is being loaded"
 		delay(2000);
-		led.setLED(uint8_t(EmotiBit::Led::RED), false);
-		led.send();
+		led.setState(EmotiBitLedController::Led::RED, false, true);
 	}
 	// ToDo: verify if this else is ever reached.
 	else
@@ -974,8 +960,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 #endif
 	printEmotiBitInfo();
 	// turn BLUE on to signify we are trying to connect to WiFi
-	led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-	led.send();
+	led.setState(EmotiBitLedController::Led::BLUE, true, true);
 	uint16_t attemptDelay = 20000;  // in mS. ESP32 has been observed to take >10 seconds to resolve an enterprise connection
 	uint8_t maxAttemptsPerCred = 1;
 	uint32_t timeout = attemptDelay * maxAttemptsPerCred * _emotiBitWiFi.getNumCredentials() * 2; // Try cycling through all credentials at least 2x before giving up and trying a restart
@@ -996,8 +981,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		// Could not connect to network. software restart and begin setup again.
 		restartMcu();
 	}
-	led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
-	led.send();
+	led.setState(EmotiBitLedController::Led::BLUE, false, true);
 	if (testingMode == TestingMode::FACTORY_TEST)
 	{
 		// Add Pass or fail
@@ -1671,10 +1655,10 @@ uint8_t EmotiBit::update()
 					timerStop(timer);
 					// turn OFF leds
 					// ToDo: Move this out of the #ifdef block. This behavior should be consistant across all Feathers.
-					led.setLED(uint8_t(EmotiBit::Led::RED), true);
-					led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-					led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-					led.send();					
+					led.setState(EmotiBitLedController::Led::RED, true);
+					led.setState(EmotiBitLedController::Led::BLUE, true);
+					led.setState(EmotiBitLedController::Led::YELLOW, true);
+					led.update();				
 					_fileTransferManager.begin();
 					// ToDo: Consider is this should be implemented outside the #ifdef block. Should FileTransferManager handle the MCU specific stuff?
 					while(1)
@@ -3222,9 +3206,9 @@ void EmotiBit::readSensors()
 					if (buttonPressed)
 					{
 						// Turn on the LEDs when the button is pressed
-						led.setLED(uint8_t(EmotiBit::Led::RED), true);
-						led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-						led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+						led.setState(EmotiBitLedController::Led::RED, true);
+						led.setState(EmotiBitLedController::Led::BLUE, true);
+						led.setState(EmotiBitLedController::Led::YELLOW, true);
 					}
 					else
 					{
@@ -3233,7 +3217,7 @@ void EmotiBit::readSensors()
 						{
 							// Connected to oscilloscope
 							// turn LED on
-							led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+							led.setState(EmotiBitLedController::Led::BLUE, true);
 						}
 						else
 						{
@@ -3250,11 +3234,11 @@ void EmotiBit::readSensors()
 								unsigned long timeNow = millis();
 								if (timeNow - wifiConnBlinkTimer < onTime)
 								{
-									led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
+									led.setState(EmotiBitLedController::Led::BLUE, true);
 								}
 								else if (timeNow - wifiConnBlinkTimer < totalTime)
 								{
-									led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+									led.setState(EmotiBitLedController::Led::BLUE, false);
 								}
 								else
 								{
@@ -3265,18 +3249,18 @@ void EmotiBit::readSensors()
 							{
 								// not connected to wifi
 								// turn LED off
-								led.setLED(uint8_t(EmotiBit::Led::BLUE), false);
+								led.setState(EmotiBitLedController::Led::BLUE, false);
 							}
 						}
 
 						// Battery LED
 						if (battIndicationSeq)
 						{
-							led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
+							led.setState(EmotiBitLedController::Led::YELLOW, true);
 						}
 						else
 						{
-							led.setLED(uint8_t(EmotiBit::Led::YELLOW), false);
+							led.setState(EmotiBitLedController::Led::YELLOW, false);
 						}
 
 						// Recording status LED
@@ -3285,17 +3269,17 @@ void EmotiBit::readSensors()
 							static uint32_t recordBlinkDuration = millis();
 							if (millis() - recordBlinkDuration >= 500)
 							{
-								led.setLED(uint8_t(EmotiBit::Led::RED), !led.getLED(uint8_t(EmotiBit::Led::RED)));
+								led.setState(EmotiBitLedController::Led::RED, !led.getState(EmotiBitLedController::Led::RED));
 								recordBlinkDuration = millis();
 							}
 						}
-						else if (!_sdWrite && led.getLED(uint8_t(EmotiBit::Led::RED)) == true)
+						else if (!_sdWrite && led.getState(EmotiBitLedController::Led::RED) == true)
 						{
-							led.setLED(uint8_t(EmotiBit::Led::RED), false);
+							led.setState(EmotiBitLedController::Led::RED, false);
 						}
 					}
 				}
-				led.send();
+				led.update();
 			}
 			ledCounter++;
 
@@ -3506,10 +3490,10 @@ void EmotiBit::sleep(bool i2cSetupComplete) {
 	if (i2cSetupComplete)
 	{
 		// Turn on all the LEDs to indicate hibernate started
-		led.setLED(uint8_t(EmotiBit::Led::RED), true);
-		led.setLED(uint8_t(EmotiBit::Led::BLUE), true);
-		led.setLED(uint8_t(EmotiBit::Led::YELLOW), true);
-		led.send();
+		led.setState(EmotiBitLedController::Led::RED, true);
+		led.setState(EmotiBitLedController::Led::BLUE, true);
+		led.setState(EmotiBitLedController::Led::YELLOW, true);
+		led.update();
 		chipBegun.MAX30101 = false;
 		chipBegun.BMM150 = false;
 		chipBegun.BMI160 = false;
@@ -4337,27 +4321,27 @@ void EmotiBit::processFactoryTestMessages()
 		Serial.println(msgTypeTag);
 		if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_ON))
 		{
-			led.setLED((uint8_t)EmotiBit::Led::RED, true);
+			led.setState(EmotiBitLedController::Led::RED, true);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_RED_OFF))
 		{
-			led.setLED((uint8_t)EmotiBit::Led::RED, false);
+			led.setState(EmotiBitLedController::Led::RED, false);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_ON))
 		{
-			led.setLED((uint8_t)EmotiBit::Led::BLUE, true);
+			led.setState(EmotiBitLedController::Led::BLUE, true);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_BLUE_OFF))
 		{
-			led.setLED((uint8_t)EmotiBit::Led::BLUE, false);
+			led.setState(EmotiBitLedController::Led::BLUE, false);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_ON))
 		{
-			led.setLED((uint8_t)EmotiBit::Led::YELLOW, true);
+			led.setState(EmotiBitLedController::Led::YELLOW, true);
 		}
 		else if (msgTypeTag.equals(EmotiBitFactoryTest::TypeTag::LED_YELLOW_OFF))
 		{
-			led.setLED((uint8_t)EmotiBit::Led::YELLOW, false);
+			led.setState(EmotiBitLedController::Led::YELLOW, false);
 		}
 		else if (msgTypeTag.equals(EmotiBitPacket::TypeTag::MODE_HIBERNATE))
 		{
