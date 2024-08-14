@@ -53,7 +53,7 @@ public:
 
 
 
-  String firmware_version = "1.11.1.feat-LedController.1";
+  String firmware_version = "1.12.0";
 
 
 
