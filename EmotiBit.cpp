@@ -989,11 +989,13 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::WIFI, EmotiBitFactoryTest::TypeTag::TEST_PASS);
 	}
 	Serial.println(" WiFi setup Completed");
+	#ifdef ARDUINO_FEATHER_ESP32
 	Serial.println("Setting up FTP");
 	Serial.println("Setting Protocol");
   	_fileTransferManager.setProtocol(FileTransferManager::Protocol::FTP);
   	Serial.println("Setting Auth");
   	_fileTransferManager.setFtpAuth("ftp", "ftp");
+	#endif
 
 	setPowerMode(PowerMode::NORMAL_POWER);
 	typeTags[(uint8_t)EmotiBit::DataType::EDA] = EmotiBitPacket::TypeTag::EDA;

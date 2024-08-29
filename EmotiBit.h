@@ -35,7 +35,9 @@
 #include "EmotiBitVariants.h"
 #include "EmotiBitNvmController.h"
 #include "heartRate.h"
+#ifdef ARDUINO_FEATHER_ESP32
 #include "FileTransferManager.h"
+#endif
 #include "EmotiBitConfigManager.h"
 
 class EmotiBit {
@@ -53,7 +55,7 @@ public:
 
 
 
-  String firmware_version = "1.12.0";
+  String firmware_version = "1.12.0.fix-featherM0Mem.1";
 
 
 
@@ -277,7 +279,9 @@ public:
 	MLX90632 thermopile;
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
+	#ifdef ARDUINO_FEATHER_ESP32
 	FileTransferManager _fileTransferManager;
+	#endif
 	EmotiBitConfigManager _emotibitConfigManager;
 
 	int _emotiBitSystemConstants[(int)SystemConstants::length];
