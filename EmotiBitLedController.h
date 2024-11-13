@@ -18,6 +18,7 @@
 #include <Arduino.h>
 #include "EmotiBitVersionController.h"
 #include "EmotiBit_NCP5623.h"
+#include "KTD2026.h"
 
 class EmotiBitLedController
 {
@@ -59,6 +60,7 @@ public:
     } settingsNCP5623;
     
     NCP5623 ncp5623;
+    KTD2026* ktd2026b = nullptr;
 
 public:
 
@@ -99,5 +101,7 @@ private:
      * @return true if successful, else false
     */
     bool _updateNcp();
+    bool _updateKtd2026();
+    EmotiBitVersionController::EmotiBitVersion _hwVersion;
 };
 #endif
