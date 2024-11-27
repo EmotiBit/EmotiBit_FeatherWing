@@ -42,20 +42,10 @@ bool EmotiBitLedController::begin(TwoWire* emotibitI2c, EmotiBitVersionControlle
         Serial.println("initializing KTD2026");
         ktd2026b = new KTD2026(KTD2026B_I2C_ADDRESS, emotibitI2c);
         status = ktd2026b->begin();
-        ktd2026b->setEnabled();
-        // todo: move the following to update()
-        ktd2026b->setChannel1();
-        delay(500);
-        ktd2026b->setChannel2();
-        delay(500);
-        ktd2026b->setChannel3();
-        delay(500);
-        ktd2026b->resetChannel1();
-        delay(500);
-        ktd2026b->resetChannel2();
-        delay(500);
-        ktd2026b->resetChannel3();
-        delay(500);
+        ktd2026b->setEnable();
+        ktd2026b->setChannelCurrent(KTD2026::Channel::CH1, settingsKTD2026.iOut);  // setting current to 2mA. value = 2mA/24mA * 192 steps = 16 steps = 0x10
+        ktd2026b->setChannelCurrent(KTD2026::Channel::CH2, settingsKTD2026.iOut);
+        ktd2026b->setChannelCurrent(KTD2026::Channel::CH3, settingsKTD2026.iOut);
     }
     else
     {
@@ -92,8 +82,43 @@ bool EmotiBitLedController::begin(TwoWire* emotibitI2c, EmotiBitVersionControlle
 
 bool EmotiBitLedController::setState(Led led, bool state, bool updateNow)
 {
-    _ledStatus[(int)led].state = state;
-    _ledStatus[(int)led].isChanged = true;
+    if((uint8_t) _hwVersion > (uint8_t)EmotiBitVersionController::EmotiBitVersion::V06A)
+    {
+        KTD2026::LedMode mode;
+        KTD2026::Channel channel = ledToKtdMap[(uint8_t)led]; // use the map to convert EmotiBit LED to KTD2026 channel
+        if(state)
+        {
+            mode = KTD2026::LedMode::ALWAYS_ON;
+        }
+        else
+        {
+            mode = KTD2026::LedMode::ALWAYS_OFF;
+        }
+        // switch(led)
+        // {
+        //     case Led::RED:
+        //         channel = KTD2026::Channel::CH1;
+        //         break;
+        //     case Led::BLUE:
+        //         channel = KTD2026::Channel::CH2;
+        //         break;
+        //     case Led::YELLOW:
+        //         channel = KTD2026::Channel::CH3;
+        //         break;
+        //     default:
+        //         return false;
+        // }
+        bool status = ktd2026b->updateChannelMode(channel, mode);
+        if(!status)
+        {
+            return false;
+        }
+    }
+    else
+    {
+        _ledStatus[(int)led].state = state;
+        _ledStatus[(int)led].isChanged = true;
+    }
     if(updateNow)
     {
         return update();
@@ -103,7 +128,32 @@ bool EmotiBitLedController::setState(Led led, bool state, bool updateNow)
 
 bool EmotiBitLedController::getState(Led led)
 {
-    return _ledStatus[(int)led].state;
+    if((uint8_t) _hwVersion > (uint8_t)EmotiBitVersionController::EmotiBitVersion::V06A)
+    {
+        uint8_t mask = 0b00000011;
+        uint8_t channelModeReg = ktd2026b->getChannelControl();
+        switch(led)
+        {
+            case Led::BLUE:  // shift by 2; 0b00001100
+                mask = mask << 2;
+                break;
+            case Led::YELLOW: // shift by 4; 0b00110000
+                mask = mask << 4;
+                break;
+        }
+        if(channelModeReg & mask)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return _ledStatus[(int)led].state;
+    }    
 }
 
 bool EmotiBitLedController::_updateNcp()
@@ -126,34 +176,10 @@ bool EmotiBitLedController::_updateNcp()
 
 bool EmotiBitLedController::_updateKtd2026()
 {
-    // ToDo: do a better job
-    for (uint8_t i = 0;i<Led::length;i++)
+    uint8_t status = ktd2026b->sendChannelControl();
+    if(status)
     {
-        if(_ledStatus[i].isChanged)
-        {
-            if (i==0)
-            {
-                if( _ledStatus[i].state)
-                    ktd2026b->setChannel1();
-                else
-                    ktd2026b->resetChannel1();
-            }
-            else if (i==1)
-            {
-                if( _ledStatus[i].state)
-                    ktd2026b->setChannel3();
-                else
-                    ktd2026b->resetChannel3();
-            }
-            else if (i==2)
-            {
-                if( _ledStatus[i].state)
-                    ktd2026b->setChannel2();
-                else
-                    ktd2026b->resetChannel2();
-            }
-            _ledStatus[i].isChanged = false;
-        }
+        return false;
     }
     return true;
 }
