@@ -76,7 +76,7 @@ public:
     }settingsKTD2026;
 
     NCP5623 ncp5623; //<! instance of NCP5623
-    KTD2026* ktd2026b = nullptr;  //<! instance of KTD2026
+    KTD2026* ktd2026b = new KTD2026();  //<! instance of KTD2026
 
 public:
 
@@ -110,6 +110,26 @@ public:
      * @return true if successful, else false
     */
     bool update();
+
+    /*!
+        @brief Set HW version in the LedController class
+        @param version EmotiBit HW version
+        @return True is set successfully, else false
+    */
+    bool setHwVersion(EmotiBitVersionController::EmotiBitVersion version)
+    {
+        _hwVersion = version;
+        return true;
+    }
+
+    /*!
+        @brief Get the HW version set in the LedController class
+        @return HW version
+    */
+    EmotiBitVersionController::EmotiBitVersion getHeWVersion()
+    {
+        return _hwVersion;
+    }
 
 private:
     /*!

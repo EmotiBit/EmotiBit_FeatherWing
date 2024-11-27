@@ -40,6 +40,11 @@ bool EmotiBitLedController::begin(TwoWire* emotibitI2c, EmotiBitVersionControlle
     if((uint8_t) _hwVersion > (uint8_t)EmotiBitVersionController::EmotiBitVersion::V06A)
     {
         Serial.println("initializing KTD2026");
+        if(ktd2026b != nullptr)
+        {
+            delete ktd2026b;
+            ktd2026b = nullptr;
+        }
         ktd2026b = new KTD2026(KTD2026B_I2C_ADDRESS, emotibitI2c);
         status = ktd2026b->begin();
         ktd2026b->setEnable();
@@ -94,6 +99,7 @@ bool EmotiBitLedController::setState(Led led, bool state, bool updateNow)
         {
             mode = KTD2026::LedMode::ALWAYS_OFF;
         }
+        //Serial.print("Channel: "); Serial.print((uint8_t)channel); Serial.print("\tmode: "); Serial.println((uint8_t)mode);
         bool status = ktd2026b->updateChannelMode(channel, mode);
         if(!status)
         {
@@ -116,18 +122,20 @@ bool EmotiBitLedController::getState(Led led)
 {
     if((uint8_t) _hwVersion > (uint8_t)EmotiBitVersionController::EmotiBitVersion::V06A)
     {
-        uint8_t mask = 0b00000011;
+        uint8_t mask = 0b00000011;  // defaults to mask for Channel 1
         uint8_t channelModeReg = ktd2026b->getChannelControl();
+        //Serial.print("Channel control: 0x"); Serial.println(channelModeReg, HEX);
         switch(led)
         {
-            case Led::BLUE:  // shift by 2; 0b00001100
+            case Led::BLUE:  // shift by 2; 0b00001100, for channel 2
                 mask = mask << 2;
                 break;
-            case Led::YELLOW: // shift by 4; 0b00110000
+            case Led::YELLOW: // shift by 4; 0b00110000, for channel 3
                 mask = mask << 4;
                 break;
         }
-        if(channelModeReg & mask)
+        //Serial.print("getState mask: 0x"); Serial.println(mask, HEX);
+        if((channelModeReg & mask))
         {
             return true;
         }
