@@ -94,20 +94,6 @@ bool EmotiBitLedController::setState(Led led, bool state, bool updateNow)
         {
             mode = KTD2026::LedMode::ALWAYS_OFF;
         }
-        // switch(led)
-        // {
-        //     case Led::RED:
-        //         channel = KTD2026::Channel::CH1;
-        //         break;
-        //     case Led::BLUE:
-        //         channel = KTD2026::Channel::CH2;
-        //         break;
-        //     case Led::YELLOW:
-        //         channel = KTD2026::Channel::CH3;
-        //         break;
-        //     default:
-        //         return false;
-        // }
         bool status = ktd2026b->updateChannelMode(channel, mode);
         if(!status)
         {
