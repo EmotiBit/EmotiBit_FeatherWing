@@ -2,7 +2,8 @@ f="EmotiBit_FeatherWing_depends.txt"
 script_name=$(basename "$0")
 echo "**** $script_name ****"
 echo "Script to read dependency list from $f and clone repos into ../"
-echo "ToDo: read/parse depends directly from library.properties"
+echo "ToDo: integrate passing $f into ExtractRepoNames.sh"
+./ExtractDepends.sh
 
 eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_ed25519
