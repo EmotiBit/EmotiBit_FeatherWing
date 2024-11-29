@@ -3,7 +3,7 @@ script_name=$(basename "$0")
 echo "**** $script_name ****"
 echo "Script to read dependency list from $f and checkout master branch for all repos"
 echo "ToDo: integrate passing $f into ExtractRepoNames.sh"
-./ExtractRepoNames.sh
+./ExtractDepends.sh
 
 eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_ed25519
