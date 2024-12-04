@@ -48,7 +48,7 @@ bool EmotiBitLedController::begin(TwoWire* emotibitI2c, EmotiBitVersionControlle
         ktd2026b = new KTD2026(KTD2026B_I2C_ADDRESS, emotibitI2c);
         status = ktd2026b->begin();
         ktd2026b->setEnable();
-        ktd2026b->setChannelCurrent(KTD2026::Channel::CH1, settingsKTD2026.iOut);  // setting current to 2mA. value = 2mA/24mA * 192 steps = 16 steps = 0x10
+        ktd2026b->setChannelCurrent(KTD2026::Channel::CH1, settingsKTD2026.iOut);
         ktd2026b->setChannelCurrent(KTD2026::Channel::CH2, settingsKTD2026.iOut);
         ktd2026b->setChannelCurrent(KTD2026::Channel::CH3, settingsKTD2026.iOut);
     }
@@ -57,7 +57,7 @@ bool EmotiBitLedController::begin(TwoWire* emotibitI2c, EmotiBitVersionControlle
         if((uint8_t) hwVersion > (uint8_t)EmotiBitVersionController::EmotiBitVersion::V05C)
         {
             
-            // EmotiBit HW v6+
+            // EmotiBit HW v6
             status = ncp5623.begin(*emotibitI2c, NCP5623_C_DEFAULT_ADDR);
             
         }

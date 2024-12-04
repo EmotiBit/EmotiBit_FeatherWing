@@ -137,6 +137,11 @@ private:
      * @return true if successful, else false
     */
     bool _updateNcp();
+
+    /*!
+        @brief Function to communicate with the KTD2026 driver
+        @return True if successful, else false
+    */
     bool _updateKtd2026();
     EmotiBitVersionController::EmotiBitVersion _hwVersion;
 };
