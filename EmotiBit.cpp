@@ -2,6 +2,48 @@
 #include "EmotiBitSerial.h"
 #include <math.h>
 
+#ifdef ARDUINO_FEATHER_ESP32
+  #include <BLEDevice.h>
+  #include <BLEServer.h>
+  #include <BLEUtils.h>
+  #include <BLE2902.h>
+  BLEServer* pServer = nullptr;
+  BLECharacteristic* pTxCharacteristic = nullptr;
+  bool deviceConnected = false;
+#endif
+
+void enableBluetooth() {
+	#ifdef ARDUINO_FEATHER_ESP32
+	  BLEDevice::init("EmotiBit_BLE");
+	  Serial.println("Bluetooth turned on.");
+	#endif
+	}
+
+	#ifdef ARDUINO_FEATHER_ESP32
+	class MyServerCallbacks: public BLEServerCallbacks {
+	  void onConnect(BLEServer* pServer) override {
+		deviceConnected = true;
+		Serial.println("BLE client connected");
+	  }
+	  void onDisconnect(BLEServer* pServer) override {
+		deviceConnected = false;
+		Serial.println("BLE client disconnected");
+	  }
+	};
+	#endif
+	
+	#ifdef ARDUINO_FEATHER_ESP32
+	class MyCallbacks : public BLECharacteristicCallbacks {
+	void onWrite(BLECharacteristic *pCharacteristic) override {
+		std::string rxValue = pCharacteristic->getValue();
+		if (rxValue.length() > 0) {
+		Serial.print("Received: ");
+		Serial.println(rxValue.c_str());
+		}
+	}
+	};
+	#endif
+
 //FlashStorage(samdFlashStorage, SamdStorageAdcValues);
 
 EmotiBit* myEmotiBit = nullptr;
@@ -110,7 +152,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 #endif
 
 #ifdef ARDUINO_FEATHER_ESP32
-	esp_bt_controller_disable();
+	//esp_bt_controller_disable();
 	// ToDo: assess similarity with btStop();
 	setCpuFrequencyMhz(CPU_HZ / 1000000); // 80MHz has been tested working to save battery life
 #endif
@@ -997,7 +1039,35 @@ uint8_t EmotiBit::setup(String firmwareVariant)
   	_fileTransferManager.setFtpAuth("ftp", "ftp");
 	#endif
 
-	setPowerMode(PowerMode::NORMAL_POWER);
+
+//	setPowerMode(PowerMode::NORMAL_POWER);
+	setPowerMode(PowerMode::WIRELESS_OFF);
+// Turn WiFi Off
+	if (getPowerMode() == PowerMode::WIRELESS_OFF)
+	{
+		Serial.println("WiFi Turned Off");
+	}
+	enableBluetooth();
+	#ifdef ARDUINO_FEATHER_ESP32
+	pServer = BLEDevice::createServer();
+	pServer->setCallbacks(new MyServerCallbacks());
+  
+	BLEService* pService = pServer->createService("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
+  
+	pTxCharacteristic = pService->createCharacteristic("6E400003-B5A3-F393-E0A9-E50E24DCCA9E", BLECharacteristic::PROPERTY_NOTIFY);
+	pTxCharacteristic->addDescriptor(new BLE2902());
+
+	BLECharacteristic* pRxCharacteristic = pService->createCharacteristic("6E400002-B5A3-F393-E0A9-E50E24DCCA9E", BLECharacteristic::PROPERTY_WRITE);
+	pRxCharacteristic->setCallbacks(new MyCallbacks());
+
+	pService->start();
+	pServer->getAdvertising()->start();
+  
+	Serial.println("Waiting a client connection to notify...");
+  #endif
+  
+
+
 	typeTags[(uint8_t)EmotiBit::DataType::EDA] = EmotiBitPacket::TypeTag::EDA;
 	typeTags[(uint8_t)EmotiBit::DataType::EDL] = EmotiBitPacket::TypeTag::EDL;
 	typeTags[(uint8_t)EmotiBit::DataType::EDR] = EmotiBitPacket::TypeTag::EDR;
@@ -1499,7 +1569,14 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 	static String packet;
 	static EmotiBitPacket::Header header;
 	int16_t dataStartChar = 0;
-	while (_emotiBitWiFi.readControl(packet) > 0)
+    static bool packetProcessed = false;
+
+    packet = String("307288,37502,1,RB,1,100,2025-03-10_17-11-06-086219");
+
+
+	//while (_emotiBitWiFi.readControl(packet) > 0)
+	if (!packetProcessed && packet.length() > 0)
+	//if (packet.length() > 0)
 	{
 		Serial.println(packet);
 		dataStartChar = EmotiBitPacket::getHeader(packet, header);
@@ -1584,6 +1661,7 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 			// Create a packet that can be logged with incrementing EmotiBit packet number
 			controlPackets += EmotiBitPacket::createPacket(header.typeTag, packetNumber++, packet.substring(dataStartChar, packet.length()), header.dataLength);
 		}
+		packetProcessed = true;  // Ensure this block won’t run again.
 	}
 }
 
@@ -3438,6 +3516,14 @@ void EmotiBit::sendData()
 			{
 				_emotiBitWiFi.sendData(_outDataPackets);
 			}
+
+			if (getPowerMode() == PowerMode::WIRELESS_OFF)
+			{
+        //if (deviceConnected && pTxCharacteristic != nullptr) {
+        //  pTxCharacteristic->setValue(_outDataPackets.c_str());
+        //  pTxCharacteristic->notify();
+        //}
+			}
 			//Serial.println("_emotiBitWiFi.sendData()");
 			writeSdCardMessage(_outDataPackets);
 			//Serial.println("writeSdCardMessage()");
@@ -3450,6 +3536,14 @@ void EmotiBit::sendData()
 		if (getPowerMode() == PowerMode::NORMAL_POWER)
 		{
 			_emotiBitWiFi.sendData(_outDataPackets);
+		}
+		if (getPowerMode() == PowerMode::WIRELESS_OFF)
+		{
+			//This is where we had the BLE code before moving it to the SD Card
+//			if (deviceConnected && pTxCharacteristic != nullptr) {
+//				pTxCharacteristic->setValue(_outDataPackets.c_str());
+//				pTxCharacteristic->notify();
+//			  }
 		}
 		writeSdCardMessage(_outDataPackets);
 		_outDataPackets = "";
@@ -3645,6 +3739,12 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 				Serial.println("writing to SD card");
 #endif // DEBUG
 				_dataFile.print(s.substring(firstIndex, lastIndex));
+				
+				String chunk = s.substring(firstIndex, lastIndex);
+				if (deviceConnected && pTxCharacteristic != nullptr) {
+					pTxCharacteristic->setValue(chunk.c_str());
+					pTxCharacteristic->notify();
+				  }
 				firstIndex = lastIndex;
 			}
 
