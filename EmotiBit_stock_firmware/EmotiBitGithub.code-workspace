@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"name": "EmotiBit_stock_firmware",
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"regex": "cpp",
+			"xlocale": "cpp",
+			"xstring": "cpp"
+		}
+	}
+}

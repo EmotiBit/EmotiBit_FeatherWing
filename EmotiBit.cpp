@@ -110,7 +110,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 #endif
 
 #ifdef ARDUINO_FEATHER_ESP32
-	esp_bt_controller_disable();
+	//esp_bt_controller_disable();
 	// ToDo: assess similarity with btStop();
 	setCpuFrequencyMhz(CPU_HZ / 1000000); // 80MHz has been tested working to save battery life
 #endif
@@ -952,6 +952,17 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		Serial.println(factoryTestSerialOutput);
 		sleep(true);
 	}
+
+	if (_emotibitBluetooth.begin(emotibitDeviceId))
+	{
+		setPowerMode(PowerMode::BLUETOOTH);
+		Serial.println("Bluetooth setup completed");
+	}
+	else{
+	Serial.println("Bluetooth setup failed");
+	#ifdef ARDUINO_FEATHER_ESP32
+	esp_bt_controller_disable();
+	#endif
 	//WiFi Setup;
 	Serial.print("\nSetting up WiFi\n");
 #if defined(ADAFRUIT_FEATHER_M0)
@@ -998,6 +1009,8 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	#endif
 
 	setPowerMode(PowerMode::NORMAL_POWER);
+	}
+
 	typeTags[(uint8_t)EmotiBit::DataType::EDA] = EmotiBitPacket::TypeTag::EDA;
 	typeTags[(uint8_t)EmotiBit::DataType::EDL] = EmotiBitPacket::TypeTag::EDL;
 	typeTags[(uint8_t)EmotiBit::DataType::EDR] = EmotiBitPacket::TypeTag::EDR;
@@ -1574,6 +1587,7 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_WIRELESS_OFF)) {
 				setPowerMode(EmotiBit::PowerMode::WIRELESS_OFF);
 			}
+			else if (header.typeT)
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_HIBERNATE)) {
 				setPowerMode(EmotiBit::PowerMode::HIBERNATE);
 			}
@@ -1747,7 +1761,7 @@ uint8_t EmotiBit::update()
 		dataSendTimer = millis();
 
 
-
+//maybe move into send data
 		if (_sendTestData)
 		{
 			appendTestData(_outDataPackets, _outDataPacketCounter);
@@ -3635,8 +3649,8 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 			firstIndex = 0;
 			while (firstIndex < s.length()) {
 				static int16_t lastIndex;
-				if (s.length() - firstIndex > MAX_SD_WRITE_LEN) {
-					lastIndex = firstIndex + MAX_SD_WRITE_LEN;
+				if (s.length() - firstIndex > MAX_SEND_LEN) { //used to be MAX_SD_WRITE_LEN
+					lastIndex = firstIndex + MAX_SEND_LEN;
 				}
 				else {
 					lastIndex = s.length();
@@ -4654,4 +4668,8 @@ void EmotiBit::restartMcu()
 #elif defined ADAFRUIT_FEATHER_M0
 	NVIC_SystemReset();
 #endif
+}
+
+void EmotiBit::nameSdCardFile(){
+
 }

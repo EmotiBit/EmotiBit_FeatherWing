@@ -17,6 +17,7 @@
 #include "DoubleBufferFloat.h"
 #include <ArduinoJson.h>
 #include "EmotiBitWiFi.h"
+#include "EmotiBitBluetooth.h"
 #include <SPI.h>
 #ifdef ARDUINO_FEATHER_ESP32
 #include <SD.h>
@@ -266,7 +267,8 @@ public:
 		MAX_LOW_POWER,			// data not sent, time-syncing accuracy low
 		LOW_POWER,					// data not sent, time-syncing accuracy high
 		NORMAL_POWER,				// data sending, time-syncing accuracy high
-		length
+		length,
+		BLUETOOTH
 	};
 
 	Si7013 tempHumiditySensor;
@@ -279,6 +281,7 @@ public:
 	MLX90632 thermopile;
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
+	EmotiBitBluetooth _emotibitBluetooth;
 	#ifdef ARDUINO_FEATHER_ESP32
 	FileTransferManager _fileTransferManager;
 	#endif
@@ -298,7 +301,8 @@ public:
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 2048;
 	static const uint16_t OUT_MESSAGE_TARGET_SIZE = 1024;
 	static const uint16_t DATA_SEND_INTERVAL = 100;
-	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
+//	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
+	static const uint16_t MAX_SEND_LEN = 512; // new max send length for splitting in send data, used to be "MAX_SD_WRITE_LEN"
 	static const uint16_t MAX_DATA_BUFFER_SIZE = 48;
 	static const uint16_t NORMAL_POWER_MODE_PACKET_INTERVAL = 200;
 	static const uint16_t LOW_POWER_MODE_PACKET_INTERVAL = 1000;
@@ -458,7 +462,7 @@ public:
 	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented
 	void writeSerialData(EmotiBit::DataType t);
 	void printEmotiBitInfo();
-	
+	void nameSdCardFile();
 
 	/**
 	 * Copies data buffer of the specified DataType into the passed array
