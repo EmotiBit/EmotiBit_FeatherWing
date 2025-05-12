@@ -267,8 +267,8 @@ public:
 		MAX_LOW_POWER,			// data not sent, time-syncing accuracy low
 		LOW_POWER,					// data not sent, time-syncing accuracy high
 		NORMAL_POWER,				// data sending, time-syncing accuracy high
-		length,
-		BLUETOOTH
+		BLUETOOTH,
+		length
 	};
 
 	Si7013 tempHumiditySensor;

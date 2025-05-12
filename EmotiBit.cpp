@@ -955,11 +955,13 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 
 	if (_emotibitBluetooth.begin(emotibitDeviceId))
 	{
+		// Bluetooth setup
 		setPowerMode(PowerMode::BLUETOOTH);
 		Serial.println("Bluetooth setup completed");
+		nameSdCardFile();
 	}
 	else{
-	Serial.println("Bluetooth setup failed");
+	Serial.println("Bluetooth setup failed"); //TODO can remove this in PR
 	#ifdef ARDUINO_FEATHER_ESP32
 	esp_bt_controller_disable();
 	#endif
@@ -1297,7 +1299,7 @@ bool EmotiBit::setupSdCard(bool loadConfig)
 #if defined ARDUINO_FEATHER_ESP32
 		Serial.println("ESP::: Reading SD-Card");
 		File dir;
-		dir = SD.open("/");
+		dir = SD.open("/"); // look here for files and grab everything
 		// taken from SD examples: listFiles
 		while (true)
 		{
@@ -1587,7 +1589,9 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_WIRELESS_OFF)) {
 				setPowerMode(EmotiBit::PowerMode::WIRELESS_OFF);
 			}
-			else if (header.typeT)
+			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_BLUETOOTH)) {
+				setPowerMode(EmotiBit::PowerMode::BLUETOOTH);
+			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_HIBERNATE)) {
 				setPowerMode(EmotiBit::PowerMode::HIBERNATE);
 			}
@@ -1764,7 +1768,7 @@ uint8_t EmotiBit::update()
 //maybe move into send data
 		if (_sendTestData)
 		{
-			appendTestData(_outDataPackets, _outDataPacketCounter);
+			appendTestData(_outDataPackets, _outDataPacketCounter); // add here for testing
 			if (getPowerMode() == PowerMode::NORMAL_POWER)
 			{
 				_emotiBitWiFi.sendData(_outDataPackets);
@@ -3226,6 +3230,35 @@ void EmotiBit::readSensors()
 						led.setState(EmotiBitLedController::Led::BLUE, true);
 						led.setState(EmotiBitLedController::Led::YELLOW, true);
 					}
+					//new if statment to check if we are in powermode
+					if (getPowerMode() == PowerMode::BLUETOOTH){
+						// Bluetooth connected status LED
+						if (_emotibitBluetooth.deviceConnected){
+							led.setState(EmotiBitLedController::Led::BLUE, true);
+						}
+						else {
+								// blink LED
+								static unsigned long onTime = 125; // msec
+								static unsigned long totalTime = 250; // msec changed to 250
+								static bool wifiConnectedBlinkState = false;
+
+								static unsigned long wifiConnBlinkTimer = millis();
+
+								unsigned long timeNow = millis();
+								if (timeNow - wifiConnBlinkTimer < onTime)
+								{
+									led.setState(EmotiBitLedController::Led::BLUE, true);
+								}
+								else if (timeNow - wifiConnBlinkTimer < totalTime)
+								{
+									led.setState(EmotiBitLedController::Led::BLUE, false);
+								}
+								else
+								{
+									wifiConnBlinkTimer = timeNow;
+								}
+						}
+					}
 					else
 					{
 						// WiFi connected status LED
@@ -3439,33 +3472,78 @@ void EmotiBit::sendData()
 {
 	for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
 	{
+		//Serial.print(_outDataPackets);
 		addPacket((EmotiBit::DataType) i);
 		if (_outDataPackets.length() > OUT_MESSAGE_TARGET_SIZE)
 		{
+			//writeSdCardMessage(_outDataPackets); //moved out of loop to test
+
+			static int16_t firstIndex;
+			firstIndex = 0;
+			while (firstIndex < _outDataPackets.length()) {
+				static int16_t lastIndex;
+				if (_outDataPackets.length() - firstIndex > MAX_SEND_LEN) { //used to be MAX_SD_WRITE_LEN
+					lastIndex = firstIndex + MAX_SEND_LEN;
+				}
+				else {
+					lastIndex = _outDataPackets.length();
+				}
 			// Avoid overrunning our reserve memory
 			//if (_outDataPackets.length() > 2000)
 			//{
 			//	Serial.println(_outDataPackets.length());
 			//}
 
+			String s = _outDataPackets.substring(firstIndex, lastIndex);
 			if (getPowerMode() == PowerMode::NORMAL_POWER)
 			{
-				_emotiBitWiFi.sendData(_outDataPackets);
+				_emotiBitWiFi.sendData(s);
 			}
 			//Serial.println("_emotiBitWiFi.sendData()");
-			writeSdCardMessage(_outDataPackets);
+			if (getPowerMode() == PowerMode::BLUETOOTH)
+			{
+				_emotibitBluetooth.sendData(s);
+				//_emotibitBluetooth.sendData("Hello World");
+				//Serial.println("sending data via bluetooth");
+			}
+			//writeSdCardMessage(s);
 			//Serial.println("writeSdCardMessage()");
-			_outDataPackets = "";
 
+				firstIndex = lastIndex;
+				//_outDataPackets = "";
+				_outDataPackets = "";
+
+			}
 		}
 	}
 	if (_outDataPackets.length() > 0)
 	{
+		//writeSdCardMessage(_outDataPackets); //moved out of loop to test
+		static int16_t firstIndex;
+		firstIndex = 0;
+		while (firstIndex < _outDataPackets.length()) {
+			static int16_t lastIndex;
+			if (_outDataPackets.length() - firstIndex > MAX_SEND_LEN) { //used to be MAX_SD_WRITE_LEN
+				lastIndex = firstIndex + MAX_SEND_LEN;
+			}
+			else {
+				lastIndex = _outDataPackets.length();
+			}
+		String s = _outDataPackets.substring(firstIndex, lastIndex);
 		if (getPowerMode() == PowerMode::NORMAL_POWER)
 		{
-			_emotiBitWiFi.sendData(_outDataPackets);
+			_emotiBitWiFi.sendData(s);
 		}
-		writeSdCardMessage(_outDataPackets);
+
+		if (getPowerMode() == PowerMode::BLUETOOTH)
+		{
+			_emotibitBluetooth.sendData(s);
+			//_emotibitBluetooth.sendData("Hello World");
+			//Serial.println("sending data via bluetooth");
+		}
+		writeSdCardMessage(s);
+		firstIndex = lastIndex;
+		}				
 		_outDataPackets = "";
 	}
 }
@@ -3746,6 +3824,11 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	{
 		Serial.println("PowerMode::WIRELESS_OFF");
 		_emotiBitWiFi.end();
+	}
+	else if (getPowerMode() == PowerMode::BLUETOOTH)
+	{
+		Serial.println("PowerMode::BLUETOOTH");
+		//TODO: we can turn on/off disable bluetooth here and wifi
 	}
 	else if (getPowerMode() == PowerMode::HIBERNATE)
 	{
@@ -4670,6 +4753,49 @@ void EmotiBit::restartMcu()
 #endif
 }
 
-void EmotiBit::nameSdCardFile(){
+void EmotiBit::nameSdCardFile() {
+    int maxSuffix = -1;
+    File dir = SD.open("/");
+    while (true) {
+        File entry = dir.openNextFile();
+        if (!entry) break;
+        String name = entry.name();
+        if (name.startsWith("BLUETOOTH_") && name.endsWith(".csv")) {
+            int underscore = name.lastIndexOf('_');
+            int dot = name.lastIndexOf('.');
+            if (underscore != -1 && dot != -1 && dot > underscore + 1) {
+                String numStr = name.substring(underscore + 1, dot);
+                int num = numStr.toInt();
+                if (num > maxSuffix) maxSuffix = num;
+            }
+        }
+        entry.close();
+    }
+    int nextSuffix = maxSuffix + 1;
+    char filename[32];
+    snprintf(filename, sizeof(filename), "/BLUETOOTH_%04d.csv", nextSuffix);
+    _sdCardFilename = String(filename);
+    Serial.print("Creating SD card file: ");
+    Serial.println(_sdCardFilename);
 
+	/*
+    // Write test line to the file
+    File testFile = SD.open(_sdCardFilename, FILE_WRITE);
+    if (testFile) {
+        testFile.print("test working for ");
+        testFile.println(nextSuffix);
+        testFile.close();
+        Serial.println("Test line written to SD card file.");
+    } else {
+        Serial.println("Failed to create SD card file!");
+    }*/
+      // Open the file for writing and set _sdWrite
+	  _dataFile = SD.open(_sdCardFilename, FILE_WRITE);
+	  if (_dataFile) {
+		  _sdWrite = true;
+		  Serial.println("SD card file opened.");
+	  } else {
+		  _sdWrite = false;
+		  Serial.println("Failed to open SD card");
+	  }
 }

@@ -9,7 +9,7 @@ uint8_t EmotiBitBluetooth::begin(const String& emotibitDeviceId)
 #ifdef BLUETOOTH_ENABLED
     _emotibitDeviceId = emotibitDeviceId;
     Serial.println("Bluetooth tag detected, turning on bluetooth.");
-    BLEDevice::init(_emotibitDeviceId.c_str());
+    BLEDevice::init(("EmotiBit: " + _emotibitDeviceId).c_str());
     pServer = BLEDevice::createServer();
     pServer->setCallbacks(new MyServerCallbacks(this));
     BLEService* pService = pServer->createService("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
@@ -37,6 +37,9 @@ void EmotiBitBluetooth::MyServerCallbacks::onDisconnect(BLEServer* pServer)
 {
     server -> deviceConnected = false;
     Serial.println("BLE client disconnected");
+    //need to restart advertising to allow new connections after disconnection
+    pServer->getAdvertising()->start();
+    Serial.println("Restarted BLE advertising");
 }
 
 void EmotiBitBluetooth::MyCallbacks::onWrite(BLECharacteristic *pCharacteristic) 
@@ -58,6 +61,8 @@ void EmotiBitBluetooth::sendData(const String &message)
     if (deviceConnected) {
         pTxCharacteristic->setValue(message.c_str());
         pTxCharacteristic->notify();
+        //Serial.print("Sent: ");
+        //Serial.println(message.c_str());
     }
     else {
         Serial.println("unable to send data.");
