@@ -3837,27 +3837,14 @@ void EmotiBit::updateBatteryIndication(float battPercent)
 	}
 }
 
+//used to access each type tag locally in EmotiBit Packet
+const char* typeTags[(uint8_t)EmotiBit::DataType::length];
+
 void EmotiBit::appendTestData(String &dataMessage, uint16_t &packetNumber)
 {
-	for (uint8_t t = ((uint8_t)EmotiBit::DataType::DATA_CLIPPING) + 1; t < (uint8_t)DataType::length; t++)
-	{
-		String payload;
-		int m = 5;
-		int n = 2;
-		for (int i = 0; i < m; i++)
-		{
-			int k;
-			for (int j = 0; j < n; j++)
-			{
-				if (i > 0 || j > 0)
-				{
-					payload += EmotiBitPacket::PAYLOAD_DELIMITER;
-				}
-				k = i * 250 / m + random(50);
-				payload += k;
-			}
-		}
-		dataMessage += EmotiBitPacket::createPacket(typeTags[t], packetNumber++, payload, m * n);
+	//Refactored to use EmotiBitPacket::appendTestDataMessage() to allow for cross platform testing
+	if (_sdWrite){ //only send test data if we are recording
+		EmotiBitPacket::appendTestDataMessage(dataMessage, packetNumber, typeTags, ((uint8_t)EmotiBit::DataType::DATA_CLIPPING) + 1, (uint8_t)EmotiBit::DataType::length);
 	}
 }
 
