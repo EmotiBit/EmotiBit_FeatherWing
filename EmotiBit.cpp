@@ -3838,7 +3838,6 @@ void EmotiBit::updateBatteryIndication(float battPercent)
 }
 
 //used to access each type tag locally in EmotiBit Packet
-const char* typeTags[(uint8_t)EmotiBit::DataType::length];
 
 void EmotiBit::appendTestData(String &dataMessage, uint16_t &packetNumber)
 {
