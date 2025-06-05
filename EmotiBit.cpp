@@ -3837,13 +3837,10 @@ void EmotiBit::updateBatteryIndication(float battPercent)
 	}
 }
 
-//used to access each type tag locally in EmotiBit Packet
-
 void EmotiBit::appendTestData(String &dataMessage, uint16_t &packetNumber)
 {
-	//Refactored to use EmotiBitPacket::appendTestDataMessage() to allow for cross platform testing
 	if (_sdWrite){ //only send test data if we are recording
-		EmotiBitPacket::appendTestDataMessage(dataMessage, packetNumber, typeTags, ((uint8_t)EmotiBit::DataType::DATA_CLIPPING) + 1, (uint8_t)EmotiBit::DataType::length);
+		EmotiBitPacket::appendTestDataMessage(dataMessage);
 	}
 }
 
