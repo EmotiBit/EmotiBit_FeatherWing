@@ -503,7 +503,7 @@ public:
 	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	
 
 	void updateBatteryIndication(float battPercent);
-	void appendTestData(String &dataMessage, uint16_t &packetNumber);
+	void setTestData(String &dataMessage);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
 	void processDebugInputs(String &debugPackets, uint16_t &packetNumber);
