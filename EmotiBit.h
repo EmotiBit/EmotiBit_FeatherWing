@@ -507,7 +507,7 @@ public:
 	* @brief Sets dataMessage to the test packet string
 	* @param dataMessage 
 	*/
-	void setTestData(String &dataMessage);
+	void addTestData(String &dataMessage);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
 	void processDebugInputs(String &debugPackets, uint16_t &packetNumber);

@@ -1750,7 +1750,7 @@ uint8_t EmotiBit::update()
 
 		if (_sendTestData)
 		{
-			setTestData(_outDataPackets);
+			addTestData(_outDataPackets);
 			if (getPowerMode() == PowerMode::NORMAL_POWER)
 			{
 				_emotiBitWiFi.sendData(_outDataPackets);
@@ -3837,7 +3837,7 @@ void EmotiBit::updateBatteryIndication(float battPercent)
 	}
 }
 
-void EmotiBit::setTestData(String &dataMessage)
+void EmotiBit::addTestData(String &dataMessage)
 {
 	if (_sdWrite){ //only send test data if we are recording
 		EmotiBitPacket::createTestDataPacket(dataMessage);
