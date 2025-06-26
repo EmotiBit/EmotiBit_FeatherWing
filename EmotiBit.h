@@ -504,7 +504,7 @@ public:
 
 	void updateBatteryIndication(float battPercent);
 	/**
-	* @brief Sets dataMessage to the test packet string
+	* @brief Adds test packet string to dataMessage
 	* @param dataMessage 
 	*/
 	void addTestData(String &dataMessage);
