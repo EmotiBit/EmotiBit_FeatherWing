@@ -1750,7 +1750,7 @@ uint8_t EmotiBit::update()
 
 		if (_sendTestData)
 		{
-			appendTestData(_outDataPackets, _outDataPacketCounter);
+			addTestData(_outDataPackets);
 			if (getPowerMode() == PowerMode::NORMAL_POWER)
 			{
 				_emotiBitWiFi.sendData(_outDataPackets);
@@ -3837,27 +3837,10 @@ void EmotiBit::updateBatteryIndication(float battPercent)
 	}
 }
 
-void EmotiBit::appendTestData(String &dataMessage, uint16_t &packetNumber)
+void EmotiBit::addTestData(String &dataMessage)
 {
-	for (uint8_t t = ((uint8_t)EmotiBit::DataType::DATA_CLIPPING) + 1; t < (uint8_t)DataType::length; t++)
-	{
-		String payload;
-		int m = 5;
-		int n = 2;
-		for (int i = 0; i < m; i++)
-		{
-			int k;
-			for (int j = 0; j < n; j++)
-			{
-				if (i > 0 || j > 0)
-				{
-					payload += EmotiBitPacket::PAYLOAD_DELIMITER;
-				}
-				k = i * 250 / m + random(50);
-				payload += k;
-			}
-		}
-		dataMessage += EmotiBitPacket::createPacket(typeTags[t], packetNumber++, payload, m * n);
+	if (_sdWrite){ //only send test data if we are recording
+		EmotiBitPacket::createTestDataPacket(dataMessage);
 	}
 }
 

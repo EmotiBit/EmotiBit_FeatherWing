@@ -55,7 +55,7 @@ public:
 
 
 
-  String firmware_version = "1.13.0";
+  String firmware_version = "1.14.0";
 
 
 
@@ -503,7 +503,11 @@ public:
 	size_t readData(EmotiBit::DataType t, float **data, uint32_t &timestamp);	
 
 	void updateBatteryIndication(float battPercent);
-	void appendTestData(String &dataMessage, uint16_t &packetNumber);
+	/**
+	* @brief Adds test packet string to dataMessage
+	* @param dataMessage 
+	*/
+	void addTestData(String &dataMessage);
 	bool createModePacket(String &modePacket, uint16_t &packetNumber);
 	void sendModePacket(String &sentModePacket, uint16_t &packetNumber);
 	void processDebugInputs(String &debugPackets, uint16_t &packetNumber);
