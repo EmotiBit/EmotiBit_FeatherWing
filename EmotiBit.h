@@ -298,7 +298,8 @@ public:
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 2048;
 	static const uint16_t OUT_MESSAGE_TARGET_SIZE = 1024;
 	static const uint16_t DATA_SEND_INTERVAL = 100;
-	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
+//	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
+	static const uint16_t MAX_SEND_LEN = 512; // new max send length for splitting in send data, used to be "MAX_SD_WRITE_LEN"
 	static const uint16_t MAX_DATA_BUFFER_SIZE = 48;
 	static const uint16_t NORMAL_POWER_MODE_PACKET_INTERVAL = 200;
 	static const uint16_t LOW_POWER_MODE_PACKET_INTERVAL = 1000;
@@ -424,7 +425,7 @@ public:
 	File _dataFile;
 	volatile bool _sdWrite;
 	PowerMode _powerMode;
-	bool _sendTestData = false;
+	bool _sendTestData = true;
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;

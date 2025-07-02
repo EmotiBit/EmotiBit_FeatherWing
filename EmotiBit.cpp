@@ -1746,7 +1746,11 @@ uint8_t EmotiBit::update()
 	{
 		dataSendTimer = millis();
 
-
+		bool stressTestEnabled = true;
+		if (stressTestEnabled)
+		{
+			delay(500);  // Add artificial delay to create stress conditions
+		}
 
 		if (_sendTestData)
 		{
@@ -3425,33 +3429,64 @@ void EmotiBit::sendData()
 {
 	for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
 	{
+		//Serial.print(_outDataPackets);
 		addPacket((EmotiBit::DataType) i);
 		if (_outDataPackets.length() > OUT_MESSAGE_TARGET_SIZE)
 		{
+			//writeSdCardMessage(_outDataPackets); //moved out of loop to test
+
+			static int16_t firstIndex;
+			firstIndex = 0;
+			while (firstIndex < _outDataPackets.length()) {
+				static int16_t lastIndex;
+				if (_outDataPackets.length() - firstIndex > MAX_SEND_LEN) { //used to be MAX_SD_WRITE_LEN
+					lastIndex = firstIndex + MAX_SEND_LEN;
+				}
+				else {
+					lastIndex = _outDataPackets.length();
+				}
 			// Avoid overrunning our reserve memory
 			//if (_outDataPackets.length() > 2000)
 			//{
 			//	Serial.println(_outDataPackets.length());
 			//}
 
+			String s = _outDataPackets.substring(firstIndex, lastIndex);
 			if (getPowerMode() == PowerMode::NORMAL_POWER)
 			{
-				_emotiBitWiFi.sendData(_outDataPackets);
+				_emotiBitWiFi.sendData(s);
 			}
-			//Serial.println("_emotiBitWiFi.sendData()");
-			writeSdCardMessage(_outDataPackets);
-			//Serial.println("writeSdCardMessage()");
-			_outDataPackets = "";
 
+			//writeSdCardMessage(s);
+			//Serial.println("writeSdCardMessage()");
+
+				firstIndex = lastIndex;
+				//_outDataPackets = ""; //ToDo determine if this is needed or if we should stay in this loop until all data over target size is split
+
+			}
 		}
 	}
 	if (_outDataPackets.length() > 0)
 	{
+		//writeSdCardMessage(_outDataPackets); //moved out of loop to test
+		static int16_t firstIndex;
+		firstIndex = 0;
+		while (firstIndex < _outDataPackets.length()) {
+			static int16_t lastIndex;
+			if (_outDataPackets.length() - firstIndex > MAX_SEND_LEN) { //used to be MAX_SD_WRITE_LEN
+				lastIndex = firstIndex + MAX_SEND_LEN;
+			}
+			else {
+				lastIndex = _outDataPackets.length();
+			}
+		String s = _outDataPackets.substring(firstIndex, lastIndex);
 		if (getPowerMode() == PowerMode::NORMAL_POWER)
 		{
-			_emotiBitWiFi.sendData(_outDataPackets);
+			_emotiBitWiFi.sendData(s);
 		}
-		writeSdCardMessage(_outDataPackets);
+		writeSdCardMessage(s);
+		firstIndex = lastIndex;
+		}				
 		_outDataPackets = "";
 	}
 }
@@ -3631,22 +3666,10 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 
 	if (_sdWrite && s.length() > 0) {
 		if (_dataFile) {
-			static int16_t firstIndex;
-			firstIndex = 0;
-			while (firstIndex < s.length()) {
-				static int16_t lastIndex;
-				if (s.length() - firstIndex > MAX_SD_WRITE_LEN) {
-					lastIndex = firstIndex + MAX_SD_WRITE_LEN;
-				}
-				else {
-					lastIndex = s.length();
-				}
 #ifdef DEBUG_GET_DATA
 				Serial.println("writing to SD card");
 #endif // DEBUG
-				_dataFile.print(s.substring(firstIndex, lastIndex));
-				firstIndex = lastIndex;
-			}
+			_dataFile.print(s);
 
 			static uint32_t syncTimer = millis();
 			if (millis() - syncTimer > targetFileSyncDelay)
