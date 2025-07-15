@@ -3673,6 +3673,20 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 
 	if (_sdWrite && s.length() > 0) {
 		if (_dataFile) {
+			if (s.length() > MAX_SEND_LEN)
+			{
+				Serial.println("Message too long for SD card write: ");
+				EmotiBitPacket::Header header = EmotiBitPacket::createHeader(
+					EmotiBitPacket::TypeTag::DATA_OVERFLOW,
+					millis(),
+					_outDataPacketCounter++,
+					1, 1, 100);
+				String data = String(s.length());
+				String errorPacket = EmotiBitPacket::createPacket(header, data);
+				Serial.println(errorPacket);
+				_dataFile.print(errorPacket);
+				return false; // ToDo: handle this case
+			}
 #ifdef DEBUG_GET_DATA
 				Serial.println("writing to SD card");
 #endif // DEBUG
