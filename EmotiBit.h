@@ -426,8 +426,8 @@ public:
 	volatile bool _sdWrite;
 	PowerMode _powerMode;
 	bool _sendTestData = false;
-	const char* testDataType = EmotiBitPacket::TestType::SAWTOOTH; // Default to SAWTOOTH
-	bool addSplitter = false; // Adds a splitter indicator to the data packets written to the SD Card
+	const char* testDataType = "Sawtooth"; // Default to Sawtooth
+	bool addSplitterIndicator = false; // Adds a indicator to the data packets written to the SD Card on when a split occurs
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;

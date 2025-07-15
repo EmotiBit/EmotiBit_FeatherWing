@@ -3446,7 +3446,7 @@ void EmotiBit::sendData()
 				String s = _outDataPackets.substring(firstIndex, lastIndex + 1);
 
 				// Write a split marker to SD card (for test/debug only)
-					if (addSplitter) {
+					if (addSplitterIndicator) {
 						writeSdCardMessage("\nS\n");
 					}
 
@@ -3484,7 +3484,7 @@ void EmotiBit::sendData()
 			String s = _outDataPackets.substring(firstIndex, lastIndex + 1);
 
 				// Write a split marker to SD card (for test/debug only)
-				if (addSplitter) {
+				if (addSplitterIndicator) {
 					writeSdCardMessage("\nS\n");
 				}
 
@@ -3995,7 +3995,7 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("Press Z to toggle ON splitter indicators");
 			Serial.println("Press > to toggle ON Send Test Data");
 			Serial.println("Press < to toggle OFF Send Test Data");
-			Serial.println("Press @ to toggle Splitter Test Data if Send Test Data is ON");
+			Serial.println("Press @ to toggle Packet Fixed Length Test if Send Test Data is ON");
 			Serial.println("Press # to toggle Sawtooth Test Data if Send Test Data is ON");
 		}
 		else if (c == ':')
@@ -4346,13 +4346,13 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 
 		else if (c == 'Z')
 		{
-			addSplitter = true;
+			addSplitterIndicator = true;
 			Serial.println("Adding Splitter Print");
 		}
 
 		else if (c == 'z')
 		{
-			addSplitter = false;
+			addSplitterIndicator = false;
 			Serial.println("Removing Splitter Print");
 		}
 
@@ -4363,13 +4363,13 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		}
 			else if (c == '@' && _sendTestData == true)
 			{
-				testDataType = EmotiBitPacket::TestType::SPLITTER;
+				testDataType = "Splitter";
 				Serial.println("TestDataType: SPLITTER");
 			}
 
 			else if (c == '#' && _sendTestData == true)
 			{
-				testDataType = EmotiBitPacket::TestType::SAWTOOTH;
+				testDataType = "Sawtooth";
 				Serial.println("TestDataType: SAWTOOTH");
 			}
 
