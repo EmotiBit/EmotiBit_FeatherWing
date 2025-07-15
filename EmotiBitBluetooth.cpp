@@ -12,13 +12,23 @@ uint8_t EmotiBitBluetooth::begin(const String& emotibitDeviceId)
     BLEDevice::init(("EmotiBit: " + _emotibitDeviceId).c_str());
     pServer = BLEDevice::createServer();
     pServer->setCallbacks(new MyServerCallbacks(this));
-    BLEService* pService = pServer->createService("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
-    pTxCharacteristic = pService->createCharacteristic("6E400003-B5A3-F393-E0A9-E50E24DCCA9E", BLECharacteristic::PROPERTY_NOTIFY);
-    pTxCharacteristic->addDescriptor(new BLE2902());
-    BLECharacteristic* pRxCharacteristic = pService->createCharacteristic("6E400002-B5A3-F393-E0A9-E50E24DCCA9E", BLECharacteristic::PROPERTY_WRITE);
-    pRxCharacteristic->setCallbacks(new MyCallbacks());
+    BLEService* pService = pServer->createService(EMOTIBIT_SERVICE_UUID);
+
+    pDataTxCharacteristic = pService->createCharacteristic(EMOTIBIT_DATA_TX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_NOTIFY);
+    pDataTxCharacteristic->addDescriptor(new BLE2902());
+
+    pDataRxCharacteristic = pService->createCharacteristic(EMOTIBIT_DATA_RX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_WRITE);
+    pDataRxCharacteristic->setCallbacks(new MyCallbacks());
+
+    pSyncTxCharacteristic = pService->createCharacteristic(EMOTIBIT_SYNC_TX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_NOTIFY);
+    pSyncTxCharacteristic->addDescriptor(new BLE2902());
+
+    pSyncRxCharacteristic = pService->createCharacteristic(EMOTIBIT_SYNC_RX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_WRITE);
+    pSyncRxCharacteristic->setCallbacks(new MyCallbacks());
+
     pService->start();
     pServer->getAdvertising()->start();
+    Serial.println("BLE advertising started");
     return 1;
 #else
     Serial.println("Bluetooth disabled.");
@@ -26,6 +36,7 @@ uint8_t EmotiBitBluetooth::begin(const String& emotibitDeviceId)
 #endif
 }
 
+//ToDO: consider splitting this function into two: one for sending data and another for sending sync data
 void EmotiBitBluetooth::MyServerCallbacks::onConnect(BLEServer* pServer)
 {
     server -> deviceConnected = true;
@@ -59,8 +70,8 @@ void EmotiBitBluetooth::setDeviceId(const String emotibitDeviceId)
 void EmotiBitBluetooth::sendData(const String &message)
 {
     if (deviceConnected) {
-        pTxCharacteristic->setValue(message.c_str());
-        pTxCharacteristic->notify();
+        pDataTxCharacteristic->setValue(message.c_str());
+        pDataTxCharacteristic->notify();
         //Serial.print("Sent: ");
         //Serial.println(message.c_str());
     }
