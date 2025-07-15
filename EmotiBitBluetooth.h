@@ -77,7 +77,13 @@ class EmotiBitBluetooth {
     * @param emotibitDeviceId
     */
     void setDeviceId(const String emotibitDeviceId); 
-    
+
+    /*!
+    * @brief Reads control messages from the BLE characteristic
+    * @param packet the control message packet
+    */
+    uint8_t readControl(String& packet);
+
     //void update();for when we sync data over BLE
     //move to emotibit
     //void sdCardFileNaming(); for when we choose bluetooth and there is no rb start time

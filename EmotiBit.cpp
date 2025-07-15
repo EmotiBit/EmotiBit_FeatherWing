@@ -1514,6 +1514,8 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 	static String packet;
 	static EmotiBitPacket::Header header;
 	int16_t dataStartChar = 0;
+	//use the following
+	//while (_emotiBitWiFi.readControl(packet) > 0 || _emotiBitBluetooth.readControl(packet) > 0)
 	while (_emotiBitWiFi.readControl(packet) > 0)
 	{
 		Serial.println(packet);

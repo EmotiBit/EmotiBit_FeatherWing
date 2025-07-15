@@ -1,5 +1,5 @@
 #include "EmotiBitBluetooth.h"
-
+//NOTE, remove ifdefs for bluetooth when we can manually choose to enable/disable bluetooth
 
 
 
@@ -78,4 +78,33 @@ void EmotiBitBluetooth::sendData(const String &message)
     else {
         Serial.println("unable to send data.");
     }
+}
+
+uint8_t EmotiBitBluetooth::readControl(String& packet)
+{
+    uint8_t numPackets = 0;
+#ifdef BLUETOOTH_ENABLED
+    if (deviceConnected)
+    {
+        std::string rxValue = pDataRxCharacteristic->getValue();
+        if (rxValue.length() > 0)
+        {
+            // Append new data to buffer
+            _receivedControlMessage += String(rxValue.c_str());
+
+            // Look for complete packets (delimited by EmotiBitPacket::PACKET_DELIMITER_CSV)
+            int delimIndex;
+            while ((delimIndex = _receivedControlMessage.indexOf(EmotiBitPacket::PACKET_DELIMITER_CSV)) != -1)
+            {
+                // Extract one packet
+                packet = _receivedControlMessage.substring(0, delimIndex + 1);
+                _receivedControlMessage = _receivedControlMessage.substring(delimIndex + 1);
+                numPackets++;
+                // Optionally: return after first packet if you want one-at-a-time behavior
+                return numPackets;
+            }
+        }
+    }
+#endif
+    return numPackets;
 }
