@@ -426,7 +426,7 @@ public:
 	PowerMode _powerMode;
 	bool _sendTestData = false;
 	const char* testDataType = "Sawtooth"; // Default to Sawtooth
-	bool addSplitterIndicator = false; // Adds a indicator to the data packets written to the SD Card on when a split occurs
+	bool addSplitterIndicator = false; // Adds an indicator to the data packets written to the SD Card on when a split occurs
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;

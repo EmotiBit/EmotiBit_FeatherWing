@@ -3883,7 +3883,7 @@ void EmotiBit::updateBatteryIndication(float battPercent)
 
 void EmotiBit::addTestData(String &dataMessage)
 {
-	if (_sdWrite){ //only send test data if we are recording
+	if (_sdWrite) {//only send test data if we are recording
 		EmotiBitPacket::createTestDataPacket(dataMessage, testDataType);
 	}
 }
