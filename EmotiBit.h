@@ -35,6 +35,7 @@
 #include "EmotiBitVariants.h"
 #include "EmotiBitNvmController.h"
 #include "heartRate.h"
+#include "BrainflowSpO2Algorithm.h"
 #ifdef ARDUINO_FEATHER_ESP32
 #include "FileTransferManager.h"
 #endif
@@ -55,7 +56,7 @@ public:
 
 
 
-  String firmware_version = "1.14.0";
+  String firmware_version = "1.14.0-feat-spo2.0";
 
 
 
@@ -376,7 +377,8 @@ public:
 		bool debug = false;
 		bool battery = true;
 		bool heartRate = true; // Note: we may want to move this to a separarte flag someday, for controlling derivative signals
-		bool edrMetrics = true;
+		bool spo2 = true;
+    bool edrMetrics = true;
 	} acquireData;
 
 	struct ChipBegun {

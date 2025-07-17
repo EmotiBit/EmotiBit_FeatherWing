@@ -3363,6 +3363,50 @@ void EmotiBit::processHeartRate()
 	//addPacket(timestamp, FIR_FILT_DATA, iirFiltData, dataSize, true);
 }
 
+void EmotiBit::processSpO2()
+{
+  static uint8_t irDataIndex = 0;
+  static uint8_t redDataIndex = 0;
+  static float irDataBuffer[SPO2_PPG_BUFFER_SIZE];
+  static float redDataBuffer[SPO2_PPG_BUFFER_SIZE];
+
+  float* ir_data;
+  float* red_data;
+	uint16_t irDataSize;
+  uint16_t redDataSize;
+	uint32_t timestamp;
+	const static size_t APERIODIC_DATA_LEN = 1;  //used in packet header
+	const static float timePeriod = (1.f / _samplingRates.ppg) * 1000; // in mS
+	float spo2;
+  
+	irDataSize = dataDoubleBuffers[(uint8_t)DataType::PPG_INFRARED]->getData(&ir_data, &timestamp, false);
+  redDataSize = dataDoubleBuffers[(uint8_t)DataType::PPG_RED]->getData(&red_data, &timestamp, false);
+
+  if (irDataIndex + irDataSize < SPO2_PPG_BUFFER_SIZE) {
+    for (int i = 0 ; i < irDataSize ; i++) {
+      irDataBuffer[irDataIndex + i] = ir_data[i];
+    }
+  }
+  irDataIndex += irDataSize;
+  
+  if (redDataIndex + redDataSize < SPO2_PPG_BUFFER_SIZE) {
+    for (int i = 0 ; i < redDataSize ; i++) {
+      redDataBuffer[redDataIndex + i] = red_data[i];
+    }
+  }
+  redDataIndex += redDataSize;
+
+  if (irDataIndex >= SPO2_PPG_BUFFER_SIZE-15 && redDataIndex >= SPO2_PPG_BUFFER_SIZE-15) {
+    get_oxygen_level(irDataBuffer, redDataBuffer, min(irDataIndex, redDataIndex), &spo2);
+
+    irDataIndex = 0;
+    redDataIndex = 0;
+
+    // Add packets to output
+    addPacket(timestamp, EmotiBitPacket::TypeTag::SPO2, &spo2, APERIODIC_DATA_LEN);
+  }
+}
+
 void EmotiBit::processData()
 {
 	// Perform all derivative calculations
@@ -3412,6 +3456,10 @@ void EmotiBit::processData()
 		{
 			processHeartRate();
 		}
+    if (acquireData.spo2)
+    {
+      processSpO2();
+    }
 		if (acquireData.edrMetrics)
 		{
 			// Note: this may move to emotiBitEda.processData() in the future
