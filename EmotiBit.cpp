@@ -953,12 +953,12 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		sleep(true);
 	}
 
-	if (_emotibitBluetooth.begin(emotibitDeviceId))
+	if (_emotiBitBluetooth.begin(emotibitDeviceId))
 	{
 		// Bluetooth setup
 		setPowerMode(PowerMode::BLUETOOTH);
 		Serial.println("Bluetooth setup completed");
-		nameSdCardFile();
+		//nameSdCardFile();
 	}
 	else{
 	Serial.println("Bluetooth setup failed"); //TODO can remove this in PR
@@ -1515,8 +1515,8 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 	static EmotiBitPacket::Header header;
 	int16_t dataStartChar = 0;
 	//use the following
-	//while (_emotiBitWiFi.readControl(packet) > 0 || _emotiBitBluetooth.readControl(packet) > 0)
-	while (_emotiBitWiFi.readControl(packet) > 0)
+	while (_emotiBitWiFi.readControl(packet) > 0 || _emotiBitBluetooth.readControl(packet) > 0)
+	//while (_emotiBitWiFi.readControl(packet) > 0)
 	{
 		Serial.println(packet);
 		dataStartChar = EmotiBitPacket::getHeader(packet, header);
@@ -3220,7 +3220,7 @@ void EmotiBit::readSensors()
 					//new if statment to check if we are in powermode
 					if (getPowerMode() == PowerMode::BLUETOOTH){
 						// Bluetooth connected status LED
-						if (_emotibitBluetooth.deviceConnected){
+						if (_emotiBitBluetooth.deviceConnected){
 							led.setState(EmotiBitLedController::Led::BLUE, true);
 						}
 						else {
@@ -3502,6 +3502,9 @@ void EmotiBit::sendData()
 				if (getPowerMode() == PowerMode::NORMAL_POWER) {
 					_emotiBitWiFi.sendData(s);
 				}
+				if (getPowerMode() == PowerMode::BLUETOOTH) {
+					_emotiBitBluetooth.sendData(s);
+				}
 				writeSdCardMessage(s);
 				firstIndex = lastIndex + 1;
 			}
@@ -3539,6 +3542,9 @@ void EmotiBit::sendData()
 
 				if (getPowerMode() == PowerMode::NORMAL_POWER) {
 					_emotiBitWiFi.sendData(s);
+				}
+				if (getPowerMode() == PowerMode::BLUETOOTH) {
+					_emotiBitBluetooth.sendData(s);
 				}
 				writeSdCardMessage(s);
 				firstIndex = lastIndex + 1;
@@ -4413,6 +4419,8 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		else if (c == '>')
 		{
 			_sendTestData = true;
+			//nameSdCardFile(); //temp
+
 			Serial.println("Entering Sending Test Data Mode");
 		}
 			else if (c == '@' && _sendTestData == true)
@@ -4778,6 +4786,7 @@ void EmotiBit::restartMcu()
 #endif
 }
 
+//unneeded can be removed
 void EmotiBit::nameSdCardFile() {
     int maxSuffix = -1;
     File dir = SD.open("/");

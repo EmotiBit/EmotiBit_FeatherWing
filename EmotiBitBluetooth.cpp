@@ -20,11 +20,11 @@ uint8_t EmotiBitBluetooth::begin(const String& emotibitDeviceId)
     pDataRxCharacteristic = pService->createCharacteristic(EMOTIBIT_DATA_RX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_WRITE);
     pDataRxCharacteristic->setCallbacks(new MyCallbacks());
 
-    pSyncTxCharacteristic = pService->createCharacteristic(EMOTIBIT_SYNC_TX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_NOTIFY);
-    pSyncTxCharacteristic->addDescriptor(new BLE2902());
+    //pSyncTxCharacteristic = pService->createCharacteristic(EMOTIBIT_SYNC_TX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_NOTIFY);
+    //pSyncTxCharacteristic->addDescriptor(new BLE2902());
 
-    pSyncRxCharacteristic = pService->createCharacteristic(EMOTIBIT_SYNC_RX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_WRITE);
-    pSyncRxCharacteristic->setCallbacks(new MyCallbacks());
+    //pSyncRxCharacteristic = pService->createCharacteristic(EMOTIBIT_SYNC_RX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_WRITE);
+    //pSyncRxCharacteristic->setCallbacks(new MyCallbacks());
 
     pService->start();
     pServer->getAdvertising()->start();
@@ -52,6 +52,7 @@ void EmotiBitBluetooth::MyServerCallbacks::onDisconnect(BLEServer* pServer)
     pServer->getAdvertising()->start();
     Serial.println("Restarted BLE advertising");
 }
+
 
 void EmotiBitBluetooth::MyCallbacks::onWrite(BLECharacteristic *pCharacteristic) 
 {
@@ -84,24 +85,44 @@ uint8_t EmotiBitBluetooth::readControl(String& packet)
 {
     uint8_t numPackets = 0;
 #ifdef BLUETOOTH_ENABLED
+    packet = "";
     if (deviceConnected)
     {
+
         std::string rxValue = pDataRxCharacteristic->getValue();
-        if (rxValue.length() > 0)
+        if (!rxValue.empty())
         {
-            // Append new data to buffer
+            Serial.print("Received: ");
+            Serial.println(rxValue.c_str());
             _receivedControlMessage += String(rxValue.c_str());
 
-            // Look for complete packets (delimited by EmotiBitPacket::PACKET_DELIMITER_CSV)
-            int delimIndex;
-            while ((delimIndex = _receivedControlMessage.indexOf(EmotiBitPacket::PACKET_DELIMITER_CSV)) != -1)
+            // *** CLEAR THE CHAR VALUE SO WE DON’T REUSE IT ***
+            pDataRxCharacteristic->setValue("");  
+        }
+
+        String tempPacket = "";
+        while (_receivedControlMessage.length() > 0)
+        {
+            int c = _receivedControlMessage[0];
+            _receivedControlMessage.remove(0, 1);
+
+            if (c == (int)EmotiBitPacket::PACKET_DELIMITER_CSV)
             {
-                // Extract one packet
-                packet = _receivedControlMessage.substring(0, delimIndex + 1);
-                _receivedControlMessage = _receivedControlMessage.substring(delimIndex + 1);
                 numPackets++;
-                // Optionally: return after first packet if you want one-at-a-time behavior
+                packet = tempPacket;
+                tempPacket = "";
+				_receivedControlMessage = "";
                 return numPackets;
+            }
+            else
+            {
+                if (c == 0) {
+                    // Throw out null term
+                }
+                else
+                {
+                    tempPacket += (char)c;
+                }
             }
         }
     }

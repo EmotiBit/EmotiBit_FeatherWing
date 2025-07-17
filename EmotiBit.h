@@ -281,7 +281,7 @@ public:
 	MLX90632 thermopile;
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
-	EmotiBitBluetooth _emotibitBluetooth;
+	EmotiBitBluetooth _emotiBitBluetooth;
 	#ifdef ARDUINO_FEATHER_ESP32
 	FileTransferManager _fileTransferManager;
 	#endif
