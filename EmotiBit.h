@@ -17,12 +17,11 @@
 #include "DoubleBufferFloat.h"
 #include <ArduinoJson.h>
 #include "EmotiBitWiFi.h"
-#include "EmotiBitBluetooth.h"
 #include <SPI.h>
 #ifdef ARDUINO_FEATHER_ESP32
 #include <SD.h>
 #include "driver/adc.h"
-#include <esp_bt.h>
+#include <esp_bt.h> //consider moving into bluetooth
 #else
 #include <SdFat.h>
 #include <ArduinoLowPower.h>
@@ -40,6 +39,9 @@
 #include "FileTransferManager.h"
 #endif
 #include "EmotiBitConfigManager.h"
+#ifdef ARDUINO_FEATHER_ESP32
+#include "EmotiBitBluetooth.h"
+#endif
 
 class EmotiBit {
   
@@ -281,7 +283,9 @@ public:
 	MLX90632 thermopile;
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
+	#ifdef ARDUINO_FEATHER_ESP32
 	EmotiBitBluetooth _emotiBitBluetooth;
+	#endif //ARDUINO_FEATHER_ESP32
 	#ifdef ARDUINO_FEATHER_ESP32
 	FileTransferManager _fileTransferManager;
 	#endif
@@ -433,6 +437,7 @@ public:
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;
+	bool _enableBluetooth = false;
 
 	void setupFailed(const String failureMode, int buttonPin = -1, bool configFileError = false);
 	bool setupSdCard(bool loadConfig = true);

@@ -455,6 +455,13 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 
 	while (!Serial.available() && millis() - now < 2000)
 	{
+#ifdef ARDUINO_FEATHER_ESP32		
+		if (digitalRead(buttonPin)) {
+			Serial.println("Bluetooth Enabled");
+			_enableBluetooth = true;
+			break; 
+		}
+#endif // ARDUINO_FEATHER_ESP32
 	}
 #ifdef ADAFRUIT_FEATHER_M0
 	AdcCorrection::AdcCorrectionValues adcCorrectionValues;
@@ -953,17 +960,17 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		sleep(true);
 	}
 
-	if (_emotiBitBluetooth.begin(emotibitDeviceId))
+	if (_enableBluetooth == true)
 	{
-		// Bluetooth setup
+		#ifdef ARDUINO_FEATHER_ESP32
 		setPowerMode(PowerMode::BLUETOOTH);
-		Serial.println("Bluetooth setup completed");
-		//nameSdCardFile();
+		#endif // ARDUINO_FEATHER_ESP32	
 	}
-	else{
-	Serial.println("Bluetooth setup failed"); //TODO can remove this in PR
+
+	else
+	{
 	#ifdef ARDUINO_FEATHER_ESP32
-	esp_bt_controller_disable();
+		esp_bt_controller_disable();
 	#endif
 	//WiFi Setup;
 	Serial.print("\nSetting up WiFi\n");
@@ -1515,8 +1522,11 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 	static EmotiBitPacket::Header header;
 	int16_t dataStartChar = 0;
 	//use the following
+	#ifdef ARDUINO_FEATHER_ESP32
 	while (_emotiBitWiFi.readControl(packet) > 0 || _emotiBitBluetooth.readControl(packet) > 0)
-	//while (_emotiBitWiFi.readControl(packet) > 0)
+	#else
+	while (_emotiBitWiFi.readControl(packet) > 0)
+	#endif //ARDUINO_FEATHER_ESP32
 	{
 		Serial.println(packet);
 		dataStartChar = EmotiBitPacket::getHeader(packet, header);
@@ -3218,33 +3228,61 @@ void EmotiBit::readSensors()
 						led.setState(EmotiBitLedController::Led::YELLOW, true);
 					}
 					//new if statment to check if we are in powermode
-					if (getPowerMode() == PowerMode::BLUETOOTH){
+
+					if (getPowerMode() == PowerMode::BLUETOOTH) {
+#ifdef ARDUINO_FEATHER_ESP32
 						// Bluetooth connected status LED
-						if (_emotiBitBluetooth.deviceConnected){
+						if (_emotiBitBluetooth.deviceConnected) {
 							led.setState(EmotiBitLedController::Led::BLUE, true);
 						}
 						else {
 								// blink LED
 								static unsigned long onTime = 125; // msec
 								static unsigned long totalTime = 250; // msec changed to 250
-								static bool wifiConnectedBlinkState = false;
+								static bool bleConnectedBlinkState = false;
 
-								static unsigned long wifiConnBlinkTimer = millis();
+								static unsigned long bleConnBlinkTimer = millis();
 
 								unsigned long timeNow = millis();
-								if (timeNow - wifiConnBlinkTimer < onTime)
+								if (timeNow - bleConnBlinkTimer < onTime)
 								{
 									led.setState(EmotiBitLedController::Led::BLUE, true);
 								}
-								else if (timeNow - wifiConnBlinkTimer < totalTime)
+								else if (timeNow - bleConnBlinkTimer < totalTime)
 								{
 									led.setState(EmotiBitLedController::Led::BLUE, false);
 								}
 								else
 								{
-									wifiConnBlinkTimer = timeNow;
+									bleConnBlinkTimer = timeNow;
 								}
-						}
+							}
+							// Battery LED
+							if (battIndicationSeq)
+							{
+								led.setState(EmotiBitLedController::Led::YELLOW, true);
+							}
+							else
+							{
+								led.setState(EmotiBitLedController::Led::YELLOW, false);
+							}
+
+							// Recording status LED
+							if (_sdWrite)
+							{
+								static uint32_t recordBlinkDuration = millis();
+								if (millis() - recordBlinkDuration >= 500)
+								{
+									led.setState(EmotiBitLedController::Led::RED, !led.getState(EmotiBitLedController::Led::RED));
+									recordBlinkDuration = millis();
+								}
+							}
+							else if (!_sdWrite && led.getState(EmotiBitLedController::Led::RED) == true)
+							{
+								led.setState(EmotiBitLedController::Led::RED, false);
+							}
+						
+#endif //ARDUINO_FEATHER_ESP32
 					}
 					else
 					{
@@ -3503,7 +3541,9 @@ void EmotiBit::sendData()
 					_emotiBitWiFi.sendData(s);
 				}
 				if (getPowerMode() == PowerMode::BLUETOOTH) {
+					#ifdef ARDUINO_FEATHER_ESP32
 					_emotiBitBluetooth.sendData(s);
+					#endif //ARDUINO_FEATHER_ESP32
 				}
 				writeSdCardMessage(s);
 				firstIndex = lastIndex + 1;
@@ -3544,7 +3584,9 @@ void EmotiBit::sendData()
 					_emotiBitWiFi.sendData(s);
 				}
 				if (getPowerMode() == PowerMode::BLUETOOTH) {
+					#ifdef ARDUINO_FEATHER_ESP32
 					_emotiBitBluetooth.sendData(s);
+					#endif //ARDUINO_FEATHER_ESP32
 				}
 				writeSdCardMessage(s);
 				firstIndex = lastIndex + 1;
@@ -3830,12 +3872,29 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	else if (getPowerMode() == PowerMode::WIRELESS_OFF)
 	{
 		Serial.println("PowerMode::WIRELESS_OFF");
+
+		if (_enableBluetooth == true)
+			{
+#ifdef ARDUINO_FEATHER_ESP32		
+				_emotiBitBluetooth.end();
+//				_enableBluetooth = false;
+#endif //ARDUINO_FEATHER_ESP32
+			}
+		else
+		{
 		_emotiBitWiFi.end();
+		}
 	}
 	else if (getPowerMode() == PowerMode::BLUETOOTH)
 	{
-		Serial.println("PowerMode::BLUETOOTH");
-		//TODO: we can turn on/off disable bluetooth here and wifi
+#ifdef ARDUINO_FEATHER_ESP32		
+		if (_emotiBitBluetooth.isOff())
+		{
+			Serial.println("PowerMode::BLUETOOTH");
+			_emotiBitBluetooth.begin(emotibitDeviceId);
+		}
+
+#endif //ARDUINO_FEATHER_ESP32
 	}
 	else if (getPowerMode() == PowerMode::HIBERNATE)
 	{
@@ -4784,52 +4843,4 @@ void EmotiBit::restartMcu()
 #elif defined ADAFRUIT_FEATHER_M0
 	NVIC_SystemReset();
 #endif
-}
-
-//unneeded can be removed
-void EmotiBit::nameSdCardFile() {
-    int maxSuffix = -1;
-    File dir = SD.open("/");
-    while (true) {
-        File entry = dir.openNextFile();
-        if (!entry) break;
-        String name = entry.name();
-        if (name.startsWith("BLUETOOTH_") && name.endsWith(".csv")) {
-            int underscore = name.lastIndexOf('_');
-            int dot = name.lastIndexOf('.');
-            if (underscore != -1 && dot != -1 && dot > underscore + 1) {
-                String numStr = name.substring(underscore + 1, dot);
-                int num = numStr.toInt();
-                if (num > maxSuffix) maxSuffix = num;
-            }
-        }
-        entry.close();
-    }
-    int nextSuffix = maxSuffix + 1;
-    char filename[32];
-    snprintf(filename, sizeof(filename), "/BLUETOOTH_%04d.csv", nextSuffix);
-    _sdCardFilename = String(filename);
-    Serial.print("Creating SD card file: ");
-    Serial.println(_sdCardFilename);
-
-	/*
-    // Write test line to the file
-    File testFile = SD.open(_sdCardFilename, FILE_WRITE);
-    if (testFile) {
-        testFile.print("test working for ");
-        testFile.println(nextSuffix);
-        testFile.close();
-        Serial.println("Test line written to SD card file.");
-    } else {
-        Serial.println("Failed to create SD card file!");
-    }*/
-      // Open the file for writing and set _sdWrite
-	  _dataFile = SD.open(_sdCardFilename, FILE_WRITE);
-	  if (_dataFile) {
-		  _sdWrite = true;
-		  Serial.println("SD card file opened.");
-	  } else {
-		  _sdWrite = false;
-		  Serial.println("Failed to open SD card");
-	  }
 }

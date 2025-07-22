@@ -13,6 +13,7 @@
     BSD license, all text here must be included in any redistribution
 */
 /**************************************************************************/
+#ifdef ARDUINO_FEATHER_ESP32
 #pragma once
 /*!
 * @brief inclusions for BLE Device, Server, Utils, 2902, and Arduino   
@@ -23,6 +24,7 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include "EmotiBitPacket.h"
+
 
 
 #define EMOTIBIT_SERVICE_UUID "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -48,7 +50,8 @@ class EmotiBitBluetooth {
     bool deviceConnected = false; ///boolean to check if device is connected
     String _emotibitDeviceId = ""; ///string to hold device id
 	String _receivedControlMessage = "";
-
+    bool _bluetoothOff = true;
+    bool _bluetoothReconnect = false; 
     /*!
     * @brief Server callbacks for connections
     */
@@ -97,5 +100,22 @@ class EmotiBitBluetooth {
     //void update();for when we sync data over BLE
     //move to emotibit
     //void sdCardFileNaming(); for when we choose bluetooth and there is no rb start time
+
+    /*!
+    * @brief Ends the BLE connection
+    */
+    void end();
+
+    /*!
+    * @brief Checks if the Bluetooth is off
+    * @return if Bluetooth is off, returns true, otherwise false
+    */
+    bool isOff();
+
+    /*!
+    
+    */
+    void reconnect();
 };
 
+#endif //ARDUINO_FEATHER_ESP32
