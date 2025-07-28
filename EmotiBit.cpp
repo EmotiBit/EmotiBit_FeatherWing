@@ -1678,7 +1678,7 @@ uint8_t EmotiBit::update()
 #endif
 
 			}
-			else
+			else if (!_debugMode)
 			{
 				printEmotiBitInfo();
 			}
@@ -1746,17 +1746,16 @@ uint8_t EmotiBit::update()
 	{
 		dataSendTimer = millis();
 
-			// Perform data calculations in main loop
-			processData();
+		// Perform data calculations in main loop
+		processData();
+		// Send data to SD card and over wireless
+		sendData();
 
-			// Send data to SD card and over wireless
-			sendData();
-
-			if (startBufferOverflowTest)
-			{
-				startBufferOverflowTest = false;
-				bufferOverflowTest();
-			}
+		if (startBufferOverflowTest)
+		{
+			startBufferOverflowTest = false;
+			bufferOverflowTest();
+		}
 	}
 
 	// Hibernate after writing data
@@ -3445,11 +3444,6 @@ void EmotiBit::sendData()
 				
 				String s = _outDataPackets.substring(firstIndex, lastIndex + 1);
 
-				// Write a split marker to SD card (for test/debug only)
-					if (addSplitterIndicator) {
-						writeSdCardMessage("\nS\n");
-					}
-
 				if (getPowerMode() == PowerMode::NORMAL_POWER) {
 					_emotiBitWiFi.sendData(s);
 				}
@@ -3459,7 +3453,7 @@ void EmotiBit::sendData()
 			_outDataPackets = "";
 		}
 	}
-	if (_outDataPackets.length() > 0)
+	if (_outDataPackets.length() > 0) //ToDo: Consider removing this check since it only clears the remaining data on the buffer
 	{
 		int16_t firstIndex;
 		firstIndex = 0;
@@ -3483,18 +3477,13 @@ void EmotiBit::sendData()
 		
 			String s = _outDataPackets.substring(firstIndex, lastIndex + 1);
 
-				// Write a split marker to SD card (for test/debug only)
-				if (addSplitterIndicator) {
-					writeSdCardMessage("\nS\n");
-				}
-
-				if (getPowerMode() == PowerMode::NORMAL_POWER) {
-					_emotiBitWiFi.sendData(s);
-				}
-				writeSdCardMessage(s);
-				firstIndex = lastIndex + 1;
+			if (getPowerMode() == PowerMode::NORMAL_POWER) {
+				_emotiBitWiFi.sendData(s);
 			}
-			_outDataPackets = "";
+			writeSdCardMessage(s);
+			firstIndex = lastIndex + 1;
+		}
+		_outDataPackets = "";
 	}
 }
 
@@ -3884,7 +3873,7 @@ void EmotiBit::updateBatteryIndication(float battPercent)
 void EmotiBit::addTestData(String &dataMessage)
 {
 	if (_sdWrite) {//only send test data if we are recording
-		EmotiBitPacket::createTestDataPacket(dataMessage, testDataType);
+		EmotiBitPacket::createTestDataPacket(dataMessage, _testDataType);
 	}
 }
 
@@ -3991,8 +3980,6 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("Press S to reset maxReadSensors metrics");
 			Serial.println("[ACUTE TESTING MODE] Press n to printEntireNvm");
 			Serial.println("[ACUTE TESTING MODE] Press N to eraseEeprom");
-			Serial.println("Press z to toggle OFF splitter indicators");
-			Serial.println("Press Z to toggle ON splitter indicators");
 			Serial.println("Press > to toggle ON Send Test Data");
 			Serial.println("Press < to toggle OFF Send Test Data");
 			Serial.println("Press @ to toggle Packet Fixed Length Test if Send Test Data is ON");
@@ -4343,40 +4330,24 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 				_emotibitNvmController.eraseEeprom();
 			}
 		}
-
-		else if (c == 'Z')
-		{
-			addSplitterIndicator = true;
-			Serial.println("Adding Splitter Print");
-		}
-
-		else if (c == 'z')
-		{
-			addSplitterIndicator = false;
-			Serial.println("Removing Splitter Print");
-		}
-
-		else if (c == '>')
-		{
+		else if (c == '>') {
 			_sendTestData = true;
 			Serial.println("Entering Sending Test Data Mode");
 		}
-			else if (c == '@' && _sendTestData == true)
-			{
-				testDataType = "Splitter";
-				Serial.println("TestDataType: SPLITTER");
-			}
-
-			else if (c == '#' && _sendTestData == true)
-			{
-				testDataType = "Sawtooth";
-				Serial.println("TestDataType: SAWTOOTH");
-			}
-
 		else if (c == '<')
 		{
 			_sendTestData = false;
 			Serial.println("Exiting Sending Test Data Mode");
+		}
+		else if (c == '@' && _sendTestData == true)
+		{
+			_testDataType = EmotiBitPacket::TestType::FIXEDPACKETLENGTHTEST;
+			Serial.println("TestDataType: Fixed Packet Length Test");
+		}
+		else if (c == '#' && _sendTestData == true)
+		{
+			_testDataType = EmotiBitPacket::TestType::SAWTOOTHTEST;
+			Serial.println("TestDataType: Sawtooth Test");
 		}
 	}
 }
