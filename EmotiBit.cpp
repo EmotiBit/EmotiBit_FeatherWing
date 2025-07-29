@@ -3442,7 +3442,7 @@ void EmotiBit::sendData()
 					}
 				}
 				
-				String s = _outDataPackets.substring(firstIndex, lastIndex + 1);
+				String s = _outDataPackets.substring(firstIndex, lastIndex + 1); //ToDo:: Consider methods to optimize this
 
 				if (getPowerMode() == PowerMode::NORMAL_POWER) {
 					_emotiBitWiFi.sendData(s);
