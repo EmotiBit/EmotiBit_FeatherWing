@@ -39,88 +39,88 @@
  * @brief Handles Bluetooth communication for EmotiBit.
 */
 class EmotiBitBluetooth {
-    public:
-    BLEServer* pServer = nullptr; ///points to the server
-    
-    BLECharacteristic* pDataTxCharacteristic = nullptr; ///points to the data tx characteristic
-    BLECharacteristic* pDataRxCharacteristic = nullptr; ///points to the data rx characteristic
-    //BLECharacteristic* pSyncTxCharacteristic = nullptr; ///points to the sync tx characteristic
-    //BLECharacteristic* pSyncRxCharacteristic = nullptr; ///points to the sync rx characteristic
-
-    bool deviceConnected = false; ///boolean to check if device is connected
-    String _emotibitDeviceId = ""; ///string to hold device id
-	String _receivedControlMessage = "";
-    bool _bluetoothOff = true;
-    bool _bluetoothReconnect = false; 
-    /*!
-    * @brief Server callbacks for connections
-    */
-    class MyServerCallbacks: public BLEServerCallbacks {
         public:
-            MyServerCallbacks(EmotiBitBluetooth* server) : server(server) {}
-            void onConnect(BLEServer* pServer);
-            void onDisconnect(BLEServer* pServer);
-        private:
-            EmotiBitBluetooth* server;
-    };
-    
-    /*!
-    * @brief Characteristic callbacks for data transfer
-    */
-    class MyCallbacks : public BLECharacteristicCallbacks {
-        void onWrite(BLECharacteristic *pCharacteristic);
-    };
+        BLEServer* pServer = nullptr; ///points to the server
+        
+        BLECharacteristic* pDataTxCharacteristic = nullptr; ///points to the data tx characteristic
+        BLECharacteristic* pDataRxCharacteristic = nullptr; ///points to the data rx characteristic
+        //BLECharacteristic* pSyncTxCharacteristic = nullptr; ///points to the sync tx characteristic
+        //BLECharacteristic* pSyncRxCharacteristic = nullptr; ///points to the sync rx characteristic
 
-    /*!
-    * @brief Initializes the BLE device and starts advertising
-    * @param emotibitDeviceId ID from setDeviceId
-    * @return 1 on success, 0 on failure
-    */
-    //TO DO use int for error handling
-    uint8_t begin(const String& emotibitDeviceId);
-    
-    /*!
-    * @brief Sends data over BLE
-    * @param message data to be sent
-    */
-    void sendData(const String &message);
-    
-    /*!
-    * @brief Checks if the device is connected to a BLE client  
-    * @param emotibitDeviceId
-    */
-    void setDeviceId(const String emotibitDeviceId); 
+        bool deviceConnected = false; ///boolean to check if device is connected
+        String _emotibitDeviceId = ""; ///string to hold device id
+                String _receivedControlMessage = "";
+        bool _bluetoothOff = true;
+        bool _bluetoothReconnect = false; 
+        /*!
+        * @brief Server callbacks for connections
+        */
+        class MyServerCallbacks: public BLEServerCallbacks {
+                public:
+                MyServerCallbacks(EmotiBitBluetooth* server) : server(server) {}
+                void onConnect(BLEServer* pServer);
+                void onDisconnect(BLEServer* pServer);
+                private:
+                EmotiBitBluetooth* server;
+        };
+        
+        /*!
+        * @brief Characteristic callbacks for data transfer
+        */
+        class MyCallbacks : public BLECharacteristicCallbacks {
+                void onWrite(BLECharacteristic *pCharacteristic);
+        };
 
-    /*!
-    * @brief Reads control messages from the BLE characteristic
-    * @param packet the control message packet
-    */
-    uint8_t readControl(String& packet);
+        /*!
+        * @brief Initializes the BLE device and starts advertising
+        * @param emotibitDeviceId ID from setDeviceId
+        * @return 1 on success, 0 on failure
+        */
+        //TO DO use int for error handling
+        uint8_t begin(const String& emotibitDeviceId);
+        
+        /*!
+        * @brief Sends data over BLE
+        * @param message data to be sent
+        */
+        void sendData(const String &message);
+        
+        /*!
+        * @brief Checks if the device is connected to a BLE client  
+        * @param emotibitDeviceId
+        */
+        void setDeviceId(const String emotibitDeviceId); 
 
-    //void update();for when we sync data over BLE
-    //move to emotibit
-    //void sdCardFileNaming(); for when we choose bluetooth and there is no rb start time
+        /*!
+        * @brief Reads control messages from the BLE characteristic
+        * @param packet the control message packet
+        */
+        uint8_t readControl(String& packet);
 
-    /*!
-    * @brief Ends the BLE connection
-    */
-    void end();
+        //void update();for when we sync data over BLE
+        //move to emotibit
+        //void sdCardFileNaming(); for when we choose bluetooth and there is no rb start time
 
-    /*!
-    * @brief Checks if the Bluetooth is off
-    * @return if Bluetooth is off, returns true, otherwise false
-    */
-    bool isOff();
+        /*!
+        * @brief Ends the BLE connection
+        */
+        void end();
 
-    /*!
-    * @brief Reconnects the BLE server if disconnected
-    */
-    void reconnect();
+        /*!
+        * @brief Checks if the Bluetooth is off
+        * @return if Bluetooth is off, returns true, otherwise false
+        */
+        bool isOff();
 
-    /*!
-    * @brief Starts Advertising
-    */
-    void startAdvertising();
+        /*!
+        * @brief Reconnects the BLE server if disconnected
+        */
+        void reconnect();
+
+        /*!
+        * @brief Starts Advertising
+        */
+        void startAdvertising();
 };
 
 #endif //ARDUINO_FEATHER_ESP32
