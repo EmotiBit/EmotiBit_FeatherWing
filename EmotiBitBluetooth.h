@@ -25,8 +25,6 @@
 #include <BLE2902.h>
 #include "EmotiBitPacket.h"
 
-
-
 #define EMOTIBIT_SERVICE_UUID "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 #define EMOTIBIT_DATA_RX_CHARACTERISTIC_UUID "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 #define EMOTIBIT_DATA_TX_CHARACTERISTIC_UUID "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -43,9 +41,10 @@ class EmotiBitBluetooth {
 
         bool deviceConnected = false; ///boolean to check if device is connected
         String _emotibitDeviceId = ""; ///string to hold device id
-                String _receivedControlMessage = "";
+        String _receivedControlMessage = "";
         bool _bluetoothOff = true;
-        bool _bluetoothReconnect = false; 
+        bool _bluetoothReconnect = false;
+
         /*!
         * @brief Server callbacks for connections
         */

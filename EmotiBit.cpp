@@ -110,8 +110,6 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 #endif
 
 #ifdef ARDUINO_FEATHER_ESP32
-	//esp_bt_controller_disable();
-	// ToDo: assess similarity with btStop();
 	setCpuFrequencyMhz(CPU_HZ / 1000000); // 80MHz has been tested working to save battery life
 #endif
 
@@ -971,6 +969,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	{
 	#ifdef ARDUINO_FEATHER_ESP32
 		esp_bt_controller_disable();
+                // ToDo: assess similarity with btStop();
 	#endif
 	//WiFi Setup;
 	Serial.print("\nSetting up WiFi\n");
@@ -1521,9 +1520,8 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 	static String packet;
 	static EmotiBitPacket::Header header;
 	int16_t dataStartChar = 0;
-	//use the following
 	#ifdef ARDUINO_FEATHER_ESP32
-	while (_emotiBitWiFi.readControl(packet) > 0 || _emotiBitBluetooth.readControl(packet) > 0)
+	while (_emotiBitWiFi.readControl(packet) > 0 || _emotiBitBluetooth.readControl(packet) > 0) //Bluetooth and WiFi control packets are read in the same loop
 	#else
 	while (_emotiBitWiFi.readControl(packet) > 0)
 	#endif //ARDUINO_FEATHER_ESP32

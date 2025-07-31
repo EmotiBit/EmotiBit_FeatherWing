@@ -48,7 +48,6 @@ void EmotiBitBluetooth::MyServerCallbacks::onConnect(BLEServer* pServer)
 
 void EmotiBitBluetooth::MyServerCallbacks::onDisconnect(BLEServer* pServer)
 {
-
         server -> deviceConnected = false;
         Serial.println("BLE client disconnected");
         //need to restart advertising to allow new connections after disconnection if accidentally disconnected
@@ -161,7 +160,6 @@ bool EmotiBitBluetooth::isOff()
 	return _bluetoothOff;
 }
 
-
 void EmotiBitBluetooth::end()
 {
         if (pServer && deviceConnected)
@@ -178,7 +176,6 @@ void EmotiBitBluetooth::end()
         _bluetoothOff      = true;
         _bluetoothReconnect = false;
 }
-
 
 void EmotiBitBluetooth::reconnect()
 {
