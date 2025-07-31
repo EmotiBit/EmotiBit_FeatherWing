@@ -113,9 +113,14 @@ class EmotiBitBluetooth {
     bool isOff();
 
     /*!
-    
+    * @brief Reconnects the BLE server if disconnected
     */
     void reconnect();
+
+    /*!
+    * @brief Starts Advertising
+    */
+    void startAdvertising();
 };
 
 #endif //ARDUINO_FEATHER_ESP32
