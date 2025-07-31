@@ -10,7 +10,7 @@ uint8_t EmotiBitBluetooth::begin(const String& emotibitDeviceId)
                 return 0; // Success
         }
 
-_emotibitDeviceId = emotibitDeviceId;
+        _emotibitDeviceId = emotibitDeviceId;
     
         Serial.println("Bluetooth tag detected, turning on bluetooth.");
         BLEDevice::init(("EmotiBit: " + _emotibitDeviceId).c_str());

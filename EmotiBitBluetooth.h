@@ -41,7 +41,6 @@ class EmotiBitBluetooth {
         BLECharacteristic* pDataTxCharacteristic = nullptr; ///points to the data tx characteristic
         BLECharacteristic* pDataRxCharacteristic = nullptr; ///points to the data rx characteristic
 
-
         bool deviceConnected = false; ///boolean to check if device is connected
         String _emotibitDeviceId = ""; ///string to hold device id
                 String _receivedControlMessage = "";
