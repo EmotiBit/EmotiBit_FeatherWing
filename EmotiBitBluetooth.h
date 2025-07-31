@@ -31,10 +31,6 @@
 #define EMOTIBIT_DATA_RX_CHARACTERISTIC_UUID "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 #define EMOTIBIT_DATA_TX_CHARACTERISTIC_UUID "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
-//untested below
-//#define EMOTIBIT_SYNC_TX_CHARACTERISTIC_UUID "6E400004-B5A3-F393-E0A9-E50E24DCCA9E"
-//#define EMOTIBIT_SYNC_RX_CHARACTERISTIC_UUID "6E400005-B5A3-F393-E0A9-E50E24DCCA9E"
-
 /*!
  * @brief Handles Bluetooth communication for EmotiBit.
 */
@@ -44,8 +40,7 @@ class EmotiBitBluetooth {
         
         BLECharacteristic* pDataTxCharacteristic = nullptr; ///points to the data tx characteristic
         BLECharacteristic* pDataRxCharacteristic = nullptr; ///points to the data rx characteristic
-        //BLECharacteristic* pSyncTxCharacteristic = nullptr; ///points to the sync tx characteristic
-        //BLECharacteristic* pSyncRxCharacteristic = nullptr; ///points to the sync rx characteristic
+
 
         bool deviceConnected = false; ///boolean to check if device is connected
         String _emotibitDeviceId = ""; ///string to hold device id

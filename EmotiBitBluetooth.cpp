@@ -31,11 +31,6 @@ _emotibitDeviceId = emotibitDeviceId;
         pDataRxCharacteristic = pService->createCharacteristic(EMOTIBIT_DATA_RX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_WRITE);
         pDataRxCharacteristic->setCallbacks(new MyCallbacks());
 
-        //pSyncTxCharacteristic = pService->createCharacteristic(EMOTIBIT_SYNC_TX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_NOTIFY);
-        //pSyncTxCharacteristic->addDescriptor(new BLE2902());
-
-        //pSyncRxCharacteristic = pService->createCharacteristic(EMOTIBIT_SYNC_RX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_WRITE);
-        //pSyncRxCharacteristic->setCallbacks(new MyCallbacks());
         pService->start();
 
         EmotiBitBluetooth::startAdvertising();
