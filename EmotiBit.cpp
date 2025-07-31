@@ -1304,7 +1304,7 @@ bool EmotiBit::setupSdCard(bool loadConfig)
 #if defined ARDUINO_FEATHER_ESP32
 		Serial.println("ESP::: Reading SD-Card");
 		File dir;
-		dir = SD.open("/"); // look here for files and grab everything
+		dir = SD.open("/");
 		// taken from SD examples: listFiles
 		while (true)
 		{
@@ -3223,7 +3223,6 @@ void EmotiBit::readSensors()
 						led.setState(EmotiBitLedController::Led::BLUE, true);
 						led.setState(EmotiBitLedController::Led::YELLOW, true);
 					}
-					//new if statment to check if we are in powermode
 
 					if (getPowerMode() == PowerMode::BLUETOOTH) {
 #ifdef ARDUINO_FEATHER_ESP32
