@@ -454,10 +454,9 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	while (!Serial.available() && millis() - now < 2000)
 	{
 #ifdef ARDUINO_FEATHER_ESP32		
-		if (digitalRead(buttonPin)) {
+		if (digitalRead(buttonPin) && !_enableBluetooth) {
 			Serial.println("Bluetooth Enabled");
 			_enableBluetooth = true;
-			break; 
 		}
 #endif // ARDUINO_FEATHER_ESP32
 	}
