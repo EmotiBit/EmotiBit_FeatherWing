@@ -4341,12 +4341,12 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		}
 		else if (c == '@' && _sendTestData == true)
 		{
-			_testDataType = EmotiBitPacket::TestType::FIXEDPACKETLENGTHTEST;
+			_testDataType = EmotiBitPacket::TestType::FIXED_PACKET_LENGTH;
 			Serial.println("TestDataType: Fixed Packet Length Test");
 		}
 		else if (c == '#' && _sendTestData == true)
 		{
-			_testDataType = EmotiBitPacket::TestType::SAWTOOTHTEST;
+			_testDataType = EmotiBitPacket::TestType::SAWTOOTH;
 			Serial.println("TestDataType: Sawtooth Test");
 		}
 	}
