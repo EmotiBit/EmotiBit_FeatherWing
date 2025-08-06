@@ -3,7 +3,7 @@ set -u
 
 EMOTIBIT_CSV=""
 
-# Parse required -e or --extension argument
+# Parse required -p or --path argument
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -p|--path)
