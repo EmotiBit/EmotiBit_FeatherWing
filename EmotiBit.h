@@ -58,7 +58,7 @@ public:
 
 
 
-  String firmware_version = "1.14.1.feat-blePrototype-Example.1";
+  String firmware_version = "1.14.2.feat-blePrototype-Example.1";
 
 
 
