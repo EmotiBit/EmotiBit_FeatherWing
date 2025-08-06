@@ -201,7 +201,7 @@ void EmotiBitBluetooth::startAdvertising()
         }
         else
         {
-        Serial.println("ERROR: pServer is NULL, cannot start advertising");
+                Serial.println("ERROR: pServer is NULL, cannot start advertising");
         }
 }
 
