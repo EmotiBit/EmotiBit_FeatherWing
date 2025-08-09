@@ -2434,7 +2434,7 @@ bool EmotiBit::processThermopileData()
 size_t EmotiBit::getData(DataType type, float** data, uint32_t * timestamp) {
 #ifdef DEBUG
 	Serial.print("getData: type=");
-	Serial.println((uint8_t) t);
+	Serial.println((uint8_t) type);
 #endif // DEBUG
 	if ((uint8_t)type < (uint8_t)EmotiBit::DataType::length) {
 		return dataDoubleBuffers[(uint8_t)type]->getData(data, timestamp, false);
