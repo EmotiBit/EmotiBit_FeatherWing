@@ -35,7 +35,7 @@
 #include "EmotiBitVariants.h"
 #include "EmotiBitNvmController.h"
 #include "heartRate.h"
-#include "BrainflowSpO2Algorithm.h"
+#include "Emotibit_Brainflow_SpO2_Algorithm.h"
 #ifdef ARDUINO_FEATHER_ESP32
 #include "FileTransferManager.h"
 #endif
