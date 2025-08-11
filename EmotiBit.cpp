@@ -2719,7 +2719,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]["channel_count"] = 3;
 		infos[i]["nominal_srate"] = _samplingRates.magnetometer;
 		infos[i]["channel_format"] = "float";
-		infos[i]["units"] = "microhenries";
+		infos[i]["units"] = "microteslas";
 		setups[i] = infos[i].createNestedObject("setup");
 		serializeJson(jsonDoc, file);
 	}
