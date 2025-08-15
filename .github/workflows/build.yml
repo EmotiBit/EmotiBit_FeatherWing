@@ -1,0 +1,33 @@
+name: Build EmotiBit FeatherWing Firmware
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout FeatherWing repository
+      uses: actions/checkout@v4
+        
+    - name: Download dependencies
+      run: |
+        chmod +x ./download_dependencies.sh
+        ./download_dependencies.sh
+        
+    - name: Build firmware
+      run: |
+        chmod +x ./build.sh
+        ./build.sh
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: emotibit-firmware
+        path: |
+          EmotiBit_stock_firmware/.pio/build/**/*.bin
+          EmotiBit_stock_firmware/.pio/build/**/*.hex
+          EmotiBit_stock_firmware_PPG_100Hz/.pio/build/**/*.bin
+          EmotiBit_stock_firmware_PPG_100Hz/.pio/build/**/*.hex
+        retention-days: 30
