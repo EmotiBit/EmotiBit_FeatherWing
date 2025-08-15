@@ -19,6 +19,7 @@ jobs:
         
     - name: Build firmware
       run: |
+        export PATH="$HOME/.local/bin:$PATH"
         chmod +x ./build.sh
         ./build.sh
         
