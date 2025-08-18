@@ -23,13 +23,19 @@ jobs:
         chmod +x ./build.sh
         ./build.sh
         
+    - name: Prepare artifacts for upload
+      run: |
+        mkdir -p firmware_binaries
+        find EmotiBit_stock_firmware/.pio/build -name "*.bin" -o -name "*.hex" | while read file; do
+          cp "$file" firmware_binaries/
+        done
+        find EmotiBit_stock_firmware_PPG_100Hz/.pio/build -name "*.bin" -o -name "*.hex" | while read file; do
+          cp "$file" firmware_binaries/
+        done
+        
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: emotibit-firmware
-        path: |
-          EmotiBit_stock_firmware/.pio/build/**/*.bin
-          EmotiBit_stock_firmware/.pio/build/**/*.hex
-          EmotiBit_stock_firmware_PPG_100Hz/.pio/build/**/*.bin
-          EmotiBit_stock_firmware_PPG_100Hz/.pio/build/**/*.hex
+        path: firmware_binaries/
         retention-days: 30
