@@ -3407,7 +3407,6 @@ void EmotiBit::processData()
 
 void EmotiBit::sendData()
 {
-	// Test data packets would get added here
 	if (_sendTestData)
 	{
 		addTestData(_outDataPackets);
@@ -3872,7 +3871,7 @@ void EmotiBit::updateBatteryIndication(float battPercent)
 
 void EmotiBit::addTestData(String &dataMessage)
 {
-	if (_sdWrite) {//only send test data if we are recording
+	if (_sdWrite) { //only send test data if we are recording so testing has sd card files with defined start/stop points for diffing
 		EmotiBitPacket::createTestDataPacket(dataMessage, _testDataType);
 	}
 }
