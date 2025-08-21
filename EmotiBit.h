@@ -35,6 +35,7 @@
 #include "EmotiBitVariants.h"
 #include "EmotiBitNvmController.h"
 #include "heartRate.h"
+#include "Emotibit_Brainflow_SpO2_Algorithm.h"
 #ifdef ARDUINO_FEATHER_ESP32
 #include "FileTransferManager.h"
 #endif
@@ -55,7 +56,7 @@ public:
 
 
 
-  String firmware_version = "1.14.0";
+  String firmware_version = "1.14.0-feat-spo2.0";
 
 
 
@@ -331,6 +332,7 @@ public:
 #define IMU_SAMPLING_DIV 2
 #define BATTERY_SAMPLING_DIV 50
 #define DUMMY_ISR_DIV 10
+#define SPO2_PPG_BUFFER_SIZE 64
 
 	struct TimerLoopOffset
 	{
@@ -376,7 +378,8 @@ public:
 		bool debug = false;
 		bool battery = true;
 		bool heartRate = true; // Note: we may want to move this to a separarte flag someday, for controlling derivative signals
-		bool edrMetrics = true;
+		bool spo2 = true;
+    bool edrMetrics = true;
 	} acquireData;
 
 	struct ChipBegun {
@@ -453,6 +456,7 @@ public:
 	void parseIncomingControlPackets(String &controlPackets, uint16_t &packetNumber);
 	void readSensors();
 	void processHeartRate();
+  void processSpO2();
 	void processData();
 	void sendData();
 	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented

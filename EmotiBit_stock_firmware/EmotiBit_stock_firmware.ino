@@ -1,8 +1,8 @@
-#include <Arduino.h>
 #include "EmotiBit.h"
+#include <Arduino.h>
 
 #define SerialUSB SERIAL_PORT_USBVIRTUAL // Required to work in Visual Micro / Visual Studio IDE
-const uint32_t SERIAL_BAUD = 2000000; //115200
+const uint32_t SERIAL_BAUD = 2000000;
 
 EmotiBit emotibit;
 const size_t dataSize = EmotiBit::MAX_DATA_BUFFER_SIZE;
@@ -11,7 +11,7 @@ float data[dataSize];
 void onShortButtonPress()
 {
 	// toggle wifi on/off
-	if (emotibit.getPowerMode() == EmotiBit::PowerMode::NORMAL_POWER)
+	if (emotibit.getPowerMode() == EmotiBit::PowerMode::NORMAL_POWER)	
 	{
 		emotibit.setPowerMode(EmotiBit::PowerMode::WIRELESS_OFF);
 		Serial.println("PowerMode::WIRELESS_OFF");
