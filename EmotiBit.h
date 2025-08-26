@@ -21,7 +21,7 @@
 #ifdef ARDUINO_FEATHER_ESP32
 #include <SD.h>
 #include "driver/adc.h"
-#include <esp_bt.h>
+#include <esp_bt.h> //consider moving into bluetooth
 #else
 #include <SdFat.h>
 #include <ArduinoLowPower.h>
@@ -39,6 +39,9 @@
 #include "FileTransferManager.h"
 #endif
 #include "EmotiBitConfigManager.h"
+#ifdef ARDUINO_FEATHER_ESP32
+#include "EmotiBitBluetooth.h"
+#endif
 
 class EmotiBit {
   
@@ -55,7 +58,7 @@ public:
 
 
 
-  String firmware_version = "1.14.0";
+  String firmware_version = "1.14.2.feat-blePrototype-Example.1";
 
 
 
@@ -266,6 +269,7 @@ public:
 		MAX_LOW_POWER,			// data not sent, time-syncing accuracy low
 		LOW_POWER,					// data not sent, time-syncing accuracy high
 		NORMAL_POWER,				// data sending, time-syncing accuracy high
+		BLUETOOTH,
 		length
 	};
 
@@ -279,6 +283,9 @@ public:
 	MLX90632 thermopile;
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
+	#ifdef ARDUINO_FEATHER_ESP32
+	EmotiBitBluetooth _emotiBitBluetooth;
+	#endif //ARDUINO_FEATHER_ESP32
 	#ifdef ARDUINO_FEATHER_ESP32
 	FileTransferManager _fileTransferManager;
 	#endif
@@ -298,7 +305,7 @@ public:
 	static const uint16_t OUT_MESSAGE_RESERVE_SIZE = 2048;
 	static const uint16_t OUT_MESSAGE_TARGET_SIZE = 1024;
 	static const uint16_t DATA_SEND_INTERVAL = 100;
-	static const uint16_t MAX_SD_WRITE_LEN = 512; // 512 is the size of the sdFat buffer
+	static const uint16_t MAX_SEND_LEN = 512;
 	static const uint16_t MAX_DATA_BUFFER_SIZE = 48;
 	static const uint16_t NORMAL_POWER_MODE_PACKET_INTERVAL = 200;
 	static const uint16_t LOW_POWER_MODE_PACKET_INTERVAL = 1000;
@@ -425,9 +432,11 @@ public:
 	volatile bool _sdWrite;
 	PowerMode _powerMode;
 	bool _sendTestData = false;
+	EmotiBitPacket::TestType _testDataType = EmotiBitPacket::TestType::SAWTOOTHTEST; // Default to Sawtooth
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;
+	bool _enableBluetooth = false;
 
 	void setupFailed(const String failureMode, int buttonPin = -1, bool configFileError = false);
 	bool setupSdCard(bool loadConfig = true);
@@ -458,7 +467,7 @@ public:
 	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented
 	void writeSerialData(EmotiBit::DataType t);
 	void printEmotiBitInfo();
-	
+	void nameSdCardFile();
 
 	/**
 	 * Copies data buffer of the specified DataType into the passed array

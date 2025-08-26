@@ -110,8 +110,6 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 #endif
 
 #ifdef ARDUINO_FEATHER_ESP32
-	esp_bt_controller_disable();
-	// ToDo: assess similarity with btStop();
 	setCpuFrequencyMhz(CPU_HZ / 1000000); // 80MHz has been tested working to save battery life
 #endif
 
@@ -455,6 +453,12 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 
 	while (!Serial.available() && millis() - now < 2000)
 	{
+#ifdef ARDUINO_FEATHER_ESP32		
+		if (digitalRead(buttonPin) && !_enableBluetooth) {
+			Serial.println("Bluetooth Enabled");
+			_enableBluetooth = true;
+		}
+#endif // ARDUINO_FEATHER_ESP32
 	}
 #ifdef ADAFRUIT_FEATHER_M0
 	AdcCorrection::AdcCorrectionValues adcCorrectionValues;
@@ -952,6 +956,20 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		Serial.println(factoryTestSerialOutput);
 		sleep(true);
 	}
+
+	if (_enableBluetooth == true)
+	{
+		#ifdef ARDUINO_FEATHER_ESP32
+		setPowerMode(PowerMode::BLUETOOTH);
+		#endif // ARDUINO_FEATHER_ESP32	
+	}
+
+	else
+	{
+	#ifdef ARDUINO_FEATHER_ESP32
+		esp_bt_controller_disable();
+                // ToDo: assess similarity with btStop();
+	#endif
 	//WiFi Setup;
 	Serial.print("\nSetting up WiFi\n");
 #if defined(ADAFRUIT_FEATHER_M0)
@@ -998,6 +1016,8 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	#endif
 
 	setPowerMode(PowerMode::NORMAL_POWER);
+	}
+
 	typeTags[(uint8_t)EmotiBit::DataType::EDA] = EmotiBitPacket::TypeTag::EDA;
 	typeTags[(uint8_t)EmotiBit::DataType::EDL] = EmotiBitPacket::TypeTag::EDL;
 	typeTags[(uint8_t)EmotiBit::DataType::EDR] = EmotiBitPacket::TypeTag::EDR;
@@ -1499,7 +1519,11 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 	static String packet;
 	static EmotiBitPacket::Header header;
 	int16_t dataStartChar = 0;
+	#ifdef ARDUINO_FEATHER_ESP32
+	while (_emotiBitWiFi.readControl(packet) > 0 || _emotiBitBluetooth.readControl(packet) > 0) //Bluetooth and WiFi control packets are read in the same loop
+	#else
 	while (_emotiBitWiFi.readControl(packet) > 0)
+	#endif //ARDUINO_FEATHER_ESP32
 	{
 		Serial.println(packet);
 		dataStartChar = EmotiBitPacket::getHeader(packet, header);
@@ -1573,6 +1597,9 @@ void EmotiBit::parseIncomingControlPackets(String &controlPackets, uint16_t &pac
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_WIRELESS_OFF)) {
 				setPowerMode(EmotiBit::PowerMode::WIRELESS_OFF);
+			}
+			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_BLUETOOTH)) {
+				setPowerMode(EmotiBit::PowerMode::BLUETOOTH);
 			}
 			else if (header.typeTag.equals(EmotiBitPacket::TypeTag::MODE_HIBERNATE)) {
 				setPowerMode(EmotiBit::PowerMode::HIBERNATE);
@@ -1648,7 +1675,7 @@ uint8_t EmotiBit::update()
 		static uint16_t serialPrevAvailable = Serial.available();
 		if (Serial.available() > serialPrevAvailable)
 		{
-			if(Serial.read() == 'F')
+			if(Serial.peek() == 'F')
 			{
 #ifdef ARDUINO_FEATHER_ESP32
 				if(!_sdWrite) // if not writing to SD card
@@ -1678,7 +1705,7 @@ uint8_t EmotiBit::update()
 #endif
 
 			}
-			else
+			else if (!_debugMode)
 			{
 				printEmotiBitInfo();
 			}
@@ -1746,31 +1773,15 @@ uint8_t EmotiBit::update()
 	{
 		dataSendTimer = millis();
 
+		// Perform data calculations in main loop
+		processData();
+		// Send data to SD card and over wireless
+		sendData();
 
-
-		if (_sendTestData)
+		if (startBufferOverflowTest)
 		{
-			addTestData(_outDataPackets);
-			if (getPowerMode() == PowerMode::NORMAL_POWER)
-			{
-				_emotiBitWiFi.sendData(_outDataPackets);
-			}
-			writeSdCardMessage(_outDataPackets);
-			_outDataPackets = "";
-		}
-		else
-		{
-			// Perform data calculations in main loop
-			processData();
-
-			// Send data to SD card and over wireless
-			sendData();
-
-			if (startBufferOverflowTest)
-			{
-				startBufferOverflowTest = false;
-				bufferOverflowTest();
-			}
+			startBufferOverflowTest = false;
+			bufferOverflowTest();
 		}
 	}
 
@@ -3212,6 +3223,62 @@ void EmotiBit::readSensors()
 						led.setState(EmotiBitLedController::Led::BLUE, true);
 						led.setState(EmotiBitLedController::Led::YELLOW, true);
 					}
+
+					if (getPowerMode() == PowerMode::BLUETOOTH) {
+#ifdef ARDUINO_FEATHER_ESP32
+						// Bluetooth connected status LED
+						if (_emotiBitBluetooth.deviceConnected) {
+							led.setState(EmotiBitLedController::Led::BLUE, true);
+						}
+						else {
+								// blink LED
+								static unsigned long onTime = 125; // msec
+								static unsigned long totalTime = 250; // msec changed to 250
+								static bool bleConnectedBlinkState = false;
+
+								static unsigned long bleConnBlinkTimer = millis();
+
+								unsigned long timeNow = millis();
+								if (timeNow - bleConnBlinkTimer < onTime)
+								{
+									led.setState(EmotiBitLedController::Led::BLUE, true);
+								}
+								else if (timeNow - bleConnBlinkTimer < totalTime)
+								{
+									led.setState(EmotiBitLedController::Led::BLUE, false);
+								}
+								else
+								{
+									bleConnBlinkTimer = timeNow;
+								}
+							}
+							// Battery LED
+							if (battIndicationSeq)
+							{
+								led.setState(EmotiBitLedController::Led::YELLOW, true);
+							}
+							else
+							{
+								led.setState(EmotiBitLedController::Led::YELLOW, false);
+							}
+
+							// Recording status LED
+							if (_sdWrite)
+							{
+								static uint32_t recordBlinkDuration = millis();
+								if (millis() - recordBlinkDuration >= 500)
+								{
+									led.setState(EmotiBitLedController::Led::RED, !led.getState(EmotiBitLedController::Led::RED));
+									recordBlinkDuration = millis();
+								}
+							}
+							else if (!_sdWrite && led.getState(EmotiBitLedController::Led::RED) == true)
+							{
+								led.setState(EmotiBitLedController::Led::RED, false);
+							}
+						
+#endif //ARDUINO_FEATHER_ESP32
+					}
 					else
 					{
 						// WiFi connected status LED
@@ -3423,36 +3490,93 @@ void EmotiBit::processData()
 
 void EmotiBit::sendData()
 {
+	// Test data packets would get added here
+	if (_sendTestData)
+	{
+		addTestData(_outDataPackets);
+	}
+
 	for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
 	{
-		addPacket((EmotiBit::DataType) i);
+		if (!_sendTestData)
+		{
+			addPacket((EmotiBit::DataType) i);
+		}
+
 		if (_outDataPackets.length() > OUT_MESSAGE_TARGET_SIZE)
 		{
-			// Avoid overrunning our reserve memory
-			//if (_outDataPackets.length() > 2000)
-			//{
-			//	Serial.println(_outDataPackets.length());
-			//}
+			int16_t firstIndex;
+			firstIndex = 0;
+			while (firstIndex < _outDataPackets.length()) {
+				int16_t lastIndex;
+				//Serial.println(firstIndex);
+				lastIndex = _outDataPackets.length() - 1; // message.length() - 1 to handle \n
 
-			if (getPowerMode() == PowerMode::NORMAL_POWER)
-			{
-				_emotiBitWiFi.sendData(_outDataPackets);
+				// Search for the largest packet larger than MAX_SEND_LEN
+				while (lastIndex - firstIndex > MAX_SEND_LEN - 1) {
+					// Start at the end of the message and search for a packet delimiter less than MAX_SEND_LEN
+					lastIndex = _outDataPackets.lastIndexOf(EmotiBitPacket::PACKET_DELIMITER_CSV, lastIndex - 1);
+					//Serial.println(lastIndex);
+					if (lastIndex <= firstIndex)
+					{
+						// If we don't find a packet less than MAX_SEND_LEN, send the whole thing
+						lastIndex = _outDataPackets.length() - 1;
+						break;
+					}
+				}
+				
+				String s = _outDataPackets.substring(firstIndex, lastIndex + 1); //ToDo:: Consider methods to optimize this
+
+				if (getPowerMode() == PowerMode::NORMAL_POWER) {
+					_emotiBitWiFi.sendData(s);
+				}
+				if (getPowerMode() == PowerMode::BLUETOOTH) {
+					#ifdef ARDUINO_FEATHER_ESP32
+					_emotiBitBluetooth.sendData(s);
+					#endif //ARDUINO_FEATHER_ESP32
+				}
+				writeSdCardMessage(s);
+				firstIndex = lastIndex + 1;
 			}
-			//Serial.println("_emotiBitWiFi.sendData()");
-			writeSdCardMessage(_outDataPackets);
-			//Serial.println("writeSdCardMessage()");
 			_outDataPackets = "";
-
 		}
 	}
-	if (_outDataPackets.length() > 0)
+	if (_outDataPackets.length() > 0) //ToDo: Consider removing this check since it only clears the remaining data on the buffer
 	{
-		if (getPowerMode() == PowerMode::NORMAL_POWER)
-		{
-			_emotiBitWiFi.sendData(_outDataPackets);
-		}
-		writeSdCardMessage(_outDataPackets);
-		_outDataPackets = "";
+		int16_t firstIndex;
+		firstIndex = 0;
+		while (firstIndex < _outDataPackets.length()) {
+			int16_t lastIndex;
+			//Serial.println(firstIndex);
+			lastIndex = _outDataPackets.length() - 1; // message.length() - 1 to handle \n
+
+			// Search for the largest packet larger than MAX_SEND_LEN
+			while (lastIndex - firstIndex > MAX_SEND_LEN - 1) {
+				// Start at the end of the message and search for a packet delimiter less than MAX_SEND_LEN
+				lastIndex = _outDataPackets.lastIndexOf(EmotiBitPacket::PACKET_DELIMITER_CSV, lastIndex - 1);
+				//Serial.println(lastIndex);
+				if (lastIndex <= firstIndex)
+				{
+					// If we don't find a packet less than MAX_SEND_LEN, send the whole thing
+					lastIndex = _outDataPackets.length() - 1;
+					break;
+				}
+			}
+		
+			String s = _outDataPackets.substring(firstIndex, lastIndex + 1);
+
+				if (getPowerMode() == PowerMode::NORMAL_POWER) {
+					_emotiBitWiFi.sendData(s);
+				}
+				if (getPowerMode() == PowerMode::BLUETOOTH) {
+					#ifdef ARDUINO_FEATHER_ESP32
+					_emotiBitBluetooth.sendData(s);
+					#endif //ARDUINO_FEATHER_ESP32
+				}
+				writeSdCardMessage(s);
+				firstIndex = lastIndex + 1;
+			}
+			_outDataPackets = "";
 	}
 }
 
@@ -3631,22 +3755,24 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 
 	if (_sdWrite && s.length() > 0) {
 		if (_dataFile) {
-			static int16_t firstIndex;
-			firstIndex = 0;
-			while (firstIndex < s.length()) {
-				static int16_t lastIndex;
-				if (s.length() - firstIndex > MAX_SD_WRITE_LEN) {
-					lastIndex = firstIndex + MAX_SD_WRITE_LEN;
-				}
-				else {
-					lastIndex = s.length();
-				}
+			if (s.length() > MAX_SEND_LEN)
+			{
+				Serial.println("Message too long for SD card write: ");
+				EmotiBitPacket::Header header = EmotiBitPacket::createHeader(
+					EmotiBitPacket::TypeTag::DATA_OVERFLOW,
+					millis(),
+					_outDataPacketCounter++,
+					1, 1, 100);
+				String data = String(s.length());
+				String errorPacket = EmotiBitPacket::createPacket(header, data);
+				Serial.println(errorPacket);
+				_dataFile.print(errorPacket);
+				return false; // ToDo: handle this case
+			}
 #ifdef DEBUG_GET_DATA
 				Serial.println("writing to SD card");
 #endif // DEBUG
-				_dataFile.print(s.substring(firstIndex, lastIndex));
-				firstIndex = lastIndex;
-			}
+			_dataFile.print(s);
 
 			static uint32_t syncTimer = millis();
 			if (millis() - syncTimer > targetFileSyncDelay)
@@ -3731,7 +3857,29 @@ void EmotiBit::setPowerMode(PowerMode mode)
 	else if (getPowerMode() == PowerMode::WIRELESS_OFF)
 	{
 		Serial.println("PowerMode::WIRELESS_OFF");
+
+		if (_enableBluetooth == true)
+			{
+#ifdef ARDUINO_FEATHER_ESP32		
+				_emotiBitBluetooth.end();
+//				_enableBluetooth = false;
+#endif //ARDUINO_FEATHER_ESP32
+			}
+		else
+		{
 		_emotiBitWiFi.end();
+		}
+	}
+	else if (getPowerMode() == PowerMode::BLUETOOTH)
+	{
+#ifdef ARDUINO_FEATHER_ESP32		
+		if (_emotiBitBluetooth.isOff())
+		{
+			Serial.println("PowerMode::BLUETOOTH");
+			_emotiBitBluetooth.begin(emotibitDeviceId);
+		}
+
+#endif //ARDUINO_FEATHER_ESP32
 	}
 	else if (getPowerMode() == PowerMode::HIBERNATE)
 	{
@@ -3839,8 +3987,8 @@ void EmotiBit::updateBatteryIndication(float battPercent)
 
 void EmotiBit::addTestData(String &dataMessage)
 {
-	if (_sdWrite){ //only send test data if we are recording
-		EmotiBitPacket::createTestDataPacket(dataMessage);
+	if (_sdWrite) {//only send test data if we are recording
+		EmotiBitPacket::createTestDataPacket(dataMessage, _testDataType);
 	}
 }
 
@@ -3947,6 +4095,10 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("Press S to reset maxReadSensors metrics");
 			Serial.println("[ACUTE TESTING MODE] Press n to printEntireNvm");
 			Serial.println("[ACUTE TESTING MODE] Press N to eraseEeprom");
+			Serial.println("Press > to toggle ON Send Test Data");
+			Serial.println("Press < to toggle OFF Send Test Data");
+			Serial.println("Press @ to toggle Packet Fixed Length Test if Send Test Data is ON");
+			Serial.println("Press # to toggle Sawtooth Test Data if Send Test Data is ON");
 		}
 		else if (c == ':')
 		{
@@ -4292,6 +4444,27 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			{
 				_emotibitNvmController.eraseEeprom();
 			}
+		}
+		else if (c == '>') {
+			_sendTestData = true;
+			//nameSdCardFile(); //temp
+
+			Serial.println("Entering Sending Test Data Mode");
+		}
+		else if (c == '<')
+		{
+			_sendTestData = true;
+			Serial.println("Entering Sending Test Data Mode");
+		}
+		else if (c == '@' && _sendTestData == true)
+		{
+			_testDataType = EmotiBitPacket::TestType::FIXEDPACKETLENGTHTEST;
+			Serial.println("TestDataType: Fixed Packet Length Test");
+		}
+		else if (c == '#' && _sendTestData == true)
+		{
+			_testDataType = EmotiBitPacket::TestType::SAWTOOTHTEST;
+			Serial.println("TestDataType: Sawtooth Test");
 		}
 	}
 }
