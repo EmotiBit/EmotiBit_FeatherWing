@@ -1,19 +1,26 @@
 #!/bin/bash
 
-# Script to download all dependencies from dependencies.json and checkout specified versions
+# Script to download all dependencies using library.properties for names/versions and dependencies.json for URLs
 # Downloads dependencies at the same level as the FeatherWing directory
 # Usage: ./download_dependencies.sh
 
 set -e  # Exit on any error
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEPS_JSON="$SCRIPT_DIR/dependencies.json"
+LIBRARY_PROPERTIES="$SCRIPT_DIR/library.properties"
+DEPS_JSON="$SCRIPT_DIR/depends_urls.json"
 # Libraries will be downloaded one level up from FeatherWing (same level as FeatherWing)
 LIBS_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Check if dependencies.json exists
+# Check if library.properties exists
+if [ ! -f "$LIBRARY_PROPERTIES" ]; then
+    echo "Error: library.properties not found in $SCRIPT_DIR"
+    exit 1
+fi
+
+# Check if depends_urls.json exists
 if [ ! -f "$DEPS_JSON" ]; then
-    echo "Error: dependencies.json not found in $SCRIPT_DIR"
+    echo "Error: depends_urls.json not found in $SCRIPT_DIR"
     exit 1
 fi
 
@@ -29,14 +36,31 @@ echo "Starting dependency download..."
 echo "Libraries will be downloaded to: $LIBS_DIR"
 echo ""
 
-# Read dependencies from JSON and process each one
-jq -r '.dependencies[] | @base64' "$DEPS_JSON" | while read -r data; do
-    # Decode the JSON object
-    dep=$(echo "$data" | base64 --decode)
+# Parse dependencies from library.properties
+depends_line=$(grep "^depends=" "$LIBRARY_PROPERTIES" | cut -d'=' -f2-)
+
+# Split dependencies by comma and process each one
+IFS=',' read -ra DEPS <<< "$depends_line"
+for dep in "${DEPS[@]}"; do
+    # Trim whitespace and extract name and version
+    dep=$(echo "$dep" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     
-    name=$(echo "$dep" | jq -r '.name')
-    github=$(echo "$dep" | jq -r '.github')
-    version=$(echo "$dep" | jq -r '.version')
+    # Check if dependency has version specification like "Name (=version)"
+    if [[ "$dep" == *"(="* ]]; then
+        name=$(echo "$dep" | sed 's/[[:space:]]*(.*//')
+        version=$(echo "$dep" | sed 's/.*(\=//' | sed 's/).*//')
+    else
+        name="$dep"
+        version=""
+    fi
+    
+    # Get GitHub URL from depends_urls.json
+    github=$(jq -r --arg name "$name" '.library_urls[$name] // empty' "$DEPS_JSON")
+    
+    if [ -z "$github" ]; then
+        echo "Warning: No URL found for library '$name' in depends_urls.json, skipping..."
+        continue
+    fi
     
     echo "Processing: $name"
     echo "  Repository: $github"
@@ -53,13 +77,11 @@ jq -r '.dependencies[] | @base64' "$DEPS_JSON" | while read -r data; do
         if [ -n "$version" ] && [ "$version" != "" ]; then
             echo "  Cloning repository at version: $version"
             
-            # Try cloning with version tag first, then with v prefix
-            if git clone --depth 1 --branch "$version" --single-branch "$github" "$lib_path" 2>/dev/null; then
-                echo "  ✓ Cloned at tag: $version"
-            elif git clone --depth 1 --branch "v$version" --single-branch "$github" "$lib_path" 2>/dev/null; then
-                echo "  ✓ Cloned at tag: v$version"
+            # Try cloning with v prefix
+            if git clone --depth 1 --branch "v$version" --single-branch "$github" "$lib_path" 2>/dev/null; then
+                echo " Cloned at tag: v$version"
             else
-                echo "  ⚠ Warning: Version tag '$version' or 'v$version' not found, cloning default branch"
+                echo "  Warning: Specified version tag 'v$version' not found, cloning default branch"
                 git clone --depth 1 "$github" "$lib_path"
             fi
         else

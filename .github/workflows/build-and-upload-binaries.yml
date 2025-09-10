@@ -3,7 +3,6 @@ name: Build EmotiBit FeatherWing Firmware
 on:
   push:
     branches:
-      dev
 jobs:
   build:
     runs-on:  [self-hosted, macOS]
