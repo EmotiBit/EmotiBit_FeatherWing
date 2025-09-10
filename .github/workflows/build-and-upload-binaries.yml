@@ -3,7 +3,6 @@ name: Build EmotiBit FeatherWing Firmware
 on:
   push:
     branches:
-      dev
 jobs:
   build:
     runs-on:  [self-hosted, macOS]
@@ -16,6 +15,11 @@ jobs:
       run: |
         chmod +x ./download_dependencies.sh
         ./download_dependencies.sh
+        
+    - name: Generate dependency report
+      run: |
+        chmod +x ./generate_dependency_report.sh
+        ./generate_dependency_report.sh
         
     - name: Build firmware
       run: |
@@ -32,10 +36,17 @@ jobs:
         find EmotiBit_stock_firmware_PPG_100Hz/.pio/build -name "*.bin" -o -name "*.hex" | while read file; do
           cp "$file" firmware_binaries/
         done
+        cp dependency_report.txt firmware_binaries/
         
+    - name: Set version environment variable
+      run: |
+        VERSION=$(grep "^version=" library.properties | cut -d'=' -f2)
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "Uploading artifacts for version: $VERSION"
+      
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: emotibit-firmware
+        name: emotibit-firmware-${{ env.VERSION }}
         path: firmware_binaries/
         retention-days: 30
