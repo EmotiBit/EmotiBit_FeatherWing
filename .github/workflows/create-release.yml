@@ -99,23 +99,15 @@ jobs:
       run: |
         RELEASE_NAME="${{ inputs.release_name }}"
         if [ -z "$RELEASE_NAME" ]; then
-          RELEASE_NAME="EmotiBit FeatherWing Firmware v${{ env.VERSION }}"
+          RELEASE_NAME="v${{ env.VERSION }}"
         fi
         echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
         
         # Create release notes
         cat > release_notes.md << EOF
-        # EmotiBit FeatherWing Firmware v${{ env.VERSION }}
-        
         ## Release Notes
-        - Built from latest dev branch commit
-        - All dependencies verified and tested
-        
-        ## Included Firmware Files
-        $(find ./release_files -name "*.bin" -o -name "*.hex" | sort | sed 's|./release_files/|- |')
         
         ## Build Information
-        - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
         - **Source Branch**: dev
         - **Workflow Run**: [${{ steps.get_run.outputs.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.get_run.outputs.run_id }})
         
@@ -128,6 +120,7 @@ jobs:
           echo "\`\`\`" >> release_notes.md
           cat ./release_files/dependency_report.txt >> release_notes.md
           echo "\`\`\`" >> release_notes.md
+          rm ./release_files/dependency_report.txt
         fi
         
         echo "Generated release notes:"
