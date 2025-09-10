@@ -1,0 +1,148 @@
+name: Create Release from Latest CI Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: 'Release name (leave empty to auto-generate from version)'
+        required: false
+        type: string
+      pre_release:
+        description: 'Mark as pre-release'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: dev
+        
+    - name: Get version from library.properties
+      id: get_version
+      run: |
+        VERSION=$(grep "^version=" library.properties | cut -d'=' -f2)
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Found version: $VERSION"
+        
+    - name: Get latest successful workflow run
+      id: get_run
+      run: |
+        LATEST_RUN=$(gh api repos/${{ github.repository }}/actions/workflows/build-and-upload-binaries.yml/runs \
+          --jq '.workflow_runs[] | select(.head_branch == "dev" and .conclusion == "success") | .id' \
+          | head -1)
+        
+        if [ -z "$LATEST_RUN" ]; then
+          echo "No successful workflow runs found on dev branch"
+          exit 1
+        fi
+        
+        echo "LATEST_RUN_ID=$LATEST_RUN" >> $GITHUB_ENV
+        echo "run_id=$LATEST_RUN" >> $GITHUB_OUTPUT
+        echo "Latest successful run ID: $LATEST_RUN"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Download artifacts from latest run
+      run: |
+        echo "Downloading artifacts from run ID: $LATEST_RUN_ID"
+        gh run download $LATEST_RUN_ID --dir ./artifacts
+        ls -la ./artifacts/
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Extract and prepare release files
+      id: prepare_files
+      run: |
+        # Find the artifact directory (should be named like emotibit-firmware-x.x.x)
+        ARTIFACT_DIR=$(find ./artifacts -name "emotibit-firmware-*" -type d | head -1)
+        
+        if [ -z "$ARTIFACT_DIR" ]; then
+          echo "No firmware artifact directory found"
+          exit 1
+        fi
+        
+        echo "Found artifact directory: $ARTIFACT_DIR"
+        
+        # Create release directory
+        mkdir -p ./release_files
+        
+        # Copy stock_firmware binaries
+        find "$ARTIFACT_DIR" -name "*stock_firmware*" -type f \( -name "*.bin" -o -name "*.hex" \) | while read file; do
+          echo "Copying: $(basename "$file")"
+          cp "$file" ./release_files/
+        done
+        
+        # Check if dependency_report.txt exists and copy it
+        if [ -f "$ARTIFACT_DIR/dependency_report.txt" ]; then
+          cp "$ARTIFACT_DIR/dependency_report.txt" ./release_files/
+          echo "DEPENDENCY_REPORT_EXISTS=true" >> $GITHUB_ENV
+        else
+          echo "DEPENDENCY_REPORT_EXISTS=false" >> $GITHUB_ENV
+        fi
+        
+        # List files that will be included in release
+        echo "Files to be included in release:"
+        ls -la ./release_files/
+        
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        RELEASE_NAME="${{ inputs.release_name }}"
+        if [ -z "$RELEASE_NAME" ]; then
+          RELEASE_NAME="EmotiBit FeatherWing Firmware v${{ env.VERSION }}"
+        fi
+        echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
+        
+        # Create release notes
+        cat > release_notes.md << EOF
+        # EmotiBit FeatherWing Firmware v${{ env.VERSION }}
+        
+        ## Release Notes
+        - Built from latest dev branch commit
+        - All dependencies verified and tested
+        
+        ## Included Firmware Files
+        $(find ./release_files -name "*.bin" -o -name "*.hex" | sort | sed 's|./release_files/|- |')
+        
+        ## Build Information
+        - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        - **Source Branch**: dev
+        - **Workflow Run**: [${{ steps.get_run.outputs.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.get_run.outputs.run_id }})
+        
+        EOF
+        
+        # Add dependency information if report exists
+        if [ "$DEPENDENCY_REPORT_EXISTS" = "true" ]; then
+          echo "" >> release_notes.md
+          echo "## Library Dependencies" >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
+          cat ./release_files/dependency_report.txt >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
+        fi
+        
+        echo "Generated release notes:"
+        cat release_notes.md
+        
+    - name: Create draft release
+      run: |
+        gh release create "v${{ env.VERSION }}" \
+          --title "${{ env.RELEASE_NAME }}" \
+          --notes-file release_notes.md \
+          --draft \
+          ${{ inputs.pre_release == true && '--prerelease' || '' }} \
+          ./release_files/*
+          
+        echo "Draft release created successfully!"
+        echo "Release URL: ${{ github.server_url }}/${{ github.repository }}/releases"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
