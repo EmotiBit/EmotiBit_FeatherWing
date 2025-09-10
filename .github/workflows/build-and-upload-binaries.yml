@@ -16,6 +16,11 @@ jobs:
         chmod +x ./download_dependencies.sh
         ./download_dependencies.sh
         
+    - name: Generate dependency report
+      run: |
+        chmod +x ./generate_dependency_report.sh
+        ./generate_dependency_report.sh
+        
     - name: Build firmware
       run: |
         export PATH="$HOME/.local/bin:$PATH"
@@ -31,6 +36,7 @@ jobs:
         find EmotiBit_stock_firmware_PPG_100Hz/.pio/build -name "*.bin" -o -name "*.hex" | while read file; do
           cp "$file" firmware_binaries/
         done
+        cp dependency_report.txt firmware_binaries/
         
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
