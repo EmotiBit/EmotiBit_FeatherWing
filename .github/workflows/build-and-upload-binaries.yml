@@ -38,9 +38,15 @@ jobs:
         done
         cp dependency_report.txt firmware_binaries/
         
+    - name: Set version environment variable
+      run: |
+        VERSION=$(grep "^version=" library.properties | cut -d'=' -f2)
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "Uploading artifacts for version: $VERSION"
+      
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: emotibit-firmware
+        name: emotibit-firmware-${{ env.VERSION }}
         path: firmware_binaries/
         retention-days: 30
