@@ -50,3 +50,10 @@ jobs:
         name: emotibit-firmware-${{ env.VERSION }}
         path: firmware_binaries/
         retention-days: 30
+        
+    - name: Clean up working directory and downloaded libraries
+      if: always()
+      run: |
+        cd ${{ github.workspace }}/..
+        find . -maxdepth 1 -type d ! -name "." ! -name "EmotiBit_FeatherWing" -exec rm -rf {} +
+        find . -maxdepth 1 -type f -exec rm -f {} +

@@ -1648,7 +1648,7 @@ uint8_t EmotiBit::update()
 		static uint16_t serialPrevAvailable = Serial.available();
 		if (Serial.available() > serialPrevAvailable)
 		{
-			if(Serial.read() == 'F')
+			if(Serial.peek() == 'F')
 			{
 #ifdef ARDUINO_FEATHER_ESP32
 				if(!_sdWrite) // if not writing to SD card
@@ -1678,7 +1678,7 @@ uint8_t EmotiBit::update()
 #endif
 
 			}
-			else
+			else if (!_debugMode)
 			{
 				printEmotiBitInfo();
 			}
@@ -1746,31 +1746,15 @@ uint8_t EmotiBit::update()
 	{
 		dataSendTimer = millis();
 
+		// Perform data calculations in main loop
+		processData();
+		// Send data to SD card and over wireless
+		sendData();
 
-
-		if (_sendTestData)
+		if (startBufferOverflowTest)
 		{
-			addTestData(_outDataPackets);
-			if (getPowerMode() == PowerMode::NORMAL_POWER)
-			{
-				_emotiBitWiFi.sendData(_outDataPackets);
-			}
-			writeSdCardMessage(_outDataPackets);
-			_outDataPackets = "";
-		}
-		else
-		{
-			// Perform data calculations in main loop
-			processData();
-
-			// Send data to SD card and over wireless
-			sendData();
-
-			if (startBufferOverflowTest)
-			{
-				startBufferOverflowTest = false;
-				bufferOverflowTest();
-			}
+			startBufferOverflowTest = false;
+			bufferOverflowTest();
 		}
 	}
 
@@ -3423,35 +3407,81 @@ void EmotiBit::processData()
 
 void EmotiBit::sendData()
 {
+	if (_sendTestData)
+	{
+		addTestData(_outDataPackets);
+	}
+
 	for (int16_t i = 0; i < (uint8_t)EmotiBit::DataType::length; i++)
 	{
-		addPacket((EmotiBit::DataType) i);
+		if (!_sendTestData)
+		{
+			addPacket((EmotiBit::DataType) i);
+		}
+
 		if (_outDataPackets.length() > OUT_MESSAGE_TARGET_SIZE)
 		{
-			// Avoid overrunning our reserve memory
-			//if (_outDataPackets.length() > 2000)
-			//{
-			//	Serial.println(_outDataPackets.length());
-			//}
+			int16_t firstIndex;
+			firstIndex = 0;
+			while (firstIndex < _outDataPackets.length()) {
+				int16_t lastIndex;
+				//Serial.println(firstIndex);
+				lastIndex = _outDataPackets.length() - 1; // message.length() - 1 to handle \n
 
-			if (getPowerMode() == PowerMode::NORMAL_POWER)
-			{
-				_emotiBitWiFi.sendData(_outDataPackets);
+				// Search for the largest packet larger than MAX_SEND_LEN
+				while (lastIndex - firstIndex > MAX_SEND_LEN - 1) {
+					// Start at the end of the message and search for a packet delimiter less than MAX_SEND_LEN
+					lastIndex = _outDataPackets.lastIndexOf(EmotiBitPacket::PACKET_DELIMITER_CSV, lastIndex - 1);
+					//Serial.println(lastIndex);
+					if (lastIndex <= firstIndex)
+					{
+						// If we don't find a packet less than MAX_SEND_LEN, send the whole thing
+						lastIndex = _outDataPackets.length() - 1;
+						break;
+					}
+				}
+				
+				String s = _outDataPackets.substring(firstIndex, lastIndex + 1); //ToDo:: Consider methods to optimize this
+
+				if (getPowerMode() == PowerMode::NORMAL_POWER) {
+					_emotiBitWiFi.sendData(s);
+				}
+				writeSdCardMessage(s);
+				firstIndex = lastIndex + 1;
 			}
-			//Serial.println("_emotiBitWiFi.sendData()");
-			writeSdCardMessage(_outDataPackets);
-			//Serial.println("writeSdCardMessage()");
 			_outDataPackets = "";
-
 		}
 	}
-	if (_outDataPackets.length() > 0)
+	if (_outDataPackets.length() > 0) //ToDo: Consider removing this check since it only clears the remaining data on the buffer
 	{
-		if (getPowerMode() == PowerMode::NORMAL_POWER)
-		{
-			_emotiBitWiFi.sendData(_outDataPackets);
+		int16_t firstIndex;
+		firstIndex = 0;
+		while (firstIndex < _outDataPackets.length()) {
+			int16_t lastIndex;
+			//Serial.println(firstIndex);
+			lastIndex = _outDataPackets.length() - 1; // message.length() - 1 to handle \n
+
+			// Search for the largest packet larger than MAX_SEND_LEN
+			while (lastIndex - firstIndex > MAX_SEND_LEN - 1) {
+				// Start at the end of the message and search for a packet delimiter less than MAX_SEND_LEN
+				lastIndex = _outDataPackets.lastIndexOf(EmotiBitPacket::PACKET_DELIMITER_CSV, lastIndex - 1);
+				//Serial.println(lastIndex);
+				if (lastIndex <= firstIndex)
+				{
+					// If we don't find a packet less than MAX_SEND_LEN, send the whole thing
+					lastIndex = _outDataPackets.length() - 1;
+					break;
+				}
+			}
+		
+			String s = _outDataPackets.substring(firstIndex, lastIndex + 1);
+
+			if (getPowerMode() == PowerMode::NORMAL_POWER) {
+				_emotiBitWiFi.sendData(s);
+			}
+			writeSdCardMessage(s);
+			firstIndex = lastIndex + 1;
 		}
-		writeSdCardMessage(_outDataPackets);
 		_outDataPackets = "";
 	}
 }
@@ -3631,22 +3661,24 @@ bool EmotiBit::writeSdCardMessage(const String & s) {
 
 	if (_sdWrite && s.length() > 0) {
 		if (_dataFile) {
-			static int16_t firstIndex;
-			firstIndex = 0;
-			while (firstIndex < s.length()) {
-				static int16_t lastIndex;
-				if (s.length() - firstIndex > MAX_SD_WRITE_LEN) {
-					lastIndex = firstIndex + MAX_SD_WRITE_LEN;
-				}
-				else {
-					lastIndex = s.length();
-				}
+			if (s.length() > MAX_SEND_LEN)
+			{
+				Serial.println("Message too long for SD card write: ");
+				EmotiBitPacket::Header header = EmotiBitPacket::createHeader(
+					EmotiBitPacket::TypeTag::DATA_OVERFLOW,
+					millis(),
+					_outDataPacketCounter++,
+					1, 1, 100);
+				String data = String(s.length());
+				String errorPacket = EmotiBitPacket::createPacket(header, data);
+				Serial.println(errorPacket);
+				_dataFile.print(errorPacket);
+				return false; // ToDo: handle this case
+			}
 #ifdef DEBUG_GET_DATA
 				Serial.println("writing to SD card");
 #endif // DEBUG
-				_dataFile.print(s.substring(firstIndex, lastIndex));
-				firstIndex = lastIndex;
-			}
+			_dataFile.print(s);
 
 			static uint32_t syncTimer = millis();
 			if (millis() - syncTimer > targetFileSyncDelay)
@@ -3839,8 +3871,8 @@ void EmotiBit::updateBatteryIndication(float battPercent)
 
 void EmotiBit::addTestData(String &dataMessage)
 {
-	if (_sdWrite){ //only send test data if we are recording
-		EmotiBitPacket::createTestDataPacket(dataMessage);
+	if (_sdWrite) { //only send test data if we are recording so testing has sd card files with defined start/stop points for diffing
+		EmotiBitPacket::createTestDataPacket(dataMessage, _testDataType);
 	}
 }
 
@@ -3947,6 +3979,10 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			Serial.println("Press S to reset maxReadSensors metrics");
 			Serial.println("[ACUTE TESTING MODE] Press n to printEntireNvm");
 			Serial.println("[ACUTE TESTING MODE] Press N to eraseEeprom");
+			Serial.println("Press > to toggle ON Send Test Data");
+			Serial.println("Press < to toggle OFF Send Test Data");
+			Serial.println("Press @ to toggle Packet Fixed Length Test if Send Test Data is ON");
+			Serial.println("Press # to toggle Sawtooth Test Data if Send Test Data is ON");
 		}
 		else if (c == ':')
 		{
@@ -4292,6 +4328,25 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 			{
 				_emotibitNvmController.eraseEeprom();
 			}
+		}
+		else if (c == '>') {
+			_sendTestData = true;
+			Serial.println("Entering Sending Test Data Mode");
+		}
+		else if (c == '<')
+		{
+			_sendTestData = false;
+			Serial.println("Exiting Sending Test Data Mode");
+		}
+		else if (c == '@' && _sendTestData == true)
+		{
+			_testDataType = EmotiBitPacket::TestType::FIXED_PACKET_LENGTH;
+			Serial.println("TestDataType: Fixed Packet Length Test");
+		}
+		else if (c == '#' && _sendTestData == true)
+		{
+			_testDataType = EmotiBitPacket::TestType::SAWTOOTH;
+			Serial.println("TestDataType: Sawtooth Test");
 		}
 	}
 }
