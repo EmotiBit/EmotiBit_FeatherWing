@@ -77,11 +77,14 @@ for dep in "${DEPS[@]}"; do
         if [ -n "$version" ] && [ "$version" != "" ]; then
             echo "  Cloning repository at version: $version"
             
-            # Try cloning with v prefix
+            # Try cloning with v prefix first
             if git clone --depth 1 --branch "v$version" --single-branch "$github" "$lib_path" 2>/dev/null; then
-                echo " Cloned at tag: v$version"
+                echo "  Cloned at tag: v$version"
+            # Try cloning without v prefix
+            elif git clone --depth 1 --branch "$version" --single-branch "$github" "$lib_path" 2>/dev/null; then
+                echo "  Cloned at tag: $version"
             else
-                echo "  Warning: Specified version tag 'v$version' not found, cloning default branch"
+                echo "  Warning: Specified version tags 'v$version' and '$version' not found, cloning default branch"
                 git clone --depth 1 "$github" "$lib_path"
             fi
         else
