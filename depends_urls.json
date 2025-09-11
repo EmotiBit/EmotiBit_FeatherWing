@@ -18,7 +18,7 @@
     "Arduino Low Power": "https://github.com/arduino-libraries/ArduinoLowPower",
     "RTCZero": "https://github.com/arduino-libraries/RTCZero",
     "Adafruit IS31FL3731 Library": "https://github.com/adafruit/Adafruit_IS31FL3731",
-    "Adafruit_GFX_Library": "https://github.com/adafruit/Adafruit-GFX-Library",
+    "Adafruit GFX Library": "https://github.com/adafruit/Adafruit-GFX-Library",
     "Adafruit BusIO": "https://github.com/adafruit/Adafruit_BusIO"
   }
 }
