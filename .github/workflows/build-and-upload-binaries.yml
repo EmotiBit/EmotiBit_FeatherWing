@@ -1,0 +1,59 @@
+name: Build EmotiBit FeatherWing Firmware
+
+on:
+  push:
+    branches:
+jobs:
+  build:
+    runs-on:  [self-hosted, macOS]
+    
+    steps:
+    - name: Checkout FeatherWing repository
+      uses: actions/checkout@v4
+        
+    - name: Download dependencies
+      run: |
+        chmod +x ./download_dependencies.sh
+        ./download_dependencies.sh
+        
+    - name: Generate dependency report
+      run: |
+        chmod +x ./generate_dependency_report.sh
+        ./generate_dependency_report.sh
+        
+    - name: Build firmware
+      run: |
+        export PATH="$HOME/.local/bin:$PATH"
+        chmod +x ./build.sh
+        ./build.sh
+        
+    - name: Prepare artifacts for upload
+      run: |
+        mkdir -p firmware_binaries
+        find EmotiBit_stock_firmware/.pio/build -name "*.bin" -o -name "*.hex" | while read file; do
+          cp "$file" firmware_binaries/
+        done
+        find EmotiBit_stock_firmware_PPG_100Hz/.pio/build -name "*.bin" -o -name "*.hex" | while read file; do
+          cp "$file" firmware_binaries/
+        done
+        cp dependency_report.txt firmware_binaries/
+        
+    - name: Set version environment variable
+      run: |
+        VERSION=$(grep "^version=" library.properties | cut -d'=' -f2)
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "Uploading artifacts for version: $VERSION"
+      
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: emotibit-firmware-${{ env.VERSION }}
+        path: firmware_binaries/
+        retention-days: 30
+        
+    - name: Clean up working directory and downloaded libraries
+      if: always()
+      run: |
+        cd ${{ github.workspace }}/..
+        find . -maxdepth 1 -type d ! -name "." ! -name "EmotiBit_FeatherWing" -exec rm -rf {} +
+        find . -maxdepth 1 -type f -exec rm -f {} +

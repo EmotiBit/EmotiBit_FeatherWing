@@ -58,7 +58,7 @@ public:
 
 
 
-  String firmware_version = "1.14.2.feat-blePrototype-Example.1";
+  String firmware_version = "1.14.3";
 
 
 
@@ -432,7 +432,7 @@ public:
 	volatile bool _sdWrite;
 	PowerMode _powerMode;
 	bool _sendTestData = false;
-	EmotiBitPacket::TestType _testDataType = EmotiBitPacket::TestType::SAWTOOTHTEST; // Default to Sawtooth
+	EmotiBitPacket::TestType _testDataType = EmotiBitPacket::TestType::SAWTOOTH; // Default to Sawtooth
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;

@@ -2746,7 +2746,7 @@ bool EmotiBit::printConfigInfo(File &file, const String &datetimeString) {
 		infos[i]["channel_count"] = 3;
 		infos[i]["nominal_srate"] = _samplingRates.magnetometer;
 		infos[i]["channel_format"] = "float";
-		infos[i]["units"] = "microhenries";
+		infos[i]["units"] = "microteslas";
 		setups[i] = infos[i].createNestedObject("setup");
 		serializeJson(jsonDoc, file);
 	}
@@ -3490,7 +3490,6 @@ void EmotiBit::processData()
 
 void EmotiBit::sendData()
 {
-	// Test data packets would get added here
 	if (_sendTestData)
 	{
 		addTestData(_outDataPackets);
@@ -3987,7 +3986,7 @@ void EmotiBit::updateBatteryIndication(float battPercent)
 
 void EmotiBit::addTestData(String &dataMessage)
 {
-	if (_sdWrite) {//only send test data if we are recording
+	if (_sdWrite) { //only send test data if we are recording so testing has sd card files with defined start/stop points for diffing
 		EmotiBitPacket::createTestDataPacket(dataMessage, _testDataType);
 	}
 }
@@ -4458,12 +4457,12 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		}
 		else if (c == '@' && _sendTestData == true)
 		{
-			_testDataType = EmotiBitPacket::TestType::FIXEDPACKETLENGTHTEST;
+			_testDataType = EmotiBitPacket::TestType::FIXED_PACKET_LENGTH;
 			Serial.println("TestDataType: Fixed Packet Length Test");
 		}
 		else if (c == '#' && _sendTestData == true)
 		{
-			_testDataType = EmotiBitPacket::TestType::SAWTOOTHTEST;
+			_testDataType = EmotiBitPacket::TestType::SAWTOOTH;
 			Serial.println("TestDataType: Sawtooth Test");
 		}
 	}
