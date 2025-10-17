@@ -467,7 +467,6 @@ public:
 	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented
 	void writeSerialData(EmotiBit::DataType t);
 	void printEmotiBitInfo();
-	void nameSdCardFile();
 
 	/**
 	 * Copies data buffer of the specified DataType into the passed array

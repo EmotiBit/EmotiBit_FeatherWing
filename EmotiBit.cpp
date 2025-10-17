@@ -4446,7 +4446,6 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		}
 		else if (c == '>') {
 			_sendTestData = true;
-			//nameSdCardFile(); //temp
 
 			Serial.println("Entering Sending Test Data Mode");
 		}
