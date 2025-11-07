@@ -82,7 +82,7 @@ class EmotiBitBluetooth {
         * @brief Checks if the device is connected to a BLE client  
         * @param emotibitDeviceId
         */
-        void setDeviceId(const String emotibitDeviceId); 
+        void setDeviceId(const String& emotibitDeviceId); 
 
         /*!
         * @brief Reads control messages from the BLE characteristic

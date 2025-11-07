@@ -17,7 +17,8 @@ uint8_t EmotiBitBluetooth::begin(const String& emotibitDeviceId)
 
         pServer = BLEDevice::createServer();
 
-        if (!pServer) {
+        if (!pServer)
+        {
                 Serial.println("ERROR: Failed to create BLE server");
                 return 1;
         }
@@ -26,9 +27,19 @@ uint8_t EmotiBitBluetooth::begin(const String& emotibitDeviceId)
         BLEService* pService = pServer->createService(EMOTIBIT_SERVICE_UUID);
 
         pDataTxCharacteristic = pService->createCharacteristic(EMOTIBIT_DATA_TX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_NOTIFY);
+        if (!pDataTxCharacteristic)
+        {
+                Serial.println("ERROR: Failed to create TX characteristic");
+                return 1;
+        }
         pDataTxCharacteristic->addDescriptor(new BLE2902());
 
         pDataRxCharacteristic = pService->createCharacteristic(EMOTIBIT_DATA_RX_CHARACTERISTIC_UUID, BLECharacteristic::PROPERTY_WRITE);
+        if (!pDataRxCharacteristic)
+        {
+                Serial.println("ERROR: Failed to create RX characteristic");
+                return 1;
+        }
         pDataRxCharacteristic->setCallbacks(new MyCallbacks());
 
         pService->start();
@@ -67,15 +78,18 @@ void EmotiBitBluetooth::MyCallbacks::onWrite(BLECharacteristic *pCharacteristic)
         }
 }
 
-void EmotiBitBluetooth::setDeviceId(const String emotibitDeviceId)
+void EmotiBitBluetooth::setDeviceId(const String& emotibitDeviceId)
 {
 	_emotibitDeviceId = emotibitDeviceId;
 }
 
 void EmotiBitBluetooth::sendData(const String &message)
 {
-        if (deviceConnected) {
-                if (pDataTxCharacteristic == nullptr) {
+        if (deviceConnected)
+        {
+                //TODO: consider truncating via MTU if message is too long
+                if (pDataTxCharacteristic == nullptr)
+                {
                 //Serial.println("ERROR: pDataTxCharacteristic is NULL!");
                 return;
                 }
@@ -91,9 +105,11 @@ void EmotiBitBluetooth::sendData(const String &message)
                 
                 // Check descriptor status
                 BLEDescriptor* p2902 = pDataTxCharacteristic->getDescriptorByUUID(BLEUUID((uint16_t)0x2902));
-                if (p2902) {
+                if (p2902)
+                {
                 const uint8_t* val = p2902->getValue();
-                if (val) {
+                if (val)
+                {
                         //Serial.print(" | Notifications enabled=");
                         //Serial.print((val[0] & 0x01) ? "YES" : "NO");
                 }
@@ -104,7 +120,9 @@ void EmotiBitBluetooth::sendData(const String &message)
                 //Serial.print(" | Message: ");
                 //Serial.println(message.c_str());
         }
-        else {
+        else
+        {
+        //ToDO: consider gating behind a debug flag
                 Serial.println("unable to send data: deviceConnected=false");
         }
 }

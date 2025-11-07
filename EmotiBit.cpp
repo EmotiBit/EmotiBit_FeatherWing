@@ -4444,15 +4444,15 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 				_emotibitNvmController.eraseEeprom();
 			}
 		}
-		else if (c == '>') {
+		else if (c == '>')
+		{
 			_sendTestData = true;
-
 			Serial.println("Entering Sending Test Data Mode");
 		}
 		else if (c == '<')
 		{
-			_sendTestData = true;
-			Serial.println("Entering Sending Test Data Mode");
+			_sendTestData = false;
+			Serial.println("Exiting Sending Test Data Mode");
 		}
 		else if (c == '@' && _sendTestData == true)
 		{
