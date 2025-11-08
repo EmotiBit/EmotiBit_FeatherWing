@@ -16,3 +16,6 @@ See https://github.com/EmotiBit/EmotiBit_Docs/blob/master/Getting_Started.md
 ### Build
 - To build on Arduino, Open the EmotiBit_stock_firmware > EmotiBit_stock_firmware.ino. Press the build button.
 - To build using PlatformIO, follow the instructions in our documentation: [`Building firmware using PlatformIO`]( https://github.com/EmotiBit/EmotiBit_Docs/blob/master/Keep_emotibit_up_to_date.md#building-firmware-using-platformio)
+
+## Developer Documentation
+- [GitHub Workflows and CI/CD](WORKFLOWS_AND_SCRIPTS.md) - Detailed documentation on automated builds, releases, and bash scripts
