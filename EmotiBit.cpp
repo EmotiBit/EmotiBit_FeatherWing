@@ -959,12 +959,13 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 
 	if (_enableBluetooth == true)
 	{
-		#ifdef ARDUINO_FEATHER_ESP32
-		setPowerMode(PowerMode::BLUETOOTH);
-		#endif // ARDUINO_FEATHER_ESP32	
+		if (!setPowerMode(PowerMode::BLUETOOTH))
+		{
+			_enableBluetooth = false;
+		}
 	}
 
-	else
+	if (_enableBluetooth == false)
 	{
 	#ifdef ARDUINO_FEATHER_ESP32
 		esp_bt_controller_disable();
@@ -3800,94 +3801,140 @@ EmotiBit::PowerMode EmotiBit::getPowerMode()
 	return _powerMode;
 }
 
-void EmotiBit::setPowerMode(PowerMode mode)
+bool EmotiBit::setPowerMode(PowerMode mode)
 {
-	_powerMode = mode;
-	String modePacket;
-	sendModePacket(modePacket, _outDataPacketCounter);
-	if (getPowerMode() == PowerMode::NORMAL_POWER)
+	bool ret = false;
+	if (mode == PowerMode::NORMAL_POWER)
 	{
-		Serial.println("PowerMode::NORMAL_POWER");
-		if (_emotiBitWiFi.isOff())
+		Serial.println("SetPowerMode(NORMAL_POWER)");
+		if (_enableBluetooth)
 		{
-			unsigned long beginTime = millis();
-			_emotiBitWiFi.begin(100, 1, 100);	// This ToDo: create a async begin option
-			Serial.print("Total WiFi.begin() = ");
-			Serial.println(millis() - beginTime);
+			Serial.println("SetPowerMode() FAILED: BLUETOOTH <-> WIFI requires device reset");
 		}
-#ifdef ADAFRUIT_FEATHER_M0
-		// For ADAFRUIT_FEATHER_M0, lowPowerMode() is a good balance of performance and battery
-		WiFi.lowPowerMode();
-		// For ESP32 the default WIFI_PS_MIN_MODEM is probably optimal https://www.mischianti.org/2021/03/06/esp32-practical-power-saving-manage-wifi-and-cpu-1/
-#endif
-		modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
-	}
-	else if (getPowerMode() == PowerMode::LOW_POWER)
-	{
-		Serial.println("PowerMode::LOW_POWER");
-		if (_emotiBitWiFi.isOff())
+		else 
 		{
-			unsigned long beginTime = millis();
-			_emotiBitWiFi.begin(100, 1, 100);	// This ToDo: create a async begin option
-			Serial.print("Total WiFi.begin() = ");
-			Serial.println(millis() - beginTime);
-		}
-#ifdef ADAFRUIT_FEATHER_M0
-		WiFi.lowPowerMode();
-#endif
-		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
-	}
-	else if (getPowerMode() == PowerMode::MAX_LOW_POWER)
-	{
-		Serial.println("PowerMode::MAX_LOW_POWER");
-		if (_emotiBitWiFi.isOff())
-		{
-			unsigned long beginTime = millis();
-			_emotiBitWiFi.begin(100, 1, 100);	// This ToDo: create a async begin option
-			Serial.print("Total WiFi.begin() = ");
-			Serial.println(millis() - beginTime);
-		}
-#ifdef ADAFRUIT_FEATHER_M0
-		WiFi.maxLowPowerMode();
-#endif
-		// ToDo: for ESP32 There may be some value to explore WIFI_PS_MAX_MODEM https://www.mischianti.org/2021/03/06/esp32-practical-power-saving-manage-wifi-and-cpu-1/
-		modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
-	}
-	else if (getPowerMode() == PowerMode::WIRELESS_OFF)
-	{
-		Serial.println("PowerMode::WIRELESS_OFF");
-
-		if (_enableBluetooth == true)
+			if (_emotiBitWiFi.isOff())
 			{
-#ifdef ARDUINO_FEATHER_ESP32		
-				_emotiBitBluetooth.end();
-//				_enableBluetooth = false;
-#endif //ARDUINO_FEATHER_ESP32
+				unsigned long beginTime = millis();
+				_emotiBitWiFi.begin(100, 1, 100);	// This ToDo: create a async begin option
+				Serial.print("Total WiFi.begin() = ");
+				Serial.println(millis() - beginTime);
 			}
+#ifdef ADAFRUIT_FEATHER_M0
+			// For ADAFRUIT_FEATHER_M0, lowPowerMode() is a good balance of performance and battery
+			WiFi.lowPowerMode();
+			// For ESP32 the default WIFI_PS_MIN_MODEM is probably optimal https://www.mischianti.org/2021/03/06/esp32-practical-power-saving-manage-wifi-and-cpu-1/
+#endif
+			modePacketInterval = NORMAL_POWER_MODE_PACKET_INTERVAL;
+			Serial.println("PowerMode::NORMAL_POWER");
+			_powerMode = mode;
+			ret = true;
+		}
+	}
+	else if (mode == PowerMode::LOW_POWER)
+	{	
+		Serial.println("SetPowerMode(LOW_POWER)");
+		if (_enableBluetooth)
+		{
+			Serial.println("SetPowerMode() FAILED: BLUETOOTH <-> WIFI requires device reset");
+		}
+		else 
+		{
+			if (_emotiBitWiFi.isOff())
+			{
+				unsigned long beginTime = millis();
+				_emotiBitWiFi.begin(100, 1, 100);	// This ToDo: create a async begin option
+				Serial.print("Total WiFi.begin() = ");
+				Serial.println(millis() - beginTime);
+			}
+#ifdef ADAFRUIT_FEATHER_M0
+			WiFi.lowPowerMode();
+#endif
+			modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
+			Serial.println("PowerMode::LOW_POWER");
+			_powerMode = mode;
+			ret = true;
+		}
+	}
+	else if (mode == PowerMode::MAX_LOW_POWER)
+	{
+		Serial.println("SetPowerMode(MAX_LOW_POWER)");
+		if (_enableBluetooth)
+		{
+			Serial.println("SetPowerMode() FAILED: BLUETOOTH <-> WIFI requires device reset");
+		}
+		else 
+		{
+			if (_emotiBitWiFi.isOff())
+			{
+				unsigned long beginTime = millis();
+				_emotiBitWiFi.begin(100, 1, 100);	// This ToDo: create a async begin option
+				Serial.print("Total WiFi.begin() = ");
+				Serial.println(millis() - beginTime);
+			}
+#ifdef ADAFRUIT_FEATHER_M0
+			WiFi.maxLowPowerMode();
+#endif
+			// ToDo: for ESP32 There may be some value to explore WIFI_PS_MAX_MODEM https://www.mischianti.org/2021/03/06/esp32-practical-power-saving-manage-wifi-and-cpu-1/
+			modePacketInterval = LOW_POWER_MODE_PACKET_INTERVAL;
+			Serial.println("PowerMode::MAX_LOW_POWER");
+			_powerMode = mode;
+			ret = true;
+		}
+	}
+	else if (mode == PowerMode::WIRELESS_OFF)
+	{
+		Serial.println("SetPowerMode(WIRELESS_OFF)");
+		if (_enableBluetooth)
+		{
+#ifdef ARDUINO_FEATHER_ESP32	// consider moving this ifdef into EmotiBitBluetooth
+			_emotiBitBluetooth.end();
+			// Note: we're NOT setting _enableBluetooth = false here because BLUETOOTH <-> WIFI requires device reset 
+#endif //ARDUINO_FEATHER_ESP32
+		}
 		else
 		{
-		_emotiBitWiFi.end();
+			_emotiBitWiFi.end();
 		}
+		Serial.println("PowerMode::WIRELESS_OFF");
+		_powerMode = mode;
+		ret = true;
 	}
-	else if (getPowerMode() == PowerMode::BLUETOOTH)
+	else if (mode == PowerMode::BLUETOOTH)
 	{
-#ifdef ARDUINO_FEATHER_ESP32		
-		if (_emotiBitBluetooth.isOff())
+		Serial.println("SetPowerMode(BLUETOOTH)");
+		if (!_enableBluetooth)
 		{
-			Serial.println("PowerMode::BLUETOOTH");
-			_emotiBitBluetooth.begin(emotibitDeviceId);
+			Serial.println("SetPowerMode() FAILED: BLUETOOTH <-> WIFI requires device reset");
 		}
-
+		else 
+		{
+#ifdef ARDUINO_FEATHER_ESP32 // consider moving this ifdef into EmotiBitBluetooth		
+			if (_emotiBitBluetooth.isOff())
+			{
+				if (_emotiBitBluetooth.begin(emotibitDeviceId) == 0) // ToDo: add EmotiBitBluetooth::SUCCESS for improved readability
+				{
+					Serial.println("PowerMode::BLUETOOTH");
+					_powerMode = mode;
+					ret = true;
+				}
+			}
+			// ToDo: consider adding serial output to clarify !isOff() and !begin()
 #endif //ARDUINO_FEATHER_ESP32
+		}
 	}
-	else if (getPowerMode() == PowerMode::HIBERNATE)
+	else if (mode == PowerMode::HIBERNATE)
 	{
 		Serial.println("PowerMode::HIBERNATE");
+		_powerMode = mode;
 	}
 	else
 	{
 		Serial.println("PowerMode Not Recognized");
 	}
+	String modePacket;
+	sendModePacket(modePacket, _outDataPacketCounter);
+	return status;
 }
 
 void EmotiBit::writeSerialData(EmotiBit::DataType t)
