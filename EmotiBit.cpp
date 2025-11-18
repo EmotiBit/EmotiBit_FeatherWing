@@ -454,9 +454,9 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	while (!Serial.available() && millis() - now < 2000)
 	{
 #ifdef ARDUINO_FEATHER_ESP32		
-		if (digitalRead(buttonPin) && !_enableBluetooth) {
+		if (digitalRead(buttonPin) && !_bluetoothEnabled ) {
 			Serial.println("Bluetooth Enabled");
-			_enableBluetooth = true;
+			_bluetoothEnabled  = true;
 		}
 #endif // ARDUINO_FEATHER_ESP32
 	}
@@ -957,66 +957,66 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 		sleep(true);
 	}
 
-	if (_enableBluetooth == true)
+	if (_bluetoothEnabled  == true)
 	{
 		if (!setPowerMode(PowerMode::BLUETOOTH))
 		{
-			_enableBluetooth = false;
+			_bluetoothEnabled  = false;
 		}
 	}
 
-	if (_enableBluetooth == false)
+	if (_bluetoothEnabled  == false)
 	{
-	#ifdef ARDUINO_FEATHER_ESP32
+#ifdef ARDUINO_FEATHER_ESP32
+		// ToDo: assess similarity with btStop();
 		esp_bt_controller_disable();
-                // ToDo: assess similarity with btStop();
-	#endif
-	//WiFi Setup;
-	Serial.print("\nSetting up WiFi\n");
+#endif //ARDUINO_FEATHER_ESP32
+		//WiFi Setup;
+		Serial.print("\nSetting up WiFi\n");
 #if defined(ADAFRUIT_FEATHER_M0)
-	WiFi.setPins(8, 7, 4, 2);
-	WiFi.lowPowerMode();
+		WiFi.setPins(8, 7, 4, 2);
+		WiFi.lowPowerMode();
 #endif
-	printEmotiBitInfo();
-	// turn BLUE on to signify we are trying to connect to WiFi
-	led.setState(EmotiBitLedController::Led::BLUE, true, true);
-	uint16_t attemptDelay = 20000;  // in mS. ESP32 has been observed to take >10 seconds to resolve an enterprise connection
-	uint8_t maxAttemptsPerCred = 1;
-	uint32_t timeout = attemptDelay * maxAttemptsPerCred * _emotiBitWiFi.getNumCredentials() * 2; // Try cycling through all credentials at least 2x before giving up and trying a restart
-	if (_emotiBitWiFi.isEnterpriseNetworkListed())
-	{
-		// enterprise network is listed in network credential list.
-		// restart MCU after timeout
-		_emotiBitWiFi.begin(timeout, maxAttemptsPerCred, attemptDelay);
-	}
-	else
-	{
-		// only personal networks listed in credentials list.
-		// keep trying to connect to networks without any timeout
-		_emotiBitWiFi.begin(-1, maxAttemptsPerCred, attemptDelay);
-	}
-	if (_emotiBitWiFi.status(false) != WL_CONNECTED)
-	{ 
-		// Could not connect to network. software restart and begin setup again.
-		restartMcu();
-	}
-	led.setState(EmotiBitLedController::Led::BLUE, false, true);
-	if (testingMode == TestingMode::FACTORY_TEST)
-	{
-		// Add Pass or fail
-		// ToDo: add mechanism to detect fail/pass
-		EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::WIFI, EmotiBitFactoryTest::TypeTag::TEST_PASS);
-	}
-	Serial.println(" WiFi setup Completed");
-	#ifdef ARDUINO_FEATHER_ESP32
-	Serial.println("Setting up FTP");
-	Serial.println("Setting Protocol");
-  	_fileTransferManager.setProtocol(FileTransferManager::Protocol::FTP);
-  	Serial.println("Setting Auth");
-  	_fileTransferManager.setFtpAuth("ftp", "ftp");
-	#endif
+		printEmotiBitInfo();
+		// turn BLUE on to signify we are trying to connect to WiFi
+		led.setState(EmotiBitLedController::Led::BLUE, true, true);
+		uint16_t attemptDelay = 20000;  // in mS. ESP32 has been observed to take >10 seconds to resolve an enterprise connection
+		uint8_t maxAttemptsPerCred = 1;
+		uint32_t timeout = attemptDelay * maxAttemptsPerCred * _emotiBitWiFi.getNumCredentials() * 2; // Try cycling through all credentials at least 2x before giving up and trying a restart
+		if (_emotiBitWiFi.isEnterpriseNetworkListed())
+		{
+			// enterprise network is listed in network credential list.
+			// restart MCU after timeout
+			_emotiBitWiFi.begin(timeout, maxAttemptsPerCred, attemptDelay);
+		}
+		else
+		{
+			// only personal networks listed in credentials list.
+			// keep trying to connect to networks without any timeout
+			_emotiBitWiFi.begin(-1, maxAttemptsPerCred, attemptDelay);
+		}
+		if (_emotiBitWiFi.status(false) != WL_CONNECTED)
+		{ 
+			// Could not connect to network. software restart and begin setup again.
+			restartMcu();
+		}
+		led.setState(EmotiBitLedController::Led::BLUE, false, true);
+		if (testingMode == TestingMode::FACTORY_TEST)
+		{
+			// Add Pass or fail
+			// ToDo: add mechanism to detect fail/pass
+			EmotiBitFactoryTest::updateOutputString(factoryTestSerialOutput, EmotiBitFactoryTest::TypeTag::WIFI, EmotiBitFactoryTest::TypeTag::TEST_PASS);
+		}
+		Serial.println(" WiFi setup Completed");
+		#ifdef ARDUINO_FEATHER_ESP32
+		Serial.println("Setting up FTP");
+		Serial.println("Setting Protocol");
+		_fileTransferManager.setProtocol(FileTransferManager::Protocol::FTP);
+		Serial.println("Setting Auth");
+		_fileTransferManager.setFtpAuth("ftp", "ftp");
+		#endif
 
-	setPowerMode(PowerMode::NORMAL_POWER);
+		setPowerMode(PowerMode::NORMAL_POWER);
 	}
 
 	typeTags[(uint8_t)EmotiBit::DataType::EDA] = EmotiBitPacket::TypeTag::EDA;
@@ -3224,66 +3224,14 @@ void EmotiBit::readSensors()
 						led.setState(EmotiBitLedController::Led::BLUE, true);
 						led.setState(EmotiBitLedController::Led::YELLOW, true);
 					}
-
-					if (getPowerMode() == PowerMode::BLUETOOTH) {
-#ifdef ARDUINO_FEATHER_ESP32
-						// Bluetooth connected status LED
-						if (_emotiBitBluetooth.deviceConnected) {
-							led.setState(EmotiBitLedController::Led::BLUE, true);
-						}
-						else {
-								// blink LED
-								static unsigned long onTime = 125; // msec
-								static unsigned long totalTime = 250; // msec changed to 250
-								static bool bleConnectedBlinkState = false;
-
-								static unsigned long bleConnBlinkTimer = millis();
-
-								unsigned long timeNow = millis();
-								if (timeNow - bleConnBlinkTimer < onTime)
-								{
-									led.setState(EmotiBitLedController::Led::BLUE, true);
-								}
-								else if (timeNow - bleConnBlinkTimer < totalTime)
-								{
-									led.setState(EmotiBitLedController::Led::BLUE, false);
-								}
-								else
-								{
-									bleConnBlinkTimer = timeNow;
-								}
-							}
-							// Battery LED
-							if (battIndicationSeq)
-							{
-								led.setState(EmotiBitLedController::Led::YELLOW, true);
-							}
-							else
-							{
-								led.setState(EmotiBitLedController::Led::YELLOW, false);
-							}
-
-							// Recording status LED
-							if (_sdWrite)
-							{
-								static uint32_t recordBlinkDuration = millis();
-								if (millis() - recordBlinkDuration >= 500)
-								{
-									led.setState(EmotiBitLedController::Led::RED, !led.getState(EmotiBitLedController::Led::RED));
-									recordBlinkDuration = millis();
-								}
-							}
-							else if (!_sdWrite && led.getState(EmotiBitLedController::Led::RED) == true)
-							{
-								led.setState(EmotiBitLedController::Led::RED, false);
-							}
-						
-#endif //ARDUINO_FEATHER_ESP32
-					}
 					else
 					{
 						// WiFi connected status LED
+#ifdef ARDUINO_FEATHER_ESP32
+						if (_emotiBitWiFi.isConnected() || _emotiBitBluetooth.deviceConnected)
+#else
 						if (_emotiBitWiFi.isConnected())
+#endif // ARDUINO_FEATHER_ESP32
 						{
 							// Connected to oscilloscope
 							// turn LED on
@@ -3291,28 +3239,32 @@ void EmotiBit::readSensors()
 						}
 						else
 						{
-							if (_emotiBitWiFi.status(false) == WL_CONNECTED) // ToDo: assess if WiFi.status() is thread/interrupt safe
+							if (_emotiBitWiFi.status(false) == WL_CONNECTED || _bluetoothEnabled) // ToDo: assess if WiFi.status() is thread/interrupt safe
 							{
 								// Not connected to oscilloscope, but connected to wifi
 								// blink LED
-								static unsigned long onTime = 125; // msec
-								static unsigned long totalTime = 500; // msec
-								static bool wifiConnectedBlinkState = false;
+								unsigned long onTime = 125; // msec
+								unsigned long totalTime = 500; // msec
+								if (_bluetoothEnabled)
+								{
+									totalTime = 250; // msec
+								}
+								static bool ConnectedBlinkState = false;
 
-								static unsigned long wifiConnBlinkTimer = millis();
+								static unsigned long ConnBlinkTimer = millis();
 
 								unsigned long timeNow = millis();
-								if (timeNow - wifiConnBlinkTimer < onTime)
+								if (timeNow - ConnBlinkTimer < onTime)
 								{
 									led.setState(EmotiBitLedController::Led::BLUE, true);
 								}
-								else if (timeNow - wifiConnBlinkTimer < totalTime)
+								else if (timeNow - ConnBlinkTimer < totalTime)
 								{
 									led.setState(EmotiBitLedController::Led::BLUE, false);
 								}
 								else
 								{
-									wifiConnBlinkTimer = timeNow;
+									ConnBlinkTimer = timeNow;
 								}
 							}
 							else
@@ -3807,7 +3759,7 @@ bool EmotiBit::setPowerMode(PowerMode mode)
 	if (mode == PowerMode::NORMAL_POWER)
 	{
 		Serial.println("SetPowerMode(NORMAL_POWER)");
-		if (_enableBluetooth)
+		if (_bluetoothEnabled )
 		{
 			Serial.println("SetPowerMode() FAILED: BLUETOOTH <-> WIFI requires device reset");
 		}
@@ -3834,7 +3786,7 @@ bool EmotiBit::setPowerMode(PowerMode mode)
 	else if (mode == PowerMode::LOW_POWER)
 	{	
 		Serial.println("SetPowerMode(LOW_POWER)");
-		if (_enableBluetooth)
+		if (_bluetoothEnabled )
 		{
 			Serial.println("SetPowerMode() FAILED: BLUETOOTH <-> WIFI requires device reset");
 		}
@@ -3859,7 +3811,7 @@ bool EmotiBit::setPowerMode(PowerMode mode)
 	else if (mode == PowerMode::MAX_LOW_POWER)
 	{
 		Serial.println("SetPowerMode(MAX_LOW_POWER)");
-		if (_enableBluetooth)
+		if (_bluetoothEnabled )
 		{
 			Serial.println("SetPowerMode() FAILED: BLUETOOTH <-> WIFI requires device reset");
 		}
@@ -3885,11 +3837,11 @@ bool EmotiBit::setPowerMode(PowerMode mode)
 	else if (mode == PowerMode::WIRELESS_OFF)
 	{
 		Serial.println("SetPowerMode(WIRELESS_OFF)");
-		if (_enableBluetooth)
+		if (_bluetoothEnabled )
 		{
 #ifdef ARDUINO_FEATHER_ESP32	// consider moving this ifdef into EmotiBitBluetooth
 			_emotiBitBluetooth.end();
-			// Note: we're NOT setting _enableBluetooth = false here because BLUETOOTH <-> WIFI requires device reset 
+			// Note: we're NOT setting _bluetoothEnabled  = false here because BLUETOOTH <-> WIFI requires device reset 
 #endif //ARDUINO_FEATHER_ESP32
 		}
 		else
@@ -3903,7 +3855,7 @@ bool EmotiBit::setPowerMode(PowerMode mode)
 	else if (mode == PowerMode::BLUETOOTH)
 	{
 		Serial.println("SetPowerMode(BLUETOOTH)");
-		if (!_enableBluetooth)
+		if (!_bluetoothEnabled )
 		{
 			Serial.println("SetPowerMode() FAILED: BLUETOOTH <-> WIFI requires device reset");
 		}
@@ -3934,7 +3886,7 @@ bool EmotiBit::setPowerMode(PowerMode mode)
 	}
 	String modePacket;
 	sendModePacket(modePacket, _outDataPacketCounter);
-	return status;
+	return ret;
 }
 
 void EmotiBit::writeSerialData(EmotiBit::DataType t)
@@ -4842,7 +4794,15 @@ void EmotiBit::printEmotiBitInfo()
     Serial.print(ip);
     Serial.println("\"");
   }
-  
+
+  if (!_bluetoothEnabled )
+  {
+	Serial.print("WiFi Enabled");
+  }
+  else
+  {
+	Serial.print("Bluetooth Enabled");
+}
 	Serial.println("}}]");
 }
 

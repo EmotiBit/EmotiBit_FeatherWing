@@ -436,7 +436,7 @@ public:
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;
-	bool _enableBluetooth = false;
+	bool _bluetoothEnabled  = false;
 
 	void setupFailed(const String failureMode, int buttonPin = -1, bool configFileError = false);
 	bool setupSdCard(bool loadConfig = true);
@@ -452,7 +452,8 @@ public:
 	void attachShortButtonPress(void(*shortButtonPressFunction)(void));
 	void attachLongButtonPress(void(*longButtonPressFunction)(void));
 	PowerMode getPowerMode();
-	void setPowerMode(PowerMode mode);
+	//void setPowerMode(PowerMode mode);
+	bool setPowerMode(PowerMode mode);
 	bool writeSdCardMessage(const String &s);
 	int freeMemory();
 	bool loadConfigFile(const String &filename);

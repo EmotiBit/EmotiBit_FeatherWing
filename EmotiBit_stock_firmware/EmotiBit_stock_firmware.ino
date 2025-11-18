@@ -10,7 +10,7 @@ float data[dataSize];
 
 void onShortButtonPress()
 {
-	if (emotibit._enableBluetooth == true)
+	if (emotibit._bluetoothEnabled == true)
 	{
 		if (emotibit.getPowerMode() == EmotiBit::PowerMode::BLUETOOTH)
 		{
