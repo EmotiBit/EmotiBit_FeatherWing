@@ -21,7 +21,7 @@
 #ifdef ARDUINO_FEATHER_ESP32
 #include <SD.h>
 #include "driver/adc.h"
-#include <esp_bt.h>
+#include <esp_bt.h> //consider moving into bluetooth
 #else
 #include <SdFat.h>
 #include <ArduinoLowPower.h>
@@ -39,6 +39,9 @@
 #include "FileTransferManager.h"
 #endif
 #include "EmotiBitConfigManager.h"
+#ifdef ARDUINO_FEATHER_ESP32
+#include "EmotiBitBluetooth.h"
+#endif
 
 class EmotiBit {
   
@@ -266,6 +269,7 @@ public:
 		MAX_LOW_POWER,			// data not sent, time-syncing accuracy low
 		LOW_POWER,					// data not sent, time-syncing accuracy high
 		NORMAL_POWER,				// data sending, time-syncing accuracy high
+		BLUETOOTH,
 		length
 	};
 
@@ -279,6 +283,9 @@ public:
 	MLX90632 thermopile;
 	EmotiBitEda emotibitEda;
 	EmotiBitNvmController _emotibitNvmController;
+	#ifdef ARDUINO_FEATHER_ESP32
+	EmotiBitBluetooth _emotiBitBluetooth;
+	#endif //ARDUINO_FEATHER_ESP32
 	#ifdef ARDUINO_FEATHER_ESP32
 	FileTransferManager _fileTransferManager;
 	#endif
@@ -429,6 +436,7 @@ public:
 	DataType _serialData = DataType::length;
 	volatile bool buttonPressed = false;
 	bool startBufferOverflowTest = false;
+	bool _bluetoothEnabled  = false;
 
 	void setupFailed(const String failureMode, int buttonPin = -1, bool configFileError = false);
 	bool setupSdCard(bool loadConfig = true);
@@ -444,7 +452,8 @@ public:
 	void attachShortButtonPress(void(*shortButtonPressFunction)(void));
 	void attachLongButtonPress(void(*longButtonPressFunction)(void));
 	PowerMode getPowerMode();
-	void setPowerMode(PowerMode mode);
+	//void setPowerMode(PowerMode mode);
+	bool setPowerMode(PowerMode mode);
 	bool writeSdCardMessage(const String &s);
 	int freeMemory();
 	bool loadConfigFile(const String &filename);
@@ -459,7 +468,6 @@ public:
 	bool processThermopileData();	// placeholder until separate EmotiBitThermopile controller is implemented
 	void writeSerialData(EmotiBit::DataType t);
 	void printEmotiBitInfo();
-	
 
 	/**
 	 * Copies data buffer of the specified DataType into the passed array

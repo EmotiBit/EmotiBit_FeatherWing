@@ -10,16 +10,32 @@ float data[dataSize];
 
 void onShortButtonPress()
 {
-	// toggle wifi on/off
-	if (emotibit.getPowerMode() == EmotiBit::PowerMode::NORMAL_POWER)
+	if (emotibit._bluetoothEnabled == true)
 	{
-		emotibit.setPowerMode(EmotiBit::PowerMode::WIRELESS_OFF);
-		Serial.println("PowerMode::WIRELESS_OFF");
+		if (emotibit.getPowerMode() == EmotiBit::PowerMode::BLUETOOTH)
+		{
+			emotibit.setPowerMode(EmotiBit::PowerMode::WIRELESS_OFF);
+			Serial.println("PowerMode::WIRELESS_OFF");
+		}
+		else
+		{
+			emotibit.setPowerMode(EmotiBit::PowerMode::BLUETOOTH);
+			Serial.println("PowerMode::BLUETOOTH");
+		}	
 	}
 	else
 	{
-		emotibit.setPowerMode(EmotiBit::PowerMode::NORMAL_POWER);
-		Serial.println("PowerMode::NORMAL_POWER");
+		// toggle wifi on/off
+		if (emotibit.getPowerMode() == EmotiBit::PowerMode::NORMAL_POWER)
+		{
+			emotibit.setPowerMode(EmotiBit::PowerMode::WIRELESS_OFF);
+			Serial.println("PowerMode::WIRELESS_OFF");
+		}
+		else
+		{
+			emotibit.setPowerMode(EmotiBit::PowerMode::NORMAL_POWER);
+			Serial.println("PowerMode::NORMAL_POWER");
+		}
 	}
 }
 
