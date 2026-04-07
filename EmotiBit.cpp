@@ -1676,6 +1676,7 @@ uint8_t EmotiBit::update()
 		static uint16_t serialPrevAvailable = Serial.available();
 		if (Serial.available() > serialPrevAvailable)
 		{
+#ifdef ARDUINO_FEATHER_ESP32
 			if(Serial.peek() == 'F')
 			{
 				if(!_sdWrite) // if not writing to SD card
