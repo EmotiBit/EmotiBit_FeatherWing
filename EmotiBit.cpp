@@ -1678,7 +1678,6 @@ uint8_t EmotiBit::update()
 		{
 			if(Serial.peek() == 'F')
 			{
-#ifdef ARDUINO_FEATHER_ESP32
 				if(!_sdWrite) // if not writing to SD card
 				{
 					// Stop ISR
@@ -1701,15 +1700,24 @@ uint8_t EmotiBit::update()
 					Serial.println("Recording in progess. Cannot start FTP server.");
 					Serial.println("Please end recording and try again");
 				}
-#else
-				Serial.println("FTP server is only supported on ESP32 boards");
-#endif
-
 			}
 			else if (!_debugMode)
 			{
 				printEmotiBitInfo();
 			}
+#else
+			if (!_debugMode)
+			{
+				if (Serial.read() == 'F')
+				{
+					Serial.println("FTP server is only supported on ESP32 boards");
+				}
+				else
+				{
+					printEmotiBitInfo();
+				}
+			}
+#endif
 		}
 		serialPrevAvailable = Serial.available();
 		
