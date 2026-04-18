@@ -969,7 +969,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	{
 #ifdef ARDUINO_FEATHER_ESP32
 		// ToDo: assess similarity with btStop();
-		esp_bt_controller_disable();
+		_emotiBitBluetooth.disableBluetooth();
 #endif //ARDUINO_FEATHER_ESP32
 		//WiFi Setup;
 		Serial.print("\nSetting up WiFi\n");
@@ -3248,13 +3248,13 @@ void EmotiBit::readSensors()
 						}
 						else
 						{
-							if (_emotiBitWiFi.status(false) == WL_CONNECTED || _bluetoothEnabled) // ToDo: assess if WiFi.status() is thread/interrupt safe
+							if (_emotiBitWiFi.status(false) == WL_CONNECTED || getPowerMode() == PowerMode::BLUETOOTH) // ToDo: assess if WiFi.status() is thread/interrupt safe
 							{
 								// Not connected to oscilloscope, but connected to wifi
 								// blink LED
 								unsigned long onTime = 125; // msec
 								unsigned long totalTime = 500; // msec
-								if (_bluetoothEnabled)
+								if (getPowerMode() == PowerMode::BLUETOOTH)
 								{
 									totalTime = 250; // msec
 								}
@@ -3888,6 +3888,7 @@ bool EmotiBit::setPowerMode(PowerMode mode)
 	{
 		Serial.println("PowerMode::HIBERNATE");
 		_powerMode = mode;
+		ret = true;
 	}
 	else
 	{
@@ -4041,6 +4042,10 @@ bool EmotiBit::createModePacket(String &modePacket, uint16_t &packetNumber)
 	else if (getPowerMode() == PowerMode::HIBERNATE)
 	{
 		payload += EmotiBitPacket::TypeTag::MODE_HIBERNATE;
+	}
+	else if (getPowerMode() == PowerMode::BLUETOOTH)
+	{
+		payload += EmotiBitPacket::TypeTag::MODE_BLUETOOTH;
 	}
 	dataCount++;
 
@@ -4801,17 +4806,12 @@ void EmotiBit::printEmotiBitInfo()
     IPAddress ip = WiFi.localIP();
     Serial.print("\"ip_address\":\"");
     Serial.print(ip);
-    Serial.println("\"");
+    Serial.println("\",");
   }
 
-  if (!_bluetoothEnabled )
-  {
-	Serial.print("WiFi Enabled");
-  }
-  else
-  {
-	Serial.print("Bluetooth Enabled");
-}
+  Serial.print("\"wireless_mode\":\"");
+  Serial.print(_bluetoothEnabled ? "bluetooth" : "wifi");
+  Serial.print("\"");
 	Serial.println("}}]");
 }
 

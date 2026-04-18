@@ -1,5 +1,6 @@
 #ifdef ARDUINO_FEATHER_ESP32
 #include "EmotiBitBluetooth.h"
+#include <esp_bt.h>
 
 uint8_t EmotiBitBluetooth::begin(const String& emotibitDeviceId)
 {
@@ -46,29 +47,30 @@ uint8_t EmotiBitBluetooth::begin(const String& emotibitDeviceId)
 
         EmotiBitBluetooth::startAdvertising();
         _bluetoothReconnect = true; // Allow reconnection after disconnection
-        Serial.println("BLE advertising started");
 
         return 0;
 }
 
 void EmotiBitBluetooth::MyServerCallbacks::onConnect(BLEServer* pServer)
 {
-        server -> deviceConnected = true;
-        Serial.println("BLE client connected"); 
+        server->deviceConnected = true;
+        server->_connId = pServer->getConnId();
+        Serial.println("BLE client connected");
 }
 
 void EmotiBitBluetooth::MyServerCallbacks::onDisconnect(BLEServer* pServer)
 {
-        server -> deviceConnected = false;
+        server->deviceConnected = false;
         Serial.println("BLE client disconnected");
         //need to restart advertising to allow new connections after disconnection if accidentally disconnected
-        if (server -> _bluetoothReconnect)
+        if (server->_bluetoothReconnect)
         {
-                server -> reconnect();
+                server->reconnect();
                 Serial.println("Restarted BLE advertising");
         }
 }
 
+//ToDO: Current polling aproach can drop back to back writes since the characteristic only holds the last value.
 void EmotiBitBluetooth::MyCallbacks::onWrite(BLECharacteristic *pCharacteristic) 
 {
         std::string rxValue = pCharacteristic->getValue();
@@ -155,7 +157,7 @@ uint8_t EmotiBitBluetooth::readControl(String& packet)
                                 numPackets++;
                                 packet = tempPacket;
                                 tempPacket = "";
-                                                _receivedControlMessage = "";
+                                _receivedControlMessage = "";
                                 return numPackets;
                         }
                         else
@@ -183,7 +185,7 @@ void EmotiBitBluetooth::end()
         if (pServer && deviceConnected)
         {
                 //tear down the old connection
-                pServer->disconnect(0);  
+                pServer->disconnect(_connId);
                 Serial.println("BLE client disconnected by end()");
         }
         if (pServer)
@@ -215,12 +217,18 @@ void EmotiBitBluetooth::startAdvertising()
         if (pServer)
         {
                 pServer->getAdvertising()->start();
+                _bluetoothOff = false;
                 Serial.println("BLE advertising started");
         }
         else
         {
                 Serial.println("ERROR: pServer is NULL, cannot start advertising");
         }
+}
+
+void EmotiBitBluetooth::disableBluetooth()
+{
+        esp_bt_controller_disable();
 }
 
 #endif //ARDUINO_FEATHER_ESP32

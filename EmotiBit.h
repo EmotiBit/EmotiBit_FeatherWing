@@ -21,7 +21,6 @@
 #ifdef ARDUINO_FEATHER_ESP32
 #include <SD.h>
 #include "driver/adc.h"
-#include <esp_bt.h> //consider moving into bluetooth
 #else
 #include <SdFat.h>
 #include <ArduinoLowPower.h>

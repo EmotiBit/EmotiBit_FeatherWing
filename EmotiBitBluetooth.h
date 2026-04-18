@@ -44,6 +44,7 @@ class EmotiBitBluetooth {
         String _receivedControlMessage = "";
         bool _bluetoothOff = true;
         bool _bluetoothReconnect = false;
+        uint16_t _connId = 0;
 
         /*!
         * @brief Server callbacks for connections
@@ -67,7 +68,7 @@ class EmotiBitBluetooth {
         /*!
         * @brief Initializes the BLE device and starts advertising
         * @param emotibitDeviceId ID from setDeviceId
-        * @return 1 on success, 0 on failure
+        * @return 0 on success, 1 on failure
         */
         //TO DO use int for error handling
         uint8_t begin(const String& emotibitDeviceId);
@@ -79,8 +80,8 @@ class EmotiBitBluetooth {
         void sendData(const String &message);
         
         /*!
-        * @brief Checks if the device is connected to a BLE client  
-        * @param emotibitDeviceId
+        * @brief Updates the device ID used in BLE advertising 
+        * @param emotibitDeviceId the new device ID to be used in advertising
         */
         void setDeviceId(const String& emotibitDeviceId); 
 
@@ -114,6 +115,11 @@ class EmotiBitBluetooth {
         * @brief Starts Advertising
         */
         void startAdvertising();
+
+        /*!
+        * @brief Disable Bluetooth
+        */
+        void disableBluetooth();
 };
 
 #endif //ARDUINO_FEATHER_ESP32
