@@ -4466,6 +4466,9 @@ void EmotiBit::processDebugInputs(String &debugPackets, uint16_t &packetNumber)
 		{
 			_sendTestData = false;
 			Serial.println("Exiting Sending Test Data Mode");
+#ifdef ADAFRUIT_FEATHER_M0
+			startTimer(BASE_SAMPLING_FREQ);
+#endif
 		}
 		else if (c == '@' && _sendTestData == true)
 		{
