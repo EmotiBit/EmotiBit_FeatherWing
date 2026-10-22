@@ -43,13 +43,20 @@ bool syncOut()
 #elif defined (ADAFRUIT_FEATHER_M0)
 	const uint8_t SYNC_PIN = 14;
 #endif
-	const int NTH_LOOP = 20; // toggles the sync pulse high every Nth loop
+	const int NTH_LOOP = 2000; // toggles the sync pulse high every Nth loop
 	// end sync out setup variables //
 
+
+	static uint32 syncOffTimer = millis();
+	const uint32 offTime = 1000;
+	const uint32 onTime = 100;
+	
+	const uint32 offRand = random(max);
+
 	// sync out code logic
-	static isSetup = false;
-	static loopCounter = 0;
-	static toggle = LOW;
+	static bool isSetup = false;
+	static int loopCounter = 0;
+	static int toggle = LOW;
 
 	if (!isSetup) 
 	{
@@ -61,8 +68,9 @@ bool syncOut()
 	if (loopCounter >= NTH_LOOP || toggle == HIGH) 
 	{
 		toggle = !toggle;
+		float toggleFloat = (float) toggle;
 		digitalWrite(SYNC_PIN , toggle );
-		emotibit.addPacket(millis(), "SP", toggle, 1); // Log the SYNC_PIN toggle
+		emotibit.addPacket(millis(), "SP", &toggleFloat, 1); // Log the SYNC_PIN toggle
 		// ToDo: consider adding EmotiBitPacket::TypeTag::SYNC_PULSE
 	}
 	if (loopCounter >= NTH_LOOP) 
