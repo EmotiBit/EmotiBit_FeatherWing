@@ -28,12 +28,12 @@ void onLongButtonPress()
 	emotibit.sleep();
 }
 
-/// @brief Generates a sync pulse in a digital out pin.
+/// @brief 		Generates a sync pulse in a digital out pin.
 /// @details	Calling in loop() toggles SYNC_PIN LOW until offBaseTime+random(offRandMax)
 ///	 			is exceeded and then toggles SYNC_PIN HIGH until onTime is exceeded.
-///				An packet with a timestamp is logged every time the SYNC_PIN is toggled 
-///				for easyy synchronization across devices into local time.
-/// @return The state of the SYNC_PIN is returned.
+///				A packet with a timestamp is logged every time the SYNC_PIN is toggled 
+///				for easy synchronization across devices into local time.
+/// @return 	The state of the SYNC_PIN is returned.
 bool syncOut()
 {
 	// sync out setup variables //
@@ -43,9 +43,9 @@ bool syncOut()
 #elif defined (ADAFRUIT_FEATHER_M0)
 	const uint8_t SYNC_PIN = 14;
 #endif
-	const unsigned long offBaseTime = 900; 
-	const unsigned long offRandMax = 200;
-	const unsigned long onTime = 100;
+	const unsigned long offBaseTime = 900;	// SYNC_PIN is LOW for offBaseTime + offRand
+	const unsigned long offRandMax = 200;	// Sets the max offRand
+	const unsigned long onTime = 100;		// SYNC_PIN is HIGH for onTime
 	// end sync out setup variables //
 	
 	
@@ -74,8 +74,8 @@ bool syncOut()
 	{
 		syncTimer = millis();
 		toggle = !toggle;
-		float toggleFloat = (float) toggle;
 		digitalWrite(SYNC_PIN , toggle );
+		float toggleFloat = (float) toggle;
 		emotibit.addPacket(millis(), "SP", &toggleFloat, 1); // Log the SYNC_PIN toggle
 		// ToDo: consider adding EmotiBitPacket::TypeTag::SYNC_PULSE
 		sendSync = false;
@@ -108,7 +108,7 @@ void loop()
 {
 	//Serial.println("emotibit.update()");
 	emotibit.update();
-	syncOut();
+	syncOut(); // send semi-periodic sync pulses to synchronize with other devices
 
 	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::PPG_GREEN, &data[0], dataSize);
 	if (dataAvailable > 0)
