@@ -53,11 +53,7 @@ public:
 	};
 
 
-
-
-  String firmware_version = "1.14.3";
-
-
+  String firmware_version = "1.14.3_feat-syncOutExample.0";
 
 
 	TestingMode testingMode = TestingMode::NONE;
