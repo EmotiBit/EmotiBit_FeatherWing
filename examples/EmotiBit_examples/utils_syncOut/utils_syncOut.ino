@@ -43,41 +43,73 @@ bool syncOut()
 #elif defined (ADAFRUIT_FEATHER_M0)
 	const uint8_t SYNC_PIN = 14;
 #endif
-	const int NTH_LOOP = 2000; // toggles the sync pulse high every Nth loop
+
+	const unsigned long offBaseTime = 900; 
+	const unsigned long offRandMax = 200;
+	const unsigned long onTime = 100;
 	// end sync out setup variables //
-
-
-	static uint32 syncOffTimer = millis();
-	const uint32 offTime = 1000;
-	const uint32 onTime = 100;
 	
-	const uint32 offRand = random(max);
-
 	// sync out code logic
-	static bool isSetup = false;
-	static int loopCounter = 0;
+	static unsigned long syncTimer = millis();
+	static unsigned long offRand = random(offRandMax);
 	static int toggle = LOW;
-
+	static bool sendSync = false;
+	static bool isSetup = false;
+	
 	if (!isSetup) 
 	{
 		pinMode(SYNC_PIN , OUTPUT);
 		isSetup = true;
 	}
-
-	loopCounter++;
-	if (loopCounter >= NTH_LOOP || toggle == HIGH) 
+	if (toggle == LOW && ((millis() - syncTimer) > (offBaseTime + offRand)))
 	{
+		sendSync = true;
+		offRand = random(offRandMax); // get a new random offRand
+	}
+	if (toggle == HIGH && ((millis() - syncTimer) > onTime))
+	{
+		sendSync = true;
+	}
+	if (sendSync)
+	{
+		syncTimer = millis();
 		toggle = !toggle;
 		float toggleFloat = (float) toggle;
 		digitalWrite(SYNC_PIN , toggle );
 		emotibit.addPacket(millis(), "SP", &toggleFloat, 1); // Log the SYNC_PIN toggle
 		// ToDo: consider adding EmotiBitPacket::TypeTag::SYNC_PULSE
-	}
-	if (loopCounter >= NTH_LOOP) 
-	{
-		loopCounter = 0;
+		sendSync = false;
 	}
 	return toggle;
+	
+	// /// Deprecated loop-based version
+	// const int NTH_LOOP = 2000; // toggles the sync pulse high every Nth loop
+
+	// // sync out code logic
+	// static bool isSetup = false;
+	// static int loopCounter = 0;
+	// static int toggle = LOW;
+
+	// if (!isSetup) 
+	// {
+		// pinMode(SYNC_PIN , OUTPUT);
+		// isSetup = true;
+	// }
+
+	// loopCounter++;
+	// if (loopCounter >= NTH_LOOP || toggle == HIGH) 
+	// {
+		// toggle = !toggle;
+		// float toggleFloat = (float) toggle;
+		// digitalWrite(SYNC_PIN , toggle );
+		// emotibit.addPacket(millis(), "SP", &toggleFloat, 1); // Log the SYNC_PIN toggle
+		// // ToDo: consider adding EmotiBitPacket::TypeTag::SYNC_PULSE
+	// }
+	// if (loopCounter >= NTH_LOOP) 
+	// {
+		// loopCounter = 0;
+	// }
+	// return toggle;
 }
 
 void setup() 
