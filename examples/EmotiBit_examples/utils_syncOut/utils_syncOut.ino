@@ -29,10 +29,10 @@ void onLongButtonPress()
 }
 
 /// @brief Generates a sync pulse in a digital out pin.
-/// @details	Toggles a SYNC_PIN digital out HIGH every Nth call of the function. 
-///         	The following call, pulls the SYNC_PIN LOW again. A "SP" packet  
-///						with a timestamp is logged every time the SYNC_PIN is toggled for
-///						easy synchronization across devices into local time.
+/// @details	Calling in loop() toggles SYNC_PIN LOW until offBaseTime+random(offRandMax)
+///	 			is exceeded and then toggles SYNC_PIN HIGH until onTime is exceeded.
+///				An packet with a timestamp is logged every time the SYNC_PIN is toggled 
+///				for easyy synchronization across devices into local time.
 /// @return The state of the SYNC_PIN is returned.
 bool syncOut()
 {
@@ -43,16 +43,16 @@ bool syncOut()
 #elif defined (ADAFRUIT_FEATHER_M0)
 	const uint8_t SYNC_PIN = 14;
 #endif
-
 	const unsigned long offBaseTime = 900; 
 	const unsigned long offRandMax = 200;
 	const unsigned long onTime = 100;
 	// end sync out setup variables //
 	
+	
 	// sync out code logic
-	static unsigned long syncTimer = millis();
-	static unsigned long offRand = random(offRandMax);
 	static int toggle = LOW;
+	static unsigned long offRand = random(offRandMax);
+	static unsigned long syncTimer = millis();
 	static bool sendSync = false;
 	static bool isSetup = false;
 	
@@ -81,35 +81,6 @@ bool syncOut()
 		sendSync = false;
 	}
 	return toggle;
-	
-	// /// Deprecated loop-based version
-	// const int NTH_LOOP = 2000; // toggles the sync pulse high every Nth loop
-
-	// // sync out code logic
-	// static bool isSetup = false;
-	// static int loopCounter = 0;
-	// static int toggle = LOW;
-
-	// if (!isSetup) 
-	// {
-		// pinMode(SYNC_PIN , OUTPUT);
-		// isSetup = true;
-	// }
-
-	// loopCounter++;
-	// if (loopCounter >= NTH_LOOP || toggle == HIGH) 
-	// {
-		// toggle = !toggle;
-		// float toggleFloat = (float) toggle;
-		// digitalWrite(SYNC_PIN , toggle );
-		// emotibit.addPacket(millis(), "SP", &toggleFloat, 1); // Log the SYNC_PIN toggle
-		// // ToDo: consider adding EmotiBitPacket::TypeTag::SYNC_PULSE
-	// }
-	// if (loopCounter >= NTH_LOOP) 
-	// {
-		// loopCounter = 0;
-	// }
-	// return toggle;
 }
 
 void setup() 
@@ -137,7 +108,7 @@ void loop()
 {
 	//Serial.println("emotibit.update()");
 	emotibit.update();
-	Serial.println(syncOut());
+	syncOut();
 
 	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::PPG_GREEN, &data[0], dataSize);
 	if (dataAvailable > 0)
