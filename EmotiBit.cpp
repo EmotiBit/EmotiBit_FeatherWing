@@ -1806,7 +1806,9 @@ int8_t EmotiBit::updatePPGData() {
 	while (ppgSensor.available()) {
 		status = status | pushData(EmotiBit::DataType::PPG_INFRARED, ppgSensor.getFIFOIR());
 		status = status | pushData(EmotiBit::DataType::PPG_RED, ppgSensor.getFIFORed());
+#if !defined(EMOTIBIT_PPG_100HZ_R_IR)
 		status = status | pushData(EmotiBit::DataType::PPG_GREEN, ppgSensor.getFIFOGreen());
+#endif
 		ppgSensor.nextSample();
 		//available--;
 	}

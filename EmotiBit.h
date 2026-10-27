@@ -56,7 +56,7 @@ public:
 	};
 
 
-  String firmware_version = "1.14.3_feat-PPG_100Hz_R_IR.0";
+  String firmware_version = "1.14.3_feat-PPG_100Hz_R_IR.1";
 
 
 	TestingMode testingMode = TestingMode::NONE;
