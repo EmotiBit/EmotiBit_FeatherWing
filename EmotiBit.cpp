@@ -105,8 +105,10 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 	// Update firmware_variant information
 	firmware_variant = firmwareVariant;
 	// ToDo: find a way to extract variant string from build flag
-#ifdef EMOTIBIT_PPG_100HZ
+#if defined(EMOTIBIT_PPG_100HZ)
 	firmware_variant = firmware_variant + "_PPG_100Hz";
+#elif defined(EMOTIBIT_PPG_100HZ_R_IR)
+	firmware_variant = firmware_variant + "_PPG_100Hz_R_IR";
 #endif
 
 #ifdef ARDUINO_FEATHER_ESP32
@@ -1141,7 +1143,7 @@ uint8_t EmotiBit::setup(String firmwareVariant)
 #if defined(ADAFRUIT_FEATHER_M0)
 	Serial.println("Feather M0 detected.");
 #endif
-#if defined(EMOTIBIT_PPG_100HZ)
+#if (defined(EMOTIBIT_PPG_100HZ) || defined(EMOTIBIT_PPG_100HZ_R_IR))
 	Serial.println("100Hz PPG activated. Ensure correct settings in ofxOscilloscopeSettings.xml are used to correctly visualize live data.");
 #endif
 	Serial.println("");
@@ -1804,7 +1806,9 @@ int8_t EmotiBit::updatePPGData() {
 	while (ppgSensor.available()) {
 		status = status | pushData(EmotiBit::DataType::PPG_INFRARED, ppgSensor.getFIFOIR());
 		status = status | pushData(EmotiBit::DataType::PPG_RED, ppgSensor.getFIFORed());
+#if !defined(EMOTIBIT_PPG_100HZ_R_IR)
 		status = status | pushData(EmotiBit::DataType::PPG_GREEN, ppgSensor.getFIFOGreen());
+#endif
 		ppgSensor.nextSample();
 		//available--;
 	}

@@ -7,6 +7,11 @@
 #ifndef _EMOTIBIT_H_
 #define _EMOTIBIT_H_
 
+// **** #define options to change PPG behavior **** //
+// NOTE: do not use if you're also specifying PPG behavior in PlatformIO variant_flags
+//#define EMOTIBIT_PPG_100HZ // uncomment if you want to capture 100Hz PPG with R/IR/G
+//#define EMOTIBIT_PPG_100HZ_R_IR // uncomment if you want to capture 100Hz PPG with R/IR
+
 #include "Arduino.h"
 #include <Wire.h>
 #include <EmotiBit_Si7013.h>
@@ -53,7 +58,7 @@ public:
 	};
 
 
-  String firmware_version = "1.14.3_feat-syncOutExample.1";
+  String firmware_version = "1.16.0";
 
 
 	TestingMode testingMode = TestingMode::NONE;
@@ -143,6 +148,15 @@ public:
 		uint16_t sampleRate = 800;    //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
 		uint16_t pulseWidth = 118;     //Options: 69, 118, 215, 411
 		uint16_t adcRange = 4096;     //Options: 2048, 4096, 8192, 16384
+	};
+#elif defined(EMOTIBIT_PPG_100HZ_R_IR)
+	struct PPGSettings {
+		uint8_t ledPowerLevel = 200; //Options: 0=Off to 255=50mA
+		uint16_t sampleAverage = 8;   //Options: 1, 2, 4, 8, 16, 32
+		uint8_t ledMode = 2;          //Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
+		uint16_t sampleRate = 800;    //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
+		uint16_t pulseWidth = 215;     //Options: 69, 118, 215, 411
+		uint16_t adcRange = 16384;     //Options: 2048, 4096, 8192, 16384
 	};
 #else
 	struct PPGSettings {
@@ -604,28 +618,28 @@ private:
 	// Adjust buffer sizes for different PPG sampling rates & MCUs
 	// See EmotiBit Buffer Size RAM Calculator google sheet
 	// ToDo: Consider how to better manange stack memory allocation
-#if !defined(EMOTIBIT_PPG_100HZ) && !defined(ARDUINO_FEATHER_ESP32)
+#if !defined(EMOTIBIT_PPG_100HZ) && !defined(EMOTIBIT_PPG_100HZ_R_IR) && !defined(ARDUINO_FEATHER_ESP32)
 	// 2.4 seconds data buffering
 	const uint16_t EDA_BUFFER_SIZE = 36;
 	const uint16_t PPG_BUFFER_SIZE = 60;
 	const uint16_t TEMP_BUFFER_SIZE = 18;
 	const uint16_t IMU_BUFFER_SIZE = 9;
 #endif
-#if !defined(EMOTIBIT_PPG_100HZ) && defined(ARDUINO_FEATHER_ESP32)
+#if !defined(EMOTIBIT_PPG_100HZ) && !defined(EMOTIBIT_PPG_100HZ_R_IR) && defined(ARDUINO_FEATHER_ESP32)
 	// 4.8 seconds data buffering
 	const uint16_t EDA_BUFFER_SIZE = 72;
 	const uint16_t PPG_BUFFER_SIZE = 120;
 	const uint16_t TEMP_BUFFER_SIZE = 36;
 	const uint16_t IMU_BUFFER_SIZE = 69;
 #endif
-#if defined(EMOTIBIT_PPG_100HZ) && !defined(ARDUINO_FEATHER_ESP32)
+#if (defined(EMOTIBIT_PPG_100HZ) || defined(EMOTIBIT_PPG_100HZ_R_IR)) && !defined(ARDUINO_FEATHER_ESP32)
 	// 1.07 seconds data buffering
 	const uint16_t EDA_BUFFER_SIZE = 16;
 	const uint16_t PPG_BUFFER_SIZE = 107;
 	const uint16_t TEMP_BUFFER_SIZE = 8;
 	const uint16_t IMU_BUFFER_SIZE = 8;
 #endif
-#if defined(EMOTIBIT_PPG_100HZ) && defined(ARDUINO_FEATHER_ESP32)
+#if (defined(EMOTIBIT_PPG_100HZ) || defined(EMOTIBIT_PPG_100HZ_R_IR)) && defined(ARDUINO_FEATHER_ESP32)
 	// 3.6 seconds data buffering
 	const uint16_t EDA_BUFFER_SIZE = 54;
 	const uint16_t PPG_BUFFER_SIZE = 360;
@@ -638,7 +652,11 @@ private:
 	DoubleBufferFloat edr			 = DoubleBufferFloat(EDA_BUFFER_SIZE);
 	DoubleBufferFloat ppgInfrared	 = DoubleBufferFloat(PPG_BUFFER_SIZE);
 	DoubleBufferFloat ppgRed		 = DoubleBufferFloat(PPG_BUFFER_SIZE);
+#if defined(EMOTIBIT_PPG_100HZ_R_IR)
+	DoubleBufferFloat ppgGreen		 = DoubleBufferFloat(1);
+#else
 	DoubleBufferFloat ppgGreen		 = DoubleBufferFloat(PPG_BUFFER_SIZE);
+#endif
 	DoubleBufferFloat temp0			 = DoubleBufferFloat(TEMP_BUFFER_SIZE);
 	DoubleBufferFloat temp1		     = DoubleBufferFloat(TEMP_BUFFER_SIZE); // To store the thermistor Object Temp
 	DoubleBufferFloat therm0		 = DoubleBufferFloat(TEMP_BUFFER_SIZE); // To store the thermistor Object Temp
