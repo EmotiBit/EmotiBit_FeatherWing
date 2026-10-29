@@ -38,19 +38,18 @@ bool syncOut()
 {
 	// sync out setup variables //
 #if defined (ARDUINO_FEATHER_ESP32)
-	//const uint8_t SYNC_PIN = 26;
-	const uint8_t SYNC_PIN = A0;
+	const uint8_t SYNC_PIN = 26;
 #elif defined (ADAFRUIT_FEATHER_M0)
 	const uint8_t SYNC_PIN = 14;
 #endif
-	const unsigned long offBaseTime = 900;	// SYNC_PIN is LOW for offBaseTime + offRand
-	const unsigned long offRandMax = 200;	// Sets the max offRand
-	const unsigned long onTime = 100;		// SYNC_PIN is HIGH for onTime
+	const unsigned long offBaseTime = 900;	// SYNC_PIN is LOW for offBaseTime + offRand msec
+	const unsigned long offRandMax = 200;	// Sets the max offRand msec
+	const unsigned long onTime = 100;		// SYNC_PIN is HIGH for onTime msec
 	// end sync out setup variables //
 	
 	
 	// sync out code logic
-	static int toggle = LOW;
+	static bool toggle = LOW;
 	static unsigned long offRand = random(offRandMax);
 	static unsigned long syncTimer = millis();
 	static bool sendSync = false;
