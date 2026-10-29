@@ -7,6 +7,8 @@
 #ifndef _EMOTIBIT_H_
 #define _EMOTIBIT_H_
 
+// **** #defines to change PPG behavior **** //
+// NOTE: do no use if you're also specifying PPG behavior in PlatformIO variant_flags
 //#define EMOTIBIT_PPG_100HZ // uncomment if you want to capture 100Hz PPG with R/IR/G
 //#define EMOTIBIT_PPG_100HZ_R_IR // uncomment if you want to capture 100Hz PPG with R/IR
 
@@ -56,7 +58,7 @@ public:
 	};
 
 
-  String firmware_version = "1.14.3_feat-PPG_100Hz_R_IR.1";
+  String firmware_version = "1.14.3_feat-PPG_100Hz_R_IR.2";
 
 
 	TestingMode testingMode = TestingMode::NONE;
