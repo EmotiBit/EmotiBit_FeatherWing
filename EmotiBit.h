@@ -58,7 +58,7 @@ public:
 	};
 
 
-  String firmware_version = "1.15.0";
+  String firmware_version = "1.16.0";
 
 
 	TestingMode testingMode = TestingMode::NONE;

@@ -1,0 +1,128 @@
+#include <Arduino.h>
+#include "EmotiBit.h"
+
+#define SerialUSB SERIAL_PORT_USBVIRTUAL // Required to work in Visual Micro / Visual Studio IDE
+const uint32_t SERIAL_BAUD = 2000000; //115200
+
+EmotiBit emotibit;
+const size_t dataSize = EmotiBit::MAX_DATA_BUFFER_SIZE;
+float data[dataSize];
+
+void onShortButtonPress()
+{
+	// toggle wifi on/off
+	if (emotibit.getPowerMode() == EmotiBit::PowerMode::NORMAL_POWER)
+	{
+		emotibit.setPowerMode(EmotiBit::PowerMode::WIRELESS_OFF);
+		Serial.println("PowerMode::WIRELESS_OFF");
+	}
+	else
+	{
+		emotibit.setPowerMode(EmotiBit::PowerMode::NORMAL_POWER);
+		Serial.println("PowerMode::NORMAL_POWER");
+	}
+}
+
+void onLongButtonPress()
+{
+	emotibit.sleep();
+}
+
+/// @brief 		Generates a sync pulse in a digital out pin.
+/// @details	Calling in loop() toggles SYNC_PIN LOW until offBaseTime+random(offRandMax)
+///	 			is exceeded and then toggles SYNC_PIN HIGH until onTime is exceeded.
+///				A packet with a timestamp is logged every time the SYNC_PIN is toggled 
+///				for easy synchronization across devices into local time.
+/// @return 	The state of the SYNC_PIN is returned.
+bool syncOut()
+{
+	// sync out setup variables //
+#if defined (ARDUINO_FEATHER_ESP32)
+	const uint8_t SYNC_PIN = 26;
+#elif defined (ADAFRUIT_FEATHER_M0)
+	const uint8_t SYNC_PIN = 14;
+#endif
+	const unsigned long offBaseTime = 900;	// SYNC_PIN is LOW for offBaseTime + offRand msec
+	const unsigned long offRandMax = 200;	// Sets the max offRand msec
+	const unsigned long onTime = 100;		// SYNC_PIN is HIGH for onTime msec
+	// end sync out setup variables //
+	
+	
+	// sync out code logic
+	static bool toggle = LOW;
+	static unsigned long offRand = random(offRandMax);
+	static unsigned long syncTimer = millis();
+	static bool sendSync = false;
+	static bool isSetup = false;
+	
+	if (!isSetup) 
+	{
+		pinMode(SYNC_PIN , OUTPUT);
+		isSetup = true;
+	}
+	if (toggle == LOW && ((millis() - syncTimer) > (offBaseTime + offRand)))
+	{
+		sendSync = true;
+		offRand = random(offRandMax); // get a new random offRand
+	}
+	if (toggle == HIGH && ((millis() - syncTimer) > onTime))
+	{
+		sendSync = true;
+	}
+	if (sendSync)
+	{
+		syncTimer = millis();
+		toggle = !toggle;
+		digitalWrite(SYNC_PIN , toggle );
+		float toggleFloat = (float) toggle;
+		emotibit.addPacket(millis(), "SP", &toggleFloat, 1); // Log the SYNC_PIN toggle
+		// ToDo: consider adding EmotiBitPacket::TypeTag::SYNC_PULSE
+		sendSync = false;
+	}
+	return toggle;
+}
+
+void setup() 
+{
+	Serial.begin(SERIAL_BAUD);
+	Serial.println("Serial started");
+	delay(2000);	// short delay to allow user to connect to serial, if desired
+
+	// Capture the calling ino into firmware_variant information
+	String inoFilename = __FILE__;  // returns absolute path of ino file
+	inoFilename.replace("/","\\");  // conform to standard directory separator
+	// extract filename only if directory separator found in absolute path
+	if(inoFilename.lastIndexOf("\\") != -1)
+	{
+		inoFilename = inoFilename.substring((inoFilename.lastIndexOf("\\")) + 1,(inoFilename.indexOf(".")));
+	}
+	emotibit.setup(inoFilename);
+
+	// Attach callback functions
+	emotibit.attachShortButtonPress(&onShortButtonPress);
+	emotibit.attachLongButtonPress(&onLongButtonPress);
+}
+
+void loop()
+{
+	//Serial.println("emotibit.update()");
+	emotibit.update();
+	syncOut(); // send semi-periodic sync pulses to synchronize with other devices
+
+	size_t dataAvailable = emotibit.readData(EmotiBit::DataType::PPG_GREEN, &data[0], dataSize);
+	if (dataAvailable > 0)
+	{
+		// Hey cool, I got some data! Maybe I can light up my shoes whenever I get excited!
+
+		// print the data to view in the serial plotter
+		bool printData = false;
+		if (printData)
+		{
+			for (size_t i = 0; i < dataAvailable && i < dataSize; i++)
+			{
+				// Note that dataAvailable can be larger than dataSize
+				Serial.println(data[i]);
+			}
+		}
+	}
+}
